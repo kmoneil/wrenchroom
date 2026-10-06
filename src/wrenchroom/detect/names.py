@@ -12,10 +12,12 @@ Four kinds of evidence, strongest first:
 Any of them may come with a thread size (``M6``, ``M6x20``, ``M6x1x20``,
 ``1/4-20 x 3/4``, ``#10-32``) and a length.
 
-A name reads as a fastener only when the word it is about, its last noun, is a
-fastener noun, or when it carries a standard or a catalogue number. So
-``bolt_hole_cover`` is a cover and ``pair_nut_held_upper`` is about ``held`` (with the
-positional ``upper`` set aside), however many fastener words come earlier.
+A name reads as a fastener when the word it is about, its last noun, is a
+fastener noun, or when it carries a standard or a catalogue number. A fastener noun
+with ordinary words after it is only a candidate (``needs_drive``): ``box_gland_vent``
+may be a gland or a vent, ``bolt_hole_cover`` is a cover, and ``pair_nut_held_upper``
+is about ``held``. Only its solid can say, by showing a drive (issue #30: such a
+name used to be passed over without a word).
 
 Whatever the name doesn't say stays None for geometry to fill in (spec 5.2: names,
 then geometry, then the sidecar, each overriding the one before). A name that is
@@ -53,6 +55,9 @@ class NameHint:
             ``McMaster 91290A``, ``SHCS``, ``noun 'bolt'``, ``M6x20``).
         not_covered: Set when the name is clearly a fastener the kit can't check,
             with the reason; the check reports it `not-covered`.
+        needs_drive: The fastener noun has ordinary words after it
+            (``box_gland_vent``): the part is a fastener only if its solid shows
+            a drive, and is reported as passed over if it doesn't.
     """
 
     kind: Kind
@@ -62,6 +67,7 @@ class NameHint:
     socket_allowed: bool = True
     basis: str = ""
     not_covered: str | None = None
+    needs_drive: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -302,6 +308,7 @@ def read_name(name: str) -> NameHint | None:
     at = _last_noun(words)
     noun = words[at] if at is not None else None
     run = _descriptors(words, at)
+    needs_drive = False
     if standard is not None:
         label, (kind, head, reason) = standard
         if kind is None:
@@ -312,11 +319,12 @@ def read_name(name: str) -> NameHint | None:
         reason = None
         basis = [f"McMaster {series}"]
     else:
-        found = _noun_hint(noun, run)
-        if found is None:
+        reading = _noun_reading(words, at)
+        if reading is None:
             return None
-        kind, head, reason, word = found
-        basis = [f"noun {word!r}"]
+        at, (kind, head, reason, word), needs_drive = reading
+        noun, run = words[at], _descriptors(words, at)
+        basis = [f"noun {word!r}" + (", words after it" if needs_drive else "")]
     if head is None:
         near = _head_from(run, kind)
         head = _head_from(run | (set(words) & _DRIVE_WORDS), kind)
@@ -339,6 +347,7 @@ def read_name(name: str) -> NameHint | None:
         socket_allowed=socket_allowed,
         basis=", ".join(basis),
         not_covered=reason or size_reason,
+        needs_drive=needs_drive,
     )
 
 
@@ -389,6 +398,25 @@ def _last_noun(words: list[str]) -> int | None:
         if word.isdigit() or len(word) == 1 or re.fullmatch(r"[a-z]\d+", word):
             continue  # numbers, a/b, r1: labels, not nouns
         return index
+    return None
+
+
+def _noun_reading(
+    words: list[str], at: int | None
+) -> tuple[int, tuple[Kind, Head | None, str | None, str], bool] | None:
+    """Where the fastener noun is, what it says, and whether ordinary words follow it.
+
+    The word the name is about first; failing that, the last fastener noun
+    before it, which then needs its solid to show a drive (issue #30).
+    """
+    end = len(words) if at is None else at
+    earlier = next((i for i in range(end - 1, -1, -1) if words[i] in _NOUN_KIND), None)
+    for index, needs_drive in ((at, False), (earlier, True)):
+        if index is None:
+            continue
+        found = _noun_hint(words[index], _descriptors(words, index))
+        if found is not None:
+            return index, found, needs_drive
     return None
 
 

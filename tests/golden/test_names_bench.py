@@ -2,7 +2,9 @@
 
 The parts the bench's sidecar calls fasteners must be found with the right kind,
 and no other part may be: not a plate, not a wall, not the pocket block named
-"pair_nut_held_upper" (a nut word, but the name is about "held").
+"pair_nut_held_upper" (a nut word, but the name is about "held"). A name with
+words after its fastener noun is only a candidate, for its solid to decide
+(issue #30): vented's "gland_vent" is the one the sidecar calls a fastener.
 """
 
 import fnmatch
@@ -27,13 +29,15 @@ def _rule_for(name, rules):
 def test_the_bench_names_read_as_its_sidecar_says():
     sidecar, _ = sidecar_and_truth()
     rules = sidecar["fasteners"] + edges_sidecar()["fasteners"]
-    wrong = []
+    wrong, candidates = [], []
     found_count = 0
     for name in _bench_names():
         rule = _rule_for(name, rules)
         found = read_name(name)
+        if found is not None and found.needs_drive:
+            candidates.append(name)
         if rule is None:
-            if found is not None:
+            if found is not None and not found.needs_drive:
                 wrong.append((name, "read as a fastener", found))
             continue
         want = Kind(rule.get("kind", "screw"))
@@ -44,6 +48,7 @@ def test_the_bench_names_read_as_its_sidecar_says():
         if "gland" in name:
             assert not found.socket_allowed, name
     assert not wrong
+    assert [name for name in candidates if _rule_for(name, rules)] == ["vented_gland_vent"]
     # The sidecar's fasteners (FINAL_COUNTS less the torx screw only detection finds)
     # and the edges file's torx screw.
     assert found_count == FINAL_COUNTS["fasteners"]

@@ -102,6 +102,10 @@ def inch_mm(text: str) -> float:
 _INCH_BY_MM: dict[float, str] = {inch_mm(text): text for text in INCH_KEYS + INCH_FLATS}
 
 
+#: Every hex size a spanner or socket comes in, metric and inch, mm.
+FLATS: tuple[float, ...] = METRIC_FLATS + tuple(inch_mm(size) for size in INCH_FLATS)
+
+
 def size_name(af: float) -> str:
     """A size in mm, as tools of that size are named: ``13``, ``5.5`` or ``7/16in``."""
     for mm, text in _INCH_BY_MM.items():

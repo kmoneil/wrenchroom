@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from wrenchroom import __version__
-from wrenchroom.fasteners import Fastener
+from wrenchroom.fasteners import Fastener, PassedOver
 from wrenchroom.terminal import printable
 
 if TYPE_CHECKING:
@@ -147,11 +147,17 @@ class Report:
     ignored: frozenset[str] = field(default=frozenset(), compare=False, repr=False)
     #: Whether room for a hand round each handle was checked (spec 6.4).
     hand_room: bool = False
+    #: Parts named like fasteners that detection didn't take (issue #30): a
+    #: fastener noun with ordinary words after it, and no drive in the solid.
+    #: Not failures, but every report lists them, so none goes unsaid.
+    passed_over: tuple[PassedOver, ...] = ()
 
     @property
     def not_checked(self) -> str:
         """What the run could not see, said in every report (the prototype's lesson)."""
         unseen = ["parts the model doesn't have"]
+        if self.passed_over:
+            unseen.insert(0, _passed_over_count(self.passed_over))
         if not self.hand_room:
             unseen.insert(0, "room for a hand (checks: {hand_room: true} turns it on)")
         return "not checked: " + "; ".join(unseen)
@@ -222,6 +228,10 @@ class Report:
             "unmatched_ignores": list(self.unmatched_ignores),
             "warnings": list(self.warnings),
             "hand_room": self.hand_room,
+            "passed_over": [
+                {"name": part.name, "kind": part.kind.value, "reason": part.reason}
+                for part in self.passed_over
+            ],
             "fasteners": [_result_json(result) for result in self.results],
         }
 
@@ -257,6 +267,11 @@ class Report:
         for glob in self.unmatched_ignores:
             lines.append(f"WARN ignore matched nothing: {glob!r}")
         lines.extend(f"WARN {warning}" for warning in self.warnings)
+        shown = self.passed_over[:PASSED_OVER_SHOWN]
+        lines.extend(f"NOTE passed over {part.name}: {part.reason}" for part in shown)
+        if len(self.passed_over) > len(shown):
+            more = len(self.passed_over) - len(shown)
+            lines.append(f"NOTE and {more} more passed over (the JSON lists every one)")
         lines.append(f"NOTE {self.not_checked}")
         return [printable(line) for line in lines]
 
@@ -288,6 +303,7 @@ class Report:
                 if self.hand_room
                 else "room for a hand (`checks: {hand_room: true}` turns it on); "
             )
+            + (f"{md_text(_passed_over_count(self.passed_over))}; " if self.passed_over else "")
             + "parts the model doesn't have.",
         ]
         groups = _groups(self.results)
@@ -332,6 +348,15 @@ class Report:
         if warnings:
             lines += ["", "#### Warnings", ""]
             lines.extend(f"- {warning}" for warning in warnings)
+        if self.passed_over:
+            shown = self.passed_over[:PASSED_OVER_SHOWN]
+            lines += ["", "#### Passed over", ""]
+            lines.extend(
+                f"- {md_code(part.name, in_table=False)}: {md_text(part.reason)}" for part in shown
+            )
+            if len(self.passed_over) > len(shown):
+                more = len(self.passed_over) - len(shown)
+                lines.append(f"- and {more} more (the JSON lists every one)")
         return "\n".join(lines) + "\n"
 
     def to_markdown(self, path: str | Path) -> None:
@@ -382,6 +407,14 @@ def _result_json(result: FastenerResult) -> dict[str, object]:
 
 #: What a failure says when nothing was in the way and nothing explains it.
 NO_TOOL = "no tool found"
+
+#: How many passed-over parts the terminal and Markdown name; the JSON has all.
+PASSED_OVER_SHOWN = 10
+
+
+def _passed_over_count(passed: tuple[PassedOver, ...]) -> str:
+    noun = "part" if len(passed) == 1 else "parts"
+    return f"{len(passed)} {noun} named like a fastener, with no drive in the solid (passed over)"
 
 
 def _summary_text(counts: dict[str, int]) -> str:

@@ -135,10 +135,6 @@ def test_a_fastener_the_kit_cannot_check_says_why(name, reason):
 @pytest.mark.parametrize(
     "name",
     [
-        "bolt_hole_cover",
-        "screw_boss",
-        "nut_plate",
-        "bolt_circle",
         "nutmeg",
         "screwdriver",
         "socket_wrench",
@@ -150,10 +146,7 @@ def test_a_fastener_the_kit_cannot_check_says_why(name, reason):
         "M6 insert",
         "standoff_m3",
         "spacer M4x10",
-        "pair_nut_held_upper",
         "pair_both_hold_pocket_low",
-        "nut_stubby_box_box",
-        "screw_set_box",
         "",
         "   ",
         "#",
@@ -165,6 +158,51 @@ def test_a_fastener_the_kit_cannot_check_says_why(name, reason):
 )
 def test_things_that_are_not_fasteners(name):
     assert read_name(name) is None
+
+
+@pytest.mark.parametrize(
+    ("name", "kind", "noun"),
+    [
+        # A fastener noun with ordinary words after it: a cover, a boss, a plate,
+        # a hole circle, a pocket block, or a gland after all. Only the solid can
+        # say, so each is a candidate, never a fastener by its name alone (#30).
+        ("bolt_hole_cover", S, "bolt"),
+        ("screw_boss", S, "screw"),
+        ("nut_plate", N, "nut"),
+        ("bolt_circle", S, "bolt"),
+        ("pair_nut_held_upper", N, "nut"),
+        ("nut_stubby_box_box", N, "nut"),
+        ("box_gland_vent", N, "gland"),
+        ("box_gland_base", N, "gland"),
+        ("box_gland_cable_front", N, "gland"),
+        ("panel_screw_long", S, "screw"),
+        ("torx_lid_screw_long", S, "screw"),
+        ("bolt_nut_plate", N, "nut"),  # the last fastener noun before the words
+    ],
+)
+def test_a_noun_with_words_after_it_is_a_candidate(name, kind, noun):
+    found = hint(name)
+    assert (found.kind, found.needs_drive) == (kind, True)
+    assert found.basis.startswith(f"noun {noun!r}, words after it")
+
+
+def test_a_candidate_keeps_what_its_name_says():
+    gland = hint("box_gland_vent")
+    assert not gland.socket_allowed  # a gland still takes no socket
+    assert gland.size is None
+    torx = hint("torx_lid_screw_long M6x20")
+    assert (torx.head, torx.size.designation) == (Head.TORX, "M6")
+    assert torx.basis == "noun 'screw', words after it, drive 'torx', M6x20"
+    set_screw = hint("screw_set_box")
+    assert "set screw" in set_screw.not_covered  # a set screw holder, or a set screw
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["frame_bolt", "box_gland_front_L", "frame_bolt_upper", "lift_link_0_bolt_bot", "hex nut M8"],
+)
+def test_a_noun_followed_only_by_labels_is_a_fastener_outright(name):
+    assert not hint(name).needs_drive
 
 
 def test_a_head_word_away_from_the_noun_says_nothing():

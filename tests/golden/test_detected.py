@@ -28,6 +28,8 @@ from pathlib import Path
 import pytest
 from bench import canonical, check_detected, sidecar_and_truth
 
+from wrenchroom.detect import read_name
+
 SNAPSHOT = Path(__file__).parent / "bench.detected.snapshot.json"
 
 #: The two verdicts that need the sidecar, and what they read without it.
@@ -116,6 +118,22 @@ def test_detected_tools_match_the_truth_but_where_the_sidecar_is_needed(detected
     differ = {name for name, tool in named.items() if by_name[name].tool != tool}
     assert differ <= set(NEEDS_THE_SIDECAR)
     assert by_name["torx_wall_screw"].tool == "torx-key-T30"
+
+
+def test_every_candidate_name_is_taken_on_its_solid_or_passed_over(detected):
+    """Issue #30: a fastener noun with words after it. On the bench the one whose
+    solid shows a drive is vented's gland; every other is a plate, block, stud,
+    tube or dome, and is passed over by name, none dropped and none taken."""
+    names = detected.models[None].assembly.names
+    candidates = {
+        name
+        for name in names
+        if name not in detected.ignored and (hint := read_name(name)) and hint.needs_drive
+    }
+    assert len(candidates) > 15  # a vacuity guard: the bench is full of such names
+    assert {part.name for part in detected.passed_over} == candidates - {"vented_gland_vent"}
+    (gland,) = [r for r in detected.results if r.fastener.name == "vented_gland_vent"]
+    assert (gland.tool, gland.fastener.confidence) == ("spanner-24", "medium")
 
 
 def test_the_detected_report_matches_its_snapshot(detected):
