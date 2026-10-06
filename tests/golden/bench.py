@@ -43,11 +43,11 @@ SLOTS = len(CELLS) + 1
 #: detection finds torx_open_screw, which no rule names; 45 since M6's hand_tight,
 #: inch_pair, torx_wall, ball_tilt and nut_tube; and since M6's open end,
 #: glands_close's two turn; 47 since issue #27's hex_band, 48 with #26's nut_gap,
-#: 49 with #30's vented, 50 with #31's low_head.
+#: 49 with #30's vented, 50 with #31's low_head, 52 with #29's rubber.
 FINAL_COUNTS = {
-    "fasteners": 50,
-    "turns": 39,
-    "held": 2,
+    "fasteners": 52,
+    "turns": 40,
+    "held": 3,
     "blocked": 8,
     "stuck": 1,
     "not_covered": 0,

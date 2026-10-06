@@ -68,7 +68,7 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
             wrong.append((name, got, want))
     assert not wrong
     assert banded == ["hex_band_nut"]  # issue #27: 12.8, inside ISO 4032's band for 13
-    assert outlined == ["low_head_screw"]  # issue #31: a button head drawn flat
+    assert outlined == ["low_head_screw", "rubber_screw"]  # #31: button heads drawn flat
 
 
 def test_the_step_round_trip_changes_no_reading(bench_parts):

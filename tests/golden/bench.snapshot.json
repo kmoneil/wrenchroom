@@ -3,9 +3,9 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 50,
-  "turns": 39,
-  "held": 2,
+  "fasteners": 52,
+  "turns": 40,
+  "held": 3,
   "blocked": 8,
   "stuck": 1,
   "not_covered": 0
@@ -1113,6 +1113,56 @@
    "reason": null
   },
   {
+   "name": "rubber_screw",
+   "kind": "screw",
+   "head": "button",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4000.0,
+    5000.0,
+    6.7
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-2.5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": "rubber_well_nut",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "rubber_well_nut",
+   "kind": "insert",
+   "head": null,
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": null,
+   "source": "sidecar",
+   "tool": null,
+   "verdict": "held",
+   "how": "holds itself",
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "rubber_screw",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
    "name": "state_lever_screw",
    "kind": "screw",
    "head": "socket",
@@ -1402,7 +1452,7 @@
     1.0
    ],
    "seat": [
-    3900.0,
+    4900.0,
     5000.0,
     6.0
    ],
@@ -1431,7 +1481,7 @@
     1.0
    ],
    "seat": [
-    4100.0,
+    5100.0,
     5000.0,
     6.0
    ],

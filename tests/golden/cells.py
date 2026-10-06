@@ -806,3 +806,29 @@ def low_head():
         ("plate", plate(holes=[(0, 0, 2.75)])),
         ("screw", Pos(0, 0, -8) * Cylinder(2.5, 16) + Pos(0, 0, 1.375) * Cylinder(4.75, 2.75)),
     ]
+
+
+@cell(
+    "rubber",
+    [
+        {"parts": "screw", "kind": "screw", "head": "button", "size": "M4"},
+        {"parts": "well_nut", "kind": "insert", "size": "M4"},
+    ],
+    {
+        "screw": {"verdict": "turns", "tool": "hex-key-2.5", "how": "driver straight in"},
+        "well_nut": {"verdict": "held", "how": "holds itself", "pair": "screw"},
+    },
+)
+def rubber():
+    """An M4 button head (ISO 7380-1, drawn flat: 7.6 by 2.2) through a 3 mm panel
+    into a rubber well nut, a flanged sleeve with no flats, set in a 2 mm wall
+    (issue #29). The well nut is a fixed thread: it holds itself, takes no tool,
+    and pairs with the screw, which turns with its 2.5 mm key in open air. Read as
+    a hex nut by its name, it used to "turn" with spanner-7, which can't grip it.
+    """
+    wall = Pos(0, 0, -1) * (Box(80, 80, 2) - Cylinder(4.5, 2))
+    flange = Pos(0, 0, 0.75) * (Cylinder(5.5, 1.5) - Cylinder(2, 1.5))
+    body = Pos(0, 0, -5) * (Cylinder(4.4, 10) - Cylinder(2, 10))
+    panel = Pos(0, 0, 3) * (Box(80, 80, 3) - Cylinder(2.2, 3))
+    screw = Pos(0, 0, -1.5) * Cylinder(2, 12) + Pos(0, 0, 5.6) * Cylinder(3.8, 2.2)
+    return [("wall", wall), ("well_nut", flange + body), ("panel", panel), ("screw", screw)]

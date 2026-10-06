@@ -334,7 +334,7 @@ def _find_pairs(
             continue
         pairs[a], pairs[b] = b, a
     screws = [f for f in fasteners if f.kind is Kind.SCREW and f.name in frames]
-    nuts = [f for f in fasteners if f.kind is Kind.NUT and f.name in frames]
+    nuts = [f for f in fasteners if f.kind is not Kind.SCREW and f.name in frames]
     for screw in screws:
         if screw.name in pairs:
             continue
@@ -477,6 +477,10 @@ def _check_fastener(
     tools: _Tools,
 ) -> _Candidate:
     own_state = fastener.state if fastener.state is not None else default_state
+    if fastener.kind is Kind.INSERT:
+        # A fixed thread holds itself, and no tool comes at it from either end:
+        # its axis, unsigned, is all there is to say (issue #29).
+        return _Candidate(fastener, how="holds itself", axis=frame.direction, state=own_state)
     order: list[str | None] = [own_state]
     order += [s for s in config.try_states if s != own_state]
     first: _Candidate | None = None

@@ -58,6 +58,9 @@ class NameHint:
         needs_drive: The fastener noun has ordinary words after it
             (``box_gland_vent``): the part is a fastener only if its solid shows
             a drive, and is reported as passed over if it doesn't.
+        unless_hex: An insert only by the word before "nut" ("well nut", which
+            could as well be a nut deep in a well): a nut after all if its solid
+            shows a hex, as a fixed thread's doesn't.
     """
 
     kind: Kind
@@ -68,6 +71,7 @@ class NameHint:
     basis: str = ""
     not_covered: str | None = None
     needs_drive: bool = False
+    unless_hex: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -176,6 +180,18 @@ _SCREW_NOUNS = {"screw", "screws", "bolt", "bolts", "capscrew", "shcs", "bhcs", 
 _NUT_NOUNS = {"nut", "nuts", "locknut", "nyloc", "nylock", "nylok"}
 _GLAND_NOUNS = {"gland", "glands"}
 _HAND_TURNED = {"wingnut", "thumbscrew", "thumbnut"}
+#: Fixed threads (issue #29): set in a panel, never turned. As nouns, and as the
+#: word just before "nut" ("well nut", "cage nut", "T-nut"); a lock or nylon word
+#: anywhere keeps a nut a nut ("nylon insert lock nut" is a nyloc).
+_INSERT_NOUNS = {
+    "insert", "inserts", "wellnut", "rivnut", "rivnuts", "rivetnut", "nutsert",
+    "plusnut", "tnut", "teenut",
+}  # fmt: skip
+_INSERT_WORDS = {
+    "well", "rivet", "insert", "cage", "t", "tee", "press", "clinch", "clinching",
+    "pem", "weld", "captive",
+}  # fmt: skip
+_LOCK_WORDS = {"lock", "locking", "nylon", "nyloc", "nylock", "nylok"}
 _SET_SCREW_NOUNS = {"setscrew", "grubscrew"}
 #: Describing words that settle a fastener as one the kit can't check.
 _HAND_WORDS = {"wing", "thumb", "knurled"}
@@ -186,6 +202,7 @@ _BY_HAND = "turned by hand: there is no tool to check"
 _NOUN_KIND: dict[str, Kind] = {
     **dict.fromkeys(_SCREW_NOUNS | _SET_SCREW_NOUNS | {"thumbscrew"}, Kind.SCREW),
     **dict.fromkeys(_NUT_NOUNS | _GLAND_NOUNS | {"wingnut", "thumbnut"}, Kind.NUT),
+    **dict.fromkeys(_INSERT_NOUNS, Kind.INSERT),
 }
 
 #: Words that describe a fastener rather than name what the part is, and so are
@@ -348,6 +365,7 @@ def read_name(name: str) -> NameHint | None:
         basis=", ".join(basis),
         not_covered=reason or size_reason,
         needs_drive=needs_drive,
+        unless_hex=kind is Kind.INSERT and word not in _INSERT_NOUNS,
     )
 
 
@@ -415,6 +433,8 @@ def _noun_reading(
         if index is None:
             continue
         found = _noun_hint(words[index], _descriptors(words, index))
+        if found is not None and _is_insert(words, index, found[0]):
+            found = (Kind.INSERT, None, None, f"{words[index - 1]} {found[3]}")  # "well nut"
         if found is not None:
             return index, found, needs_drive
     return None
@@ -445,6 +465,12 @@ def _descriptors(words: list[str], at: int | None) -> set[str]:
             run.add(words[index])
             index += step
     return run
+
+
+def _is_insert(words: list[str], at: int, kind: Kind) -> bool:
+    """A nut named as a fixed thread by the word just before it: "well nut", "t_nut"."""
+    before = words[at - 1] if at > 0 else None
+    return kind is Kind.NUT and before in _INSERT_WORDS and not set(words) & _LOCK_WORDS
 
 
 def _noun_hint(noun: str | None, run: set[str]) -> tuple[Kind, Head | None, str | None, str] | None:

@@ -143,7 +143,6 @@ def test_a_fastener_the_kit_cannot_check_says_why(name, reason):
         "washer M6",
         "DIN 125 M6",
         "ISO 7089 M8",
-        "M6 insert",
         "standoff_m3",
         "spacer M4x10",
         "pair_both_hold_pocket_low",
