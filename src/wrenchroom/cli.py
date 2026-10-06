@@ -1,8 +1,6 @@
 """The command line interface.
 
-The four commands exist from day one so the entry point, the exit-code contract and the
-help text are testable before all of them work. A command not yet delivered exits 2,
-the code for "something not covered".
+Four commands: check, explain, detect (writes the sidecar) and tools.
 
 Exit codes, fixed: 0 every fastener passes, 1 a fastener fails, 2 something not covered
 or a config error.
@@ -15,7 +13,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, NoReturn
+from typing import TYPE_CHECKING
 
 import click
 
@@ -37,12 +35,6 @@ def _say(text: str = "", *, err: bool = False) -> None:
     steer the terminal. A blank line is its own call, never a newline inside one.
     """
     click.echo(printable(text), err=err)
-
-
-def _not_built(command: str) -> NoReturn:
-    """Exit with the not-covered code: the command is promised but not delivered yet."""
-    _say(f"wrenchroom {command} is not built yet.", err=True)
-    sys.exit(EXIT_NOT_COVERED)
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
@@ -132,10 +124,30 @@ def _run(
 
 
 @main.command()
-@click.argument("model")
-def detect(model: str) -> None:
-    """Write what was found in MODEL as a sidecar YAML, for correcting and keeping."""
-    _not_built("detect")
+@click.argument("model", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+def detect(model: Path) -> None:
+    """Write the fasteners found in MODEL as a sidecar YAML, for correcting and keeping.
+
+    Fasteners are found by their part names and solids, as check finds them; a
+    wrenchroom.yaml beside the model is not read. Each rule's comment says how sure
+    detection was, what found the part, its axis and how it fares now. Redirect
+    the output to wrenchroom.yaml, correct it, and keep it.
+    """
+    from wrenchroom.assembly import Assembly
+    from wrenchroom.check import check as run_check
+    from wrenchroom.config import Config
+    from wrenchroom.detect.sidecar import sidecar_text
+
+    try:
+        assembly = Assembly.from_step(model)
+    except ValueError as exc:
+        _say(f"error: {exc}", err=True)
+        sys.exit(EXIT_NOT_COVERED)
+    report = run_check(assembly, Config(), model=model.name, model_dir=model.parent)
+    for line in sidecar_text(report, model.name).splitlines():
+        _say(line)
+    counts = report.summary
+    _say(f"found {counts['fasteners']} fasteners, {counts['not_covered']} not covered", err=True)
 
 
 @main.command()

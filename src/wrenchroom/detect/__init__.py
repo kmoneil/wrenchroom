@@ -57,6 +57,7 @@ def describe(part: Part, hint: NameHint) -> Fastener:
     gland = not hint.socket_allowed
     head, head_note, reason = _head(hint, reading)
     size = None if gland else _size(hint, reading)
+    not_covered = hint.not_covered or reason
     used = [head_note] if head_note else []
     if reading.drive_af is not None:
         used.append(f"{reading.drive_af:g} across flats")
@@ -73,8 +74,25 @@ def describe(part: Part, hint: NameHint) -> Fastener:
         drive_af=reading.drive_af,
         source="name+geometry" if used else "name",
         basis=basis,
-        not_covered=hint.not_covered or reason,
+        not_covered=not_covered,
+        confidence=_confidence(hint, reading, head, size, not_covered),
     )
+
+
+def _confidence(
+    hint: NameHint,
+    reading: ShapeReading,
+    head: Head | None,
+    size: Size | None,
+    not_covered: str | None,
+) -> str:
+    """high, medium or low: see Fastener.confidence."""
+    has_size = size is not None or reading.drive_af is not None
+    if not_covered or not has_size or (hint.kind is Kind.SCREW and head is None):
+        return "low"
+    guessed_head = hint.kind is Kind.SCREW and reading.head is None and hint.head is None
+    shank_only = size is not None and hint.size is None and not reading.size_from_drive
+    return "medium" if guessed_head or shank_only else "high"
 
 
 def _head(hint: NameHint, reading: ShapeReading) -> tuple[Head | None, str | None, str | None]:

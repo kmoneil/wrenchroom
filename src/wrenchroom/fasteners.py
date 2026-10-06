@@ -140,6 +140,10 @@ class Fastener:
         basis: What said so, for people (``ISO 4762, M6x20; solid: socket 5``).
         not_covered: Set when detection found a fastener the kit can't check,
             with the reason (a set screw, a carriage bolt with no square neck).
+        confidence: How sure detection is, for a detected fastener: ``high``
+            (kind, head and size each stated by the name or shown by a drive in
+            the solid), ``medium`` (something rests on a head's outline or a
+            measured shank), ``low`` (something is missing). Empty from a sidecar.
     """
 
     name: str
@@ -156,6 +160,7 @@ class Fastener:
     source: str = "sidecar"
     basis: str = ""
     not_covered: str | None = None
+    confidence: str = ""
 
     @property
     def self_holding(self) -> bool:
