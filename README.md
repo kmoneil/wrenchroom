@@ -14,8 +14,8 @@ re-order seen late, and a collision check can't see it either way.
 
 ## Status
 
-**`wrenchroom check` works on real STEP files, with fasteners described by hand.**
-What exists today (M1):
+**`wrenchroom check` works on real STEP files, with fasteners described by hand, fast
+enough for CI.** What exists today (M1 to M3):
 
 - `wrenchroom check model.step` reads a STEP assembly (names kept, repeats made
   unique), takes fastener descriptions from a `wrenchroom.yaml` sidecar, resolves each
@@ -34,8 +34,15 @@ What exists today (M1):
   model of the mechanism, retries that say where a fastener passed), `explain`
   (every attempt for one fastener, with the blockers) and `tools` (the kit's
   dimensions, caveats inline) all work. `detect` exits 2 until M4 delivers it.
-- A golden bench of generated cells with hand-worked truth gates every change; its
-  whole-report snapshot is byte-identical across Linux and macOS, 3.13 and 3.14.
+- Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
+  from their primitives, overlap volumes from manifold3d. The golden bench scaled to
+  504 fasteners is read and checked in about 7 s on an Apple M5 Max laptop (the
+  target is 10 s). `--exact` swaps in OCP boolean intersections on the B-rep: about
+  five times slower, and the referee for anything within the mesh's 0.2 mm of a
+  curved face. Both engines give the bench the same report, field for field.
+- A golden bench of generated cells with hand-worked truth gates every change, on both
+  engines; its whole-report snapshot is byte-identical across Linux and macOS, 3.13
+  and 3.14.
 
 ## What it will do
 
@@ -57,8 +64,8 @@ FAIL key_wall_near_screw   hex-key-5   blocked  key_wall_near_wall
   and its screw are a pair, one side turned and the other held; the screw can come out
   along its axis; retried with parts removed or the mechanism moved.
 - **Every failure explained**: which tool, which way it was tried, what it hit.
-- **Fast enough for CI**: the target is 500 fasteners in under 10 seconds, with JSON
-  output and exit codes, plus a terminal table and a self-contained HTML 3D view.
+- **Fast enough for CI**: 500 fasteners in under 10 seconds, with JSON output and exit
+  codes, a terminal table, and (coming) a self-contained HTML 3D view.
 
 ## Development
 
@@ -70,14 +77,18 @@ $ uv run python scripts/lanes.py          # the table of lanes
 $ uv run python scripts/lanes.py gates    # ruff lint, ruff format, ty
 $ uv run python scripts/lanes.py fast     # the unit suite, golden bench included
 $ uv run python scripts/lanes.py golden   # only the bench: truth, counts, snapshot
+$ uv run python scripts/lanes.py perf     # the bench at 500 fasteners, timed
 ```
 
 The golden bench (`tests/golden/`) is a generated assembly of small cells, one
 mechanism each, with every verdict worked out by hand; features that haven't landed
-yet are strict xfails naming their milestone. `uv run python scripts/golden.py --out
-some-dir` writes `bench.step` and its sidecars for you to open and check against; a
-nightly job re-runs the bench against upgraded dependencies so a CAD-kernel update
-that moves a verdict shows up before it lands.
+yet are strict xfails naming their milestone. It runs on both collision engines
+against one snapshot, and again as three copies along the grid (a verdict mustn't
+depend on where its cell sits). `scripts/perf.py` repeats it to 500 fasteners and
+times it; CI reports that number on every push and fails if any verdict count moves.
+`uv run python scripts/golden.py --out some-dir` writes `bench.step` and its sidecars
+for you to open and check against; a nightly job re-runs the bench against upgraded
+dependencies so a CAD-kernel update that moves a verdict shows up before it lands.
 
 CI runs the same lanes by the same names; `scripts/lanes.py` is the only spelling of how
 this project runs its checks.
