@@ -37,7 +37,7 @@ def test_metric_flag():
 
 
 def test_carriage_holds_itself():
-    bolt = Fastener(name="bumper_bolt_0", kind=Kind.SCREW, head=Head.CARRIAGE)
+    bolt = Fastener(name="fender_bolt_0", kind=Kind.SCREW, head=Head.CARRIAGE)
     assert bolt.self_holding
     plain = Fastener(name="lid_bolt_0", kind=Kind.SCREW, head=Head.SOCKET)
     assert not plain.self_holding

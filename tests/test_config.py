@@ -1,4 +1,4 @@
-"""The sidecar: the spec's example loads, globs match, nothing fails silently."""
+"""The sidecar: the spec's example (names generic) loads, matches, fails loudly."""
 
 import pytest
 from build123d import Box
@@ -9,23 +9,23 @@ from wrenchroom.fasteners import AUTO, Head, Kind
 
 SPEC_EXAMPLE = """
 fasteners:
-  - parts: "block_*_bolt_*"
+  - parts: "bracket_*_bolt_*"
     kind: screw
     head: socket
     size: M6
     length: 50
     tool: hex-key-5
     axis: auto
-  - parts: "block_*_nut_*"
+  - parts: "bracket_*_nut_*"
     kind: nut
     size: M6
-  - parts: "bumper_bolt_*"
+  - parts: "fender_bolt_*"
     head: carriage
 ignore:
   - "wire_*"
   - "*_spring_*"
 pairs:
-  - [lift_link_0_bolt_bot, lift_link_0_nut_bot]
+  - [swing_arm_bolt_0, swing_arm_nut_0]
 """
 
 
@@ -51,7 +51,7 @@ def test_spec_example_loads(spec_config):
     assert first.tool == "hex-key-5"
     assert first.axis == AUTO
     assert spec_config.ignore == ("wire_*", "*_spring_*")
-    assert spec_config.pairs == (("lift_link_0_bolt_bot", "lift_link_0_nut_bot"),)
+    assert spec_config.pairs == (("swing_arm_bolt_0", "swing_arm_nut_0"),)
 
 
 def test_head_implies_screw_and_bare_nut_says_so(spec_config):
@@ -61,23 +61,23 @@ def test_head_implies_screw_and_bare_nut_says_so(spec_config):
 
 def test_apply_matches_globs_and_reports_what_missed(spec_config):
     assembly = assembly_of(
-        "block_frontL_bolt_0",
-        "block_frontL_bolt_1",
-        "block_frontL_nut_0",
+        "bracket_left_bolt_0",
+        "bracket_left_bolt_1",
+        "bracket_left_nut_0",
         "wire_main",
         "frame_left",
     )
     matches = spec_config.apply(assembly)
     names = sorted(f.name for f in matches.fasteners)
-    assert names == ["block_frontL_bolt_0", "block_frontL_bolt_1", "block_frontL_nut_0"]
-    assert [r.parts for r in matches.unmatched_rules] == ["bumper_bolt_*"]
+    assert names == ["bracket_left_bolt_0", "bracket_left_bolt_1", "bracket_left_nut_0"]
+    assert [r.parts for r in matches.unmatched_rules] == ["fender_bolt_*"]
     assert matches.unmatched_ignores == ("*_spring_*",)
     assert not matches.clean
 
 
 def test_clean_when_everything_matches(spec_config):
     assembly = assembly_of(
-        "block_a_bolt_0", "block_a_nut_0", "bumper_bolt_0", "wire_x", "big_spring_1"
+        "bracket_a_bolt_0", "bracket_a_nut_0", "fender_bolt_0", "wire_x", "big_spring_1"
     )
     assert spec_config.apply(assembly).clean
 

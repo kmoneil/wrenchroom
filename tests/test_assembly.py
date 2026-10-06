@@ -14,9 +14,9 @@ def four_labelled_solids():
     right = Pos(30, 0, 0) * Box(10, 10, 10)
     right.label = "frame_right"
     bolt_a = Pos(15, 0, 20) * Cylinder(3, 12)
-    bolt_a.label = "block_frontL_bolt_0"
+    bolt_a.label = "bracket_left_bolt_0"
     bolt_b = Pos(15, 20, 20) * Cylinder(3, 12)
-    bolt_b.label = "block_frontL_bolt_0"
+    bolt_b.label = "bracket_left_bolt_0"
     return [left, right, bolt_a, bolt_b]
 
 
@@ -31,8 +31,8 @@ def test_step_round_trip_keeps_names_and_makes_repeats_unique(tmp_path):
     assert assembly.names == (
         "frame_left",
         "frame_right",
-        "block_frontL_bolt_0",
-        "block_frontL_bolt_0#2",
+        "bracket_left_bolt_0",
+        "bracket_left_bolt_0#2",
     )
     assert len(assembly) == 4
 
@@ -43,8 +43,8 @@ def test_from_shapes_matches_the_step_path():
     assert assembly.names == (
         "frame_left",
         "frame_right",
-        "block_frontL_bolt_0",
-        "block_frontL_bolt_0#2",
+        "bracket_left_bolt_0",
+        "bracket_left_bolt_0#2",
     )
 
 

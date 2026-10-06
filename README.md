@@ -40,11 +40,13 @@ What exists today (M1):
 ## What it will do
 
 ```console
-$ wrenchroom check robot.step
-213 fasteners: 180 turn, 25 held by a turning partner, 6 blocked, 2 not covered
-
-controller_box_gland_blade_R   spanner-22   blocked   controller_box_gland_blade_L, deck_floor
-...
+$ wrenchroom check bench.step    # the golden bench's own report, verbatim
+36 fasteners: 23 turn, 2 held, 10 blocked, 1 stuck, 0 not covered
+  M16 nut                  spanner-24     x5    3 of 5 fail
+  M6 carriage screw        -              x1    all pass (holds itself)
+  ...
+FAIL glands_close_a_gland  spanner-24  blocked  glands_close_b_gland
+FAIL key_wall_near_screw   hex-key-5   blocked  key_wall_near_wall
 ```
 
 - **Any CAD.** STEP assemblies (AP203, AP214, AP242) from Fusion, Onshape, SolidWorks,
