@@ -2,7 +2,7 @@
 
 Usage::
 
-    uv run python scripts/golden.py --update      # rewrite both committed snapshots
+    uv run python scripts/golden.py --update      # rewrite the committed snapshots
     uv run python scripts/golden.py --out DIR     # write bench.step + sidecars to look at
 """
 
@@ -18,6 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 GOLDEN = REPO_ROOT / "tests" / "golden"
 SNAPSHOT = GOLDEN / "bench.snapshot.json"
 DETECTED = GOLDEN / "bench.detected.snapshot.json"
+MARKDOWN = GOLDEN / "bench.snapshot.md"
 
 
 def main(argv: list[str]) -> int:
@@ -29,7 +30,13 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     sys.path.insert(0, str(GOLDEN))
-    from bench import canonical, check_bench, check_detected, write  # noqa: PLC0415
+    from bench import (  # noqa: PLC0415
+        canonical,
+        canonical_markdown,
+        check_bench,
+        check_detected,
+        write,
+    )
 
     if args.out:
         args.out.mkdir(parents=True, exist_ok=True)
@@ -45,6 +52,8 @@ def main(argv: list[str]) -> int:
         path.write_text(json.dumps(canonical(document.to_json_dict()), indent=1) + "\n")
         print(f"snapshot rewritten: {path}")
         print(f"summary: {document.summary}")
+    MARKDOWN.write_text(canonical_markdown(report))
+    print(f"snapshot rewritten: {MARKDOWN}")
     return 0
 
 

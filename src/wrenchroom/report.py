@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import enum
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -145,16 +146,14 @@ class Report:
         passed through :func:`wrenchroom.terminal.printable` and none of them can
         steer a terminal or break into a second line.
         """
-        counts = self.summary
-        lines = [
-            f"{counts['fasteners']} fasteners: {counts['turns']} turn, "
-            f"{counts['held']} held, {counts['blocked']} blocked, "
-            f"{counts['stuck']} stuck, {counts['not_covered']} not covered"
-        ]
-        lines.extend(_group_table(self.results))
+        lines = [_summary_text(self.summary)]
+        lines.extend(
+            f"  {group.what:24} {group.tool or '-':14} x{group.count:<4} {group.outcome}"
+            for group in _groups(self.results)
+        )
         for result in self.failures():
-            via = result.stuck_on if result.verdict is Verdict.STUCK else result.blockers
-            what = result.reason or ", ".join(via) or "no tool found"
+            names, reason = _why(result)
+            what = reason or ", ".join(names) or NO_TOOL
             tool = result.tool or "-"
             lines.append(f"FAIL {result.fastener.name}  {tool}  {result.verdict}  {what}")
         for glob in self.unmatched_rules:
@@ -163,6 +162,76 @@ class Report:
             lines.append(f"WARN ignore matched nothing: {glob!r}")
         lines.extend(f"WARN {warning}" for warning in self.warnings)
         return [printable(line) for line in lines]
+
+    # -------------------------------------------------------------- Markdown
+
+    def markdown(self) -> str:
+        """The terminal report as Markdown, for a CI job summary or a PR comment.
+
+        The same content as :meth:`terminal_lines`: the summary, the table by
+        type, the failures and the warnings. Names come from the model and a
+        comment renders them, so every name is shown in a code span, where no
+        link, image, emphasis or HTML can start, after :func:`printable` has
+        written out anything that could steer a terminal; inside a table a pipe
+        is escaped so a name can't split its cell. Text that names nothing from
+        the model (kinds, sizes, ways) is backslash-escaped instead.
+        """
+        title = f"wrenchroom: {md_code(self.model, in_table=False)}" if self.model else "wrenchroom"
+        lines = [
+            f"### {title}",
+            "",
+            f"**{_summary_text(self.summary)}**",
+            "",
+            f"Kit {md_code(self.kit, in_table=False)}, {md_text(self.engine)} engine, "
+            f"wrenchroom {md_text(__version__)}.",
+        ]
+        groups = _groups(self.results)
+        if groups:
+            lines += ["", "| Fasteners | Tool | Count | Outcome |", "| --- | --- | ---: | --- |"]
+            lines.extend(
+                f"| {md_text(group.what)} | {_md_tool(group.tool)} | {group.count} "
+                f"| {md_text(group.outcome)} |"
+                for group in groups
+            )
+        failures = self.failures()
+        if failures:
+            lines += [
+                "",
+                "#### Failures",
+                "",
+                "| Fastener | Tool | Verdict | In the way, or why |",
+                "| --- | --- | --- | --- |",
+            ]
+            for result in failures:
+                names, reason = _why(result)
+                what = (
+                    md_code(reason)
+                    if reason
+                    else ", ".join(md_code(name) for name in names) or NO_TOOL
+                )
+                lines.append(
+                    f"| {md_code(result.fastener.name)} | {_md_tool(result.tool)} "
+                    f"| {result.verdict} | {what} |"
+                )
+        warnings = [
+            *(
+                f"rule matched nothing: {md_code(glob, in_table=False)} (renamed part?)"
+                for glob in self.unmatched_rules
+            ),
+            *(
+                f"ignore matched nothing: {md_code(glob, in_table=False)}"
+                for glob in self.unmatched_ignores
+            ),
+            *(md_code(warning, in_table=False) for warning in self.warnings),
+        ]
+        if warnings:
+            lines += ["", "#### Warnings", ""]
+            lines.extend(f"- {warning}" for warning in warnings)
+        return "\n".join(lines) + "\n"
+
+    def to_markdown(self, path: str | Path) -> None:
+        """Write the Markdown report to a file."""
+        Path(path).write_text(self.markdown())
 
 
 def _result_json(result: FastenerResult) -> dict[str, object]:
@@ -188,6 +257,24 @@ def _result_json(result: FastenerResult) -> dict[str, object]:
     }
 
 
+#: What a failure says when nothing was in the way and nothing explains it.
+NO_TOOL = "no tool found"
+
+
+def _summary_text(counts: dict[str, int]) -> str:
+    return (
+        f"{counts['fasteners']} fasteners: {counts['turns']} turn, "
+        f"{counts['held']} held, {counts['blocked']} blocked, "
+        f"{counts['stuck']} stuck, {counts['not_covered']} not covered"
+    )
+
+
+def _why(result: FastenerResult) -> tuple[tuple[str, ...], str | None]:
+    """What a failure ran into (stuck: what's in its way out), or the reason it has."""
+    names = result.stuck_on if result.verdict is Verdict.STUCK else result.blockers
+    return names, result.reason
+
+
 def _describe(fastener: Fastener) -> str:
     bits = [fastener.size.designation if fastener.size else "?"]
     if fastener.head:
@@ -196,12 +283,22 @@ def _describe(fastener: Fastener) -> str:
     return " ".join(bits)
 
 
-def _group_table(results: tuple[FastenerResult, ...]) -> list[str]:
+@dataclass(frozen=True)
+class _Group:
+    """One row of the table by type: what, the tool, how many, how they fared."""
+
+    what: str
+    tool: str | None
+    count: int
+    outcome: str
+
+
+def _groups(results: tuple[FastenerResult, ...]) -> list[_Group]:
     groups: dict[tuple[str, str], list[FastenerResult]] = {}
     for result in results:
-        key = (_describe(result.fastener), result.tool or "-")
+        key = (_describe(result.fastener), result.tool or "")
         groups.setdefault(key, []).append(result)
-    lines = []
+    rows = []
     for (what, tool), members in sorted(groups.items()):
         failed = [m for m in members if not m.passed]
         if failed:
@@ -210,5 +307,54 @@ def _group_table(results: tuple[FastenerResult, ...]) -> list[str]:
             ways = {m.how for m in members if m.how}
             hardest = max(ways, default="", key=len)
             outcome = f"all pass ({hardest})" if hardest else "all pass"
-        lines.append(f"  {what:24} {tool:14} x{len(members):<4} {outcome}")
-    return lines
+        rows.append(_Group(what, tool or None, len(members), outcome))
+    return rows
+
+
+# ---------------------------------------------------------------------------
+# Markdown escaping: what a GitHub comment renders can't be steered by a name.
+# ---------------------------------------------------------------------------
+
+#: The characters that can open something in CommonMark or GFM inline text: an
+#: escape, code, emphasis, strikethrough, a link or image, HTML, an entity, a cell
+#: boundary. Each is one CommonMark lets a backslash escape.
+_MD_SPECIAL = re.compile(r"([\\`*_~\[\]!<>&|])")
+
+
+def md_text(text: str) -> str:
+    """Plain text for Markdown: every character that could open something escaped.
+
+    For text wrenchroom writes itself (kinds, sizes, ways, counts), placed
+    mid-line, where nothing should be read as Markdown. A name from the model
+    goes through :func:`md_code` instead: escaping alone doesn't stop a GitHub
+    comment from turning ``www.example.com`` into a link.
+    """
+    return _MD_SPECIAL.sub(r"\\\1", printable(text))
+
+
+def md_code(text: str, *, in_table: bool = True) -> str:
+    r"""Text shown exactly, in a code span: how every name from the model is written.
+
+    Nothing inside a code span is Markdown, so no link, image, emphasis or HTML
+    can start there. The fence is one backtick longer than the longest run in
+    the text, so the text can't close it; the text is padded with a space when
+    an edge would otherwise be misread (a backtick against the fence, or a space
+    at both ends, which a renderer strips). In a table a pipe is escaped as
+    ``\|``, which GitHub turns back into a pipe inside the span, so a name can't
+    split its cell.
+    """
+    shown = printable(text)
+    if not shown:
+        return '""'
+    longest = max((len(run) for run in re.findall("`+", shown)), default=0)
+    fence = "`" * (longest + 1)
+    edges = shown[0] + shown[-1]
+    if "`" in edges or (shown[0] == " " and shown[-1] == " " and shown.strip(" ")):
+        shown = f" {shown} "
+    if in_table:
+        shown = shown.replace("|", "\\|")
+    return f"{fence}{shown}{fence}"
+
+
+def _md_tool(tool: str | None) -> str:
+    return md_code(tool) if tool else "-"

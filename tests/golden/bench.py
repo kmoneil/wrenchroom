@@ -22,9 +22,11 @@ from build123d import Compound, Location, Pos, export_step
 from cells import CELLS
 from parts import plate, slab, socket_screw, state_lever_raised
 
+from wrenchroom import __version__
 from wrenchroom.assembly import Assembly
 from wrenchroom.check import check
 from wrenchroom.config import Config
+from wrenchroom.report import md_text
 
 PITCH = 1000.0
 
@@ -175,6 +177,14 @@ def canonical(document):
         (_canonical_fastener(f) for f in document["fasteners"]), key=lambda f: f["name"]
     )
     return out
+
+
+def canonical_markdown(report):
+    """The Markdown report with its engine and version, which vary, as placeholders."""
+    provenance = f", {report.engine} engine, wrenchroom {md_text(__version__)}."
+    text = report.markdown()
+    assert text.count(provenance) == 1, "the provenance line moved"
+    return text.replace(provenance, ", ENGINE engine, wrenchroom VERSION.")
 
 
 def _canonical_fastener(entry):
