@@ -96,7 +96,9 @@ def gland_neighbour(distance):
 
 
 def ring_on_gland(scene):
-    return run_until_turning(ring_attempts(ORIGIN_MOUNT, SPANNER_22, GLAND_AF, GLAND_HEIGHT, scene))
+    return run_until_turning(
+        ring_attempts(ORIGIN_MOUNT, SPANNER_22, GLAND_AF, (0.0, -GLAND_HEIGHT), scene)
+    )
 
 
 def test_glands_25mm_apart_leave_no_room_for_a_ring():
@@ -125,7 +127,7 @@ def test_walls_leaving_15_degrees_hold_but_do_not_turn():
         right=Pos(reach / 2, -40, -GLAND_HEIGHT / 2) * Box(reach, 10, 30),
         back=Pos(-(reach + 25) / 2, 0, -GLAND_HEIGHT / 2) * Box(reach - 25, 200, 30),
     )
-    tried = list(ring_attempts(ORIGIN_MOUNT, SPANNER_22, GLAND_AF, GLAND_HEIGHT, scene))
+    tried = list(ring_attempts(ORIGIN_MOUNT, SPANNER_22, GLAND_AF, (0.0, -GLAND_HEIGHT), scene))
     assert not any(a.turns for a in tried)
     assert any(a.holds for a in tried)
     assert all(a.swing_deg < 30 for a in tried)

@@ -2,7 +2,13 @@
 
 import pytest
 
-from fixture_models import SEAT_Z, nut_on_plate, screw_facing_wall
+from fixture_models import (
+    SEAT_Z,
+    gland_on_wall,
+    nut_on_plate,
+    nut_with_bolt_through,
+    screw_facing_wall,
+)
 from wrenchroom.check import check
 from wrenchroom.config import Config
 from wrenchroom.report import Verdict
@@ -117,3 +123,45 @@ def test_terminal_lines_lead_with_the_summary():
     lines = report.terminal_lines()
     assert lines[0].startswith("1 fasteners: 0 turn")
     assert any(line.startswith("FAIL bolt") for line in lines)
+
+
+# ---------------------------------------------------------------------------
+# The three resolution bugs the bench prototyping found (handoff section 8).
+# ---------------------------------------------------------------------------
+
+
+def test_a_nut_with_its_bolt_through_it_still_orients():
+    # Bug A: the free-face probe is an annulus, so the bolt's protruding end
+    # doesn't read as "covered" and the nut resolves without an axis hint.
+    report = run(nut_with_bolt_through(), {"parts": "nut", "kind": "nut", "size": "M6"})
+    (result,) = report.results
+    assert result.verdict is Verdict.TURNS
+    assert result.tool == "spanner-10"
+    assert result.axis == pytest.approx((0, 0, 1))
+
+
+def test_a_gland_orients_by_its_hex_not_its_extremes():
+    # Bug B: the probes sit at the hex band's ends; the stub below is inside the
+    # wall (covered side), the dome above is the gland's own body (free side).
+    report = run(gland_on_wall(), {"parts": "gland", "kind": "nut", "size": "M16", "socket": False})
+    (result,) = report.results
+    assert result.verdict is Verdict.TURNS
+    assert result.tool == "spanner-24"
+    assert result.axis == pytest.approx((0, 0, 1))
+
+
+def test_the_ring_sits_on_the_hex_not_the_dome():
+    # Bug C: with a rib beside the hex, a ring placed on the dome would clear it
+    # and pass falsely; placed on the hex band it must report the rib.
+    report = run(
+        gland_on_wall(rib=True),
+        {"parts": "gland", "kind": "nut", "size": "M16", "socket": False, "axis": "+z"},
+    )
+    (result,) = report.results
+    assert result.verdict is Verdict.BLOCKED
+    assert "rib" in result.blockers
+
+
+def test_the_json_document_carries_its_schema_number():
+    report = run(screw_facing_wall(15.0), M6_SOCKET)
+    assert report.to_json_dict()["schema"] == 1

@@ -87,21 +87,26 @@ def ring_attempts(
     mount: Mount,
     spanner: Spanner,
     hex_af: float,
-    hex_height: float,
+    hex_band: tuple[float, float],
     scene: Scene,
     step_deg: float = DEFAULT_STEP_DEG,
 ) -> Iterator[Attempt]:
     """The ring end at full length, then the stubby, lazily.
 
-    The ring is an annulus around the hex, centred on the hex's mid-plane (the
-    hex runs from the seat down into the joint by ``hex_height``); the handle a
-    box from the ring's edge out to 0.85 of the spanner's length. Turns over
-    30 degrees, holds at any one angle.
+    The ring is an annulus around the hex, centred on the hex band's mid-plane;
+    the handle a box from the ring's edge out to 0.85 of the spanner's length.
+    Turns over 30 degrees, holds at any one angle.
+
+    ``hex_band`` is ``(top, bottom)`` in the local frame (seat at 0, both <= 0):
+    where the hex actually is, which on a cable gland is below a dome nothing
+    grips (bug C in the bench handoff). For a plain nut or a hex head the band's
+    top is the seat and nothing changes.
     """
     tool = f"spanner-{spanner.af:g}"
+    band_top, band_bottom = hex_band
     inner = hex_af / sqrt(3) + RING_CLEARANCE  # hex corner radius plus clearance
-    thickness = min(spanner.head_thickness, hex_height - _MIN_GRIP)
-    mid_z = -hex_height / 2
+    thickness = min(spanner.head_thickness, (band_top - band_bottom) - _MIN_GRIP)
+    mid_z = (band_top + band_bottom) / 2
     ring = axial_annulus(inner, spanner.ring_outer_radius, mid_z - thickness / 2, thickness)
     for way, length in (
         ("ring, full length", spanner.length),

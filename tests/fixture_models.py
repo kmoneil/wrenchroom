@@ -7,7 +7,7 @@ that need a real file export one of these to tmp_path.
 
 import math
 
-from build123d import Box, Cylinder, Pos, RegularPolygon, extrude
+from build123d import Box, Cylinder, Pos, RegularPolygon, Rot, extrude
 
 from wrenchroom.assembly import Assembly, Part
 
@@ -49,3 +49,39 @@ def nut_on_plate():
     """The nut on a plate: the free face is up, the plate rules the bottom out."""
     plate = Pos(0, 0, -5) * Box(200, 200, 10)
     return Assembly([Part("nut", hex_nut()), Part("plate", plate)])
+
+
+def hex_bolt(d, length, af, head_h):
+    """A hex head bolt, head on z = 0..head_h, shank hanging below."""
+    hexagon = RegularPolygon(af / math.sqrt(3), 6)
+    return extrude(hexagon, head_h) + Pos(0, 0, -length / 2) * Cylinder(d / 2, length)
+
+
+def nut_with_bolt_through(af=10.0, nut_h=5.2, bolt_d=6.0, bolt_len=20.0):
+    """Bug A's shape: a plate, a bolt up through it, the nut on top with the
+    bolt's end sticking out of its free face."""
+    plate = Pos(0, 0, -5) * Box(200, 200, 10) - Cylinder(bolt_d / 2 + 0.5, 11)
+    bolt = Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(bolt_d, bolt_len, 10, 4.0)
+    hexagon = RegularPolygon(af / math.sqrt(3), 6)
+    nut = extrude(hexagon, nut_h) - Cylinder(bolt_d / 2, 4 * nut_h)
+    return Assembly([Part("plate", plate), Part("bolt", bolt), Part("nut", nut)])
+
+
+def gland(af=24.0, hex_h=8.0, dome_r=10.0, dome_h=14.0, stub_r=10.0, stub_h=12.0):
+    """Bug B and C's shape: a cable gland, hex between a dome above and a
+    thread stub below, bored through."""
+    hexagon = RegularPolygon(af / math.sqrt(3), 6)
+    body = extrude(hexagon, hex_h)
+    dome = Pos(0, 0, hex_h + dome_h / 2) * Cylinder(dome_r, dome_h)
+    stub = Pos(0, 0, -stub_h / 2) * Cylinder(stub_r, stub_h)
+    return body + dome + stub - Pos(0, 0, 5) * Cylinder(4.5, 100)
+
+
+def gland_on_wall(rib=False):
+    """The gland through a wall, optionally with a rib beside its hex (bug C:
+    the ring must be placed on the hex band, where the rib is in the way)."""
+    wall = Pos(0, 0, -5) * Box(200, 200, 10) - Cylinder(10.2, 11)
+    parts = [Part("gland", gland()), Part("wall", wall)]
+    if rib:
+        parts.append(Part("rib", Pos(22, 0, 3) * Box(12, 80, 6)))
+    return Assembly(parts)

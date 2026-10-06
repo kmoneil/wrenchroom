@@ -37,7 +37,7 @@ from wrenchroom.tools.drivers import SHAFT_RADIUS, driver_attempt
 from wrenchroom.tools.hex_keys import ISO_2936, hex_key_attempts
 from wrenchroom.tools.sockets import socket_attempts, socket_for
 from wrenchroom.tools.spanners import ring_attempts, spanner_for
-from wrenchroom.tools.sweep import DEFAULT_STEP_DEG, Attempt, Mount, axial_cylinder
+from wrenchroom.tools.sweep import DEFAULT_STEP_DEG, Attempt, Mount, axial_annulus
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -165,10 +165,23 @@ def _scene_for(assembly: Assembly, config: Config, fastener: Fastener) -> Scene:
 
 @dataclass(frozen=True)
 class _Geometry:
-    """What resolution learned about the part beyond the mount."""
+    """What resolution learned about the part beyond the mount.
 
-    hex_height: float
+    ``band_top`` and ``band_bottom`` are the widest region's faces in the local
+    frame (seat at 0, axis +z, both <= 0): a plain nut's whole body, a hex head's
+    depth, a gland's hex between its dome and its thread stub. Spanner and ring
+    placement use the band, never the part's overall extent, because the part's
+    top may be a dome nothing grips (bug C in the bench handoff).
+    """
+
+    band_top: float
+    band_bottom: float
     circumradius: float
+    bore_radius: float
+
+    @property
+    def band_height(self) -> float:
+        return self.band_top - self.band_bottom
 
 
 def _resolve(part: Part, fastener: Fastener, scene: Scene) -> tuple[Mount, _Geometry]:
@@ -176,17 +189,45 @@ def _resolve(part: Part, fastener: Fastener, scene: Scene) -> tuple[Mount, _Geom
     origin, vertices = _axis_frame(part, direction)
     projections = [_dot(_sub(v, origin), direction) for v in vertices]
     radials = [_radial(_sub(v, origin), direction) for v in vertices]
-    if fastener.axis == AUTO:
-        direction, projections = _orient(
-            part, fastener, scene, origin, direction, projections, radials
-        )
+    bore = _bore_radius(part, direction)
+    if fastener.axis == AUTO and _is_flipped(
+        part, fastener, scene, origin, direction, projections, radials, bore
+    ):
+        direction = _neg(direction)
+        projections = [-p for p in projections]
     top = max(projections)
     seat = _add(origin, _scale(direction, top))
-    hex_height = _hex_height(projections, radials, top)
+    band_lo, band_hi = _band(projections, radials)
     return (
         Mount(seat=seat, axis=direction),
-        _Geometry(hex_height=hex_height, circumradius=max(radials, default=0.0)),
+        _Geometry(
+            band_top=band_hi - top,
+            band_bottom=band_lo - top,
+            circumradius=max(radials, default=0.0),
+            bore_radius=bore,
+        ),
     )
+
+
+def _band(projections: list[float], radials: list[float]) -> tuple[float, float]:
+    """The widest region's extent along the axis: where a spanner or ring grips."""
+    widest = max(radials, default=0.0)
+    heights = [p for p, r in zip(projections, radials, strict=True) if r > 0.75 * widest]
+    if not heights:
+        return (0.0, 0.0)
+    return (min(heights), max(heights))
+
+
+def _bore_radius(part: Part, direction: Vec) -> float:
+    """The smallest coaxial cylinder: a nut's bore, a gland's cable way; 0 if none."""
+    radii = [
+        radius
+        for face in part.shape.faces().filter_by(GeomType.CYLINDER)
+        if (axis := face.axis_of_rotation) is not None
+        and abs(_dot(tuple(axis.direction), direction)) > _AXIAL
+        and (radius := face.radius) is not None
+    ]
+    return min(radii, default=0.0)
 
 
 def _largest_cylinder_axis(part: Part) -> Axis | None:
@@ -218,7 +259,7 @@ def _axis_frame(part: Part, direction: Vec) -> tuple[Vec, list[Vec]]:
     return origin, vertices  # type: ignore[return-value]
 
 
-def _orient(
+def _is_flipped(
     part: Part,
     fastener: Fastener,
     scene: Scene,
@@ -226,15 +267,12 @@ def _orient(
     direction: Vec,
     projections: list[float],
     radials: list[float],
-) -> tuple[Vec, list[float]]:
-    """Point the axis out of the joint: out of a head, out of a nut's free face."""
+    bore: float,
+) -> bool:
+    """Does the axis point into the joint instead of out of it?"""
     if fastener.kind is Kind.SCREW:
-        flipped = _head_is_at_bottom(part, direction)
-    else:
-        flipped = _free_face_is_at_bottom(scene, origin, direction, projections, radials)
-    if flipped:
-        return _neg(direction), [-p for p in projections]
-    return direction, projections
+        return _head_is_at_bottom(part, direction)
+    return _free_face_is_at_bottom(scene, origin, direction, projections, radials, bore)
 
 
 def _head_is_at_bottom(part: Part, direction: Vec) -> bool:
@@ -259,28 +297,32 @@ def _free_face_is_at_bottom(
     direction: Vec,
     projections: list[float],
     radials: list[float],
+    bore: float,
 ) -> bool:
-    """A nut's free face is the end no other part sits against."""
-    radius = max(radials) * 0.95
-    top, bottom = max(projections), min(projections)
-    plane_top = Mount(seat=_add(origin, _scale(direction, top)), axis=direction)
-    plane_bottom = Mount(seat=_add(origin, _scale(direction, bottom)), axis=_neg(direction))
-    top_free = scene.clear(plane_top.place(axial_cylinder(radius, 0.1, 1.1)))
-    bottom_free = scene.clear(plane_bottom.place(axial_cylinder(radius, 0.1, 1.1)))
+    """A nut's free face is the end no other part sits against.
+
+    Two lessons are built in (bugs A and B in the bench handoff). The probe is an
+    annulus, not a disc: the nut's own bolt sticks out of the free side, and a
+    disc would read it as covered; the annulus starts just outside the bore,
+    which anything threaded through the nut must fit inside. And the probes sit
+    at the ends of the widest region (the hex), not of the whole part: a gland's
+    thread stub and dome extend past its hex on both sides, so the part's own
+    extremes read as free air.
+    """
+    outer = max(radials) * 0.95
+    inner = bore + 0.5
+    if inner >= outer:
+        raise NotCovered("the bore leaves no face to probe for the free end")
+    band_lo, band_hi = _band(projections, radials)
+    plane_top = Mount(seat=_add(origin, _scale(direction, band_hi)), axis=direction)
+    plane_bottom = Mount(seat=_add(origin, _scale(direction, band_lo)), axis=_neg(direction))
+    top_free = scene.clear(plane_top.place(axial_annulus(inner, outer, 0.1, 1.0)))
+    bottom_free = scene.clear(plane_bottom.place(axial_annulus(inner, outer, 0.1, 1.0)))
     if top_free == bottom_free:
         raise NotCovered(
             "cannot tell the nut's free face: both ends are " + ("clear" if top_free else "covered")
         )
     return bottom_free
-
-
-def _hex_height(projections: list[float], radials: list[float], top: float) -> float:
-    """The axial extent of the widest region: a nut's body, a hex head's depth."""
-    widest = max(radials, default=0.0)
-    heights = [p for p, r in zip(projections, radials, strict=True) if r > 0.75 * widest]
-    if not heights:
-        return 0.0
-    return min(top - min(heights), top - min(projections))
 
 
 # ---------------------------------------------------------------------------
@@ -289,6 +331,9 @@ def _hex_height(projections: list[float], radials: list[float], top: float) -> f
 
 #: How parallel a face normal must be to the axis to count as an end face.
 _AXIAL = 0.99
+
+#: A hex band shorter than this, mm, gives a ring nothing to grip.
+_MIN_BAND = 0.5
 
 _KEYED_HEADS = (Head.SOCKET, Head.BUTTON, Head.FLAT)
 
@@ -349,9 +394,10 @@ def _hex_flats_attempts(
     af = spanner_af(fastener.size)
     if af is None:
         raise NotCovered(f"no across-flats for {fastener.size.designation}")
-    if geometry.hex_height <= 0:
+    if geometry.band_height <= _MIN_BAND:
         raise NotCovered("could not measure the hex's height")
-    yield from ring_attempts(mount, spanner_for(af), af, geometry.hex_height, scene, step_deg)
+    band = (geometry.band_top, geometry.band_bottom)
+    yield from ring_attempts(mount, spanner_for(af), af, band, scene, step_deg)
     if fastener.socket_allowed:
         yield from socket_attempts(mount, socket_for(af), af, scene, step_deg)
 
@@ -373,9 +419,10 @@ def _forced_attempts(
         return hex_key_attempts(mount, key, scene, step_deg)
     if family == "spanner":
         af = _as_float(size_text, name)
-        if geometry.hex_height <= 0:
+        if geometry.band_height <= _MIN_BAND:
             raise NotCovered("could not measure the hex's height")
-        return ring_attempts(mount, spanner_for(af), af, geometry.hex_height, scene, step_deg)
+        band = (geometry.band_top, geometry.band_bottom)
+        return ring_attempts(mount, spanner_for(af), af, band, scene, step_deg)
     if family == "socket":
         af = _as_float(size_text, name)
         return socket_attempts(mount, socket_for(af), af, scene, step_deg)

@@ -106,6 +106,10 @@ class Report:
     def to_json_dict(self) -> dict[str, object]:
         """The spec's JSON document."""
         return {
+            # The schema number is the private-run contract (bench handoff section
+            # 9): owners pin a wrenchroom version and diff reports over time, so
+            # any breaking change to this document bumps it, with a changelog line.
+            "schema": 1,
             "model": self.model,
             "kit": self.kit,
             "tool_version": __version__,
