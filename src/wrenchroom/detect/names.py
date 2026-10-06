@@ -238,6 +238,9 @@ _HEAD_RANK = (
     Head.HEX,
 )
 
+#: Describing words that are the noun when they end the name.
+_END_NOUNS = {"cap"}
+
 #: Words that qualify where a part sits or what it is made of, never what it is.
 _QUALIFIERS = {
     "top", "bot", "bottom", "upper", "lower", "left", "right", "front", "rear", "back",
@@ -359,9 +362,15 @@ def _words(text: str) -> list[str]:
 
 
 def _last_noun(words: list[str]) -> int | None:
-    """Where the word the name is about sits: the last one that isn't a qualifier."""
+    """Where the word the name is about sits: the last one that isn't a qualifier.
+
+    ``cap`` describes a screw before it ("socket head cap screw") and is the
+    thing itself at the end ("screw_cap", "end_cap").
+    """
     for index in range(len(words) - 1, -1, -1):
         word = words[index]
+        if word in _END_NOUNS and index == len(words) - 1:
+            return index
         if _describes(word):
             continue
         if word.isdigit() or len(word) == 1 or re.fullmatch(r"[a-z]\d+", word):

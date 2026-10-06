@@ -14,8 +14,8 @@ re-order seen late, and a collision check can't see it either way.
 
 ## Status
 
-**`wrenchroom check` works on real STEP files, with fasteners described by hand, fast
-enough for CI.** What exists today (M1 to M3):
+**`wrenchroom check` works on real STEP files, finds fasteners by their names and
+solids, and is fast enough for CI.** What exists today (M1 to M3, and most of M4):
 
 - `wrenchroom check model.step` reads a STEP assembly (names kept, repeats made
   unique), takes fastener descriptions from a `wrenchroom.yaml` sidecar, resolves each
@@ -34,6 +34,15 @@ enough for CI.** What exists today (M1 to M3):
   model of the mechanism, retries that say where a fastener passed), `explain`
   (every attempt for one fastener, with the blockers) and `tools` (the kit's
   dimensions, caveats inline) all work. `detect` exits 2 until M4 delivers it.
+- No sidecar needed for named parts. Fasteners are found from their part names (ISO
+  and DIN designations, McMaster-Carr numbers, descriptions such as `M6x20 SHCS` or
+  `hex nut M8`, code-CAD names such as `lift_link_bolt`) and completed from their
+  solids: the drive the model shows (a hex, a hex socket, a cross, a slot, a carriage
+  bolt's square neck) and the size that drive or the shank gives. A sidecar rule still
+  describes a part outright, `across_flats:` gives a hex its measured size, and
+  `checks: {detect: false}` turns detection off. With every fastener rule removed, the
+  golden bench's 36 are all found with the right kind and size. `wrenchroom detect`,
+  which writes the sidecar for you to correct and keep, is next.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
   504 fasteners is read and checked in about 7 s on an Apple M5 Max laptop (the
@@ -48,12 +57,12 @@ enough for CI.** What exists today (M1 to M3):
 
 ```console
 $ wrenchroom check bench.step    # the golden bench's own report, verbatim
-36 fasteners: 23 turn, 2 held, 10 blocked, 1 stuck, 0 not covered
+37 fasteners: 24 turn, 2 held, 10 blocked, 1 stuck, 0 not covered
   M16 nut                  spanner-24     x5    3 of 5 fail
   M6 carriage screw        -              x1    all pass (holds itself)
   ...
 FAIL glands_close_a_gland  spanner-24  blocked  glands_close_b_gland
-FAIL key_wall_near_screw   hex-key-5   blocked  key_wall_near_wall
+FAIL key_wall_near_screw  hex-key-5  blocked  key_wall_near_wall
 ```
 
 - **Any CAD.** STEP assemblies (AP203, AP214, AP242) from Fusion, Onshape, SolidWorks,

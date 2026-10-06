@@ -175,7 +175,7 @@ def _result_json(result: FastenerResult) -> dict[str, object]:
         "length": fastener.length_mm,
         "axis": list(result.axis) if result.axis else None,
         "seat": list(result.seat) if result.seat else None,
-        "source": "sidecar",
+        "source": fastener.source,
         "tool": result.tool,
         "verdict": result.verdict.value,
         "how": result.how,

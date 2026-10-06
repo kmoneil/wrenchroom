@@ -1,0 +1,243 @@
+"""Detection wired up (M4): how a name and a solid make a fastener, and check uses it.
+
+The merge rules, one test each: a drive the solid shows outranks the name; the
+name outranks a guess from the head's outline; a size the drive settles outranks
+the name's, which outranks a measured shank; a gland takes no size; a carriage
+bolt needs its square neck. Then the check: detection fills in for parts no rule
+names, a rule outranks it, ignored parts and `detect: false` keep it out, and the
+tools take the measured across-flats when there is one.
+"""
+
+import sys
+from pathlib import Path
+
+import pytest
+from build123d import Box, Cylinder, Pos
+
+from fastener_models import (
+    MINOR,
+    hex_bolt,
+    hex_nut,
+    hex_prism,
+    pan_phillips,
+    socket_screw,
+)
+from fixture_models import gland_on_wall, screw_facing_wall
+from wrenchroom.assembly import Assembly, Part
+from wrenchroom.check import check
+from wrenchroom.config import Config, ConfigError
+from wrenchroom.detect import NO_SQUARE_NECK, describe, find_fasteners, read_name
+from wrenchroom.fasteners import Head, Kind
+from wrenchroom.report import Verdict
+
+sys.path.insert(0, str(Path(__file__).parent / "golden"))
+import parts as bench_parts
+
+
+def detected(name, shape):
+    return describe(Part(name, shape), read_name(name))
+
+
+# ---------------------------------------------------------------------------
+# The merge, field by field.
+# ---------------------------------------------------------------------------
+
+
+def test_a_drive_the_solid_shows_outranks_the_name():
+    found = detected("hex bolt M6x20", socket_screw("M6"))
+    assert found.head is Head.SOCKET
+    assert found.drive_af == pytest.approx(5.0)
+    assert found.source == "name+geometry"
+    assert "socket" in found.basis
+
+
+def test_the_name_outranks_a_guess_from_the_outline():
+    found = detected("button head screw M6", socket_screw("M6", pocket=False))
+    assert found.head is Head.BUTTON
+
+
+def test_the_outline_is_used_when_the_name_says_nothing():
+    found = detected("lift_bolt", socket_screw("M6", pocket=False))
+    assert found.head is Head.SOCKET
+    assert "by its outline" in found.basis
+
+
+def test_a_printer_carriage_bolt_with_a_hex_head_is_a_hex_bolt():
+    found = detected("x_carriage_bolt", hex_bolt("M8"))
+    assert found.head is Head.HEX
+    assert found.not_covered is None
+
+
+def test_a_carriage_bolt_by_name_alone_is_not_trusted():
+    found = detected("carriage bolt M8", Cylinder(4, 30) + Pos(0, 0, 16) * Cylinder(8, 4))
+    assert found.head is None
+    assert found.not_covered == NO_SQUARE_NECK
+
+
+def test_a_carriage_bolt_with_its_square_neck_holds_itself():
+    found = detected("carriage bolt M6", bench_parts.carriage_bolt())
+    assert found.head is Head.CARRIAGE
+    assert found.not_covered is None
+
+
+def test_a_size_the_drive_settles_outranks_the_name():
+    found = detected("socket screw M5x20", socket_screw("M6"))  # a stale name
+    assert found.size.designation == "M6"
+    assert "M6 measured" in found.basis
+
+
+def test_the_name_size_outranks_a_measured_shank():
+    # An M5 drawn at its minor diameter with no socket reads as #8 by itself.
+    found = detected("screw M5x16", socket_screw("M5", pocket=False, shank=MINOR["M5"]))
+    assert found.size.designation == "M5"
+
+
+def test_a_measured_size_fills_in_when_the_name_has_none():
+    found = detected("frame_bolt", hex_bolt("M10"))
+    assert found.size.designation == "M10"
+    assert found.drive_af == pytest.approx(16.0)
+
+
+def test_a_gland_takes_its_hex_and_no_size():
+    found = detected("cable_gland", bench_parts.gland())
+    assert found.kind is Kind.NUT
+    assert found.size is None
+    assert found.drive_af == pytest.approx(24.0)
+    assert not found.socket_allowed
+
+
+def test_a_set_screw_is_not_covered_with_the_reason():
+    found = detected("set screw M6x10", Cylinder(3, 10))
+    assert "set screw" in found.not_covered
+
+
+def test_a_name_with_nothing_measurable_is_source_name():
+    found = detected("bolt M6x20", Box(5, 5, 5))
+    assert found.source == "name"
+    assert found.size.designation == "M6"
+    assert found.basis == "noun 'bolt', M6x20"
+
+
+def test_phillips_is_read_from_the_cross():
+    found = detected("frame_screw", pan_phillips())
+    assert (found.head, found.size.designation) == (Head.PHILLIPS, "M4")
+
+
+def test_only_named_fasteners_are_found():
+    parts = [
+        Part("bolt", hex_bolt("M8")),
+        Part("plate", Box(50, 50, 5)),
+        Part("nut", hex_nut("M8")),
+    ]
+    assert sorted(f.name for f in find_fasteners(parts)) == ["bolt", "nut"]
+
+
+# ---------------------------------------------------------------------------
+# In the check.
+# ---------------------------------------------------------------------------
+
+
+def run(assembly, config=None, **kwargs):
+    return check(assembly, Config.from_dict(config or {}), engine="exact", **kwargs)
+
+
+def test_with_no_sidecar_the_bolt_is_found_and_checked():
+    report = run(screw_facing_wall(15.0))
+    (result,) = report.results
+    assert result.fastener.name == "bolt"
+    assert result.verdict is Verdict.BLOCKED
+    assert result.blockers == ("wall",)
+    assert report.to_json_dict()["fasteners"][0]["source"] in {"name", "name+geometry"}
+
+
+def test_a_rule_outranks_detection():
+    rule = {"parts": "bolt", "kind": "screw", "head": "torx", "size": "M6"}
+    (result,) = run(screw_facing_wall(50.0), {"fasteners": [rule]}).results
+    assert result.fastener.source == "sidecar"
+    assert "Torx" in result.reason
+
+
+def test_detect_false_finds_nothing():
+    report = run(screw_facing_wall(50.0), {"checks": {"detect": False}})
+    assert report.results == ()
+
+
+def test_an_ignored_part_is_never_detected():
+    report = run(screw_facing_wall(50.0), {"ignore": ["bolt"]})
+    assert report.results == ()
+
+
+def test_a_gland_found_by_name_gets_the_spanner_its_hex_takes():
+    found = run(gland_on_wall())
+    described = run(
+        gland_on_wall(),
+        {"fasteners": [{"parts": "gland", "kind": "nut", "size": "M16", "socket": False}]},
+    )
+    (alone,) = found.results
+    (ruled,) = described.results
+    assert (
+        (alone.verdict, alone.tool) == (ruled.verdict, ruled.tool) == (Verdict.TURNS, "spanner-24")
+    )
+
+
+def test_across_flats_in_the_sidecar_picks_the_spanner():
+    rule = {"parts": "nut", "kind": "nut", "size": "M8", "across_flats": 13}
+    nut = Assembly([Part("nut", hex_nut("M8")), Part("plate", Pos(0, 0, -5) * Box(200, 200, 10))])
+    (result,) = run(nut, {"fasteners": [rule]}).results
+    assert result.tool == "spanner-13"
+
+
+def test_an_imperial_hex_is_not_covered_rather_than_guessed():
+    inch_nut = hex_prism(11.1125, 6) - Cylinder(3.175, 30)  # 7/16" hex
+    nut = Assembly([Part("nut", inch_nut), Part("plate", Pos(0, 0, -5) * Box(200, 200, 10))])
+    (result,) = run(nut).results
+    assert result.verdict is Verdict.NOT_COVERED
+    assert "11.11 across flats is no metric tool size" in result.reason
+
+
+def test_a_socket_no_key_fits_is_not_covered():
+    odd = (
+        Pos(0, 0, -10) * Cylinder(3, 20)
+        + Pos(0, 0, 3) * Cylinder(5, 6)
+        - hex_prism(4.7625, 3.01, 3)
+    )
+    report = run(Assembly([Part("screw", odd)]))
+    (result,) = report.results
+    assert result.verdict is Verdict.NOT_COVERED
+    assert "4.76 across flats" in result.reason
+
+
+# ---------------------------------------------------------------------------
+# The sidecar keys.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("value", [24, 24.0, 5.5])
+def test_across_flats_takes_a_positive_number(value):
+    config = Config.from_dict({"fasteners": [{"parts": "g", "kind": "nut", "across_flats": value}]})
+    assert config.rules[0].drive_af == float(value)
+
+
+@pytest.mark.parametrize("value", [0, -3, "24", True])
+def test_across_flats_refuses_anything_else(value):
+    with pytest.raises(ConfigError, match="across_flats"):
+        Config.from_dict({"fasteners": [{"parts": "g", "kind": "nut", "across_flats": value}]})
+
+
+def test_detect_is_on_unless_said_otherwise():
+    assert Config.from_dict({}).detect
+    assert not Config.from_dict({"checks": {"detect": False}}).detect
+    with pytest.raises(ConfigError, match="detect"):
+        Config.from_dict({"checks": {"detect": "no"}})
+
+
+def test_a_nut_whose_size_has_no_spanner_is_not_covered_not_a_crash():
+    # Found by this file: the hex-flats attempts are a generator, and a reason
+    # raised inside one surfaced only while the attempts ran, outside the code
+    # that turns it into a verdict, so the whole check crashed. ISO 4032 has no
+    # M3.5 row; that has always been reachable from a sidecar.
+    rule = {"parts": "nut", "kind": "nut", "size": "M3.5", "axis": "+z"}
+    nut = Assembly([Part("nut", hex_prism(6.0, 2.8) - Cylinder(1.75, 10))])
+    (result,) = run(nut, {"fasteners": [rule], "checks": {"detect": False}}).results
+    assert result.verdict is Verdict.NOT_COVERED
+    assert result.reason == "no across-flats for M3.5"

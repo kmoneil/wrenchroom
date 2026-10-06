@@ -136,7 +136,9 @@ def test_terminal_lines_lead_with_the_summary(engine):
 def test_a_nut_with_its_bolt_through_it_still_orients(engine):
     # Bug A: the free-face probe is an annulus, so the bolt's protruding end
     # doesn't read as "covered" and the nut resolves without an axis hint.
-    report = run(engine, nut_with_bolt_through(), {"parts": "nut", "kind": "nut", "size": "M6"})
+    # The bolt through it is found by its name too; this test is about the nut.
+    nut_rule = {"parts": "nut", "kind": "nut", "size": "M6"}
+    report = run(engine, nut_with_bolt_through(), nut_rule, only="nut")
     (result,) = report.results
     assert result.verdict is Verdict.TURNS
     assert result.tool == "spanner-10"

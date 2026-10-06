@@ -533,8 +533,13 @@ CELLS.append(
 # ---------------------------------------------------------------- 5.5 config edges
 
 
-@cell("torx_open")
+@cell(
+    "torx_open",
+    truth={"screw": {"verdict": "turns", "tool": "hex-key-5", "how": "driver straight in"}},
+)
 def torx_open():
-    """Described as head: torx in bench_edges.yaml only: not-covered naming M6
-    today, turns with a T30 key once the full kit lands."""
+    """No rule names this screw in the main sidecar: detection finds it (its name
+    ends in "screw") and its solid shows a 5 mm hex socket, so it turns by the
+    key. bench_edges.yaml describes it as head: torx, and a rule outranks
+    detection: there it is not-covered naming M6, until the full kit lands."""
     return [("plate", plate(holes=[(0, 0, 3)])), ("screw", socket_screw())]

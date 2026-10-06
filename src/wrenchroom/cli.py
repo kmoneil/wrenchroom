@@ -23,7 +23,7 @@ from wrenchroom import __version__
 from wrenchroom.terminal import printable
 
 if TYPE_CHECKING:
-    from wrenchroom.report import Report
+    from wrenchroom.report import FastenerResult, Report
 
 #: Exit code for "not covered or a config error".
 EXIT_NOT_COVERED = 2
@@ -168,14 +168,9 @@ def explain(
         _say(f"error: no fastener named {fastener!r} (is it in the sidecar?)", err=True)
         sys.exit(EXIT_NOT_COVERED)
     (result,) = report.results
-    header = f"{result.fastener.name}: {result.verdict}"
-    if result.tool:
-        header += f" with {result.tool}" + (f", {result.how}" if result.how else "")
-    if result.state:
-        header += f" (in state {result.state})"
-    if result.pair:
-        header += f"; paired with {result.pair}"
-    _say(header)
+    _say(_explain_header(result))
+    if result.fastener.source != "sidecar":
+        _say(f"  found by {result.fastener.source}: {result.fastener.basis}")
     if result.reason:
         _say(f"  reason: {result.reason}")
     for attempt in result.attempts:
@@ -189,6 +184,18 @@ def explain(
     if result.stuck_on:
         _say(f"  cannot come out: {', '.join(result.stuck_on)} in the way")
     sys.exit(report.exit_code)
+
+
+def _explain_header(result: FastenerResult) -> str:
+    """One fastener's verdict in a line: tool and way, state, partner."""
+    header = f"{result.fastener.name}: {result.verdict}"
+    if result.tool:
+        header += f" with {result.tool}" + (f", {result.how}" if result.how else "")
+    if result.state:
+        header += f" (in state {result.state})"
+    if result.pair:
+        header += f"; paired with {result.pair}"
+    return header
 
 
 @main.command()

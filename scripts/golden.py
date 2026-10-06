@@ -2,7 +2,7 @@
 
 Usage::
 
-    uv run python scripts/golden.py --update      # rewrite tests/golden/bench.snapshot.json
+    uv run python scripts/golden.py --update      # rewrite both committed snapshots
     uv run python scripts/golden.py --out DIR     # write bench.step + sidecars to look at
 """
 
@@ -17,6 +17,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GOLDEN = REPO_ROOT / "tests" / "golden"
 SNAPSHOT = GOLDEN / "bench.snapshot.json"
+DETECTED = GOLDEN / "bench.detected.snapshot.json"
 
 
 def main(argv: list[str]) -> int:
@@ -28,7 +29,7 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     sys.path.insert(0, str(GOLDEN))
-    from bench import canonical, check_bench, write  # noqa: PLC0415  (path set just above)
+    from bench import canonical, check_bench, check_detected, write  # noqa: PLC0415
 
     if args.out:
         args.out.mkdir(parents=True, exist_ok=True)
@@ -39,9 +40,11 @@ def main(argv: list[str]) -> int:
     with tempfile.TemporaryDirectory() as scratch:
         write(scratch)
         report = check_bench(scratch)
-    SNAPSHOT.write_text(json.dumps(canonical(report.to_json_dict()), indent=1) + "\n")
-    print(f"snapshot rewritten: {SNAPSHOT}")
-    print(f"summary: {report.summary}")
+        detected = check_detected(scratch)
+    for path, document in ((SNAPSHOT, report), (DETECTED, detected)):
+        path.write_text(json.dumps(canonical(document.to_json_dict()), indent=1) + "\n")
+        print(f"snapshot rewritten: {path}")
+        print(f"summary: {document.summary}")
     return 0
 
 

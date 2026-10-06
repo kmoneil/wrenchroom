@@ -151,3 +151,19 @@ def test_explain_exact_tells_the_same_story(exported):
     exact = CliRunner().invoke(main, ["explain", str(exported), "bolt", "--exact"])
     assert exact.exit_code == default.exit_code == 1
     assert exact.output == default.output
+
+
+def test_check_and_explain_find_fasteners_with_no_sidecar(tmp_path):
+    assembly = screw_facing_wall(15.0)
+    shapes = []
+    for part in assembly:
+        part.shape.label = part.name
+        shapes.append(part.shape)
+    model = tmp_path / "model.step"
+    export_step(Compound(children=shapes), str(model))
+    checked = CliRunner().invoke(main, ["check", str(model)])
+    assert checked.exit_code == 1
+    assert "FAIL bolt" in checked.output
+    explained = CliRunner().invoke(main, ["explain", str(model), "bolt"])
+    assert "found by name" in explained.output
+    assert "noun 'bolt'" in explained.output
