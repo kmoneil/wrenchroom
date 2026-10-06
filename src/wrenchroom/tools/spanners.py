@@ -22,6 +22,7 @@ from wrenchroom.tools.sweep import (
     Attempt,
     Mount,
     axial_annulus,
+    hand_on_handle,
     radial_box,
     swing_attempt,
 )
@@ -90,8 +91,9 @@ def ring_attempts(
     hex_band: tuple[float, float],
     scene: Scene,
     step_deg: float = DEFAULT_STEP_DEG,
+    hand_room: bool = False,
 ) -> Iterator[Attempt]:
-    """The ring end at full length, then the stubby, lazily.
+    """The ring end at full length, then the stubby, lazily (with the hand, if asked).
 
     The ring is an annulus around the hex, centred on the hex band's mid-plane;
     the handle a box from the ring's edge out to 0.85 of the spanner's length.
@@ -129,4 +131,13 @@ def ring_attempts(
             ),
             required_deg=RING_RESEAT_DEG,
             step_deg=step_deg,
+            hand_at=(
+                (
+                    lambda phi, reach=0.85 * length: mount.place(
+                        hand_on_handle(mid_z, spanner.ring_outer_radius, reach, phi)
+                    )
+                )
+                if hand_room
+                else None
+            ),
         )

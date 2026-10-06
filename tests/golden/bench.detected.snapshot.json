@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 37,
-  "turns": 22,
+  "fasteners": 39,
+  "turns": 24,
   "held": 2,
   "blocked": 11,
   "stuck": 1,
@@ -13,6 +13,7 @@
  "unmatched_rules": [],
  "unmatched_ignores": [],
  "warnings": [],
+ "hand_room": false,
  "fasteners": [
   {
    "name": "carriage_boxed_bolt",
@@ -235,6 +236,60 @@
    "blocked_by": [
     "glands_close_a_gland"
    ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "hand_tight_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    1000.0,
+    4000.0,
+    -14.0
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-10",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "hand_tight_nut",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "hand_tight_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1000.0,
+    4000.0,
+    5.2
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-10",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "hand_tight_bolt",
+   "blocked_by": [],
    "stuck_on": [],
    "reason": null
   },
@@ -966,7 +1021,7 @@
     1.0
    ],
    "seat": [
-    900.0,
+    1900.0,
     4000.0,
     6.0
    ],
@@ -995,7 +1050,7 @@
     1.0
    ],
    "seat": [
-    1100.0,
+    2100.0,
     4000.0,
     6.0
    ],

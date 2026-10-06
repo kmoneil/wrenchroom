@@ -348,8 +348,12 @@ def test_an_empty_report_is_just_its_summary():
         "**0 fasteners: 0 turn, 0 held, 0 blocked, 0 stuck, 0 not covered**",
         "",
     ]
-    assert len(lines) == 5
+    assert len(lines) == 7
     assert lines[4].startswith("Kit `metric-home`, exact engine, wrenchroom ")
+    assert lines[6] == (
+        "Not checked: room for a hand (`checks: {hand_room: true}` turns it on); "
+        "parts the model doesn't have."
+    )
     assert "<table>" not in GFM.render(report.markdown())
 
 

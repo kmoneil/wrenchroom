@@ -97,11 +97,15 @@ class FastenerResult:
 def attempt_text(attempt: Attempt) -> str:
     """One attempt in a line, as ``explain`` lists them: tool, way, outcome, what it hit."""
     outcome = "turns" if attempt.turns else ("holds" if attempt.holds else "blocked")
+    if attempt.no_hand_room:
+        outcome += " (no room for a hand)"
     line = f"{attempt.tool}, {attempt.way}: {outcome}"
     if attempt.swing_deg and not attempt.turns:
         line += f", swing {attempt.swing_deg:g} deg"
     if attempt.blockers:
         line += f"; hit {', '.join(attempt.blockers)}"
+    if attempt.hand_blockers:
+        line += f"; the hand hit {', '.join(attempt.hand_blockers)}"
     return line
 
 
@@ -141,6 +145,16 @@ class Report:
     models: Mapping[str | None, StateModel] = field(default_factory=dict, compare=False, repr=False)
     #: Every part the sidecar's ignore list takes out of the way (wires, hoses).
     ignored: frozenset[str] = field(default=frozenset(), compare=False, repr=False)
+    #: Whether room for a hand round each handle was checked (spec 6.4).
+    hand_room: bool = False
+
+    @property
+    def not_checked(self) -> str:
+        """What the run could not see, said in every report (the prototype's lesson)."""
+        unseen = ["parts the model doesn't have"]
+        if not self.hand_room:
+            unseen.insert(0, "room for a hand (checks: {hand_room: true} turns it on)")
+        return "not checked: " + "; ".join(unseen)
 
     def failures(self) -> tuple[FastenerResult, ...]:
         """Everything that did not pass, worst first (not-covered last)."""
@@ -207,6 +221,7 @@ class Report:
             "unmatched_rules": list(self.unmatched_rules),
             "unmatched_ignores": list(self.unmatched_ignores),
             "warnings": list(self.warnings),
+            "hand_room": self.hand_room,
             "fasteners": [_result_json(result) for result in self.results],
         }
 
@@ -238,6 +253,7 @@ class Report:
         for glob in self.unmatched_ignores:
             lines.append(f"WARN ignore matched nothing: {glob!r}")
         lines.extend(f"WARN {warning}" for warning in self.warnings)
+        lines.append(f"NOTE {self.not_checked}")
         return [printable(line) for line in lines]
 
     # -------------------------------------------------------------- Markdown
@@ -261,6 +277,14 @@ class Report:
             "",
             f"Kit {md_code(self.kit, in_table=False)}, {md_text(self.engine)} engine, "
             f"wrenchroom {md_text(__version__)}.",
+            "",
+            "Not checked: "
+            + (
+                ""
+                if self.hand_room
+                else "room for a hand (`checks: {hand_room: true}` turns it on); "
+            )
+            + "parts the model doesn't have.",
         ]
         groups = _groups(self.results)
         if groups:

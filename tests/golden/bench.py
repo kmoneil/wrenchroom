@@ -39,11 +39,11 @@ KIT = "full"
 SLOTS = len(CELLS) + 1
 
 #: The whole bench's verdict counts once every milestone and issue has landed:
-#: the one-line summary of the truth. 37 since M4: the sidecar names 36, and
-#: detection finds torx_open_screw, which no rule names.
+#: the one-line summary of the truth. 37 since M4: the sidecar named 36, and
+#: detection finds torx_open_screw, which no rule names; 39 since M6's hand_tight.
 FINAL_COUNTS = {
-    "fasteners": 37,
-    "turns": 24,
+    "fasteners": 39,
+    "turns": 26,
     "held": 2,
     "blocked": 10,
     "stuck": 1,
@@ -227,9 +227,17 @@ def check_detected(directory, engine="mesh"):
     return check(assembly, config, kit=KIT, model="bench.step", model_dir=directory, engine=engine)
 
 
-def check_bench(directory, config_name="wrenchroom.yaml", engine="mesh", kit=KIT):
+def check_bench(directory, config_name="wrenchroom.yaml", engine="mesh", kit=KIT, hand_room=None):
     """Read the written bench back and check it, as a user would."""
     directory = Path(directory)
     assembly = Assembly.from_step(directory / "bench.step")
     config = Config.load(directory / config_name)
-    return check(assembly, config, kit=kit, model="bench.step", model_dir=directory, engine=engine)
+    return check(
+        assembly,
+        config,
+        kit=kit,
+        model="bench.step",
+        model_dir=directory,
+        engine=engine,
+        hand_room=hand_room,
+    )

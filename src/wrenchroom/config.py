@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 _SUPPORTED_TOP = {"fasteners", "ignore", "pairs", "states", "checks"}
 _STATE_KEYS = {"remove", "base", "model"}
-_CHECKS_KEYS = {"default_state", "try_states", "detect"}
+_CHECKS_KEYS = {"default_state", "try_states", "detect", "hand_room"}
 _RULE_KEYS = {
     "parts",
     "kind",
@@ -98,6 +98,9 @@ class Config:
     #: Find fasteners the rules don't name, from part names and geometry (M4).
     #: On unless ``checks: {detect: false}`` says otherwise.
     detect: bool = True
+    #: Check room for the hand round each handle (spec 6.4); off until tuned,
+    #: so ``checks: {hand_room: true}`` (or ``--hand-room``) asks for it.
+    hand_room: bool = False
     source: str = "<none>"
 
     @classmethod
@@ -138,7 +141,9 @@ class Config:
             for index, entry in enumerate(_as_list(raw.get("pairs", []), f"{source}: pairs"))
         )
         states = _parse_states(raw.get("states", {}), source)
-        default_state, try_states, detect = _parse_checks(raw.get("checks", {}), states, source)
+        default_state, try_states, detect, hand_room = _parse_checks(
+            raw.get("checks", {}), states, source
+        )
         state_names = {state.name for state in states}
         for rule in rules:
             if rule.state is not None and rule.state not in state_names:
@@ -152,6 +157,7 @@ class Config:
             default_state=default_state,
             try_states=try_states,
             detect=detect,
+            hand_room=hand_room,
             source=source,
         )
 
@@ -427,7 +433,7 @@ def _reject_base_cycles(states: list[StateDef], where: str) -> None:
 
 def _parse_checks(
     raw: object, states: tuple[StateDef, ...], source: str
-) -> tuple[str | None, tuple[str, ...], bool]:
+) -> tuple[str | None, tuple[str, ...], bool, bool]:
     where = f"{source}: checks"
     if not isinstance(raw, dict):
         msg = f"{where} must be a mapping"
@@ -450,4 +456,5 @@ def _parse_checks(
             msg = f"{where}: try_states names unknown state {name!r}"
             raise ConfigError(msg)
     detect = _parse_bool(raw.get("detect", True), f"{where}: detect")
-    return default_state, try_states, detect
+    hand_room = _parse_bool(raw.get("hand_room", False), f"{where}: hand_room")
+    return default_state, try_states, detect, hand_room

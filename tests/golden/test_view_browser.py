@@ -28,7 +28,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from bench import check_bench
+from bench import FINAL_COUNTS, check_bench
 
 from wrenchroom.view import COLOURS, html_text, view_data
 
@@ -146,7 +146,7 @@ def test_the_overview_colours_every_fastener_by_its_verdict_in_node(bench_page):
         part = view["parts"][index]
         assert colour == colour_of.get(part["name"], COLOURS["part"]), part["name"]
     assert record["tools"] == {"hit": 0, "clear": 0}
-    assert load["panel"]["fasteners"] == len(view["fasteners"]) == 37
+    assert load["panel"]["fasteners"] == len(view["fasteners"]) == FINAL_COUNTS["fasteners"]
     assert load["panel"]["detail_hidden"] is True
 
 

@@ -26,6 +26,11 @@ if TYPE_CHECKING:
 #: Exit code for "not covered or a config error".
 EXIT_NOT_COVERED = 2
 
+_HAND_ROOM_HELP = (
+    "Also check room for a hand on each handle (as `checks: {hand_room: true}`); "
+    "untuned, so off by default."
+)
+
 
 def _say(text: str = "", *, err: bool = False) -> None:
     """Print one line for a person: the only way text reaches the terminal here.
@@ -78,6 +83,7 @@ def main() -> None:
     is_flag=True,
     help="Use the exact OCP boolean engine: slow, the referee for borderline results.",
 )
+@click.option("--hand-room", is_flag=True, default=None, help=_HAND_ROOM_HELP)
 def check(  # noqa: PLR0913, PLR0917  (Click passes one parameter per option)
     model: Path,
     config_path: Path | None,
@@ -89,10 +95,18 @@ def check(  # noqa: PLR0913, PLR0917  (Click passes one parameter per option)
     only: str | None,
     state: str | None,
     exact: bool,
+    hand_room: bool | None,
 ) -> None:
     """Check every fastener in MODEL and report the verdicts."""
     report = _run(
-        model, config_path, kit=kit, step_deg=step_deg, only=only, state=state, exact=exact
+        model,
+        config_path,
+        kit=kit,
+        step_deg=step_deg,
+        only=only,
+        state=state,
+        exact=exact,
+        hand_room=hand_room,
     )
     for line in report.terminal_lines():
         _say(line)
@@ -114,6 +128,7 @@ def _run(
     only: str | None = None,
     state: str | None = None,
     exact: bool = False,
+    hand_room: bool | None = None,
 ) -> Report:
     """Load, check, and turn config mistakes into exit 2; shared by check and explain."""
     from wrenchroom.assembly import Assembly
@@ -135,6 +150,7 @@ def _run(
             state=state,
             model_dir=model.parent,
             engine="exact" if exact else "mesh",
+            hand_room=hand_room,
         )
     except (ConfigError, ValueError) as exc:
         _say(f"error: {exc}", err=True)
@@ -191,6 +207,7 @@ def detect(model: Path, kit: str) -> None:
     type=click.Path(dir_okay=False, path_type=Path),
     help="Also write the 3D view here, opening on this fastener's attempts.",
 )
+@click.option("--hand-room", is_flag=True, default=None, help=_HAND_ROOM_HELP)
 def explain(
     model: Path,
     fastener: str,
@@ -199,11 +216,20 @@ def explain(
     step_deg: float,
     exact: bool,
     html_path: Path | None,
+    hand_room: bool | None,
 ) -> None:
     """Show every attempt for one FASTENER in MODEL, with the blockers."""
     from wrenchroom.report import attempt_text
 
-    report = _run(model, config_path, kit=kit, step_deg=step_deg, only=fastener, exact=exact)
+    report = _run(
+        model,
+        config_path,
+        kit=kit,
+        step_deg=step_deg,
+        only=fastener,
+        exact=exact,
+        hand_room=hand_room,
+    )
     if not report.results:
         _say(f"error: no fastener named {fastener!r} (is it in the sidecar?)", err=True)
         sys.exit(EXIT_NOT_COVERED)
