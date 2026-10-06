@@ -72,6 +72,16 @@ class FastenerResult:
         return self.verdict in PASSING
 
     @property
+    def name(self) -> str:
+        """The fastener's part name, as the JSON's ``name``."""
+        return self.fastener.name
+
+    @property
+    def blocked_by(self) -> tuple[str, ...]:
+        """What the tools ran into, as the JSON's ``blocked_by``."""
+        return self.blockers
+
+    @property
     def headline(self) -> str:
         """The verdict in a line, as ``explain`` opens: tool and way, state, partner."""
         header = f"{self.fastener.name}: {self.verdict}"
@@ -162,6 +172,23 @@ class Report:
         if self.summary["blocked"] or self.summary["stuck"]:
             return 1
         return 0
+
+    def assert_all_pass(self) -> None:
+        """Pass when ``wrenchroom check`` would exit 0; else fail saying why.
+
+        "All pass" is the CLI's exit code 0: every fastener turns or is held,
+        none is not covered, and the sidecar matched cleanly. The pytest
+        plugin's fixture is a Report, so this is its assertion.
+
+        Raises:
+            AssertionError: With the summary line and every FAIL and WARN line,
+                as ``wrenchroom check`` prints them (names made safe to print).
+        """
+        if self.exit_code == 0:
+            return
+        lines = self.terminal_lines()
+        problems = [lines[0], *(line for line in lines if line.startswith(("FAIL ", "WARN ")))]
+        raise AssertionError("\n".join(problems))
 
     # ------------------------------------------------------------------ JSON
 

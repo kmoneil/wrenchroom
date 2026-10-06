@@ -64,6 +64,11 @@ Issues = "https://github.com/kmoneil/wrenchroom/issues"
 [project.scripts]
 wrenchroom = "wrenchroom.cli:main"
 
+# The pytest plugin (spec 10.5): a `wrenchroom_report` fixture, configured in the
+# project's pytest settings. Inert until a test asks for it; `-p no:wrenchroom` disables it.
+[project.entry-points.pytest11]
+wrenchroom = "wrenchroom.pytest_plugin"
+
 [dependency-groups]
 dev = [
   "markdown-it-py[linkify]>=4.2.0",

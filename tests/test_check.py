@@ -9,7 +9,7 @@ from fixture_models import (
     nut_with_bolt_through,
     screw_facing_wall,
 )
-from wrenchroom.check import check
+from wrenchroom.checker import check
 from wrenchroom.config import Config
 from wrenchroom.report import Verdict
 from wrenchroom.tools.hex_keys import ISO_2936

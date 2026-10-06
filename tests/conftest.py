@@ -11,6 +11,9 @@ import pytest
 from wrenchroom.assembly import Part
 from wrenchroom.engine import ENGINES, make_engine
 
+#: pytest's own harness for running a project's tests, for the plugin's tests.
+pytest_plugins = ["pytester"]
+
 
 @pytest.fixture(params=ENGINES)
 def engine(request):

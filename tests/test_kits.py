@@ -18,7 +18,7 @@ from fixture_models import (
     socket_screw,
 )
 from wrenchroom.assembly import Assembly, Part
-from wrenchroom.check import check
+from wrenchroom.checker import check
 from wrenchroom.cli import EXIT_NOT_COVERED, main
 from wrenchroom.config import Config
 from wrenchroom.report import Verdict

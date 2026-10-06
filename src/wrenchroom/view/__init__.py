@@ -170,7 +170,7 @@ def view_data(report: Report, *, select: str | None = None) -> dict[str, object]
             fastener in it.
     """
     if None not in report.models:
-        msg = "this report carries no geometry to draw: make it with wrenchroom.check"
+        msg = "this report carries no geometry to draw: make it with wrenchroom.check()"
         raise ValueError(msg)
     names = {result.fastener.name for result in report.results}
     if select is not None and select not in names:

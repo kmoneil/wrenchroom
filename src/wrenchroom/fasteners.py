@@ -5,7 +5,7 @@ Washers, well nuts, inserts and hand-set studs aren't turned and aren't modelled
 
 This module is pure data: kinds, heads, sizes, and the ``Fastener`` record the checks
 consume. Where a fastener comes from (sidecar now; names and geometry at M4) is
-``config.py`` and later ``detect.py``; what gets done to it is ``check.py``.
+``config.py`` and later ``detect.py``; what gets done to it is ``checker.py``.
 """
 
 from __future__ import annotations

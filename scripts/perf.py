@@ -45,7 +45,7 @@ def main(argv: list[str]) -> int:
     from bench import FINAL_COUNTS, KIT, write  # noqa: PLC0415  (path set just above)
 
     from wrenchroom.assembly import Assembly  # noqa: PLC0415  (heavy; after argparse)
-    from wrenchroom.check import check  # noqa: PLC0415
+    from wrenchroom.checker import check  # noqa: PLC0415
     from wrenchroom.config import Config  # noqa: PLC0415
 
     copies = math.ceil(args.fasteners / FINAL_COUNTS["fasteners"])
