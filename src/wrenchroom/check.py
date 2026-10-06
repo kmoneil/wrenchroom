@@ -43,6 +43,7 @@ from wrenchroom.fasteners import (
 from wrenchroom.report import FastenerResult, Report, StateModel, Verdict
 from wrenchroom.tools.drivers import SHAFT_RADIUS, driver_attempt
 from wrenchroom.tools.hex_keys import ISO_2936, hex_key_attempts
+from wrenchroom.tools.kits import DEFAULT_KIT, Kit, kit_named, missing
 from wrenchroom.tools.sockets import socket_attempts, socket_for
 from wrenchroom.tools.spanners import ring_attempts, spanner_for
 from wrenchroom.tools.sweep import (
@@ -58,9 +59,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from build123d import Axis
-
-#: The one kit M1 ships. imperial-home and full arrive with M6.
-KITS = ("metric-home",)
 
 #: How parallel a face normal must be to the axis to count as an end face.
 _AXIAL = 0.99
@@ -88,7 +86,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     assembly: Assembly,
     config: Config | None = None,
     *,
-    kit: str = "metric-home",
+    kit: str = DEFAULT_KIT,
     step_deg: float = DEFAULT_STEP_DEG,
     model: str = "",
     only: str | None = None,
@@ -102,7 +100,8 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         assembly: The parts in their assembled positions.
         config: The sidecar; ``None`` means no fasteners, which still yields a
             valid (empty, passing) report.
-        kit: Tool kit name; only ``metric-home`` exists until M6.
+        kit: Which tool kit (:mod:`wrenchroom.tools.kits`): only its tools are
+            tried, and a fastener needing another is not covered.
         step_deg: Swing sampling step, degrees.
         model: The model's name for the report header.
         only: A glob narrowing which fasteners are checked, as ``--only``.
@@ -116,9 +115,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         ValueError: On a kit, state or engine that doesn't exist (a typo, not a
             model problem).
     """
-    if kit not in KITS:
-        msg = f"unknown kit {kit!r}; available: {', '.join(KITS)}"
-        raise ValueError(msg)
+    tools = _Tools(kit_named(kit), step_deg)
     if engine not in ENGINES:
         msg = f"unknown engine {engine!r}; available: {', '.join(ENGINES)}"
         raise ValueError(msg)
@@ -148,7 +145,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
             candidates.append(_Candidate(fastener, reason=failures[fastener.name]))
             continue
         candidates.append(
-            _check_fastener(fastener, frames[fastener.name], space, config, default_state, step_deg)
+            _check_fastener(fastener, frames[fastener.name], space, config, default_state, tools)
         )
     results = _resolve_joints(candidates, pairs)
     models = {None: StateModel(assembly), **space.models}
@@ -439,14 +436,14 @@ def _check_fastener(
     space: _StateSpace,
     config: Config,
     default_state: str | None,
-    step_deg: float,
+    tools: _Tools,
 ) -> _Candidate:
     own_state = fastener.state if fastener.state is not None else default_state
     order: list[str | None] = [own_state]
     order += [s for s in config.try_states if s != own_state]
     first: _Candidate | None = None
     for index, state_name in enumerate(order):
-        candidate = _try_in_state(fastener, frame, state_name, space, step_deg)
+        candidate = _try_in_state(fastener, frame, state_name, space, tools)
         if first is None:
             first = candidate
         if candidate.reason is not None and index == 0:
@@ -464,7 +461,7 @@ def _try_in_state(
     default_frame: _Frame,
     state_name: str | None,
     space: _StateSpace,
-    step_deg: float,
+    tools: _Tools,
 ) -> _Candidate:
     assembly, removed, same_model = space.resolve(state_name)
     if fastener.name not in assembly.names:
@@ -485,7 +482,7 @@ def _try_in_state(
         candidate.how = "holds itself"
         return candidate
     try:
-        attempts_iter = _attempts_for(fastener, mount, geometry, scene, step_deg)
+        attempts_iter = _attempts_for(fastener, mount, geometry, scene, tools)
         _run_attempts(candidate, attempts_iter)
     except NotCovered as exc:  # also any a lazy attempt raises while running
         candidate.reason = str(exc)
@@ -713,8 +710,28 @@ def _free_face_is_at_bottom(frame: _Frame, scene: Scene) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Tool selection.
+# Tool selection: the kit's tools only.
 # ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _Tools:
+    """What a fastener may be tried with: the kit's tools, swung in ``step_deg`` steps."""
+
+    kit: Kit
+    step_deg: float
+
+    def need(self, *wanted: str) -> tuple[str, ...]:
+        """Those of ``wanted`` the kit holds, in order; not covered when it holds none.
+
+        Raises:
+            NotCovered: When the kit holds none of them, naming them and the kit
+                that does.
+        """
+        held = tuple(tool for tool in wanted if self.kit.holds(tool))
+        if not held:
+            raise NotCovered(missing(wanted, self.kit))
+        return held
 
 
 def _attempts_for(
@@ -722,24 +739,24 @@ def _attempts_for(
     mount: Mount,
     geometry: _Geometry,
     scene: Scene,
-    step_deg: float,
+    tools: _Tools,
 ) -> Iterator[Attempt]:
     if fastener.tool is not None:
-        return _forced_attempts(fastener, mount, geometry, scene, step_deg)
+        return _forced_attempts(fastener, mount, geometry, scene, tools)
     if fastener.kind is Kind.NUT or fastener.head is Head.HEX:
-        return _hex_flats_attempts(fastener, mount, geometry, scene, step_deg)
+        return _hex_flats_attempts(fastener, mount, geometry, scene, tools)
     if fastener.head in _KEYED_HEADS:
-        return _keyed_attempts(fastener, mount, scene, step_deg)
+        return _keyed_attempts(fastener, mount, scene, tools)
     if fastener.head is Head.PHILLIPS:
         size = _metric_size(fastener)
         number = PHILLIPS_NUMBER.get(size.designation)
         if number is None:
             raise NotCovered(f"no Phillips number for {size.designation}")
-        return iter(
-            [driver_attempt(mount, scene, SHAFT_RADIUS[f"ph{number}"], f"driver-ph{number}")]
-        )
+        (tool,) = tools.need(f"driver-ph{number}")
+        return iter([driver_attempt(mount, scene, SHAFT_RADIUS[f"ph{number}"], tool)])
     if fastener.head is Head.SLOTTED:
-        return iter([driver_attempt(mount, scene, SHAFT_RADIUS["slotted"], "driver-slotted")])
+        (tool,) = tools.need("driver-slotted")
+        return iter([driver_attempt(mount, scene, SHAFT_RADIUS["slotted"], tool)])
     if fastener.head is Head.TORX:
         raise NotCovered("Torx keys arrive with the full kit (M6)")
     raise NotCovered("head unknown: name it in the sidecar")
@@ -773,7 +790,7 @@ def _given_af(fastener: Fastener) -> float | None:
 
 
 def _keyed_attempts(
-    fastener: Fastener, mount: Mount, scene: Scene, step_deg: float
+    fastener: Fastener, mount: Mount, scene: Scene, tools: _Tools
 ) -> Iterator[Attempt]:
     af = _given_af(fastener)
     if af is None:
@@ -786,7 +803,8 @@ def _keyed_attempts(
             raise NotCovered(f"no standard key for a {size.designation} {head} head")
     if af not in ISO_2936:
         raise NotCovered(f"no ISO 2936 key is {af:g} across flats")
-    return hex_key_attempts(mount, ISO_2936[af], scene, step_deg)
+    tools.need(f"hex-key-{af:g}")
+    return hex_key_attempts(mount, ISO_2936[af], scene, tools.step_deg)
 
 
 def _hex_flats_attempts(
@@ -794,9 +812,9 @@ def _hex_flats_attempts(
     mount: Mount,
     geometry: _Geometry,
     scene: Scene,
-    step_deg: float,
+    tools: _Tools,
 ) -> Iterator[Attempt]:
-    """Rings, then sockets; every not-covered reason decided before they run.
+    """Rings, then sockets, those the kit holds; every not-covered reason decided first.
 
     The reasons are raised here, before the lazy attempts are handed back: one
     raised inside a generator would surface only while the attempts ran, past
@@ -812,19 +830,24 @@ def _hex_flats_attempts(
     if geometry.band_height <= _MIN_BAND:
         raise NotCovered("could not measure the hex's height")
     band = (geometry.band_top, geometry.band_bottom)
-    return _hex_flats_tools(fastener.socket_allowed, mount, af, band, scene, step_deg)
+    wanted = [f"spanner-{af:g}"]
+    if fastener.socket_allowed:
+        wanted.append(f"socket-{af:g}")
+    held = tools.need(*wanted)
+    return _hex_flats_tools(held, mount, af, band, scene, tools.step_deg)
 
 
 def _hex_flats_tools(
-    socket_allowed: bool,
+    held: tuple[str, ...],
     mount: Mount,
     af: float,
     band: tuple[float, float],
     scene: Scene,
     step_deg: float,
 ) -> Iterator[Attempt]:
-    yield from ring_attempts(mount, spanner_for(af), af, band, scene, step_deg)
-    if socket_allowed:
+    if f"spanner-{af:g}" in held:
+        yield from ring_attempts(mount, spanner_for(af), af, band, scene, step_deg)
+    if f"socket-{af:g}" in held:
         yield from socket_attempts(mount, socket_for(af), af, scene, step_deg)
 
 
@@ -833,29 +856,38 @@ def _forced_attempts(
     mount: Mount,
     geometry: _Geometry,
     scene: Scene,
-    step_deg: float,
+    tools: _Tools,
 ) -> Iterator[Attempt]:
-    """A sidecar `tool:` name, e.g. hex-key-5, spanner-10, socket-13, driver-ph2."""
+    """A sidecar `tool:` name, e.g. hex-key-5, spanner-10, socket-13, driver-ph2.
+
+    A forced tool must still be in the kit: the sidecar picks which tool, the
+    kit says which tools there are.
+    """
     name = fastener.tool or ""
     family, _, size_text = name.rpartition("-")
+    step_deg = tools.step_deg
     if family == "hex-key":
         key = ISO_2936.get(_as_float(size_text, name))
         if key is None:
             raise NotCovered(f"no ISO 2936 key sized {size_text}")
+        tools.need(name)
         return hex_key_attempts(mount, key, scene, step_deg)
     if family == "spanner":
         af = _as_float(size_text, name)
         if geometry.band_height <= _MIN_BAND:
             raise NotCovered("could not measure the hex's height")
+        tools.need(name)
         band = (geometry.band_top, geometry.band_bottom)
         return ring_attempts(mount, spanner_for(af), af, band, scene, step_deg)
     if family == "socket":
         af = _as_float(size_text, name)
+        tools.need(name)
         return socket_attempts(mount, socket_for(af), af, scene, step_deg)
     if family == "driver":
         radius = SHAFT_RADIUS.get(size_text)
         if radius is None:
             raise NotCovered(f"unknown driver {size_text!r}")
+        tools.need(name)
         return iter([driver_attempt(mount, scene, radius, name)])
     raise NotCovered(f"unknown tool {name!r}")
 

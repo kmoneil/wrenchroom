@@ -148,8 +148,11 @@ def test_a_nut_with_its_bolt_through_it_still_orients(engine):
 def test_a_gland_orients_by_its_hex_not_its_extremes(engine):
     # Bug B: the probes sit at the hex band's ends; the stub below is inside the
     # wall (covered side), the dome above is the gland's own body (free side).
-    report = run(
-        engine, gland_on_wall(), {"parts": "gland", "kind": "nut", "size": "M16", "socket": False}
+    report = run(  # a 24 mm hex: the full kit's (metric-home stops at 19)
+        engine,
+        gland_on_wall(),
+        {"parts": "gland", "kind": "nut", "size": "M16", "socket": False},
+        kit="full",
     )
     (result,) = report.results
     assert result.verdict is Verdict.TURNS
@@ -164,6 +167,7 @@ def test_the_ring_sits_on_the_hex_not_the_dome(engine):
         engine,
         gland_on_wall(rib=True),
         {"parts": "gland", "kind": "nut", "size": "M16", "socket": False, "axis": "+z"},
+        kit="full",
     )
     (result,) = report.results
     assert result.verdict is Verdict.BLOCKED

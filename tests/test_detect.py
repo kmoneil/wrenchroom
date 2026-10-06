@@ -168,10 +168,11 @@ def test_an_ignored_part_is_never_detected():
 
 
 def test_a_gland_found_by_name_gets_the_spanner_its_hex_takes():
-    found = run(gland_on_wall())
+    found = run(gland_on_wall(), kit="full")  # a 24 mm hex: metric-home stops at 19
     described = run(
         gland_on_wall(),
         {"fasteners": [{"parts": "gland", "kind": "nut", "size": "M16", "socket": False}]},
+        kit="full",
     )
     (alone,) = found.results
     (ruled,) = described.results

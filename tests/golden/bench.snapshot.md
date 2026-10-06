@@ -2,7 +2,7 @@
 
 **37 fasteners: 24 turn, 2 held, 10 blocked, 1 stuck, 0 not covered**
 
-Kit `metric-home`, ENGINE engine, wrenchroom VERSION.
+Kit `full`, ENGINE engine, wrenchroom VERSION.
 
 | Fasteners | Tool | Count | Outcome |
 | --- | --- | ---: | --- |

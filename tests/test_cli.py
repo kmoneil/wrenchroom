@@ -37,7 +37,7 @@ def test_tools_lists_the_kit_with_its_caveats():
     assert "hex-key-5" in result.output
     assert "long arm 85" in result.output  # the ISO 2936 row, not the old provisional one
     assert "spanner-10" in result.output
-    assert "socket-24" in result.output
+    assert "socket-19" in result.output  # metric-home's largest (tests/test_kits.py)
     assert "driver-ph2" in result.output
     assert "approximate" in result.output  # the caveat travels with the numbers
 

@@ -30,6 +30,11 @@ from wrenchroom.report import md_text
 
 PITCH = 1000.0
 
+#: The kit the bench is checked with: every tool the tables hold. Its 24 mm cells
+#: (M16 nuts, glands) need tools the home kit lacks (spec 5.3, decided 2026-10-06);
+#: test_kits_bench.py holds what metric-home makes of the bench.
+KIT = "full"
+
 #: Grid slots one copy of the bench takes: every cell, then the twins.
 SLOTS = len(CELLS) + 1
 
@@ -219,12 +224,12 @@ def check_detected(directory, engine="mesh"):
     directory = Path(directory)
     assembly = Assembly.from_step(directory / "bench.step")
     config = Config.from_dict(stripped_sidecar())
-    return check(assembly, config, model="bench.step", model_dir=directory, engine=engine)
+    return check(assembly, config, kit=KIT, model="bench.step", model_dir=directory, engine=engine)
 
 
-def check_bench(directory, config_name="wrenchroom.yaml", engine="mesh"):
+def check_bench(directory, config_name="wrenchroom.yaml", engine="mesh", kit=KIT):
     """Read the written bench back and check it, as a user would."""
     directory = Path(directory)
     assembly = Assembly.from_step(directory / "bench.step")
     config = Config.load(directory / config_name)
-    return check(assembly, config, model="bench.step", model_dir=directory, engine=engine)
+    return check(assembly, config, kit=kit, model="bench.step", model_dir=directory, engine=engine)

@@ -1,7 +1,7 @@
 """Truth per fastener, the whole-bench counts, isolation and the round trip."""
 
 import pytest
-from bench import FINAL_COUNTS, build, check_bench, sidecar_and_truth
+from bench import FINAL_COUNTS, KIT, build, check_bench, sidecar_and_truth
 from cells import CELLS
 
 from wrenchroom.assembly import Assembly
@@ -68,7 +68,7 @@ def test_isolation_matches_the_full_bench(bench_json, bench_dir, bench_engine):
             }
         )
         report = check(
-            Assembly.from_shapes(shapes), config, model_dir=bench_dir, engine=bench_engine
+            Assembly.from_shapes(shapes), config, kit=KIT, model_dir=bench_dir, engine=bench_engine
         )
         for result in report.results:
             alone = (result.verdict.value, result.tool, result.how)
@@ -98,7 +98,7 @@ def test_socket_false_is_load_bearing():
             "ignore": ["*_cable"],
         }
     )
-    report = check(Assembly.from_shapes(shapes), config)
+    report = check(Assembly.from_shapes(shapes), config, kit=KIT)
     for result in report.results:
         assert result.verdict.value == "turns"
         assert result.tool == "socket-24"
