@@ -682,3 +682,39 @@ def ball_tilt():
         ("screw", socket_screw()),
         ("ceiling", ceiling),
     ]
+
+
+@cell(
+    "nut_tube",
+    [
+        {"parts": "bolt", "kind": "screw", "head": "hex", "size": "M6"},
+        {"parts": "nut", "kind": "nut", "size": "M6"},
+    ],
+    {
+        "bolt": {"verdict": "turns", "tool": "spanner-10", "how": "ring, full length"},
+        "nut": {"verdict": "turns", "tool": "nut-driver-10", "how": "nut driver straight in"},
+    },
+)
+def nut_tube():
+    """A nut at the foot of a tube only a nut driver gets down (GOLDEN-BENCH section 6,
+    M6). The tube's bore is r 11 for its first 100, r 40 above. The ring (outer r 10)
+    fits the bore but its handle meets the wall at every angle; the open end's jaw
+    (+/-11.4) is wider than the bore. The socket (r 7.2) and extension (r 6) fit, but
+    the ratchet head (r 17) only clears the narrow bore from the 75 mm extension up
+    (head 105.5..117.5), and there its 180 handle meets the r 40 wall: no swing. The
+    10 mm nut driver (socket and blade r 7.2, Wiha's larger) stays inside r 11; its
+    handle (r 18, from 130.5) and the fist round it (r 35, hand room on) inside r 40:
+    it turns. The bolt, head below the plate, turns in open air. metric-home has no
+    nut driver: there the nut is blocked by the tube (test_kits_bench.py).
+    """
+    tube = (
+        Pos(0, 0, 200) * Box(200, 200, 400)
+        - Pos(0, 0, 50) * Cylinder(11, 100.02)
+        - Pos(0, 0, 250.5) * Cylinder(40, 301)
+    )
+    return [
+        ("plate", plate(holes=[(0, 0, 3)])),
+        ("tube", tube),
+        ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(6, 20, 10, 4.0)),
+        ("nut", hex_nut(6, 10, 5.2)),
+    ]

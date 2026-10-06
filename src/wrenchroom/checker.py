@@ -46,6 +46,7 @@ from wrenchroom.tools.ball_end import BALL_END_KEYS, BallEndKey, ball_end_attemp
 from wrenchroom.tools.drivers import SHAFT_RADIUS, driver_attempt
 from wrenchroom.tools.hex_keys import HEX_KEYS, HexKey, hex_key_attempts
 from wrenchroom.tools.kits import DEFAULT_KIT, Kit, kit_named, missing
+from wrenchroom.tools.nut_drivers import NUT_DRIVERS, nut_driver_attempt
 from wrenchroom.tools.sizes import INCH_FLATS, METRIC_FLATS, inch_mm, size_mm, size_name, snap
 from wrenchroom.tools.sockets import socket_attempts, socket_for
 from wrenchroom.tools.spanners import open_end_attempts, ring_attempts, spanner_for
@@ -886,8 +887,10 @@ def _hex_flats_attempts(
         raise NotCovered("could not measure the hex's height")
     band = (geometry.band_top, geometry.band_bottom)
     wanted = [f"spanner-{size_name(af)}"]
-    if fastener.socket_allowed:
+    if fastener.socket_allowed:  # a cable through it rules out anything that covers it
         wanted.append(f"socket-{size_name(af)}")
+        if af in NUT_DRIVERS:
+            wanted.append(NUT_DRIVERS[af].name)
     held = tools.need(*wanted)
     return _hex_flats_tools(held, mount, af, band, scene, tools)
 
@@ -906,6 +909,9 @@ def _hex_flats_tools(
         yield from open_end_attempts(mount, spanner_for(af), af, band, scene, step, hand)
     if f"socket-{size_name(af)}" in held:
         yield from socket_attempts(mount, socket_for(af), af, scene, step, hand)
+    driver = NUT_DRIVERS.get(af)
+    if driver is not None and driver.name in held:
+        yield nut_driver_attempt(mount, driver, af, scene, hand)
 
 
 def _spanner_ends(
@@ -930,20 +936,39 @@ def _forced_attempts(
     kit says which tools there are.
     """
     name = fastener.tool or ""
+    for family_attempts in (_forced_key, _forced_flats, _forced_driver):
+        attempts = family_attempts(name, mount, geometry, scene, tools)
+        if attempts is not None:
+            return attempts
+    raise NotCovered(f"unknown tool {name!r}")
+
+
+def _forced_key(
+    name: str, mount: Mount, geometry: _Geometry, scene: Scene, tools: _Tools
+) -> Iterator[Attempt] | None:
+    """hex-key-5, hex-key-5/32in, torx-key-T30; None for another family."""
+    del geometry  # the keys need only the mount
     family, _, size_text = name.rpartition("-")
-    step_deg = tools.step_deg
     if family == "hex-key":
         key = HEX_KEYS.get(_tool_mm(size_text, name))
         if key is None:
             raise NotCovered(f"no ISO 2936 or ASME B18.3 key sized {size_text}")
         tools.need(key.name)
-        return hex_key_attempts(mount, key, scene, step_deg, tools.hand_room)
+        return hex_key_attempts(mount, key, scene, tools.step_deg, tools.hand_room)
     if family == "torx-key":
         torx_key = ISO_10664.get(size_text)
         if torx_key is None:
             raise NotCovered(f"no Torx key {size_text}: the tables hold T10 to T40")
         tools.need(name)
-        return hex_key_attempts(mount, torx_key, scene, step_deg, tools.hand_room)
+        return hex_key_attempts(mount, torx_key, scene, tools.step_deg, tools.hand_room)
+    return None
+
+
+def _forced_flats(
+    name: str, mount: Mount, geometry: _Geometry, scene: Scene, tools: _Tools
+) -> Iterator[Attempt] | None:
+    """spanner-13, socket-7/16in, nut-driver-10; None for another family."""
+    family, _, size_text = name.rpartition("-")
     if family == "spanner":
         af = _tool_mm(size_text, name)
         if geometry.band_height <= _MIN_BAND:
@@ -954,14 +979,30 @@ def _forced_attempts(
     if family == "socket":
         af = _tool_mm(size_text, name)
         tools.need(name)
-        return socket_attempts(mount, socket_for(af), af, scene, step_deg, tools.hand_room)
-    if family == "driver":
-        radius = SHAFT_RADIUS.get(size_text)
-        if radius is None:
-            raise NotCovered(f"unknown driver {size_text!r}")
+        return socket_attempts(mount, socket_for(af), af, scene, tools.step_deg, tools.hand_room)
+    if family == "nut-driver":
+        nut_driver = NUT_DRIVERS.get(_tool_mm(size_text, name))
+        if nut_driver is None:
+            raise NotCovered(f"no nut driver sized {size_text}: the tables hold 5.5 to 13")
         tools.need(name)
-        return iter([driver_attempt(mount, scene, radius, name, tools.hand_room)])
-    raise NotCovered(f"unknown tool {name!r}")
+        af = nut_driver.af
+        return iter([nut_driver_attempt(mount, nut_driver, af, scene, tools.hand_room)])
+    return None
+
+
+def _forced_driver(
+    name: str, mount: Mount, geometry: _Geometry, scene: Scene, tools: _Tools
+) -> Iterator[Attempt] | None:
+    """driver-ph2, driver-slotted; None for another family."""
+    del geometry  # a driver needs only the mount
+    family, _, size_text = name.rpartition("-")
+    if family != "driver":
+        return None
+    radius = SHAFT_RADIUS.get(size_text)
+    if radius is None:
+        raise NotCovered(f"unknown driver {size_text!r}")
+    tools.need(name)
+    return iter([driver_attempt(mount, scene, radius, name, tools.hand_room)])
 
 
 def _tool_mm(text: str, tool: str) -> float:

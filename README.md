@@ -39,9 +39,10 @@ to M5):
   tool and the kits that have it (`needs spanner-24, which kit metric-home does not
   hold (full has it)`). `full` also has Torx keys T10 to T40 (ISO 10664 sizes, swept
   like hex keys; a Torx head takes the size ISO 14579 and its kin give its thread,
-  M6 T30), and ball-end keys 3 to 10 mm, tried when no straight key gets in: the long
-  leg leant up to 25 degrees off the axis (Bondhus' and Wiha's figure), every way
-  round. Inch tools carry their unit (`spanner-7/16in`), and inch
+  M6 T30), ball-end keys 3 to 10 mm, tried when no straight key gets in (the long leg
+  leant up to 25 degrees off the axis, Bondhus' and Wiha's figure, every way round),
+  and nut drivers 5.5 to 13 mm, tried last, straight in, where nothing that swings
+  can get down to a nut. Inch tools carry their unit (`spanner-7/16in`), and inch
   fasteners (`#10`, `1/4`, `3/4`; UNC and UNF alike) take their ASME tools: socket,
   button and flat heads (B18.3), nuts (B18.2.2, B18.6.3) and hex heads (B18.2.1),
   which part ways with their nuts at 7/16 and 9/16.

@@ -35,7 +35,7 @@ PAST_HOME = {
 
 #: Cells metric-home holds a tool for but can't turn without full's: the ball end.
 #: The plain key is tried and blocked, which is the verdict, not "not covered".
-HOME_BLOCKED = {"ball_tilt_screw": ["ball_tilt_ceiling"]}
+HOME_BLOCKED = {"ball_tilt_screw": ["ball_tilt_ceiling"], "nut_tube_nut": ["nut_tube_tube"]}
 
 #: The bench's inch fasteners: all imperial-home can turn.
 INCH = {"inch_pair_screw", "inch_pair_nut"}
