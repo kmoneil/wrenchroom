@@ -111,6 +111,15 @@ ignore = [
 [tool.ruff.lint.mccabe]
 max-complexity = 10
 
+[tool.ruff.lint.pylint]
+# The defaults assume arity signals complexity. The sweep builders take independent
+# geometric parameters (a mount, a tool's numbers, the scene, the sampling step), and
+# bundling them into a parameter object would move the same fields somewhere else
+# rather than remove any. 8 is the project ceiling; a function wanting more than that
+# is genuinely doing too much.
+max-args = 8
+max-positional-args = 8
+
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 

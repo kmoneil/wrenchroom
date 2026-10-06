@@ -15,6 +15,23 @@ approximation is needed.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+from wrenchroom.tools.drivers import driver_attempt
+from wrenchroom.tools.sweep import (
+    CONTACT_OFFSET,
+    DEFAULT_STEP_DEG,
+    Attempt,
+    Mount,
+    axial_cylinder,
+    radial_cylinder,
+    swing_attempt,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from wrenchroom.engine import Scene
 
 
 @dataclass(frozen=True)
@@ -62,3 +79,53 @@ ISO_2936: dict[float, HexKey] = {
 # in the table read on 2026-10-06): across corners extrapolated as 1.1375 * af, the
 # e/af ratio the verified rows hold to within 0.4%; lengths from supplier listings.
 # Replace from the standard before anything above M12 is load-bearing.
+
+
+# ---------------------------------------------------------------------------
+# The sweep (spec 6.1). Tried in order; the first way that turns wins.
+#
+# Engagement depth, DECIDED 2026-10-06 (was decide-hex-engagement-depth): the
+# inserted leg starts at the seat (the head's outer face) and runs its full
+# length along the axis, ignoring the depth the key sinks into the socket.
+# That errs safe -- it demands more axial room than reality by about the
+# socket's depth -- and it is what the prototype did, so the TRIDENT golden
+# verdicts match on this point. Revisit when a real model fails a check that
+# a human with the key in hand says is fine; the fix then is to subtract the
+# ISO 4762 socket depth ``t`` here and nowhere else.
+# ---------------------------------------------------------------------------
+
+#: A hex goes on again every sixth of a turn.
+HEX_RESEAT_DEG = 60.0
+
+
+def hex_key_attempts(
+    mount: Mount,
+    key: HexKey,
+    scene: Scene,
+    step_deg: float = DEFAULT_STEP_DEG,
+) -> Iterator[Attempt]:
+    """Every way to try one key, lazily, in the spec's order.
+
+    Driver straight in first (cheapest and strongest), then the short leg in
+    with the long arm swinging, then the long leg in with the short arm.
+    The caller stops consuming at the first attempt that turns.
+    """
+    tool = f"hex-key-{key.af:g}"
+    yield driver_attempt(mount, scene, key.radius, tool)
+    legs = (
+        ("short leg in", key.short_mm, key.long_mm),
+        ("long leg in", key.long_mm, key.short_mm),
+    )
+    for way, leg, arm in legs:
+        bend_z = CONTACT_OFFSET + leg
+        yield swing_attempt(
+            tool=tool,
+            way=way,
+            scene=scene,
+            engagement=mount.place(axial_cylinder(key.radius, CONTACT_OFFSET, bend_z)),
+            arm_at=lambda phi, z=bend_z, length=arm: mount.place(
+                radial_cylinder(key.radius, 0.0, length, z, phi)
+            ),
+            required_deg=HEX_RESEAT_DEG,
+            step_deg=step_deg,
+        )

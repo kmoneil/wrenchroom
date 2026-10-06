@@ -7,6 +7,24 @@ numbers by across-flats, so filling the real table changes no interface.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import sqrt
+from typing import TYPE_CHECKING
+
+from wrenchroom.tools.sweep import (
+    CONTACT_OFFSET,
+    DEFAULT_STEP_DEG,
+    Attempt,
+    Mount,
+    axial_annulus,
+    axial_cylinder,
+    radial_box,
+    swing_attempt,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from wrenchroom.engine import Scene
 
 #: How deep a socket is hollow from its mouth, mm: the bolt's end goes into it.
 #: Approximation (prototype).
@@ -38,3 +56,71 @@ def socket_for(af: float) -> Socket:
     ``max(25, 1.4*af + 14)``; replace with DIN 3124.
     """
     return Socket(af=af, outer_radius=0.6 * af + 1.2, length=max(25.0, 1.4 * af + 14.0))
+
+
+# ---------------------------------------------------------------------------
+# The socket sweep (spec 6.2): socket, extension, ratchet. Not allowed when a
+# cable or hose passes through the fastener (socket_allowed = False on the
+# fastener); the caller enforces that, not this module.
+# ---------------------------------------------------------------------------
+
+#: Ratchet and extension bodies, mm. Approximations (catalogue-typical 1/4" and
+#: 3/8" drive hardware): extension bar radius, ratchet head radius and depth,
+#: handle reach and section.
+EXTENSION_RADIUS = 6.0
+RATCHET_HEAD_RADIUS = 17.0
+RATCHET_HEAD_DEPTH = 12.0
+RATCHET_HANDLE_REACH = 180.0
+RATCHET_HANDLE_WIDTH = 16.0
+RATCHET_HANDLE_THICKNESS = 10.0
+
+
+def socket_attempts(
+    mount: Mount,
+    socket: Socket,
+    hex_af: float,
+    scene: Scene,
+    step_deg: float = DEFAULT_STEP_DEG,
+) -> Iterator[Attempt]:
+    """The socket on the ratchet directly, then on each stock extension, lazily.
+
+    The socket is hollow for its first :data:`BORE_DEPTH` (the bolt's end goes
+    into it), solid above, then the extension, then the ratchet head whose
+    handle needs only :data:`RATCHET_72_SWING_DEG` of free arc.
+    """
+    tool = f"socket-{socket.af:g}"
+    inner = hex_af / sqrt(3) + 0.3
+    mouth = axial_annulus(
+        inner, socket.outer_radius, CONTACT_OFFSET, min(BORE_DEPTH, socket.length)
+    )
+    body_from = CONTACT_OFFSET + BORE_DEPTH
+    body_to = CONTACT_OFFSET + socket.length
+    body = axial_cylinder(socket.outer_radius, body_from, body_to) if body_to > body_from else None
+    for extension in (0.0, *EXTENSION_LENGTHS):
+        head_from = body_to + extension
+        stack = mouth if body is None else mouth + body
+        if extension:
+            stack = stack + axial_cylinder(EXTENSION_RADIUS, body_to, head_from)
+        stack = stack + axial_cylinder(
+            RATCHET_HEAD_RADIUS, head_from, head_from + RATCHET_HEAD_DEPTH
+        )
+        way = "socket on ratchet" if not extension else f"socket, {extension:g} mm extension"
+        handle_z = head_from + RATCHET_HEAD_DEPTH / 2
+        yield swing_attempt(
+            tool=tool,
+            way=way,
+            scene=scene,
+            engagement=mount.place(stack),
+            arm_at=lambda phi, z=handle_z: mount.place(
+                radial_box(
+                    RATCHET_HANDLE_WIDTH,
+                    RATCHET_HANDLE_THICKNESS,
+                    RATCHET_HEAD_RADIUS + 1,
+                    RATCHET_HANDLE_REACH,
+                    z,
+                    phi,
+                )
+            ),
+            required_deg=RATCHET_72_SWING_DEG,
+            step_deg=step_deg,
+        )
