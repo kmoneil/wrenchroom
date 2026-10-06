@@ -358,6 +358,76 @@ HEX_HEAD_AF: dict[str, float] = {
     ),
 }
 
+#: DIN 934's across flats where it parts from ISO 4032 (torqbolt.com's DIN 934
+#: table, read 2026-10-06): the spanner a nut drawn to DIN takes.
+DIN_HEX_AF: dict[str, float] = {"M10": 17.0, "M12": 19.0, "M14": 22.0, "M22": 32.0}
+
+#: The smallest across flats a nut standard allows a hex of each spanner size, mm,
+#: keyed by that size. A spanner fits a hex anywhere from here up to its own size,
+#: so a model drawn inside the band (an M8 nut at 12.8) takes it. Metric: ISO 4032
+#: and DIN 934 (torqbolt.com's tables, read 2026-10-06; product grade A to M16, B
+#: above, hence the wider bands). Inch: ASME B18.2.2 hex nuts (amesweb.info) and
+#: B18.6.3 machine screw nuts (torqbolt.com), read the same day; where both give a
+#: size, the smaller minimum. Hex heads are held to their nut's band: ISO 4014/4017
+#: and ASME B18.2.1 share the sizes, and their own minimums weren't to be had. A
+#: size with no row (a hex key, 13/16 in) has no band: only its own size fits.
+HEX_AF_MIN: dict[float, float] = {
+    5.5: 5.32,
+    6.0: 5.82,
+    7.0: 6.78,
+    8.0: 7.78,
+    10.0: 9.78,
+    11.0: 10.73,
+    13.0: 12.73,
+    16.0: 15.73,
+    17.0: 16.73,
+    18.0: 17.73,
+    19.0: 18.67,
+    21.0: 20.67,
+    22.0: 21.67,
+    24.0: 23.67,
+    27.0: 26.16,
+    30.0: 29.16,
+    32.0: 31.0,
+    34.0: 33.0,
+    36.0: 35.0,
+    **{
+        inch_mm(size): minimum * _MM_PER_INCH
+        for size, minimum in {
+            "5/32": 0.150,
+            "3/16": 0.180,
+            "1/4": 0.241,
+            "5/16": 0.302,
+            "11/32": 0.332,
+            "3/8": 0.362,
+            "7/16": 0.423,
+            "1/2": 0.489,
+            "9/16": 0.545,
+            "5/8": 0.607,
+            "11/16": 0.675,
+            "3/4": 0.736,
+            "7/8": 0.861,
+            "15/16": 0.922,
+            "1-1/8": 1.088,
+            "1-5/16": 1.269,
+            "1-1/2": 1.450,
+        }.items()
+    },
+}
+
+
+def in_hex_band(measured: float, af: float) -> bool:
+    """Whether a measured hex lies in a nut standard's band for the spanner size ``af``."""
+    minimum = HEX_AF_MIN.get(af)
+    return minimum is not None and minimum - 1e-6 <= measured <= af + 1e-6
+
+
+def standard_hex_afs(size: Size) -> set[float]:
+    """Every across flats a standard gives this thread's hex: its nut, DIN nut and head."""
+    found = {spanner_af(size), spanner_af(size, head=True), DIN_HEX_AF.get(size.designation)}
+    return {af for af in found if af is not None}
+
+
 _KEY_TABLES: dict[Head, dict[str, float]] = {
     Head.SOCKET: SOCKET_KEY_AF,
     Head.BUTTON: BUTTON_KEY_AF,

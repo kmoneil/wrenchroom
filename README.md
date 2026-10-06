@@ -86,9 +86,12 @@ to M5):
   where it touches the noun (`lid_button_screw`), as elsewhere it may describe
   something else (`button_panel_screw`); a drive word (`torx`, `hexalobular`,
   `phillips`, `pozidriv`) can describe nothing else and counts anywhere
-  (`torx_lid_screw`). A sidecar rule still describes a part outright, `across_flats:`
+  (`torx_lid_screw`). A hex drawn inside its nut standard's tolerance takes that
+  spanner (an M8 nut at 12.8: ISO 4032 allows 12.73 to 13), the thread's own standard
+  first where an inch and a metric band overlap; outside every band the reason names
+  the nearest tool. A sidecar rule still describes a part outright, `across_flats:`
   gives a hex its measured size, and `checks: {detect: false}` turns detection off.
-  With every fastener rule removed, the golden bench's 44 are all found with the right
+  With every fastener rule removed, the golden bench's 46 are all found with the right
   kind and size, each screw with its rule's head.
 - `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
   correct and keep: one rule per fastener, and above each a comment with how sure
@@ -99,7 +102,7 @@ to M5):
   its reason, for you to complete. Kept as written, the file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  516 fasteners is read and checked with the full kit in about 9.5 s on an Apple M5
+  517 fasteners is read and checked with the full kit in about 9.4 s on an Apple M5
   Max laptop (the target is 10 s). The bench is dense with fasteners that fail, and
   a failing one tries every tool it has: open ends, and ball-end keys leant every way
   round, cost most of that. `--exact` swaps in OCP boolean intersections on the

@@ -254,7 +254,10 @@ def test_a_socket_no_key_fits_is_not_covered():
     report = run(Assembly([Part("screw", _socket_head(4.4))]), kit="full")
     (result,) = report.results
     assert result.verdict is Verdict.NOT_COVERED
-    assert result.reason == "4.40 mm across flats is no tool's size"
+    assert result.reason == (
+        "4.40 mm across flats is no tool's size: the nearest, hex-key-3/16in, is 0.36 "
+        "larger; set across_flats: or tool: in the sidecar"
+    )
 
 
 def test_an_inch_socket_takes_its_inch_key():

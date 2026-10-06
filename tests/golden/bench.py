@@ -42,10 +42,10 @@ SLOTS = len(CELLS) + 1
 #: the one-line summary of the truth. 37 since M4: the sidecar named 36, and
 #: detection finds torx_open_screw, which no rule names; 45 since M6's hand_tight,
 #: inch_pair, torx_wall, ball_tilt and nut_tube; and since M6's open end,
-#: glands_close's two turn.
+#: glands_close's two turn; 47 since issue #27's hex_band.
 FINAL_COUNTS = {
-    "fasteners": 45,
-    "turns": 34,
+    "fasteners": 47,
+    "turns": 36,
     "held": 2,
     "blocked": 8,
     "stuck": 1,
