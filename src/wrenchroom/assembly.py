@@ -17,6 +17,12 @@ NEXT_ASSEMBLY_USAGE_OCCURRENCE name, which is what CAD packages put the per-plac
 name in) wins, the product name is the fallback, and the nearest ancestor's name after
 that.
 
+A leaf drawn as several solids (a nut and its washer as one part) is split one part
+per solid, as collision wants, but it is still one thing to a person: its largest
+solid keeps the leaf's name, and each other solid is a piece of it
+(:attr:`Part.piece_of`). A fastener rule and detection see the leaf, never a piece,
+and a fastener's pieces leave its scene with it (issue #28).
+
 Units are millimetres internally. OCP's STEP reader converts from the file's declared
 units on import, so nothing here rescales.
 """
@@ -59,10 +65,14 @@ class Part:
             build123d label, or whatever was passed to ``from_shapes``.
         shape: The geometry, usually one solid. A part handed over as a multi-solid
             shape is kept whole: the caller grouped it, the caller meant it.
+        piece_of: For a leaf read as several solids, the part its largest solid
+            became, on every other solid: one part split for collision, never a
+            fastener of its own. None for every other part.
     """
 
     name: str
     shape: Shape
+    piece_of: str | None = None
 
 
 class Assembly:
@@ -105,7 +115,7 @@ class Assembly:
         Each pair is one part, kept whole even if the shape holds several solids.
         Repeated names get ``#2``, ``#3`` appended in order, same as the STEP path.
         """
-        named = ((name, shape) for name, shape in shapes)
+        named = ((name, shape, None) for name, shape in shapes)
         return cls(_unique(named, source="from_shapes"))
 
     @classmethod
@@ -117,6 +127,10 @@ class Assembly:
     def names(self) -> tuple[str, ...]:
         """Every part name, in order."""
         return tuple(part.name for part in self.parts)
+
+    def pieces(self, name: str) -> tuple[str, ...]:
+        """The other solids of the leaf part ``name`` is, in order: often none."""
+        return tuple(part.name for part in self.parts if part.piece_of == name)
 
     def __iter__(self) -> Iterator[Part]:
         return iter(self.parts)
@@ -132,7 +146,23 @@ class Assembly:
         raise KeyError(msg)
 
 
-def _leaves(shape: Shape, inherited: str = "") -> Iterator[tuple[str, Shape]]:
+#: (name, shape, leaf): a leaf of several solids gives one per solid, all with one
+#: leaf key, so the uniquing pass can mark the pieces; None for a whole part.
+_Named = tuple[str, Shape, object | None]
+
+
+def _split(name: str, shape: Shape) -> Iterator[_Named]:
+    """One per solid; a leaf of several solids gives its largest first, keyed together."""
+    solids = shape.solids()
+    if len(solids) == 1:
+        yield name, shape, None
+    elif solids:
+        leaf = object()
+        for solid in sorted(solids, key=lambda solid: -solid.volume):
+            yield name, solid, leaf
+
+
+def _leaves(shape: Shape, inherited: str = "") -> Iterator[_Named]:
     """Walk to the leaf solids, carrying the nearest label down to unlabelled ones.
 
     A leaf with several solids and no labelled children yields one part per solid
@@ -145,25 +175,27 @@ def _leaves(shape: Shape, inherited: str = "") -> Iterator[tuple[str, Shape]]:
         for child in children:
             yield from _leaves(child, label)
         return
-    label = label or UNNAMED
-    solids = shape.solids()
-    if len(solids) <= 1:
-        if solids:
-            yield label, shape
-        return
-    for solid in solids:
-        yield label, solid
+    yield from _split(label or UNNAMED, shape)
 
 
-def _unique(named: Iterable[tuple[str, Shape]], source: str) -> Iterator[Part]:
-    """Yield parts with repeats renamed ``name#2``, ``name#3`` in arrival order."""
+def _unique(named: Iterable[_Named], source: str) -> Iterator[Part]:
+    """Yield parts with repeats renamed ``name#2``, ``name#3`` in arrival order.
+
+    A leaf's first solid (its largest) is the part; the rest are its pieces.
+    """
     seen: Counter[str] = Counter()
+    firsts: dict[object, str] = {}
     empty = True
-    for name, shape in named:
+    for name, shape, leaf in named:
         empty = False
         seen[name] += 1
         unique_name = name if seen[name] == 1 else f"{name}#{seen[name]}"
-        yield Part(name=unique_name, shape=shape)
+        piece_of = None
+        if leaf is not None and leaf in firsts:
+            piece_of = firsts[leaf]
+        elif leaf is not None:
+            firsts[leaf] = unique_name
+        yield Part(name=unique_name, shape=shape, piece_of=piece_of)
     if empty:
         msg = f"no solids found in {source}"
         raise ValueError(msg)
@@ -174,7 +206,7 @@ def _unique(named: Iterable[tuple[str, Shape]], source: str) -> Iterator[Part]:
 # ---------------------------------------------------------------------------
 
 
-def _read_step(path: Path) -> Iterator[tuple[str, Shape]]:
+def _read_step(path: Path) -> Iterator[_Named]:
     """Yield (name, shape) per leaf, instance names winning over product names."""
     doc = TDocStd_Document(TCollection_ExtendedString("XCAF"))
     shape_tool = XCAFDoc_DocumentTool.ShapeTool_s(doc.Main())
@@ -196,7 +228,7 @@ def _walk_label(
     location: TopLoc_Location,
     inherited: str,
     instance: str = "",
-) -> Iterator[tuple[str, Shape]]:
+) -> Iterator[_Named]:
     """Walk one product label, carrying the accumulated placement and names.
 
     ``instance`` is the component (NAUO) name of the reference that brought us
@@ -223,15 +255,7 @@ def _walk_label(
         return
     name = instance or _label_name(label) or inherited
     topo = shape_tool.GetShape_s(label).Moved(location)
-    shape = Shape.cast(downcast(topo))
-    solids = shape.solids()
-    if not solids:
-        return  # curves and sketch junk: not parts
-    if len(solids) == 1:
-        yield (name or UNNAMED), shape
-    else:
-        for solid in solids:
-            yield (name or UNNAMED), solid
+    yield from _split(name or UNNAMED, Shape.cast(downcast(topo)))  # no solid: no part
 
 
 def _label_name(label: TDF_Label) -> str:

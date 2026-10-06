@@ -234,14 +234,14 @@
       const mesh = partMeshes[index];
       if (!mesh) return;
       mesh.visible = visible.has(index);
-      const owner = byName.get(part.name);
+      const owner = byName.get(part.owner ?? part.name);
       let colour = owner === undefined ? C.part : data.fasteners[owner].colour;
       let opacity = part.role === "ignored" ? IGNORED : 1;
       if (f) {
         if (highlighted.has(index)) {
           colour = C.blocker;
           opacity = BLOCKER;
-        } else if (part.name !== f.name) {
+        } else if ((part.owner ?? part.name) !== f.name) {
           opacity = owner === undefined ? GHOST : OTHER_FASTENER;
         }
       }
@@ -366,7 +366,7 @@
     const hit = picker.intersectObjects(targets, false)[0];
     if (!hit) return;
     const part = data.parts[hit.object.userData.part];
-    const owner = byName.get(part.name);
+    const owner = byName.get(part.owner ?? part.name);
     if (owner !== undefined && owner !== selected) select(owner);
     else status(part.label);
   });

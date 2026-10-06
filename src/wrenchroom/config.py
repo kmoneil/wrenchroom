@@ -194,7 +194,12 @@ class Config:
         by_part: dict[str, Rule] = {}
         unmatched_rules: list[Rule] = []
         unmatched_mates: list[tuple[str, str]] = []
-        names = [name for name in assembly.names if not self.is_ignored(name)]
+        # A piece of a leaf drawn as several solids goes with its leaf (issue #28).
+        names = [
+            part.name
+            for part in assembly
+            if part.piece_of is None and not self.is_ignored(part.name)
+        ]
         for rule in self.rules:
             hits = [name for name in names if fnmatchcase(name, rule.parts)]
             if not hits:

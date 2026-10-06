@@ -19,7 +19,9 @@ solids, is fast enough for CI, and shows its answers in 3D.** What exists today 
 to M5):
 
 - `wrenchroom check model.step` reads a STEP assembly (names kept, repeats made
-  unique), takes fastener descriptions from a `wrenchroom.yaml` sidecar, resolves each
+  unique; a part drawn as several solids, a nut and its washer, is one part to a rule
+  and to detection, its largest solid keeping the name and the rest going with it),
+  takes fastener descriptions from a `wrenchroom.yaml` sidecar, resolves each
   fastener's seat and axis from its geometry (a nut is turned from the end nothing sits
   against, or, drawn off its seat with its washer left out, from the end with the more
   room), and tries real tools against the real
@@ -107,7 +109,7 @@ to M5):
   is only a candidate: it is taken when its solid shows a drive a tool fits (a hex, a
   hex socket, a cross), and otherwise passed over, which every report lists, so a
   fastener is never missed without a word. With every fastener rule removed, the
-  golden bench's 51 are all found with the right kind and size, each screw with its
+  golden bench's 53 are all found with the right kind and size, each screw with its
   rule's head, and its 21 plates, blocks and studs named for their cells are passed over.
 - `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
   correct and keep: one rule per fastener, and above each a comment with how sure
@@ -119,7 +121,7 @@ to M5):
   file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  520 fasteners is read and checked with the full kit in about 9.0 s on an Apple M5
+  540 fasteners is read and checked with the full kit in about 9.2 s on an Apple M5
   Max laptop (the target is 10 s). The bench is dense with fasteners that fail, and
   a failing one tries every tool it has: open ends, and ball-end keys leant every way
   round, cost most of that. `--exact` swaps in OCP boolean intersections on the
