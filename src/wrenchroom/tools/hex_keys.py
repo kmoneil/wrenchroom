@@ -4,7 +4,7 @@ Checked 2026-10-06 against fasten.it's DIN ISO 2936 table (edition 2016-10, whic
 implements ISO 2936:2014): across-corners ``e`` (max), long arm ``l1`` (standard
 series) and short arm ``l2``. The spec's provisional table (long 45..112, short
 14..40) was smaller than the standard series; the standard's values are used, and
-the TRIDENT golden comparison must expect leg-length differences from the prototype
+the prototype comparison must expect leg-length differences from it
 for exactly this reason.
 
 The key's shaft is modelled as a cylinder of radius ``e/2`` (half across corners),
@@ -88,8 +88,8 @@ ISO_2936: dict[float, HexKey] = {
 # inserted leg starts at the seat (the head's outer face) and runs its full
 # length along the axis, ignoring the depth the key sinks into the socket.
 # That errs safe -- it demands more axial room than reality by about the
-# socket's depth -- and it is what the prototype did, so the TRIDENT golden
-# verdicts match on this point. Revisit when a real model fails a check that
+# socket's depth -- and it is what the prototype did, so the prototype
+# comparison agrees on this point. Revisit when a real model fails a check that
 # a human with the key in hand says is fine; the fix then is to subtract the
 # ISO 4762 socket depth ``t`` here and nowhere else.
 # ---------------------------------------------------------------------------

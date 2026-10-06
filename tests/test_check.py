@@ -18,8 +18,8 @@ def run(assembly, *rules, **kwargs):
     return check(assembly, Config.from_dict({"fasteners": list(rules)}), **kwargs)
 
 
-def test_the_trident_bolt_is_blocked_and_says_by_what():
-    report = run(screw_facing_wall(16.4), M6_SOCKET)
+def test_a_screw_under_a_close_wall_is_blocked_and_says_by_what():
+    report = run(screw_facing_wall(15.0), M6_SOCKET)
     (result,) = report.results
     assert result.verdict is Verdict.BLOCKED
     assert result.tool == "hex-key-5"
@@ -100,9 +100,9 @@ def test_an_unknown_kit_is_a_loud_error():
 
 
 def test_the_json_document_has_the_spec_shape():
-    report = run(screw_facing_wall(16.4), M6_SOCKET, model="trident.step")
+    report = run(screw_facing_wall(15.0), M6_SOCKET, model="bench.step")
     document = report.to_json_dict()
-    assert document["model"] == "trident.step"
+    assert document["model"] == "bench.step"
     assert document["summary"]["blocked"] == 1
     (entry,) = document["fasteners"]
     assert entry["name"] == "bolt"
@@ -113,7 +113,7 @@ def test_the_json_document_has_the_spec_shape():
 
 
 def test_terminal_lines_lead_with_the_summary():
-    report = run(screw_facing_wall(16.4), M6_SOCKET)
+    report = run(screw_facing_wall(15.0), M6_SOCKET)
     lines = report.terminal_lines()
     assert lines[0].startswith("1 fasteners: 0 turn")
     assert any(line.startswith("FAIL bolt") for line in lines)

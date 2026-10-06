@@ -54,8 +54,8 @@ fasteners:
 
 @pytest.fixture
 def exported(tmp_path):
-    """The TRIDENT wall case (blocked) as model.step + wrenchroom.yaml."""
-    assembly = screw_facing_wall(16.4)
+    """The close-wall case (blocked) as model.step + wrenchroom.yaml."""
+    assembly = screw_facing_wall(15.0)
     shapes = []
     for part in assembly:
         part.shape.label = part.name

@@ -8,10 +8,9 @@ it can't. It runs from the command line, from Python, and in CI.
 
 A collision check says the parts fit. It doesn't say the thing can be put together or
 taken apart. The classic failure is a bolt nobody can get a tool on, found when the parts
-arrive. One real design review found, among other things, four socket head bolts 16.4 mm
-from a wall: the 5 mm hex key they need is 28 mm long on its short leg. The fix was cheap
-once seen (hex heads a spanner turns sideways); seen late it would have been a re-order.
-Every one of those findings was invisible to the collision check.
+arrive: a socket head screw 15 mm under a wall needs a 5 mm hex key whose short leg alone
+is 33 mm. The fix is cheap seen early (a hex head a spanner turns from the side) and a
+re-order seen late, and a collision check can't see it either way.
 
 ## Status
 

@@ -45,7 +45,7 @@ def slab_above(gap, size=400, thick=10):
 
 
 # ---------------------------------------------------------------------------
-# The TRIDENT case: an M6 socket head (5 mm key) facing a wall along its axis.
+# The close-wall case: an M6 socket head (5 mm key) facing a wall along its axis.
 # ---------------------------------------------------------------------------
 
 KEY_5 = ISO_2936[5.0]
@@ -53,8 +53,8 @@ KEY_5 = ISO_2936[5.0]
 SHORT_LEG_CLEARANCE = CONTACT_OFFSET + KEY_5.short_mm + KEY_5.radius  # 36.135 mm
 
 
-def test_the_trident_wall_blocks_every_way_of_a_5mm_key():
-    scene = scene_of(wall=slab_above(16.4))
+def test_a_close_wall_blocks_every_way_of_a_5mm_key():
+    scene = scene_of(wall=slab_above(15.0))
     tried = run_until_turning(hex_key_attempts(ORIGIN_MOUNT, KEY_5, scene))
     assert not any(a.turns for a in tried)
     assert all("wall" in a.blockers for a in tried)

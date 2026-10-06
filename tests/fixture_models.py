@@ -34,7 +34,7 @@ SEAT_Z = SHANK_LENGTH + HEAD_HEIGHT
 
 
 def screw_facing_wall(gap):
-    """The TRIDENT case: a wall `gap` mm above the screw's head."""
+    """A wall `gap` mm above the screw's head."""
     wall = Pos(0, 0, SEAT_Z + gap + 5) * Box(400, 400, 10)
     return Assembly([Part("bolt", socket_screw()), Part("wall", wall)])
 

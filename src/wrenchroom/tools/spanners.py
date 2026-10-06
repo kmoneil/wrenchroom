@@ -1,7 +1,7 @@
 """Combination spanners: dimensions, currently the prototype's approximations.
 
 Every function here is an APPROXIMATION, labelled per the project rule, carried
-over from the prototype that found TRIDENT's real failures with them. Replace with
+over from the prototype that found real failures with them. Replace with
 DIN 3113 / ISO 3318 / ISO 7738 tables when those are read out; keep the function
 signatures, since the sweep only asks for numbers by across-flats.
 
