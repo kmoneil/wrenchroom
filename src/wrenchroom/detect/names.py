@@ -1,0 +1,470 @@
+"""Fasteners from part names: what a name says, and nothing it doesn't (spec 7.1).
+
+Four kinds of evidence, strongest first:
+
+1. A standard: ``ISO 4762``, ``DIN 912``, ``DIN EN ISO 4017``. Gives kind and head.
+2. A McMaster-Carr part number: ``91290A115``. Its series gives kind and head.
+3. A description: ``SHCS``, ``button head``, ``hex nut``, ``nyloc``, ``carriage bolt``.
+4. A plain noun ending a code-CAD name: ``lift_link_0_bolt_bot`` is a bolt. That
+   gives the kind and nothing else.
+
+Any of them may come with a thread size (``M6``, ``M6x20``, ``M6x1x20``,
+``1/4-20 x 3/4``, ``#10-32``) and a length.
+
+A name reads as a fastener only when the word it is about, its last noun, is a
+fastener noun, or when it carries a standard or a catalogue number. So
+``bolt_hole_cover`` is a cover and ``pair_nut_held_upper`` is about ``held`` (with the
+positional ``upper`` set aside), however many fastener words come earlier.
+
+Whatever the name doesn't say stays None for geometry to fill in (spec 5.2: names,
+then geometry, then the sidecar, each overriding the one before). A name that is
+clearly a fastener the kit can't check (a set screw, an M2) comes back with
+``not_covered`` and the reason, never as nothing.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from fractions import Fraction
+
+from wrenchroom.fasteners import Head, Kind, Size
+
+_MM_PER_INCH = 25.4
+
+#: The multiplication sign people type between size and length ("M6x20" with a
+#: real times sign); built from its code point so this file stays plain ASCII.
+_TIMES = chr(0xD7)
+
+
+@dataclass(frozen=True)
+class NameHint:
+    """What a part's name says about it as a fastener.
+
+    Attributes:
+        kind: Screw or nut.
+        head: The head, when the name says (a standard, a description, a
+            modifier such as ``hex`` or ``carriage``).
+        size: The thread size, when the name gives one the tables know.
+        length_mm: Length under the head, when the name gives it.
+        socket_allowed: False for a cable gland: a cable runs through it.
+        basis: What in the name said so, for people (``ISO 4762``,
+            ``McMaster 91290A``, ``SHCS``, ``noun 'bolt'``, ``M6x20``).
+        not_covered: Set when the name is clearly a fastener the kit can't check,
+            with the reason; the check reports it `not-covered`.
+    """
+
+    kind: Kind
+    head: Head | None = None
+    size: Size | None = None
+    length_mm: float | None = None
+    socket_allowed: bool = True
+    basis: str = ""
+    not_covered: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# The tables. Kind and head only: dimensions live in fasteners.py.
+# ---------------------------------------------------------------------------
+
+_S, _N = Kind.SCREW, Kind.NUT
+_SET_SCREW = (
+    "a set screw takes a smaller key than the socket-head table; name the tool in the sidecar"
+)
+_LOW_HEAD = (
+    "a low-head socket screw takes a smaller key than ISO 4762; name the tool in the sidecar"
+)
+
+#: Standards to (kind, head, not-covered reason); kind None means "not a fastener"
+#: (washers). Checked 2026-10-06 against ecomfasteners.com's DIN-to-ISO chart, the
+#: ISO catalogue titles (ISO 1580, 7040, 7380, 14579, 14580, 14583) and supplier
+#: pages (fasten.it for DIN 965 / ISO 7046, fabory for DIN 84 / ISO 1207,
+#: engineeringhardware for DIN 6923 / ISO 4161). DIN 85 and DIN 982 are left out
+#: until checked.
+STANDARDS: dict[str, tuple[Kind | None, Head | None, str | None]] = {
+    # socket heads
+    "ISO 4762": (_S, Head.SOCKET, None),
+    "DIN 912": (_S, Head.SOCKET, None),
+    "ISO 7380": (_S, Head.BUTTON, None),
+    "ISO 10642": (_S, Head.FLAT, None),
+    "DIN 7991": (_S, Head.FLAT, None),
+    "DIN 7984": (_S, Head.SOCKET, _LOW_HEAD),
+    # hex heads, coarse and fine, full and part thread
+    "ISO 4017": (_S, Head.HEX, None),
+    "DIN 933": (_S, Head.HEX, None),
+    "ISO 4014": (_S, Head.HEX, None),
+    "DIN 931": (_S, Head.HEX, None),
+    "ISO 8676": (_S, Head.HEX, None),
+    "DIN 961": (_S, Head.HEX, None),
+    "ISO 8765": (_S, Head.HEX, None),
+    "DIN 960": (_S, Head.HEX, None),
+    # cross recess: pan and countersunk alike take a Phillips driver
+    "ISO 7045": (_S, Head.PHILLIPS, None),
+    "DIN 7985": (_S, Head.PHILLIPS, None),
+    "ISO 7046": (_S, Head.PHILLIPS, None),
+    "DIN 965": (_S, Head.PHILLIPS, None),
+    # slotted: cheese, pan, countersunk
+    "ISO 1207": (_S, Head.SLOTTED, None),
+    "DIN 84": (_S, Head.SLOTTED, None),
+    "ISO 1580": (_S, Head.SLOTTED, None),
+    "ISO 2009": (_S, Head.SLOTTED, None),
+    "DIN 963": (_S, Head.SLOTTED, None),
+    # hexalobular (Torx): the check says not-covered until the M6 kit
+    "ISO 14579": (_S, Head.TORX, None),
+    "ISO 14580": (_S, Head.TORX, None),
+    "ISO 14583": (_S, Head.TORX, None),
+    # carriage bolts hold themselves
+    "DIN 603": (_S, Head.CARRIAGE, None),
+    "ISO 8677": (_S, Head.CARRIAGE, None),
+    "ISO 8678": (_S, Head.CARRIAGE, None),
+    # set screws
+    "ISO 4026": (_S, None, _SET_SCREW),
+    "DIN 913": (_S, None, _SET_SCREW),
+    "ISO 4027": (_S, None, _SET_SCREW),
+    "DIN 914": (_S, None, _SET_SCREW),
+    "ISO 4028": (_S, None, _SET_SCREW),
+    "DIN 915": (_S, None, _SET_SCREW),
+    "ISO 4029": (_S, None, _SET_SCREW),
+    "DIN 916": (_S, None, _SET_SCREW),
+    # nuts: plain, thin, nylon-insert, flange
+    "ISO 4032": (_N, None, None),
+    "DIN 934": (_N, None, None),
+    "ISO 4035": (_N, None, None),
+    "ISO 4036": (_N, None, None),
+    "DIN 439": (_N, None, None),
+    "ISO 7040": (_N, None, None),
+    "ISO 10511": (_N, None, None),
+    "DIN 985": (_N, None, None),
+    "ISO 4161": (_N, None, None),
+    "DIN 6923": (_N, None, None),
+    # washers: not fasteners (spec 4), whatever size they carry
+    "ISO 7089": (None, None, None),
+    "ISO 7090": (None, None, None),
+    "DIN 125": (None, None, None),
+    "DIN 127": (None, None, None),
+    "ISO 7093": (None, None, None),
+    "DIN 9021": (None, None, None),
+}
+
+#: McMaster-Carr series (the part number up to its letter) to (kind, head). The
+#: number after the letter picks a size and length that only their catalogue
+#: knows, so geometry gives the size. Checked 2026-10-06 against product titles
+#: quoted by resellers: 91290A111 "Black-Oxide Alloy Steel Socket Head Screw M3 x
+#: 0.5 mm, 6 mm Long", 91292A110 "18-8 Stainless Steel Socket Head Screw", 92095A179
+#: "Button Head Hex Drive Screw", 92125A284 "M8-1.25 x 20 flat socket", 93625A250
+#: "Nylon-Insert Locknut M6-1", 90591A121 "M3 Hex Nut". The table grows by
+#: adding checked rows, never guessed ones.
+MCMASTER: dict[str, tuple[Kind, Head | None]] = {
+    "91290A": (_S, Head.SOCKET),
+    "91292A": (_S, Head.SOCKET),
+    "92095A": (_S, Head.BUTTON),
+    "92125A": (_S, Head.FLAT),
+    "93625A": (_N, None),
+    "90591A": (_N, None),
+}
+
+#: Nouns a name can be about. Each maps to the kind, plus a fixed head or a
+#: not-covered reason where the noun settles it.
+_SCREW_NOUNS = {"screw", "screws", "bolt", "bolts", "capscrew", "shcs", "bhcs", "fhcs", "shoulder"}
+_NUT_NOUNS = {"nut", "nuts", "locknut", "nyloc", "nylock", "nylok"}
+_GLAND_NOUNS = {"gland", "glands"}
+_HAND_TURNED = {"wingnut", "thumbscrew", "thumbnut"}
+_SET_SCREW_NOUNS = {"setscrew", "grubscrew"}
+#: Describing words that settle a fastener as one the kit can't check.
+_HAND_WORDS = {"wing", "thumb", "knurled"}
+_SET_WORDS = {"set", "grub"}
+_BY_HAND = "turned by hand: there is no tool to check"
+
+#: Every fastener noun to its kind.
+_NOUN_KIND: dict[str, Kind] = {
+    **dict.fromkeys(_SCREW_NOUNS | _SET_SCREW_NOUNS | {"thumbscrew"}, Kind.SCREW),
+    **dict.fromkeys(_NUT_NOUNS | _GLAND_NOUNS | {"wingnut", "thumbnut"}, Kind.NUT),
+}
+
+#: Words that describe a fastener rather than name what the part is, and so are
+#: passed over when looking for the last noun; several also say the head.
+_HEAD_WORDS: dict[str, Head | None] = {
+    "shcs": Head.SOCKET,
+    "socket": Head.SOCKET,
+    "allen": Head.SOCKET,
+    "cap": Head.SOCKET,
+    "bhcs": Head.BUTTON,
+    "button": Head.BUTTON,
+    "fhcs": Head.FLAT,
+    "countersunk": Head.FLAT,
+    "csk": Head.FLAT,
+    "flat": Head.FLAT,
+    "hex": Head.HEX,
+    "hexagon": Head.HEX,
+    "phillips": Head.PHILLIPS,
+    "pozi": Head.PHILLIPS,
+    "pozidriv": Head.PHILLIPS,
+    "cross": Head.PHILLIPS,
+    "ph": Head.PHILLIPS,
+    "slotted": Head.SLOTTED,
+    "torx": Head.TORX,
+    "hexalobular": Head.TORX,
+    "carriage": Head.CARRIAGE,
+    "coach": Head.CARRIAGE,
+    "pan": None,
+    "cheese": None,
+    "head": None,
+    "machine": None,
+    "flange": None,
+    "flanged": None,
+    "jam": None,
+    "lock": None,
+    "thin": None,
+    "metric": None,
+    # read with the noun: "wing nut", "set screw" (see _noun_hint)
+    "wing": None,
+    "thumb": None,
+    "knurled": None,
+    "set": None,
+    "grub": None,
+}
+
+#: When several head words appear, the most specific wins: a drive beats a head
+#: shape ("pan head phillips", "flat head torx"), and a carriage bolt is one
+#: whatever else it says.
+_HEAD_RANK = (
+    Head.CARRIAGE,
+    Head.TORX,
+    Head.PHILLIPS,
+    Head.SLOTTED,
+    Head.BUTTON,
+    Head.FLAT,
+    Head.SOCKET,
+    Head.HEX,
+)
+
+#: Words that qualify where a part sits or what it is made of, never what it is.
+_QUALIFIERS = {
+    "top", "bot", "bottom", "upper", "lower", "left", "right", "front", "rear", "back",
+    "inner", "outer", "mid", "middle", "center", "centre", "near", "far", "side",
+    "high", "low", "lh", "rh", "first", "second", "third", "primary", "secondary",
+    "copy", "mirror", "mirrored", "instance", "part", "assy", "std", "standard",
+    "steel", "stainless", "ss", "zinc", "zp", "plated", "black", "oxide", "galv",
+    "brass", "nylon", "aluminium", "aluminum", "titanium", "alloy",
+    "a2", "a4", "iso", "din", "en", "ansi", "asme", "mm", "in", "inch",
+}  # fmt: skip
+
+# ---------------------------------------------------------------------------
+# Reading.
+# ---------------------------------------------------------------------------
+
+#: Instance markers CAD packages and wrenchroom itself append: "name#2" (ours),
+#: "name<3>" (SolidWorks), "name (1)" and "name:1" (Fusion and others).
+_INSTANCE_SUFFIX = re.compile(r"(?:(?<=\S)#\d+|\s*<\d+>|\s*\(\d+\)|:\d+)\s*$")
+
+_STANDARD = re.compile(
+    r"(?<![A-Za-z])(?:DIN[\s_-]*EN[\s_-]*)?(ISO|DIN)[\s_-]*(\d{2,5})(?![0-9])", re.IGNORECASE
+)
+_MCMASTER = re.compile(r"(?<![0-9A-Za-z])(\d{4,5}A)\d{1,4}(?![0-9A-Za-z])", re.IGNORECASE)
+_METRIC = re.compile(
+    r"(?<![A-Za-z0-9])M(\d+(?:[.,]\d+)?)"
+    r"(?:\s*x\s*(\d+(?:[.,]\d+)?))?(?:\s*x\s*(\d+(?:[.,]\d+)?))?(?:\s*mm)?(?![0-9])",
+    re.IGNORECASE,
+)
+_IMPERIAL = re.compile(
+    r"(?<![A-Za-z0-9#/])(#\d{1,2}|\d{1,2}/\d{1,2})(?:\s*-\s*(\d{2,3}))?"
+    r"(?:\s*x\s*(\d+(?:\s*-\s*\d+/\d+|/\d+|\.\d+)?|\.\d+)\s*(?:\"|in\b|inch\b)?)?",
+    re.IGNORECASE,
+)
+_CAMEL = re.compile(r"(?<=[a-z])(?=[A-Z])")
+_TOKEN_SPLIT = re.compile(r"[^0-9A-Za-z]+")
+
+#: Thread pitches (ISO 261, coarse and common fine), used only to tell "M6x1"
+#: (a pitch) from "M6x10" (a length).
+_PITCHES = {0.35, 0.4, 0.45, 0.5, 0.6, 0.7, 0.75, 0.8, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0}
+
+
+def read_name(name: str) -> NameHint | None:
+    """What this part name says about the part as a fastener, or None if nothing.
+
+    Never raises: any string is a possible part name.
+    """
+    cleaned = _clean(name)
+    standard = _standard_in(cleaned)
+    catalogue = _mcmaster_in(cleaned)
+    words = _words(cleaned)
+    at = _last_noun(words)
+    noun = words[at] if at is not None else None
+    run = _descriptors(words, at)
+    if standard is not None:
+        label, (kind, head, reason) = standard
+        if kind is None:
+            return None  # a washer, by its standard
+        basis = [label]
+    elif catalogue is not None:
+        series, (kind, head) = catalogue
+        reason = None
+        basis = [f"McMaster {series}"]
+    else:
+        found = _noun_hint(noun, run)
+        if found is None:
+            return None
+        kind, head, reason, word = found
+        basis = [f"noun {word!r}"]
+    head = head or _head_from(run, kind)
+    socket_allowed = noun not in _GLAND_NOUNS
+    size, length, size_text, size_reason = _size_in(cleaned)
+    if not socket_allowed:
+        # A gland's thread says nothing about the hex a spanner grips (an M20
+        # gland is commonly 24 across flats): geometry measures the hex.
+        size, size_text, size_reason = None, None, None
+    if size_text:
+        basis.append(size_text)
+    return NameHint(
+        kind=kind,
+        head=head,
+        size=size,
+        length_mm=length,
+        socket_allowed=socket_allowed,
+        basis=", ".join(basis),
+        not_covered=reason or size_reason,
+    )
+
+
+def _clean(name: str) -> str:
+    text = name.replace(_TIMES, "x").replace("*", "x")
+    previous = None
+    while previous != text:  # "bolt (2)#3": strip every trailing marker
+        previous = text
+        text = _INSTANCE_SUFFIX.sub("", text)
+    return text.strip()
+
+
+def _standard_in(text: str) -> tuple[str, tuple[Kind | None, Head | None, str | None]] | None:
+    for match in _STANDARD.finditer(text):
+        label = f"{match.group(1).upper()} {match.group(2)}"
+        if label in STANDARDS:
+            return label, STANDARDS[label]
+    return None
+
+
+def _mcmaster_in(text: str) -> tuple[str, tuple[Kind, Head | None]] | None:
+    for match in _MCMASTER.finditer(text):
+        series = match.group(1).upper()
+        if series in MCMASTER:
+            return series, MCMASTER[series]
+    return None
+
+
+def _words(text: str) -> list[str]:
+    """Lower-case words, split at punctuation and camelCase; sizes left out."""
+    stripped = _IMPERIAL.sub(" ", _METRIC.sub(" ", text))
+    spaced = _CAMEL.sub(" ", stripped)
+    return [word.lower() for word in _TOKEN_SPLIT.split(spaced) if word]
+
+
+def _last_noun(words: list[str]) -> int | None:
+    """Where the word the name is about sits: the last one that isn't a qualifier."""
+    for index in range(len(words) - 1, -1, -1):
+        word = words[index]
+        if _describes(word):
+            continue
+        if word.isdigit() or len(word) == 1 or re.fullmatch(r"[a-z]\d+", word):
+            continue  # numbers, a/b, r1: labels, not nouns
+        return index
+    return None
+
+
+def _describes(word: str) -> bool:
+    """A word that qualifies or describes rather than names what the part is."""
+    return word in _QUALIFIERS or (word in _HEAD_WORDS and word not in _SCREW_NOUNS)
+
+
+def _descriptors(words: list[str], at: int | None) -> set[str]:
+    """The describing words touching the noun on either side, and only those.
+
+    "pan head phillips screw", "Screw-Socket-Head": the run round the noun. Head
+    words anywhere else belong to something else: in ``x_carriage_bolt`` from a
+    printer, ``carriage`` is the printer's carriage, and a bolt mistaken for a
+    carriage bolt would hold itself and never be checked. (That one still reads
+    as a carriage bolt, ``x`` being a label; which is why self-holding also needs
+    the geometry to show a square neck.)
+    """
+    if at is None:
+        return set()
+    run = {words[at]}
+    for step in (-1, 1):
+        index = at + step
+        while 0 <= index < len(words) and _describes(words[index]):
+            run.add(words[index])
+            index += step
+    return run
+
+
+def _noun_hint(noun: str | None, run: set[str]) -> tuple[Kind, Head | None, str | None, str] | None:
+    """(kind, head, not-covered reason, the noun) for a fastener noun, else None."""
+    kind = _NOUN_KIND.get(noun or "")
+    if noun is None or kind is None:
+        return None
+    if noun in _SET_SCREW_NOUNS or (kind is Kind.SCREW and run & _SET_WORDS):
+        return kind, None, _SET_SCREW, noun
+    if noun in _HAND_TURNED or run & _HAND_WORDS:
+        return kind, None, _BY_HAND, noun
+    head = _HEAD_WORDS.get(noun) if kind is Kind.SCREW else None
+    return kind, head, None, noun
+
+
+def _head_from(run: set[str], kind: Kind) -> Head | None:
+    if kind is Kind.NUT:
+        return None
+    said = {head for word in run if (head := _HEAD_WORDS.get(word)) is not None}
+    return next((head for head in _HEAD_RANK if head in said), None)
+
+
+def _size_in(text: str) -> tuple[Size | None, float | None, str | None, str | None]:
+    """(size, length mm, the text that gave them, a not-covered reason)."""
+    metric = _METRIC.search(text)
+    if metric is not None:
+        return _metric(metric)
+    imperial = _IMPERIAL.search(text)
+    if imperial is not None and (imperial.group(2) or imperial.group(1).startswith("#")):
+        return _imperial(imperial)
+    return None, None, None, None
+
+
+def _metric(match: re.Match[str]) -> tuple[Size | None, float | None, str | None, str | None]:
+    diameter = match.group(1).replace(",", ".")
+    numbers = [float(g.replace(",", ".")) for g in match.groups()[1:] if g]
+    length = None
+    if len(numbers) == 2:  # noqa: PLR2004  (M6x1x20: pitch then length)
+        length = numbers[1]
+    elif numbers and not _is_pitch(numbers[0], float(diameter)):
+        length = numbers[0]
+    text = match.group(0).strip()
+    designation = f"M{float(diameter):g}"
+    try:
+        return Size.parse(designation), length, text, None
+    except ValueError:
+        return None, length, text, f"{designation} is outside the sizes the kit covers (M3 to M24)"
+
+
+def _is_pitch(value: float, diameter: float) -> bool:
+    return value in _PITCHES and value <= diameter / 4
+
+
+def _imperial(match: re.Match[str]) -> tuple[Size | None, float | None, str | None, str | None]:
+    designation = match.group(1)
+    length = _inches(match.group(3)) if match.group(3) else None
+    text = match.group(0).strip()
+    try:
+        return Size.parse(designation), length, text, None
+    except ValueError:
+        return None, length, text, f"{designation} is outside the sizes the kit covers"
+
+
+def _inches(text: str) -> float | None:
+    """'3/4', '1.5', '.5', '1-1/2' (inches) to mm."""
+    cleaned = re.sub(r"\s+", "", text)
+    whole, _, rest = (
+        cleaned.partition("-") if "/" in cleaned and "-" in cleaned else ("", "", cleaned)
+    )
+    try:
+        value = Fraction(rest) + (int(whole) if whole else 0)
+    except (ValueError, ZeroDivisionError):
+        return None
+    return round(float(value) * _MM_PER_INCH, 3)
