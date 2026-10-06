@@ -185,13 +185,36 @@ def test_explain_prints_nothing_that_steers(hostile_step):
     assert "hit wall\\x0a36 fasteners" in result.output
 
 
+@pytest.mark.parametrize(
+    ("option", "kept"),
+    [
+        ("--json", {"\n"}),
+        ("--md", {"\n"}),
+        ("--html", {"\n", "\t"}),  # the page's scripts are indented with tabs
+    ],
+)
+def test_a_report_on_stdout_steers_nothing_either(hostile_step, option, kept):
+    # Issue #21: a report on stdout lands on a terminal unless it is piped.
+    result = _run("check", str(hostile_step), option, "-")
+    assert result.exit_code == 1
+    _assert_safe(result.stderr)  # the table, moved out of the way
+    assert set(UNSAFE.findall(result.stdout)) <= kept
+    assert ESC not in result.stdout
+    assert FORGED not in [line.strip() for line in result.stdout.splitlines()]
+    if option == "--json":
+        (entry,) = json.loads(result.stdout)["fasteners"]
+        assert ESC in entry["name"]  # still the truth, escaped by the encoder
+
+
 def test_an_error_naming_a_hostile_fastener_is_escaped_too(hostile_step):
     result = _run("explain", str(hostile_step), "ghost" + ESC + "[2J")
     assert result.exit_code == 2
     _assert_safe(result.output)
 
 
-def test_nothing_in_the_cli_reaches_the_terminal_but_through_say():
+def test_nothing_in_the_cli_reaches_the_terminal_but_through_say_or_emit():
+    # _say for a person's lines; _emit for a whole report sent to stdout, held
+    # safe by the test above.
     tree = ast.parse(Path(wrenchroom.cli.__file__).read_text())
     callers = []
     for function in ast.walk(tree):
@@ -201,7 +224,7 @@ def test_nothing_in_the_cli_reaches_the_terminal_but_through_say():
             if (
                 isinstance(node, ast.Call)
                 and isinstance(node.func, ast.Attribute)
-                and node.func.attr in {"echo", "secho", "print"}
+                and node.func.attr in {"echo", "secho", "print", "write"}
             ) or (isinstance(node, ast.Call) and getattr(node.func, "id", "") == "print"):
                 callers.append(function.name)
-    assert callers == ["_say"]
+    assert callers == ["_say", "_emit"]
