@@ -23,8 +23,11 @@ solids, and is fast enough for CI.** What exists today (M1 to M4):
   parts: metric hex keys (driver straight in, short leg, long leg), ring spanners (full
   and stubby), sockets on a ratchet with stock extensions, Phillips and slotted
   drivers. Verdicts per fastener with every blocker named; terminal table, JSON
-  (`--json`), exit codes for CI (0 pass, 1 a fastener fails, 2 not covered or config
-  error).
+  (`--json`), Markdown for a CI job summary or a PR comment (`--md`), exit codes for
+  CI (0 pass, 1 a fastener fails, 2 not covered or config error). Names come from the
+  model, so the terminal shows control characters written out and the Markdown puts
+  every name in a code span: a crafted part name can't steer a terminal or post a
+  link or an image in a comment.
 - Dimension tables cite their standards (ISO 2936, 4762, 7380-1, 10642, 4032) with the
   date checked; approximations are labelled as such.
 - A sidecar rule that matches nothing is reported and fails the run: that is how a
@@ -78,7 +81,8 @@ FAIL key_wall_near_screw  hex-key-5  blocked  key_wall_near_wall
   along its axis; retried with parts removed or the mechanism moved.
 - **Every failure explained**: which tool, which way it was tried, what it hit.
 - **Fast enough for CI**: 500 fasteners in under 10 seconds, with JSON output and exit
-  codes, a terminal table, and (coming) a self-contained HTML 3D view.
+  codes, a terminal table, Markdown to post, and (coming) a self-contained HTML 3D
+  view.
 
 ## Development
 

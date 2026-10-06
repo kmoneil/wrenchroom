@@ -58,6 +58,12 @@ def main() -> None:
     type=click.Path(dir_okay=False, path_type=Path),
     help="Also write the machine-readable report here.",
 )
+@click.option(
+    "--md",
+    "md_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Also write the report as Markdown here, for a CI summary or a PR comment.",
+)
 @click.option("--step-deg", default=15.0, show_default=True, help="Swing sampling step.")
 @click.option("--only", help="Check only fasteners whose name matches this glob.")
 @click.option("--state", help="Check in this state instead of the config's default.")
@@ -66,11 +72,12 @@ def main() -> None:
     is_flag=True,
     help="Use the exact OCP boolean engine: slow, the referee for borderline results.",
 )
-def check(
+def check(  # noqa: PLR0913, PLR0917  (Click passes one parameter per option)
     model: Path,
     config_path: Path | None,
     kit: str,
     json_path: Path | None,
+    md_path: Path | None,
     step_deg: float,
     only: str | None,
     state: str | None,
@@ -84,6 +91,8 @@ def check(
         _say(line)
     if json_path is not None:
         report.to_json(json_path)
+    if md_path is not None:
+        report.to_markdown(md_path)
     sys.exit(report.exit_code)
 
 
