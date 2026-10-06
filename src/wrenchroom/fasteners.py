@@ -129,6 +129,8 @@ class Fastener:
             a socket cannot pass over a cable.
         mates: Part names that travel with this fastener (washers, a carriage
             bolt's spacer) and leave its scene.
+        state: The named state this fastener is reached in, or ``None`` for the
+            run's default state.
     """
 
     name: str
@@ -140,6 +142,7 @@ class Fastener:
     tool: str | None = None
     socket_allowed: bool = True
     mates: tuple[str, ...] = field(default=())
+    state: str | None = None
 
     @property
     def self_holding(self) -> bool:

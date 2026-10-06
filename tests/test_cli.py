@@ -28,10 +28,9 @@ def test_version_reports_the_package_version():
     "argv",
     [
         ["detect", "model.step"],
-        ["explain", "model.step", "lift_link_0_bolt_top"],
         ["tools"],
     ],
-    ids=["detect", "explain", "tools"],
+    ids=["detect", "tools"],
 )
 def test_unbuilt_commands_exit_not_covered(argv):
     result = CliRunner().invoke(main, argv)
@@ -85,13 +84,28 @@ def test_check_only_mismatch_passes_empty(exported):
 
 
 def test_check_bad_config_exits_2(exported, tmp_path):
-    (tmp_path / "wrenchroom.yaml").write_text("states: {}\n")
+    (tmp_path / "wrenchroom.yaml").write_text("states:\n  open:\n    base: missing\n")
     result = CliRunner().invoke(main, ["check", str(exported)])
     assert result.exit_code == EXIT_NOT_COVERED
-    assert "arrives with M2" in result.output
+    assert "is not a state" in result.output
 
 
 def test_check_unknown_kit_exits_2(exported):
     result = CliRunner().invoke(main, ["check", str(exported), "--kit", "mars"])
     assert result.exit_code == EXIT_NOT_COVERED
     assert "unknown kit" in result.output
+
+
+def test_explain_prints_every_attempt(exported):
+    result = CliRunner().invoke(main, ["explain", str(exported), "bolt"])
+    assert result.exit_code == 1  # the bolt is blocked, and explain says so
+    assert "bolt: blocked" in result.output
+    assert "tried hex-key-5, driver straight in: blocked" in result.output
+    assert "tried hex-key-5, short leg in: blocked" in result.output
+    assert "hit wall" in result.output
+
+
+def test_explain_unknown_fastener_exits_2(exported):
+    result = CliRunner().invoke(main, ["explain", str(exported), "ghost"])
+    assert result.exit_code == EXIT_NOT_COVERED
+    assert "no fastener named" in result.output

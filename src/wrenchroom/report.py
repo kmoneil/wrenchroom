@@ -50,10 +50,13 @@ class FastenerResult:
     how: str | None = None
     swing_deg: float = 0.0
     blockers: tuple[str, ...] = ()
+    stuck_on: tuple[str, ...] = ()
     attempts: tuple[Attempt, ...] = ()
     reason: str | None = None
     axis: tuple[float, float, float] | None = None
     seat: tuple[float, float, float] | None = None
+    state: str | None = None
+    pair: str | None = None
 
     @property
     def passed(self) -> bool:
@@ -70,6 +73,9 @@ class Report:
     results: tuple[FastenerResult, ...]
     unmatched_rules: tuple[str, ...] = ()
     unmatched_ignores: tuple[str, ...] = ()
+    #: Config-grade problems found while checking (a forced pair naming nothing,
+    #: a state's remove glob matching nothing): reported, and the run exits 2.
+    warnings: tuple[str, ...] = ()
 
     def failures(self) -> tuple[FastenerResult, ...]:
         """Everything that did not pass, worst first (not-covered last)."""
@@ -95,7 +101,8 @@ class Report:
     @property
     def exit_code(self) -> int:
         """0 all pass; 1 a fastener fails; 2 not covered or a config problem."""
-        if self.summary["not_covered"] or self.unmatched_rules or self.unmatched_ignores:
+        askew = self.unmatched_rules or self.unmatched_ignores or self.warnings
+        if self.summary["not_covered"] or askew:
             return 2
         if self.summary["blocked"] or self.summary["stuck"]:
             return 1
@@ -116,6 +123,7 @@ class Report:
             "summary": self.summary,
             "unmatched_rules": list(self.unmatched_rules),
             "unmatched_ignores": list(self.unmatched_ignores),
+            "warnings": list(self.warnings),
             "fasteners": [_result_json(result) for result in self.results],
         }
 
@@ -135,13 +143,15 @@ class Report:
         ]
         lines.extend(_group_table(self.results))
         for result in self.failures():
-            what = result.reason or ", ".join(result.blockers) or "no tool found"
+            via = result.stuck_on if result.verdict is Verdict.STUCK else result.blockers
+            what = result.reason or ", ".join(via) or "no tool found"
             tool = result.tool or "-"
             lines.append(f"FAIL {result.fastener.name}  {tool}  {result.verdict}  {what}")
         for glob in self.unmatched_rules:
             lines.append(f"WARN rule matched nothing: {glob!r} (renamed part?)")
         for glob in self.unmatched_ignores:
             lines.append(f"WARN ignore matched nothing: {glob!r}")
+        lines.extend(f"WARN {warning}" for warning in self.warnings)
         return lines
 
 
@@ -160,10 +170,10 @@ def _result_json(result: FastenerResult) -> dict[str, object]:
         "verdict": result.verdict.value,
         "how": result.how,
         "swing_deg": result.swing_deg,
-        "state": None,
-        "pair": None,
+        "state": result.state,
+        "pair": result.pair,
         "blocked_by": list(result.blockers),
-        "stuck_on": [],
+        "stuck_on": list(result.stuck_on),
         "reason": result.reason,
     }
 

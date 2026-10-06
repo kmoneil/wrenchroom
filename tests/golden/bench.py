@@ -67,7 +67,16 @@ def sidecar_and_truth():
         "needs": "issue-2",
     }
     truth["twins_b_screw"] = {"verdict": "turns", "needs": "issue-2"}
-    return {"fasteners": rules, "ignore": sorted(ignore)}, truth
+    sidecar = {
+        "fasteners": rules,
+        "ignore": sorted(ignore),
+        "states": {
+            "lid-off": {"remove": ["state_lid_lid"]},
+            "lever-up": {"model": "bench_lever-up.step"},
+        },
+        "checks": {"try_states": ["lever-up"]},
+    }
+    return sidecar, truth
 
 
 def build(raised=False):
@@ -158,4 +167,4 @@ def check_bench(directory, config_name="wrenchroom.yaml"):
     directory = Path(directory)
     assembly = Assembly.from_step(directory / "bench.step")
     config = Config.load(directory / config_name)
-    return check(assembly, config, model="bench.step")
+    return check(assembly, config, model="bench.step", model_dir=directory)

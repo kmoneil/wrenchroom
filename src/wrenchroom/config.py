@@ -8,9 +8,8 @@ Two rules here are lessons the prototype paid for:
 
 - A rule that matches no part is reported, never dropped. A glob that stops matching
   is usually a renamed part, and silence turns that into a fastener nobody checks.
-- Nothing is ignored silently. Keys this version doesn't support yet (``states``,
-  ``checks``) are a loud error naming the milestone that delivers them, because a
-  sidecar whose states section did nothing would look exactly like one that worked.
+- Nothing is ignored silently. An unknown key is a loud error, because a sidecar
+  section that did nothing would look exactly like one that worked.
 
 Later rules override earlier ones for the same part, so a broad glob can set the
 family and a narrow one the exception, in reading order.
@@ -32,8 +31,9 @@ from wrenchroom.fasteners import AUTO, Fastener, Head, Kind, Size
 if TYPE_CHECKING:
     from wrenchroom.assembly import Assembly
 
-_SUPPORTED_TOP = {"fasteners", "ignore", "pairs"}
-_LATER_TOP = {"states": "M2", "checks": "M2"}
+_SUPPORTED_TOP = {"fasteners", "ignore", "pairs", "states", "checks"}
+_STATE_KEYS = {"remove", "base", "model"}
+_CHECKS_KEYS = {"default_state", "try_states"}
 _RULE_KEYS = {
     "parts",
     "kind",
@@ -65,6 +65,21 @@ class Rule:
     axis: str | tuple[float, float, float] = AUTO
     socket_allowed: bool = True
     mates: tuple[str, ...] = ()
+    state: str | None = None
+
+
+@dataclass(frozen=True)
+class StateDef:
+    """One named state: parts off, and/or another model of the same parts.
+
+    ``base`` chains states; the effective removals walk the chain, and the
+    nearest ``model`` on the chain wins.
+    """
+
+    name: str
+    remove: tuple[str, ...] = ()
+    base: str | None = None
+    model: str | None = None
 
 
 @dataclass(frozen=True)
@@ -74,6 +89,9 @@ class Config:
     rules: tuple[Rule, ...] = ()
     ignore: tuple[str, ...] = ()
     pairs: tuple[tuple[str, str], ...] = ()
+    states: tuple[StateDef, ...] = ()
+    default_state: str | None = None
+    try_states: tuple[str, ...] = ()
     source: str = "<none>"
 
     @classmethod
@@ -100,9 +118,6 @@ class Config:
             msg = f"{source}: the sidecar must be a mapping, got {type(raw).__name__}"
             raise ConfigError(msg)
         for key in raw:
-            if key in _LATER_TOP:
-                msg = f"{source}: {key!r} arrives with {_LATER_TOP[key]} and would be ignored now"
-                raise ConfigError(msg)
             if key not in _SUPPORTED_TOP:
                 msg = f"{source}: unknown key {key!r} (supported: {sorted(_SUPPORTED_TOP)})"
                 raise ConfigError(msg)
@@ -116,7 +131,43 @@ class Config:
             _parse_pair(entry, index, source)
             for index, entry in enumerate(_as_list(raw.get("pairs", []), f"{source}: pairs"))
         )
-        return cls(rules=rules, ignore=ignore, pairs=pairs, source=source)
+        states = _parse_states(raw.get("states", {}), source)
+        default_state, try_states = _parse_checks(raw.get("checks", {}), states, source)
+        state_names = {state.name for state in states}
+        for rule in rules:
+            if rule.state is not None and rule.state not in state_names:
+                msg = f"{source}: rule {rule.parts!r} names unknown state {rule.state!r}"
+                raise ConfigError(msg)
+        return cls(
+            rules=rules,
+            ignore=ignore,
+            pairs=pairs,
+            states=states,
+            default_state=default_state,
+            try_states=try_states,
+            source=source,
+        )
+
+    def state(self, name: str) -> StateDef:
+        """The state by name; parsing already guaranteed it exists."""
+        for state in self.states:
+            if state.name == name:
+                return state
+        msg = f"unknown state {name!r}"
+        raise ConfigError(msg)
+
+    def state_removes(self, name: str) -> tuple[str, ...]:
+        """The effective removal globs: the base chain's, then this state's own."""
+        state = self.state(name)
+        inherited = self.state_removes(state.base) if state.base else ()
+        return (*inherited, *state.remove)
+
+    def state_model(self, name: str) -> str | None:
+        """The model this state uses: its own, else the nearest up the chain."""
+        state = self.state(name)
+        if state.model is not None:
+            return state.model
+        return self.state_model(state.base) if state.base else None
 
     def apply(self, assembly: Assembly) -> Matches:
         """Match the rules against an assembly's part names.
@@ -145,6 +196,7 @@ class Config:
                 tool=rule.tool,
                 socket_allowed=rule.socket_allowed,
                 mates=rule.mates,
+                state=rule.state,
             )
             for name, rule in by_part.items()
         )
@@ -187,9 +239,6 @@ def _parse_rule(entry: object, index: int, source: str) -> Rule:
     if unknown:
         msg = f"{where}: unknown key(s) {sorted(unknown)}"
         raise ConfigError(msg)
-    if "state" in entry:
-        msg = f"{where}: 'state' arrives with M2 and would be ignored now"
-        raise ConfigError(msg)
     if "parts" not in entry:
         msg = f"{where}: 'parts' is required"
         raise ConfigError(msg)
@@ -218,6 +267,7 @@ def _parse_rule(entry: object, index: int, source: str) -> Rule:
             _as_str(m, f"{where}: mates[{i}]")
             for i, m in enumerate(_as_list(entry.get("mates", []), f"{where}: mates"))
         ),
+        state=None if entry.get("state") is None else str(entry["state"]),
     )
 
 
@@ -305,3 +355,80 @@ def _as_str(value: object, where: str) -> str:
         return value
     msg = f"{where} must be a string"
     raise ConfigError(msg)
+
+
+def _parse_states(raw: object, source: str) -> tuple[StateDef, ...]:
+    where = f"{source}: states"
+    if not isinstance(raw, dict):
+        msg = f"{where} must be a mapping of state names"
+        raise ConfigError(msg)
+    states = []
+    for name, entry in raw.items():
+        state_where = f"{where}[{name}]"
+        if not isinstance(entry, dict):
+            msg = f"{state_where}: must be a mapping"
+            raise ConfigError(msg)
+        unknown = set(entry) - _STATE_KEYS
+        if unknown:
+            msg = f"{state_where}: unknown key(s) {sorted(unknown)}"
+            raise ConfigError(msg)
+        states.append(
+            StateDef(
+                name=str(name),
+                remove=tuple(
+                    _as_str(g, f"{state_where}: remove[{i}]")
+                    for i, g in enumerate(
+                        _as_list(entry.get("remove", []), f"{state_where}: remove")
+                    )
+                ),
+                base=None if entry.get("base") is None else str(entry["base"]),
+                model=None if entry.get("model") is None else str(entry["model"]),
+            )
+        )
+    names = {state.name for state in states}
+    for state in states:
+        if state.base is not None and state.base not in names:
+            msg = f"{where}[{state.name}]: base {state.base!r} is not a state"
+            raise ConfigError(msg)
+    _reject_base_cycles(states, where)
+    return tuple(states)
+
+
+def _reject_base_cycles(states: list[StateDef], where: str) -> None:
+    by_name = {state.name: state for state in states}
+    for state in states:
+        seen = {state.name}
+        base = state.base
+        while base is not None:
+            if base in seen:
+                msg = f"{where}: base chain through {state.name!r} loops"
+                raise ConfigError(msg)
+            seen.add(base)
+            base = by_name[base].base
+
+
+def _parse_checks(
+    raw: object, states: tuple[StateDef, ...], source: str
+) -> tuple[str | None, tuple[str, ...]]:
+    where = f"{source}: checks"
+    if not isinstance(raw, dict):
+        msg = f"{where} must be a mapping"
+        raise ConfigError(msg)
+    unknown = set(raw) - _CHECKS_KEYS
+    if unknown:
+        msg = f"{where}: unknown key(s) {sorted(unknown)}"
+        raise ConfigError(msg)
+    names = {state.name for state in states}
+    default_state = None if raw.get("default_state") is None else str(raw["default_state"])
+    if default_state is not None and default_state not in names:
+        msg = f"{where}: default_state {default_state!r} is not a state"
+        raise ConfigError(msg)
+    try_states = tuple(
+        _as_str(s, f"{where}: try_states[{i}]")
+        for i, s in enumerate(_as_list(raw.get("try_states", []), f"{where}: try_states"))
+    )
+    for name in try_states:
+        if name not in names:
+            msg = f"{where}: try_states names unknown state {name!r}"
+            raise ConfigError(msg)
+    return default_state, try_states

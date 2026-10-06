@@ -126,9 +126,12 @@ def test_socket_false_for_glands():
 @pytest.mark.parametrize(
     ("raw", "match"),
     [
-        ({"states": {}}, "arrives with M2"),
-        ({"checks": {}}, "arrives with M2"),
-        ({"fasteners": [{"parts": "a", "state": "service"}]}, "arrives with M2"),
+        ({"states": {"open": {"base": "missing"}}}, "is not a state"),
+        ({"states": {"a": {"base": "b"}, "b": {"base": "a"}}}, "loops"),
+        ({"states": {"open": {"lid": []}}}, "unknown key"),
+        ({"checks": {"default_state": "ghost"}}, "is not a state"),
+        ({"checks": {"try_states": ["ghost"]}}, "unknown state"),
+        ({"fasteners": [{"parts": "a", "state": "service"}]}, "unknown state"),
         ({"typo": []}, "unknown key"),
         ({"fasteners": [{"kind": "screw"}]}, "'parts' is required"),
         ({"fasteners": [{"parts": "a", "size": "M7"}]}, "unknown fastener size"),

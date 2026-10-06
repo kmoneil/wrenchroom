@@ -15,11 +15,14 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import NoReturn
+from typing import TYPE_CHECKING, NoReturn
 
 import click
 
 from wrenchroom import __version__
+
+if TYPE_CHECKING:
+    from wrenchroom.report import Report
 
 #: Exit code for "not covered or a config error".
 EXIT_NOT_COVERED = 2
@@ -54,6 +57,7 @@ def main() -> None:
 )
 @click.option("--step-deg", default=15.0, show_default=True, help="Swing sampling step.")
 @click.option("--only", help="Check only fasteners whose name matches this glob.")
+@click.option("--state", help="Check in this state instead of the config's default.")
 def check(
     model: Path,
     config_path: Path | None,
@@ -61,8 +65,27 @@ def check(
     json_path: Path | None,
     step_deg: float,
     only: str | None,
+    state: str | None,
 ) -> None:
     """Check every fastener in MODEL and report the verdicts."""
+    report = _run(model, config_path, kit=kit, step_deg=step_deg, only=only, state=state)
+    for line in report.terminal_lines():
+        click.echo(line)
+    if json_path is not None:
+        report.to_json(json_path)
+    sys.exit(report.exit_code)
+
+
+def _run(
+    model: Path,
+    config_path: Path | None,
+    *,
+    kit: str = "metric-home",
+    step_deg: float = 15.0,
+    only: str | None = None,
+    state: str | None = None,
+) -> Report:
+    """Load, check, and turn config mistakes into exit 2; shared by check and explain."""
     from wrenchroom.assembly import Assembly
     from wrenchroom.check import check as run_check
     from wrenchroom.config import Config, ConfigError
@@ -72,22 +95,19 @@ def check(
         config_path = beside if beside.exists() else None
     try:
         config = Config.load(config_path) if config_path else None
-        report = run_check(
+        return run_check(
             Assembly.from_step(model),
             config,
             kit=kit,
             step_deg=step_deg,
             model=model.name,
             only=only,
+            state=state,
+            model_dir=model.parent,
         )
     except (ConfigError, ValueError) as exc:
         click.echo(f"error: {exc}", err=True)
         sys.exit(EXIT_NOT_COVERED)
-    for line in report.terminal_lines():
-        click.echo(line)
-    if json_path is not None:
-        report.to_json(json_path)
-    sys.exit(report.exit_code)
 
 
 @main.command()
@@ -98,11 +118,46 @@ def detect(model: str) -> None:
 
 
 @main.command()
-@click.argument("model")
+@click.argument("model", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.argument("fastener")
-def explain(model: str, fastener: str) -> None:
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Sidecar YAML; default: wrenchroom.yaml beside the model, if present.",
+)
+@click.option("--kit", default="metric-home", show_default=True, help="Which tool kit.")
+@click.option("--step-deg", default=15.0, show_default=True, help="Swing sampling step.")
+def explain(
+    model: Path, fastener: str, config_path: Path | None, kit: str, step_deg: float
+) -> None:
     """Show every attempt for one FASTENER in MODEL, with the blockers."""
-    _not_built("explain")
+    report = _run(model, config_path, kit=kit, step_deg=step_deg, only=fastener)
+    if not report.results:
+        click.echo(f"error: no fastener named {fastener!r} (is it in the sidecar?)", err=True)
+        sys.exit(EXIT_NOT_COVERED)
+    (result,) = report.results
+    header = f"{result.fastener.name}: {result.verdict}"
+    if result.tool:
+        header += f" with {result.tool}" + (f", {result.how}" if result.how else "")
+    if result.state:
+        header += f" (in state {result.state})"
+    if result.pair:
+        header += f"; paired with {result.pair}"
+    click.echo(header)
+    if result.reason:
+        click.echo(f"  reason: {result.reason}")
+    for attempt in result.attempts:
+        outcome = "turns" if attempt.turns else ("holds" if attempt.holds else "blocked")
+        line = f"  tried {attempt.tool}, {attempt.way}: {outcome}"
+        if attempt.swing_deg and not attempt.turns:
+            line += f", swing {attempt.swing_deg:g} deg"
+        if attempt.blockers:
+            line += f"; hit {', '.join(attempt.blockers)}"
+        click.echo(line)
+    if result.stuck_on:
+        click.echo(f"  cannot come out: {', '.join(result.stuck_on)} in the way")
+    sys.exit(report.exit_code)
 
 
 @main.command()

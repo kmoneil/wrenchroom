@@ -365,7 +365,7 @@ def _pocket(half_angle_deg, z0, z1):
         # A nut usually only needs holding: the slot leaves ~22 deg (holds, never
         # turns), the floor 12 below rules out every socket, and the head side
         # turns, so the joint passes once pairs land.
-        "nut": {"verdict": "held", "tool": "spanner-13", "pair": "bolt", "needs": "M2"},
+        "nut": {"verdict": "held", "tool": "spanner-13", "pair": "bolt"},
     },
 )
 def pair_nut_held():
@@ -413,7 +413,7 @@ def pair_both_hold():
     {
         # Turns by the short leg (36.1 < 45) but drawn out 50 along its axis the
         # head rises into the ceiling at 45: reachable and still impossible.
-        "screw": {"verdict": "stuck", "tool": "hex-key-5", "stuck_on": ["ceiling"], "needs": "M2"}
+        "screw": {"verdict": "stuck", "tool": "hex-key-5", "stuck_on": ["ceiling"]}
     },
 )
 def stuck_screw():
@@ -440,20 +440,18 @@ def free_screw():
 
 @cell(
     "state_lid",
-    [{"parts": "screw", **M6_SOCKET}],
+    [{"parts": "screw", **M6_SOCKET, "state": "lid-off"}],
     {
         "screw": {
             "verdict": "turns",
             "tool": "hex-key-5",
             "how": "driver straight in",
             "state": "lid-off",
-            "needs": "M2",
         }
     },
 )
 def state_lid():
-    """Reached with the lid off. The sidecar grows its states section at M2;
-    until then the lid blocks everything."""
+    """Reached with the lid off: the sidecar's lid-off state removes the lid."""
     return [
         ("plate", plate(holes=[(0, 0, 3)])),
         ("screw", socket_screw()),
@@ -470,7 +468,6 @@ def state_lid():
             "tool": "hex-key-5",
             "how": "driver straight in",
             "state": "lever-up",
-            "needs": "M2",
         }
     },
 )

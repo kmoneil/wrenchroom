@@ -35,17 +35,21 @@ def test_truth(request, name, expected, bench_json):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="waiting on M2 (pairs, extraction, states) and issue-2 (twins names)",
+    reason="waiting on issue-2: the twins import as one name, so one fastener is missing",
 )
 def test_whole_bench_counts(bench_report):
     assert bench_report.summary == FINAL_COUNTS
     assert bench_report.exit_code == 1  # the bench has deliberate failures
 
 
-def test_isolation_matches_the_full_bench(bench_json):
+def test_isolation_matches_the_full_bench(bench_json, bench_dir):
     """Each cell alone (from shapes, no STEP) must agree with the whole bench:
     a difference means a tool reaches across cells or the STEP path changes
-    something. Twins are excluded: they exist to test the STEP path itself."""
+    something. Twins are excluded: they exist to test the STEP path itself.
+    The states and checks sections ride along so state cells isolate too; the
+    lever retry loads the written lever-up model from bench_dir, same as the
+    full run."""
+    bench_sidecar, _ = sidecar_and_truth()
     differences = []
     for cell in CELLS:
         if not cell.truth:
@@ -58,8 +62,15 @@ def test_isolation_matches_the_full_bench(bench_json):
             if "mates" in entry:
                 entry["mates"] = [f"{cell.name}_{m}" for m in entry["mates"]]
             rules.append(entry)
-        config = Config.from_dict({"fasteners": rules, "ignore": list(cell.ignore)})
-        report = check(Assembly.from_shapes(shapes), config)
+        config = Config.from_dict(
+            {
+                "fasteners": rules,
+                "ignore": list(cell.ignore),
+                "states": bench_sidecar["states"],
+                "checks": bench_sidecar["checks"],
+            }
+        )
+        report = check(Assembly.from_shapes(shapes), config, model_dir=bench_dir)
         for result in report.results:
             alone = (result.verdict.value, result.tool, result.how)
             entry = bench_json[result.fastener.name]
