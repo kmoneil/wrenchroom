@@ -1,0 +1,147 @@
+"""Fasteners: what a tool turns, and the vocabulary for describing one.
+
+A fastener is something a tool turns: a screw or bolt (by its head), or a nut.
+Washers, well nuts, inserts and hand-set studs aren't turned and aren't modelled.
+
+This module is pure data: kinds, heads, sizes, and the ``Fastener`` record the checks
+consume. Where a fastener comes from (sidecar now; names and geometry at M4) is
+``config.py`` and later ``detect.py``; what gets done to it is ``check.py``.
+"""
+
+from __future__ import annotations
+
+import enum
+import re
+from dataclasses import dataclass, field
+
+
+class Kind(enum.StrEnum):
+    """Screw (turned by its head) or nut."""
+
+    SCREW = "screw"
+    NUT = "nut"
+
+
+class Head(enum.StrEnum):
+    """How the turned end is shaped, which decides the tools worth trying.
+
+    ``CARRIAGE`` is the self-holding one: a square neck in a square hole. It is never
+    turned and never extracted; its nut does all the work.
+    """
+
+    SOCKET = "socket"
+    BUTTON = "button"
+    FLAT = "flat"
+    HEX = "hex"
+    TORX = "torx"
+    PHILLIPS = "phillips"
+    SLOTTED = "slotted"
+    CARRIAGE = "carriage"
+
+
+#: Metric thread designations accepted, with the nominal diameter in mm. The coarse
+#: series M3..M24 the spec names, plus M3.5 which ISO 262 keeps in the first-choice
+#: list. A size outside this table is a config error, not a guess.
+METRIC_SIZES: dict[str, float] = {
+    "M3": 3.0,
+    "M3.5": 3.5,
+    "M4": 4.0,
+    "M5": 5.0,
+    "M6": 6.0,
+    "M8": 8.0,
+    "M10": 10.0,
+    "M12": 12.0,
+    "M14": 14.0,
+    "M16": 16.0,
+    "M18": 18.0,
+    "M20": 20.0,
+    "M22": 22.0,
+    "M24": 24.0,
+}
+
+#: Imperial sizes: numbered gauges (ASME B18.6.3: major diameter 0.060 + 0.013 per
+#: gauge, in inches) and fractional designations. UNC/UNF pitch is ignored for tool
+#: choice, so "1/4" covers 1/4-20 and 1/4-28 alike.
+_GAUGES = (2, 4, 6, 8, 10, 12)
+_FRACTIONS = ("1/4", "5/16", "3/8", "7/16", "1/2", "9/16", "5/8", "3/4")
+_MM_PER_INCH = 25.4
+
+IMPERIAL_SIZES: dict[str, float] = {
+    **{f"#{g}": round((0.060 + 0.013 * g) * _MM_PER_INCH, 3) for g in _GAUGES},
+    **{f: round(int(f.split("/")[0]) / int(f.split("/")[1]) * _MM_PER_INCH, 3) for f in _FRACTIONS},
+}
+
+_THREAD_SUFFIX = re.compile(r"[- ]\d+$")  # "1/4-20", "#10-32": the pitch half
+
+
+@dataclass(frozen=True)
+class Size:
+    """A thread size: the designation as written, and the nominal diameter in mm."""
+
+    designation: str
+    diameter_mm: float
+
+    @classmethod
+    def parse(cls, text: str) -> Size:
+        """Parse "M6", "#10", "1/4", with any UNC/UNF pitch suffix dropped.
+
+        Raises:
+            ValueError: If the designation is not in the accepted tables; the message
+                carries the designation so a config error names its line.
+        """
+        cleaned = _THREAD_SUFFIX.sub("", text.strip())
+        metric = cleaned.upper()
+        if metric in METRIC_SIZES:
+            return cls(metric, METRIC_SIZES[metric])
+        if cleaned in IMPERIAL_SIZES:
+            return cls(cleaned, IMPERIAL_SIZES[cleaned])
+        msg = f"unknown fastener size {text!r}"
+        raise ValueError(msg)
+
+    @property
+    def is_metric(self) -> bool:
+        """True for M-designations."""
+        return self.designation.startswith("M")
+
+
+#: An axis is either "work it out from the geometry" or a given direction pointing
+#: out of the joint toward where the tool comes from.
+AUTO = "auto"
+
+
+@dataclass(frozen=True)
+class Fastener:
+    """One fastener as described, before any geometry has been resolved.
+
+    The axis and seat are resolved against the part's shape when the check runs;
+    here ``axis`` is the description: :data:`AUTO` or a unit direction.
+
+    Attributes:
+        name: The part's unique name in the assembly.
+        kind: Screw or nut.
+        head: The head shape, or ``None`` when not stated (geometry may fill it in
+            at M4; until then an unstated head on a screw is `not-covered`).
+        size: Thread size, or ``None`` when not stated.
+        length_mm: Length under the head when the model doesn't show it.
+        axis: :data:`AUTO` or a unit (x, y, z) pointing toward the tool.
+        tool: A forced tool name, else chosen from head and size.
+        socket_allowed: False for fasteners with a cable through them (glands):
+            a socket cannot pass over a cable.
+        mates: Part names that travel with this fastener (washers, a carriage
+            bolt's spacer) and leave its scene.
+    """
+
+    name: str
+    kind: Kind
+    head: Head | None = None
+    size: Size | None = None
+    length_mm: float | None = None
+    axis: str | tuple[float, float, float] = AUTO
+    tool: str | None = None
+    socket_allowed: bool = True
+    mates: tuple[str, ...] = field(default=())
+
+    @property
+    def self_holding(self) -> bool:
+        """A carriage bolt holds itself: never turned, never extracted."""
+        return self.head is Head.CARRIAGE
