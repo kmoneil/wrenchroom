@@ -657,3 +657,28 @@ def torx_wall():
         ("screw", head + Pos(0, 0, -10) * Cylinder(3, 20)),
         ("wall", slab(6 + 40)),
     ]
+
+
+@cell(
+    "ball_tilt",
+    [{"parts": "screw", **M6_SOCKET}],
+    {"screw": {"verdict": "turns", "tool": "ball-end-key-5"}},
+)
+def ball_tilt():
+    """A socket head reached only leant off its axis (GOLDEN-BENCH section 6, M6).
+
+    A ceiling (underside 20 over the head, 10 thick) is slotted from x 4.5 outward.
+    Straight up, the 5 mm key meets it whichever way (as a driver, short leg 33,
+    long leg 85): blocked under metric-home. The full kit's ball end (leg 154,
+    r 2.835) leant 20 deg towards the slot passes the ceiling's underside 7.28 off
+    the axis, its lower edge (r/cos 20 = 3.02) at 4.26, inside the solid edge at
+    4.5; leant 25 deg, 9.33 off and its edge at 6.2, 1.7 clear, and 17.1 at the
+    top. Its short arm swings at 140 up, over everything. Truth names the tool, not
+    the tilt, so a key-table refinement can't flip it.
+    """
+    ceiling = slab(6 + 20) - Pos(32.25, 0, 6 + 25) * Box(55.5, 20, 12)
+    return [
+        ("plate", plate(holes=[(0, 0, 3)])),
+        ("screw", socket_screw()),
+        ("ceiling", ceiling),
+    ]

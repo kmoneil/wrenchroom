@@ -39,7 +39,9 @@ to M5):
   tool and the kits that have it (`needs spanner-24, which kit metric-home does not
   hold (full has it)`). `full` also has Torx keys T10 to T40 (ISO 10664 sizes, swept
   like hex keys; a Torx head takes the size ISO 14579 and its kin give its thread,
-  M6 T30). Inch tools carry their unit (`spanner-7/16in`), and inch
+  M6 T30), and ball-end keys 3 to 10 mm, tried when no straight key gets in: the long
+  leg leant up to 25 degrees off the axis (Bondhus' and Wiha's figure), every way
+  round. Inch tools carry their unit (`spanner-7/16in`), and inch
   fasteners (`#10`, `1/4`, `3/4`; UNC and UNF alike) take their ASME tools: socket,
   button and flat heads (B18.3), nuts (B18.2.2, B18.6.3) and hex heads (B18.2.1),
   which part ways with their nuts at 7/16 and 9/16.
@@ -85,10 +87,12 @@ to M5):
   its reason, for you to complete. Kept as written, the file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  504 fasteners is read and checked in about 7 s on an Apple M5 Max laptop (the
-  target is 10 s). `--exact` swaps in OCP boolean intersections on the B-rep: about
-  five times slower, and the referee for anything within the mesh's 0.2 mm of a
-  curved face. Both engines give the bench the same report, field for field.
+  516 fasteners is read and checked with the full kit in about 9.5 s on an Apple M5
+  Max laptop (the target is 10 s). The bench is dense with fasteners that fail, and
+  a failing one tries every tool it has: open ends, and ball-end keys leant every way
+  round, cost most of that. `--exact` swaps in OCP boolean intersections on the
+  B-rep, slower, and the referee for anything within the mesh's 0.2 mm of a curved
+  face. Both engines give the bench the same report, field for field.
 - A golden bench of generated cells with hand-worked truth gates every change, on both
   engines; its whole-report snapshot is byte-identical across Linux and macOS, 3.13
   and 3.14.
