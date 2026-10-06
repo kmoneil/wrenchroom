@@ -40,11 +40,11 @@ SLOTS = len(CELLS) + 1
 
 #: The whole bench's verdict counts once every milestone and issue has landed:
 #: the one-line summary of the truth. 37 since M4: the sidecar named 36, and
-#: detection finds torx_open_screw, which no rule names; 41 since M6's hand_tight
-#: and inch_pair.
+#: detection finds torx_open_screw, which no rule names; 42 since M6's hand_tight,
+#: inch_pair and torx_wall.
 FINAL_COUNTS = {
-    "fasteners": 41,
-    "turns": 28,
+    "fasteners": 42,
+    "turns": 29,
     "held": 2,
     "blocked": 10,
     "stuck": 1,
@@ -151,7 +151,7 @@ def edges_sidecar():
         "fasteners": [
             {"parts": "gone_*", "kind": "screw"},
             # The torx_open screw is a plain socket head described as Torx: the
-            # kit has no Torx key until M6, and the reason must say so.
+            # rule outranks the solid's 5 mm hex, so it takes the T30 Torx key.
             {"parts": "torx_open_screw", "kind": "screw", "head": "torx", "size": "M6"},
         ],
         "ignore": ["*_hose"],

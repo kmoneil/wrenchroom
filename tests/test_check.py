@@ -74,12 +74,21 @@ def test_a_carriage_bolt_holds_itself(engine):
     assert report.exit_code == 0
 
 
-def test_torx_is_not_covered_until_m6(engine):
-    report = run(engine, screw_facing_wall(50), {**M6_SOCKET, "head": "torx"})
-    (result,) = report.results
+def test_torx_takes_the_full_kit_s_torx_key(engine):
+    home = run(engine, screw_facing_wall(50), {**M6_SOCKET, "head": "torx"})
+    (result,) = home.results
     assert result.verdict is Verdict.NOT_COVERED
-    assert "Torx" in result.reason
-    assert report.exit_code == 2
+    assert result.reason == "needs torx-key-T30, which kit metric-home does not hold (full has it)"
+    assert home.exit_code == 2
+    full = run(engine, screw_facing_wall(50), {**M6_SOCKET, "head": "torx"}, kit="full")
+    (result,) = full.results
+    # Under a wall 50 up: no driver (200 long); the T30's short leg (26, r 2.8)
+    # bends at 26.3 and its long arm, top at 29.1, swings free.
+    assert (result.verdict, result.tool, result.how) == (
+        Verdict.TURNS,
+        "torx-key-T30",
+        "short leg in",
+    )
 
 
 def test_a_sizeless_screw_is_not_covered_with_the_reason(engine):

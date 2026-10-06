@@ -15,7 +15,7 @@ approximation is needed.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 from wrenchroom.tools.drivers import driver_attempt
 from wrenchroom.tools.sizes import MM_PER_INCH, inch_mm, size_name
@@ -151,9 +151,33 @@ HEX_KEYS: dict[float, HexKey] = {**ISO_2936, **ASME_B18_3}
 HEX_RESEAT_DEG = 60.0
 
 
+class LKey(Protocol):
+    """What the L-key sweep reads of a key, hex or Torx (torx_keys.py)."""
+
+    @property
+    def name(self) -> str:
+        """The tool's name in a report."""
+        ...
+
+    @property
+    def radius(self) -> float:
+        """The swept shaft radius, mm."""
+        ...
+
+    @property
+    def long_mm(self) -> float:
+        """The long arm, mm."""
+        ...
+
+    @property
+    def short_mm(self) -> float:
+        """The short arm, mm."""
+        ...
+
+
 def hex_key_attempts(
     mount: Mount,
-    key: HexKey,
+    key: LKey,
     scene: Scene,
     step_deg: float = DEFAULT_STEP_DEG,
     hand_room: bool = False,

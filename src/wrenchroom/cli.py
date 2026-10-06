@@ -262,6 +262,7 @@ def tools(kit: str) -> None:
     from wrenchroom.tools.sizes import size_mm
     from wrenchroom.tools.sockets import EXTENSION_LENGTHS, socket_for
     from wrenchroom.tools.spanners import spanner_for
+    from wrenchroom.tools.torx_keys import ISO_10664
 
     try:
         chosen = kit_named(kit)
@@ -295,3 +296,12 @@ def tools(kit: str) -> None:
     _say("drivers (shaft radii approximate, catalogue-typical):")
     for drive in chosen.drivers:
         _say(f"  driver-{drive:<9} shaft r {SHAFT_RADIUS[drive]:g}")
+    if chosen.torx_keys:
+        _say()
+        _say("Torx keys (ISO 10664 sizes; arms the longest of three makers' catalogues; mm):")
+        for size in chosen.torx_keys:
+            torx = ISO_10664[size]
+            _say(
+                f"  {torx.name:<17} point to point {torx.point_to_point:<5g} "
+                f"long arm {torx.long_mm:<6.4g} short arm {torx.short_mm:.4g}"
+            )

@@ -105,12 +105,19 @@ def test_socket_false_is_load_bearing():
 
 
 def test_config_edges(bench_dir):
-    """The edges sidecar: unmatched rule and ignore reported, Torx not covered
-    with the reason naming M6, exit 2."""
+    """The edges sidecar: unmatched rule and ignore reported, exit 2; the rule
+    calling torx_open's screw a Torx head outranks detection, so it takes the
+    full kit's T30 straight in (open above), and metric-home has no Torx key."""
     report = check_bench(bench_dir, config_name="bench_edges.yaml")
     assert report.unmatched_rules == ("gone_*",)
     assert report.unmatched_ignores == ("*_hose",)
     (torx,) = [r for r in report.results if r.fastener.name == "torx_open_screw"]
-    assert torx.verdict.value == "not-covered"
-    assert "M6" in torx.reason
+    assert (torx.verdict.value, torx.tool, torx.how) == (
+        "turns",
+        "torx-key-T30",
+        "driver straight in",
+    )
     assert report.exit_code == 2
+    home = check_bench(bench_dir, config_name="bench_edges.yaml", kit="metric-home")
+    (torx,) = [r for r in home.results if r.fastener.name == "torx_open_screw"]
+    assert torx.reason == "needs torx-key-T30, which kit metric-home does not hold (full has it)"

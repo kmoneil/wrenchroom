@@ -33,6 +33,7 @@ from wrenchroom.detect import find_fasteners
 from wrenchroom.engine import DEFAULT_ENGINE, ENGINES, Engine, Scene, make_engine
 from wrenchroom.fasteners import (
     PHILLIPS_NUMBER,
+    TORX_SIZE,
     Fastener,
     Head,
     Kind,
@@ -55,6 +56,7 @@ from wrenchroom.tools.sweep import (
     axial_annulus,
     axial_cylinder,
 )
+from wrenchroom.tools.torx_keys import ISO_10664
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -781,7 +783,7 @@ def _attempts_for(
         radius = SHAFT_RADIUS["slotted"]
         return iter([driver_attempt(mount, scene, radius, tool, tools.hand_room)])
     if fastener.head is Head.TORX:
-        raise NotCovered("Torx keys arrive with the full kit (M6)")
+        return _torx_attempts(fastener, mount, scene, tools)
     raise NotCovered("head unknown: name it in the sidecar")
 
 
@@ -824,6 +826,21 @@ def _keyed_attempts(
             head = fastener.head.value
             raise NotCovered(f"no standard key for a {size.designation} {head} head")
     key = HEX_KEYS[af]
+    tools.need(key.name)
+    return hex_key_attempts(mount, key, scene, tools.step_deg, tools.hand_room)
+
+
+def _torx_attempts(
+    fastener: Fastener, mount: Mount, scene: Scene, tools: _Tools
+) -> Iterator[Attempt]:
+    """A Torx head: the key its thread takes (ISO 14579 and kin), swept as a hex key."""
+    size = _known_size(fastener)
+    torx = TORX_SIZE.get(size.designation)
+    if torx is None:
+        raise NotCovered(f"no Torx size for a {size.designation} head")
+    key = ISO_10664.get(torx)
+    if key is None:
+        raise NotCovered(missing((f"torx-key-{torx}",), tools.kit))
     tools.need(key.name)
     return hex_key_attempts(mount, key, scene, tools.step_deg, tools.hand_room)
 
@@ -894,6 +911,12 @@ def _forced_attempts(
             raise NotCovered(f"no ISO 2936 or ASME B18.3 key sized {size_text}")
         tools.need(key.name)
         return hex_key_attempts(mount, key, scene, step_deg, tools.hand_room)
+    if family == "torx-key":
+        torx_key = ISO_10664.get(size_text)
+        if torx_key is None:
+            raise NotCovered(f"no Torx key {size_text}: the tables hold T10 to T40")
+        tools.need(name)
+        return hex_key_attempts(mount, torx_key, scene, step_deg, tools.hand_room)
     if family == "spanner":
         af = _tool_mm(size_text, name)
         if geometry.band_height <= _MIN_BAND:

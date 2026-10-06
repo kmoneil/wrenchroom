@@ -152,9 +152,9 @@ def test_with_no_sidecar_the_bolt_is_found_and_checked():
 
 def test_a_rule_outranks_detection():
     rule = {"parts": "bolt", "kind": "screw", "head": "torx", "size": "M6"}
-    (result,) = run(screw_facing_wall(50.0), {"fasteners": [rule]}).results
+    (result,) = run(screw_facing_wall(50.0), {"fasteners": [rule]}, kit="full").results
     assert result.fastener.source == "sidecar"
-    assert "Torx" in result.reason
+    assert result.tool == "torx-key-T30"  # the rule's Torx head, not the solid's 5 mm hex
 
 
 def test_detect_false_finds_nothing():

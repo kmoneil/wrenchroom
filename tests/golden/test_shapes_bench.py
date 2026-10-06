@@ -4,6 +4,10 @@ Every part the sidecar describes is read from the written bench.step: the head
 must be the rule's, the drive's across-flats the standard tables' for the rule's
 size, and the size the rule's. And the reading from STEP must equal the reading
 from the shape as built: the round trip changes nothing a tool depends on.
+
+A Torx head is the one exception: the solid reading knows hex, cross, slot and
+square drives, not a hexalobular recess, so a Torx screw is Torx by its rule
+alone (torx_wall), and only its size is held to the solid.
 """
 
 import fnmatch
@@ -49,6 +53,8 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
             expected_af = hex_key_af(head, size)
         got = (reading.head, reading.drive_af and round(reading.drive_af, 6), reading.size)
         want = (head, expected_af and round(expected_af, 6), size)  # inch sizes in mm
+        if head is Head.TORX:
+            got, want = got[2], want[2]  # the size only: no Torx recess is read
         if got != want:
             wrong.append((name, got, want))
     assert not wrong
