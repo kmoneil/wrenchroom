@@ -6,7 +6,8 @@ Four kinds of evidence, strongest first:
 2. A McMaster-Carr part number: ``91290A115``. Its series gives kind and head.
 3. A description: ``SHCS``, ``button head``, ``hex nut``, ``nyloc``, ``carriage bolt``.
 4. A plain noun ending a code-CAD name: ``lift_link_0_bolt_bot`` is a bolt. That
-   gives the kind and nothing else.
+   gives the kind and nothing else, but for a drive word (``torx``, ``phillips``)
+   anywhere in the name, which gives the head: ``torx_lid_screw``.
 
 Any of them may come with a thread size (``M6``, ``M6x20``, ``M6x1x20``,
 ``1/4-20 x 3/4``, ``#10-32``) and a length.
@@ -238,6 +239,13 @@ _HEAD_RANK = (
     Head.HEX,
 )
 
+#: Drive names that describe nothing but a fastener's recess (and the keys and
+#: bits that fit it), so in a fastener's name they say its head wherever they sit:
+#: ``torx_lid_screw`` is a Torx screw for a lid. Every other head word names
+#: other things too (a button panel, a cross member, a hex standoff, a mains
+#: socket), and says the head only touching the noun (see _descriptors).
+_DRIVE_WORDS = {"torx", "hexalobular", "phillips", "pozidriv", "pozi"}
+
 #: Describing words that are the noun when they end the name.
 _END_NOUNS = {"cap"}
 
@@ -309,7 +317,12 @@ def read_name(name: str) -> NameHint | None:
             return None
         kind, head, reason, word = found
         basis = [f"noun {word!r}"]
-    head = head or _head_from(run, kind)
+    if head is None:
+        near = _head_from(run, kind)
+        head = _head_from(run | (set(words) & _DRIVE_WORDS), kind)
+        if head is not near:  # said by a drive word away from the noun: name it
+            drive = next(w for w in words if w in _DRIVE_WORDS and _HEAD_WORDS[w] is head)
+            basis.append(f"drive {drive!r}")
     socket_allowed = noun not in _GLAND_NOUNS
     size, length, size_text, size_reason = _size_in(cleaned)
     if not socket_allowed:
@@ -392,7 +405,8 @@ def _descriptors(words: list[str], at: int | None) -> set[str]:
     printer, ``carriage`` is the printer's carriage, and a bolt mistaken for a
     carriage bolt would hold itself and never be checked. (That one still reads
     as a carriage bolt, ``x`` being a label; which is why self-holding also needs
-    the geometry to show a square neck.)
+    the geometry to show a square neck.) A drive word is the exception, read
+    from anywhere (:data:`_DRIVE_WORDS`): there is nothing else it could describe.
     """
     if at is None:
         return set()

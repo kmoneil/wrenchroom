@@ -80,13 +80,19 @@ to M5):
   and DIN designations, McMaster-Carr numbers, descriptions such as `M6x20 SHCS` or
   `hex nut M8`, code-CAD names such as `lift_link_bolt`) and completed from their
   solids: the drive the model shows (a hex, a hex socket, a cross, a slot, a carriage
-  bolt's square neck) and the size that drive or the shank gives. A sidecar rule still
-  describes a part outright, `across_flats:` gives a hex its measured size, and
-  `checks: {detect: false}` turns detection off. With every fastener rule removed, the
-  golden bench's 36 are all found with the right kind and size.
+  bolt's square neck) and the size that drive or the shank gives. A head word counts
+  where it touches the noun (`lid_button_screw`), as elsewhere it may describe
+  something else (`button_panel_screw`); a drive word (`torx`, `hexalobular`,
+  `phillips`, `pozidriv`) can describe nothing else and counts anywhere
+  (`torx_lid_screw`). A sidecar rule still describes a part outright, `across_flats:`
+  gives a hex its measured size, and `checks: {detect: false}` turns detection off.
+  With every fastener rule removed, the golden bench's 44 are all found with the right
+  kind and size, each screw with its rule's head.
 - `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
   correct and keep: one rule per fastener, and above each a comment with how sure
-  detection was, what found it, the axis it resolved and how the part fares now. A
+  detection was, what found it, the axis it resolved and how the part fares now.
+  Where the name says one head and the solid's drive shows another, the drive wins
+  and the comment says what the name said. A
   fastener found but not understood (a set screw, say) is written commented out with
   its reason, for you to complete. Kept as written, the file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed

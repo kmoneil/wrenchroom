@@ -6,8 +6,8 @@ size, and the size the rule's. And the reading from STEP must equal the reading
 from the shape as built: the round trip changes nothing a tool depends on.
 
 A Torx head is the one exception: the solid reading knows hex, cross, slot and
-square drives, not a hexalobular recess, so a Torx screw is Torx by its rule
-alone (torx_wall), and only its size is held to the solid.
+square drives, not a hexalobular recess, so a Torx screw is Torx by its rule or
+its name, never its solid (torx_wall), and only its size is held to the solid.
 """
 
 import fnmatch

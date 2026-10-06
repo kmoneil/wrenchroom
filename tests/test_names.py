@@ -174,6 +174,48 @@ def test_a_head_word_away_from_the_noun_says_nothing():
         assert hint(name).head is None, name
 
 
+#: Every head word but the drive words, each of which names something else too.
+NOT_DRIVES = [
+    "shcs", "socket", "allen", "cap", "bhcs", "button", "fhcs", "countersunk", "csk",
+    "flat", "hex", "hexagon", "cross", "ph", "slotted", "carriage", "coach",
+]  # fmt: skip
+
+
+@pytest.mark.parametrize("word", NOT_DRIVES)
+def test_no_other_head_word_is_read_away_from_the_noun(word):
+    # A button panel's screw, a ph sensor's, a slotted plate's: not their heads.
+    found = hint(f"{word}_panel_screw")
+    assert found.head is None, word
+    assert found.basis == "noun 'screw'"
+
+
+@pytest.mark.parametrize(
+    ("name", "kind", "head", "basis"),
+    [
+        # Issue #19: a drive word anywhere in the name says the head.
+        ("torx_lid_screw", S, Head.TORX, "noun 'screw', drive 'torx'"),
+        ("hexalobular_cover_screw", S, Head.TORX, "noun 'screw', drive 'hexalobular'"),
+        ("phillips_panel_screw", S, Head.PHILLIPS, "noun 'screw', drive 'phillips'"),
+        ("pozidriv_hinge_bolt", S, Head.PHILLIPS, "noun 'bolt', drive 'pozidriv'"),
+        ("pozi_hinge_screw", S, Head.PHILLIPS, "noun 'screw', drive 'pozi'"),
+        ("Torx-Lid-Screw-M6x20", S, Head.TORX, "noun 'screw', drive 'torx', M6x20"),
+        ("torxLidScrew", S, Head.TORX, "noun 'screw', drive 'torx'"),
+        ("lid_screw_2_torx", S, Head.TORX, "noun 'screw', drive 'torx'"),  # past a label
+        # A drive beats a head shape wherever it sits: a button-head Torx screw.
+        ("torx_lid_button_screw", S, Head.TORX, "noun 'screw', drive 'torx'"),
+        # Touching the noun, the run says it already, and the basis stays as it was.
+        ("lid_torx_screw", S, Head.TORX, "noun 'screw'"),
+        ("lid_button_screw", S, Head.BUTTON, "noun 'screw'"),
+        # A standard's head stands; a nut has no head to say.
+        ("ISO 4762 torx_lid M6x20", S, Head.SOCKET, "ISO 4762, M6x20"),
+        ("torx_lid_nut", N, None, "noun 'nut'"),
+    ],
+)
+def test_a_drive_word_says_the_head_wherever_it_sits(name, kind, head, basis):
+    found = hint(name)
+    assert (found.kind, found.head, found.basis) == (kind, head, basis)
+
+
 def test_a_carriage_word_touching_the_noun_still_reads_as_carriage():
     # The limit of reading names: a printer's x_carriage_bolt looks exactly like
     # a carriage bolt. The check must not let a name alone make a fastener

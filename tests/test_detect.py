@@ -48,7 +48,44 @@ def test_a_drive_the_solid_shows_outranks_the_name():
     assert found.head is Head.SOCKET
     assert found.drive_af == pytest.approx(5.0)
     assert found.source == "name+geometry"
-    assert "socket" in found.basis
+    # It says what the name said, for a person to settle, and is less sure.
+    assert found.basis == (
+        "noun 'bolt', M6x20; solid: socket (the name says hex), 5 across flats, M6 measured"
+    )
+    assert found.confidence == "medium"
+
+
+def test_where_name_and_drive_agree_the_basis_says_so_once():
+    found = detected("socket head screw M6x20", socket_screw("M6"))
+    assert found.basis == "noun 'screw', M6x20; solid: socket, 5 across flats, M6 measured"
+    assert found.confidence == "high"
+
+
+def torx_screw():
+    """An M6 Torx socket head as code-CAD draws one: the recess a round pocket."""
+    head = Pos(0, 0, 3) * Cylinder(5, 6) - Pos(0, 0, 4.5) * Cylinder(2.8, 3.01)
+    return head + Pos(0, 0, -5) * Cylinder(3, 10)
+
+
+@pytest.mark.parametrize("name", ["lid_torx_screw", "torx_lid_screw"])
+def test_a_torx_screw_is_torx_by_its_name_wherever_the_word_sits(name):
+    # Issue #19: torx_lid_screw was read as a socket head by its outline, and
+    # turned with a 5 mm hex key that can't drive a Torx recess.
+    found = detected(name, torx_screw())
+    assert (found.head, found.size.designation) == (Head.TORX, "M6")
+    assert "outline" not in found.basis
+
+
+def test_a_torx_name_on_a_modelled_hex_socket_is_flagged():
+    # The solid's hex pocket is a drive, and outranks the name: the bench's
+    # torx_open cell. The comment detect writes says the two disagree.
+    found = detected("torx_lid_screw", socket_screw("M6"))
+    assert found.head is Head.SOCKET
+    assert found.basis == (
+        "noun 'screw', drive 'torx'; solid: socket (the name says torx), 5 across flats, "
+        "M6 measured"
+    )
+    assert found.confidence == "medium"
 
 
 def test_the_name_outranks_a_guess_from_the_outline():
@@ -135,6 +172,13 @@ def test_only_named_fasteners_are_found():
 # ---------------------------------------------------------------------------
 # In the check.
 # ---------------------------------------------------------------------------
+
+
+def test_with_no_sidecar_a_torx_lid_screw_takes_the_torx_key():
+    plate = Pos(0, 0, -5) * Box(100, 100, 10)
+    assembly = Assembly([Part("torx_lid_screw", torx_screw()), Part("plate", plate)])
+    (result,) = check(assembly, Config(), kit="full").results
+    assert (result.verdict, result.tool) == (Verdict.TURNS, "torx-key-T30")
 
 
 def run(assembly, config=None, **kwargs):
@@ -267,6 +311,8 @@ def test_a_nut_whose_size_has_no_spanner_is_not_covered_not_a_crash():
         ("frame_bolt", lambda: hex_bolt("M8"), "high"),  # hex shown, size settled by it
         ("frame_nut", lambda: hex_nut("M10"), "high"),
         ("button head screw M6", lambda: socket_screw("M6", pocket=False), "high"),  # name says all
+        ("hex bolt M6x20", lambda: socket_screw("M6"), "medium"),  # name and drive disagree
+        ("torx_lid_screw M6", torx_screw, "high"),  # a drive word away from the noun
         ("lift_bolt", lambda: socket_screw("M6", pocket=False), "medium"),  # head by outline
         ("frame_screw", pan_phillips, "medium"),  # size from the shank alone
         ("set screw M6x10", lambda: Cylinder(3, 10), "low"),  # not covered
