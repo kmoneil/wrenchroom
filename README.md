@@ -29,6 +29,13 @@ to M5):
   model, so the terminal shows control characters written out and the Markdown puts
   every name in a code span: a crafted part name can't steer a terminal or post a
   link or an image in a comment.
+- A kit says which tools exist, and only those are tried (`--kit`; `wrenchroom tools
+  --kit NAME` lists them). `metric-home`, the default, is a home toolbox: hex keys
+  1.5 to 10 mm, combination spanners and 1/4" and 3/8" drive sockets 5.5 to 19 mm,
+  Phillips 1 to 3 and slotted drivers. `full` holds every size the tables describe.
+  A fastener that needs a tool the kit lacks is not covered, and the reason names
+  the tool and the kit that has it (`needs spanner-24, which kit metric-home does
+  not hold (full has it)`).
 - `--html report.html` writes the 3D view: one self-contained file that opens
   offline. The assembly is grey and each fastener coloured by how it fared (green
   turns, blue held, amber passes only in another state, red blocked or stuck, grey
@@ -75,7 +82,7 @@ to M5):
 ## What it will do
 
 ```console
-$ wrenchroom check bench.step    # the golden bench's own report, verbatim
+$ wrenchroom check bench.step --kit full    # the golden bench's own report, verbatim
 37 fasteners: 24 turn, 2 held, 10 blocked, 1 stuck, 0 not covered
   M16 nut                  spanner-24     x5    3 of 5 fail
   M6 carriage screw        -              x1    all pass (holds itself)

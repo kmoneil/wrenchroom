@@ -1,7 +1,7 @@
 {
  "schema": 1,
  "model": "bench.step",
- "kit": "metric-home",
+ "kit": "full",
  "summary": {
   "fasteners": 37,
   "turns": 24,

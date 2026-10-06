@@ -143,7 +143,8 @@ def _run(
 
 @main.command()
 @click.argument("model", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-def detect(model: Path) -> None:
+@click.option("--kit", default="metric-home", show_default=True, help="Which tool kit.")
+def detect(model: Path, kit: str) -> None:
     """Write the fasteners found in MODEL as a sidecar YAML, for correcting and keeping.
 
     Fasteners are found by their part names and solids, as check finds them; a
@@ -158,10 +159,10 @@ def detect(model: Path) -> None:
 
     try:
         assembly = Assembly.from_step(model)
+        report = run_check(assembly, Config(), kit=kit, model=model.name, model_dir=model.parent)
     except ValueError as exc:
         _say(f"error: {exc}", err=True)
         sys.exit(EXIT_NOT_COVERED)
-    report = run_check(assembly, Config(), model=model.name, model_dir=model.parent)
     for line in sidecar_text(report, model.name).splitlines():
         _say(line)
     counts = report.summary
@@ -226,32 +227,31 @@ def explain(
 def tools(kit: str) -> None:
     """List the kit's tools and their dimensions, citations and approximations.
 
-    Today this lists every tool the checker can deploy, derived from the same
-    tables the sweeps read, so what you see is exactly what gets tried. Strict
-    kit membership (metric-home's spanner range against full's) arrives with
-    the M6 kit work.
+    Exactly the tools a check with this kit tries, from the same tables the
+    sweeps read: a fastener needing anything not listed is not covered.
     """
-    from wrenchroom.check import KITS
-    from wrenchroom.fasteners import HEX_AF
     from wrenchroom.tools.drivers import SHAFT_RADIUS
     from wrenchroom.tools.hex_keys import ISO_2936
+    from wrenchroom.tools.kits import kit_named
     from wrenchroom.tools.sockets import EXTENSION_LENGTHS, socket_for
     from wrenchroom.tools.spanners import spanner_for
 
-    if kit not in KITS:
-        _say(f"error: unknown kit {kit!r}; available: {', '.join(KITS)}", err=True)
+    try:
+        chosen = kit_named(kit)
+    except ValueError as exc:
+        _say(f"error: {exc}", err=True)
         sys.exit(EXIT_NOT_COVERED)
-    _say(f"kit {kit}")
+    _say(f"kit {chosen.name}: {chosen.summary}")
     _say()
     _say("hex keys (DIN ISO 2936:2016-10; all mm):")
-    for key in ISO_2936.values():
+    for key in (ISO_2936[af] for af in chosen.hex_keys):
         _say(
             f"  hex-key-{key.af:<6g} across flats {key.af:<5g} "
             f"long arm {key.long_mm:<6g} short arm {key.short_mm:g}"
         )
     _say()
     _say("ring spanners, full and stubby (approximate until DIN 3113 is read out):")
-    for af in sorted(set(HEX_AF.values())):
+    for af in chosen.spanners:
         spanner = spanner_for(af)
         _say(
             f"  spanner-{spanner.af:<7g} length {spanner.length:<6g} "
@@ -260,10 +260,10 @@ def tools(kit: str) -> None:
     extensions = "/".join(f"{e:g}" for e in EXTENSION_LENGTHS)
     _say()
     _say(f"sockets on a 72-tooth ratchet, extensions {extensions} mm (approximate until DIN 3124):")
-    for af in sorted(set(HEX_AF.values())):
+    for af in chosen.sockets:
         socket = socket_for(af)
         _say(f"  socket-{socket.af:<8g} outer r {socket.outer_radius:<5g} length {socket.length:g}")
     _say()
     _say("drivers (shaft radii approximate, catalogue-typical):")
-    for drive, radius in SHAFT_RADIUS.items():
-        _say(f"  driver-{drive:<9} shaft r {radius:g}")
+    for drive in chosen.drivers:
+        _say(f"  driver-{drive:<9} shaft r {SHAFT_RADIUS[drive]:g}")

@@ -42,7 +42,7 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     sys.path.insert(0, str(GOLDEN))
-    from bench import FINAL_COUNTS, write  # noqa: PLC0415  (path set just above)
+    from bench import FINAL_COUNTS, KIT, write  # noqa: PLC0415  (path set just above)
 
     from wrenchroom.assembly import Assembly  # noqa: PLC0415  (heavy; after argparse)
     from wrenchroom.check import check  # noqa: PLC0415
@@ -62,7 +62,9 @@ def main(argv: list[str]) -> int:
 
         config = Config.load(directory / "wrenchroom.yaml")
         started = time.perf_counter()
-        report = check(assembly, config, model="bench.step", model_dir=directory, engine=engine)
+        report = check(
+            assembly, config, kit=KIT, model="bench.step", model_dir=directory, engine=engine
+        )
         checked = time.perf_counter() - started
 
     want = {key: count * copies for key, count in FINAL_COUNTS.items()}
