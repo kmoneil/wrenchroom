@@ -1,0 +1,151 @@
+[project]
+name = "wrenchroom"
+# Single-sourced from the package: `wrenchroom.__version__` and the installed distribution
+# must never name different releases in the same bug report. See `[tool.hatch.version]`
+# and `tests/test_version.py`, which asserts they agree.
+dynamic = ["version"]
+description = "Checks that a real hand tool can reach, turn and remove every fastener in a mechanical assembly."
+readme = "README.md"
+requires-python = ">=3.13"
+# Licence is an open question for the owner (MIT or Apache-2.0). Deliberately absent
+# until decided; nothing is published before then either.
+authors = [{ name = "Kevin O'Neil", email = "kevin@oneil.xyz" }]
+keywords = [
+  "cad",
+  "step",
+  "assembly",
+  "fasteners",
+  "serviceability",
+  "dfa",
+  "build123d",
+]
+classifiers = [
+  # Pre-Alpha: the scaffold exists, no check works yet. Moves with the milestones.
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Manufacturing",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering",
+  "Typing :: Typed",
+]
+# Floors are the versions this stack was resolved and verified against on 2026-10-06, for
+# CPython 3.13 and 3.14 on macOS arm64 and Linux x86_64, not the oldest that might work.
+# A claim about an untested older version would be recalled from memory, and the one
+# dependency that matters here is binary: build123d 0.13 pulls cadquery-ocp-novtk 8.0.x,
+# which is the headless OCP wheel and the reason this project can run in CI at all.
+#
+# manifold3d rather than python-fcl for the collision engine (either would do): it is a
+# clean self-contained wheel on both platforms and both Pythons. Revisit at M3 when the
+# mesh engine is actually built; python-fcl 0.7.0.11 also resolved.
+dependencies = [
+  "build123d>=0.13",
+  "click>=8.5",
+  "manifold3d>=3.5",
+  "numpy>=2.5",
+  "pyyaml>=6.0",
+  "trimesh>=5.1",
+]
+
+[project.scripts]
+wrenchroom = "wrenchroom.cli:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "ruff>=0.14",
+  "ty>=0.0.1a10",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/wrenchroom/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wrenchroom"]
+
+# ---------------------------------------------------------------------------
+# ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E", "W",     # pycodestyle
+  "F",          # pyflakes
+  "I",          # isort
+  "N",          # pep8-naming
+  "UP",         # pyupgrade
+  "B",          # bugbear
+  "A",          # builtins shadowing
+  "C4",         # comprehensions
+  "C90",        # mccabe
+  "DTZ",        # naive datetimes
+  "T20",        # no print in shipped code
+  "PT",         # pytest style
+  "RET",        # return simplification
+  "SIM",        # simplify
+  "SLF",        # private member access
+  "TID",        # tidy imports
+  "PTH",        # pathlib over os.path
+  "ERA",        # commented-out code
+  "PL",         # pylint
+  "TRY",        # exception antipatterns
+  "RUF",
+  "S",          # bandit
+  "D",          # pydocstyle, Google convention
+  "ANN",        # annotations required
+]
+ignore = [
+  "D105",    # magic method docstrings
+  "D107",    # __init__ docstring: documented on the class
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests are exempt from docstring and annotation gates and from bandit's assert rule.
+# They are NOT exempt from correctness lints.
+"tests/**" = ["D", "ANN", "S101", "PLR2004", "T20"]
+# scripts/ is developer tooling: printing the lane table is what lanes.py does, so T20
+# would be a rule against the program. S603 goes with it: it spawns tools by resolved
+# absolute path with a list argv and no shell, which is the checked-for property rather
+# than the flagged one. Docstrings and annotations are NOT exempt here.
+"scripts/**" = ["T20", "S603"]
+
+# ---------------------------------------------------------------------------
+# ty, the type gate, scoped to shipped code
+# ---------------------------------------------------------------------------
+[tool.ty.src]
+include = ["src"]
+
+[tool.ty.environment]
+python = ".venv"
+
+# ty reports a deprecated call as a warning, and a warning does not fail `ty check`.
+# A rule that reports without failing is a rule nobody reads, so it is escalated.
+[tool.ty.rules]
+deprecated = "error"
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+xfail_strict = true
+filterwarnings = ["error"]

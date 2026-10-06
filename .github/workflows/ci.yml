@@ -1,0 +1,62 @@
+# Continuous integration for wrenchroom.
+#
+# Every lane is invoked through `scripts/lanes.py`, never by spelling out a tool's
+# command here. Two spellings of "how this project runs its checks" is how a flag
+# exists locally and not in CI, or the other way round.
+#
+# Third-party actions are pinned to a commit SHA with the tag in a trailing comment.
+# A floating tag is a mutable reference to somebody else's code with a token in scope.
+# Dependabot keeps the pins from going stale silently; re-pin deliberately, reading the
+# diff, rather than by moving the tag.
+#
+# Both Pythons the project claims (3.13 the floor, 3.14 current) and both platforms the
+# CAD stack has wheels for in CI (Linux x86_64, macOS arm64). The OCP wheel is the
+# headless `cadquery-ocp-novtk`, which is what lets this run on a runner at all.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Static gates: ruff lint, ruff format, ty. Linux only; nothing these tools check is
+  # platform-dependent.
+  gates:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+      - run: uv python install
+      - run: uv sync --frozen
+      - run: uv run --frozen python scripts/lanes.py gates
+
+  # The unit suite on every platform and Python the project claims.
+  fast:
+    timeout-minutes: 20
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+      - run: uv python install ${{ matrix.python }}
+      - run: uv sync --frozen --python ${{ matrix.python }}
+      - run: uv run --frozen python scripts/lanes.py fast

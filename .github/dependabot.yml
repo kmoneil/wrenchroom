@@ -1,0 +1,20 @@
+# Keep the pinned GitHub Actions from going stale silently.
+#
+# Every third-party action in the workflows is pinned to a commit SHA, because a floating
+# tag is a mutable reference to somebody else's code. But a SHA cannot look outdated, so
+# Dependabot opens a pull request when an action moves and rewrites the SHA and the
+# trailing tag comment: the pin survives and the staleness becomes visible.
+#
+# Actions only. Python dependencies are resolved by `uv.lock`, whose updates go through
+# `uv lock --upgrade`; a second updater on the same file would fight it.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
