@@ -43,7 +43,9 @@ jobs:
       - run: uv sync --frozen
       - run: uv run --frozen python scripts/lanes.py gates
 
-  # The unit suite on every platform and Python the project claims.
+  # The unit suite on every platform and Python the project claims. The HTML view's
+  # tests use the Node and Chrome the runner images come with; under CI a missing
+  # one fails the run instead of skipping (tests/golden/test_view_browser.py).
   fast:
     timeout-minutes: 20
     runs-on: ${{ matrix.os }}
@@ -60,6 +62,17 @@ jobs:
       - run: uv python install ${{ matrix.python }}
       - run: uv sync --frozen --python ${{ matrix.python }}
       - run: uv run --frozen python scripts/lanes.py fast
+        env:
+          WRENCHROOM_ARTIFACTS: ${{ runner.temp }}/view
+      # The golden bench's HTML report and what headless Chrome drew of it, to open
+      # or look at; one copy per platform.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always() && matrix.python == '3.13'
+        with:
+          name: bench-view-${{ matrix.os }}
+          path: ${{ runner.temp }}/view
+          if-no-files-found: warn
+          retention-days: 14
 
   # The speed target: the golden bench scaled to 500 fasteners, read and checked
   # inside 10 s. The timing REPORTS for now (the perf-report lane writes it to

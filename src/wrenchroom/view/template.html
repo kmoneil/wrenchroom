@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="@CSP@">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="wrenchroom @VERSION@">
+<title>@TITLE@</title>
+<style>@STYLE@</style>
+</head>
+<body>
+<main id="stage">
+<canvas id="view" aria-label="The assembly in 3D. Drag to turn it, scroll to zoom, right-drag to pan; click a fastener to select it."></canvas>
+<p id="nogl" hidden></p>
+<p id="status" role="status"></p>
+</main>
+<aside id="panel">
+<header>
+<h1>wrenchroom</h1>
+<p id="model" class="name"></p>
+<p id="summary"></p>
+<ul id="legend"></ul>
+</header>
+<section id="detail" hidden>
+<button id="back" type="button">&larr; All fasteners</button>
+<h2 id="name" class="name"></h2>
+<p id="headline"></p>
+<p id="reason" hidden></p>
+<p id="inway" hidden></p>
+<p id="state" class="muted" hidden></p>
+<h3>Attempts</h3>
+<p class="muted">Every way a tool was tried, in order. Click one to see it alone.</p>
+<ol id="attempts"></ol>
+</section>
+<section id="list">
+<h2>Fasteners</h2>
+<ul id="fasteners"></ul>
+</section>
+<p class="muted small">Drag to turn, scroll to zoom, right-drag to pan. Esc shows every fastener again. Written by wrenchroom @VERSION@.</p>
+</aside>
+<output id="drawn" hidden></output>
+<script type="application/json" id="wrenchroom-data">@DATA@</script>
+<!-- three.js is embedded below, under its own licence:
+
+@THREE_LICENCE@
+-->
+<script>@THREE@</script>
+<script>@VIEWER@</script>
+</body>
+</html>

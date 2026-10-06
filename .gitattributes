@@ -1,0 +1,4 @@
+# The three.js bundle the HTML view embeds is built by scripts/vendor_three.py, not
+# written by hand: collapsed in diffs and left out of the language count. Its bytes
+# are checked against a fresh build by `scripts/lanes.py vendor-check`.
+src/wrenchroom/view/vendor/three.min.js linguist-generated linguist-vendored

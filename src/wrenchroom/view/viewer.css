@@ -1,0 +1,75 @@
+:root {
+  color-scheme: light;
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #1f2328;
+}
+html, body { margin: 0; height: 100%; }
+body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  height: 100vh;
+  overflow: hidden;
+}
+#stage { position: relative; min-width: 0; min-height: 0; }
+#view { display: block; width: 100%; height: 100%; touch-action: none; }
+#nogl {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  padding: 2em;
+  text-align: center;
+}
+#status {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 88%);
+}
+#status:empty { display: none; }
+#panel {
+  overflow: auto;
+  padding: 12px 16px;
+  border-left: 1px solid #d5d8dd;
+  background: #fbfbfc;
+}
+h1 { font-size: 17px; margin: 0 0 2px; }
+h2 { font-size: 15px; margin: 16px 0 6px; }
+h3 { font-size: 14px; margin: 14px 0 4px; }
+p { margin: 4px 0; }
+ul, ol { margin: 4px 0; padding: 0; list-style: none; }
+.name { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; overflow-wrap: anywhere; }
+.muted { color: #59606a; }
+.small { font-size: 12px; margin-top: 18px; }
+#legend li { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+.swatch {
+  flex: none;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 6px;
+}
+#legend .swatch { margin-right: 0; }
+#panel button {
+  display: block;
+  width: 100%;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+#panel button:hover, #panel button:focus-visible { background: #eceff3; outline: none; }
+#panel button[aria-pressed="true"] { background: #dfe4ec; }
+#back { width: auto; margin: 4px 0 0 -6px; }
+#fasteners .verdict { color: #59606a; font-size: 12px; margin-left: 4px; }
+#attempts li { counter-increment: attempt; }
+#attempts button::before { content: counter(attempt) ". "; color: #59606a; }

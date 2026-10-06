@@ -70,6 +70,11 @@ LANES: tuple[Lane, ...] = (
         summary="the same run, timing reported not gated; wrong verdict counts still fail",
         steps=(("python", "scripts/perf.py", "--budget", "0"),),
     ),
+    Lane(
+        name="vendor-check",
+        summary="the embedded three.js is exactly what its pinned sources build (Node, network)",
+        steps=(("python", "scripts/vendor_three.py", "--check"),),
+    ),
 )
 
 

@@ -7,13 +7,14 @@ dynamic = ["version"]
 description = "Checks that a real hand tool can reach, turn and remove every fastener in a mechanical assembly."
 readme = "README.md"
 requires-python = ">=3.13"
-license = "Apache-2.0"
+license = "Apache-2.0 AND MIT"
 # The SPDX expression alone puts the identifier in METADATA and ships no grant text;
 # Apache-2.0 section 4(a) requires the copy to travel with the distribution, and a
 # compliance scan looks for the file, not the identifier. Decided 2026-10-06: Apache
 # over MIT for the explicit patent grant, which matters in a space with commercial
-# players.
-license-files = ["LICENSE"]
+# players. The MIT half is three.js, bundled into the HTML view
+# (src/wrenchroom/view/vendor/); its licence travels in the wheel and in every page.
+license-files = ["LICENSE", "src/wrenchroom/view/vendor/three.LICENSE"]
 authors = [{ name = "Kevin O'Neil", email = "kevin@oneil.xyz" }]
 keywords = [
   "cad",
@@ -66,6 +67,7 @@ wrenchroom = "wrenchroom.cli:main"
 [dependency-groups]
 dev = [
   "markdown-it-py[linkify]>=4.2.0",
+  "pillow>=12.3.0",
   "pytest>=8.3",
   "ruff>=0.14",
   "ty>=0.0.1a10",
