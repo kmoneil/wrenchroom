@@ -29,8 +29,13 @@ What exists today (M1):
   date checked; approximations are labelled as such.
 - A sidecar rule that matches nothing is reported and fails the run: that is how a
   renamed part hides.
-- `detect`, `explain` and `tools` exist and exit 2 ("not covered") until their
-  milestones deliver them. Pairs, extraction and states are next (M2).
+- Pairs (a nut that only holds passes through its turning bolt), extraction (a
+  screw that turns but can't come out is `stuck`), states (parts removed, another
+  model of the mechanism, retries that say where a fastener passed), `explain`
+  (every attempt for one fastener, with the blockers) and `tools` (the kit's
+  dimensions, caveats inline) all work. `detect` exits 2 until M4 delivers it.
+- A golden bench of generated cells with hand-worked truth gates every change; its
+  whole-report snapshot is byte-identical across Linux and macOS, 3.13 and 3.14.
 
 ## What it will do
 
