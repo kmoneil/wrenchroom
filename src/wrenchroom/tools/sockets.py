@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from math import sqrt
 from typing import TYPE_CHECKING
 
+from wrenchroom.tools.sizes import size_name
 from wrenchroom.tools.sweep import (
     CONTACT_OFFSET,
     DEFAULT_STEP_DEG,
@@ -90,7 +91,7 @@ def socket_attempts(
     into it), solid above, then the extension, then the ratchet head whose
     handle needs only :data:`RATCHET_72_SWING_DEG` of free arc.
     """
-    tool = f"socket-{socket.af:g}"
+    tool = f"socket-{size_name(socket.af)}"
     inner = hex_af / sqrt(3) + 0.3
     mouth = axial_annulus(
         inner, socket.outer_radius, CONTACT_OFFSET, min(BORE_DEPTH, socket.length)

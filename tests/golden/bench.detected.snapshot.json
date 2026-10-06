@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 39,
-  "turns": 24,
+  "fasteners": 41,
+  "turns": 26,
   "held": 2,
   "blocked": 11,
   "stuck": 1,
@@ -319,6 +319,60 @@
    "blocked_by": [
     "hex_side_wall_wall"
    ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "inch_pair_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "1/4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    2000.0,
+    4000.0,
+    -15.56
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-7/16in",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "inch_pair_screw",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "inch_pair_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "1/4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    4000.0,
+    6.35
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-3/16in",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": "inch_pair_nut",
+   "blocked_by": [],
    "stuck_on": [],
    "reason": null
   },
@@ -1021,7 +1075,7 @@
     1.0
    ],
    "seat": [
-    1900.0,
+    2900.0,
     4000.0,
     6.0
    ],
@@ -1050,7 +1104,7 @@
     1.0
    ],
    "seat": [
-    2100.0,
+    3100.0,
     4000.0,
     6.0
    ],

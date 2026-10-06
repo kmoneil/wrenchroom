@@ -32,10 +32,15 @@ to M5):
 - A kit says which tools exist, and only those are tried (`--kit`; `wrenchroom tools
   --kit NAME` lists them). `metric-home`, the default, is a home toolbox: hex keys
   1.5 to 10 mm, combination spanners and 1/4" and 3/8" drive sockets 5.5 to 19 mm,
-  Phillips 1 to 3 and slotted drivers. `full` holds every size the tables describe.
-  A fastener that needs a tool the kit lacks is not covered, and the reason names
-  the tool and the kit that has it (`needs spanner-24, which kit metric-home does
-  not hold (full has it)`).
+  Phillips 1 to 3 and slotted drivers. `imperial-home` is the same in inch sizes, as
+  US home sets come: ASME B18.3 keys 0.050 to 3/8 in, spanners 1/4 to 3/4 in, sockets
+  3/16 to 3/4 in. `full` holds every size the tables describe, both systems. A
+  fastener that needs a tool the kit lacks is not covered, and the reason names the
+  tool and the kits that have it (`needs spanner-24, which kit metric-home does not
+  hold (full has it)`). Inch tools carry their unit (`spanner-7/16in`), and inch
+  fasteners (`#10`, `1/4`, `3/4`; UNC and UNF alike) take their ASME tools: socket,
+  button and flat heads (B18.3), nuts (B18.2.2, B18.6.3) and hex heads (B18.2.1),
+  which part ways with their nuts at 7/16 and 9/16.
 - Room for the hand (`--hand-room`, or `checks: {hand_room: true}` in the sidecar):
   a hand of radius 35 mm along each handle's last 90 mm, resting on it from the side
   the tool comes from, and a fist round a driver's handle. Where the tool alone would

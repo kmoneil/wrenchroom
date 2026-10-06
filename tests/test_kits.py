@@ -23,8 +23,17 @@ from wrenchroom.cli import EXIT_NOT_COVERED, main
 from wrenchroom.config import Config
 from wrenchroom.report import Verdict
 from wrenchroom.tools import kits
-from wrenchroom.tools.hex_keys import ISO_2936
-from wrenchroom.tools.kits import FULL, KITS, METRIC_HOME, Kit, kit_named, missing
+from wrenchroom.tools.hex_keys import HEX_KEYS
+from wrenchroom.tools.kits import (
+    FULL,
+    IMPERIAL_HOME,
+    KITS,
+    METRIC_HOME,
+    Kit,
+    kit_named,
+    missing,
+)
+from wrenchroom.tools.sizes import size_mm, size_name
 
 M6_SOCKET = {"kind": "screw", "head": "socket", "size": "M6"}
 
@@ -39,24 +48,51 @@ def run(assembly, *rules, kit="metric-home"):
 
 
 def test_metric_home_is_the_spec_s_kit():
-    assert METRIC_HOME.hex_keys == (1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0)
-    flats = (5.5, *(float(af) for af in range(6, 20)))
+    assert METRIC_HOME.hex_keys == ("1.5", "2", "2.5", "3", "4", "5", "6", "8", "10")
+    flats = ("5.5", *(str(af) for af in range(6, 20)))
     assert METRIC_HOME.spanners == flats
     assert METRIC_HOME.sockets == flats
     assert METRIC_HOME.drivers == ("ph1", "ph2", "ph3", "slotted")
 
 
-def test_full_holds_everything_metric_home_does_and_more():
-    for family in ("hex_keys", "spanners", "sockets", "drivers"):
-        home, full = set(getattr(METRIC_HOME, family)), set(getattr(FULL, family))
-        assert home <= full, family
-    assert set(FULL.hex_keys) == set(ISO_2936)
-    assert max(FULL.spanners) == max(FULL.sockets) == 36
+def test_imperial_home_is_what_us_home_sets_agree_on():
+    keys = [
+        "0.050",
+        "1/16",
+        "5/64",
+        "3/32",
+        "7/64",
+        "1/8",
+        "9/64",
+        "5/32",
+        "3/16",
+        "7/32",
+        "1/4",
+        "5/16",
+        "3/8",
+    ]
+    assert IMPERIAL_HOME.hex_keys == tuple(f"{k}in" for k in keys)  # the 13-piece set
+    spanners = ["1/4", "5/16", "3/8", "7/16", "1/2", "9/16", "5/8", "11/16", "3/4"]
+    assert IMPERIAL_HOME.spanners == tuple(f"{s}in" for s in spanners)
+    quarter = ["3/16", "7/32", "1/4", "9/32", "5/16", "11/32", "3/8", "7/16", "1/2", "9/16"]
+    three_eighths = ["5/8", "11/16", "3/4"]  # 5/16 to 9/16 the 1/4 drive set has already
+    assert IMPERIAL_HOME.sockets == tuple(f"{s}in" for s in quarter + three_eighths)
+    assert IMPERIAL_HOME.drivers == METRIC_HOME.drivers
 
 
-def test_every_kit_key_is_a_standard_row():
+def test_full_holds_everything_each_home_kit_does_and_more():
+    for home in (METRIC_HOME, IMPERIAL_HOME):
+        for family in ("hex_keys", "spanners", "sockets", "drivers"):
+            assert set(getattr(home, family)) <= set(getattr(FULL, family)), (home.name, family)
+    assert len(FULL.hex_keys) == len(HEX_KEYS)
+    assert {"36", "1-1/2in"} <= set(FULL.spanners) & set(FULL.sockets)
+
+
+def test_every_kit_size_is_a_real_tool():
     for kit in KITS.values():
-        assert set(kit.hex_keys) <= set(ISO_2936), kit.name
+        assert {size_mm(size) for size in kit.hex_keys} <= set(HEX_KEYS), kit.name
+        for size in kit.spanners + kit.sockets:
+            assert size_name(size_mm(size)) == size, (kit.name, size)  # names round-trip
 
 
 @pytest.mark.parametrize(
@@ -96,7 +132,8 @@ def test_the_reason_names_the_tool_and_the_kit_that_has_it():
 
 
 def test_an_unknown_kit_is_a_typo():
-    with pytest.raises(ValueError, match="unknown kit 'mars'; available: metric-home, full"):
+    match = "unknown kit 'mars'; available: metric-home, imperial-home, full"
+    with pytest.raises(ValueError, match=match):
         kit_named("mars")
     with pytest.raises(ValueError, match="unknown kit"):
         run(screw_facing_wall(40.0), {"parts": "bolt", **M6_SOCKET}, kit="mars")
@@ -158,7 +195,7 @@ def test_every_forced_family_asks_the_kit(tool, allowed):
 @pytest.fixture
 def sockets_only(monkeypatch):
     """A kit with M10's socket but no spanners at all."""
-    kit = Kit("sockets-only", "16 mm socket", (), (), (16.0,), ())
+    kit = Kit("sockets-only", "16 mm socket", (), (), ("16",), ())
     monkeypatch.setitem(kits.KITS, kit.name, kit)
     return kit.name
 
@@ -178,7 +215,8 @@ def test_a_kit_with_no_drivers_does_not_cover_a_phillips_screw(sockets_only):
     (result,) = run(screw_facing_wall(40.0), rule, kit=sockets_only).results
     assert result.verdict is Verdict.NOT_COVERED
     assert result.reason == (
-        "needs driver-ph2, which kit sockets-only does not hold (metric-home and full have it)"
+        "needs driver-ph2, which kit sockets-only does not hold "
+        "(metric-home, imperial-home and full have it)"
     )
 
 

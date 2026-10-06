@@ -257,8 +257,9 @@ def tools(kit: str) -> None:
     sweeps read: a fastener needing anything not listed is not covered.
     """
     from wrenchroom.tools.drivers import SHAFT_RADIUS
-    from wrenchroom.tools.hex_keys import ISO_2936
+    from wrenchroom.tools.hex_keys import HEX_KEYS
     from wrenchroom.tools.kits import kit_named
+    from wrenchroom.tools.sizes import size_mm
     from wrenchroom.tools.sockets import EXTENSION_LENGTHS, socket_for
     from wrenchroom.tools.spanners import spanner_for
 
@@ -269,26 +270,27 @@ def tools(kit: str) -> None:
         sys.exit(EXIT_NOT_COVERED)
     _say(f"kit {chosen.name}: {chosen.summary}")
     _say()
-    _say("hex keys (DIN ISO 2936:2016-10; all mm):")
-    for key in (ISO_2936[af] for af in chosen.hex_keys):
+    _say("hex keys (DIN ISO 2936:2016-10 and ASME B18.3; dimensions in mm):")
+    for size in chosen.hex_keys:
+        key = HEX_KEYS[size_mm(size)]
         _say(
-            f"  hex-key-{key.af:<6g} across flats {key.af:<5g} "
-            f"long arm {key.long_mm:<6g} short arm {key.short_mm:g}"
+            f"  {key.name:<17} across flats {key.af:<7.4g} "
+            f"long arm {key.long_mm:<6.4g} short arm {key.short_mm:.4g}"
         )
     _say()
-    _say("ring spanners, full and stubby (approximate until DIN 3113 is read out):")
-    for af in chosen.spanners:
-        spanner = spanner_for(af)
+    _say("ring spanners, full and stubby (approximate until DIN 3113 is read out; mm):")
+    for size in chosen.spanners:
+        spanner = spanner_for(size_mm(size))
         _say(
-            f"  spanner-{spanner.af:<7g} length {spanner.length:<6g} "
-            f"ring outer r {spanner.ring_outer_radius:<5g} stubby {spanner.stubby_length:g}"
+            f"  spanner-{size:<9} length {spanner.length:<6.4g} "
+            f"ring outer r {spanner.ring_outer_radius:<5.3g} stubby {spanner.stubby_length:.4g}"
         )
     extensions = "/".join(f"{e:g}" for e in EXTENSION_LENGTHS)
     _say()
     _say(f"sockets on a 72-tooth ratchet, extensions {extensions} mm (approximate until DIN 3124):")
-    for af in chosen.sockets:
-        socket = socket_for(af)
-        _say(f"  socket-{socket.af:<8g} outer r {socket.outer_radius:<5g} length {socket.length:g}")
+    for size in chosen.sockets:
+        socket = socket_for(size_mm(size))
+        _say(f"  socket-{size:<10} outer r {socket.outer_radius:<5.3g} length {socket.length:.4g}")
     _say()
     _say("drivers (shaft radii approximate, catalogue-typical):")
     for drive in chosen.drivers:

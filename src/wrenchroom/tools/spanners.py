@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from math import sqrt
 from typing import TYPE_CHECKING
 
+from wrenchroom.tools.sizes import size_name
 from wrenchroom.tools.sweep import (
     DEFAULT_STEP_DEG,
     Attempt,
@@ -104,7 +105,7 @@ def ring_attempts(
     grips (bug C in the bench handoff). For a plain nut or a hex head the band's
     top is the seat and nothing changes.
     """
-    tool = f"spanner-{spanner.af:g}"
+    tool = f"spanner-{size_name(spanner.af)}"
     band_top, band_bottom = hex_band
     inner = hex_af / sqrt(3) + RING_CLEARANCE  # hex corner radius plus clearance
     thickness = min(spanner.head_thickness, (band_top - band_bottom) - _MIN_GRIP)

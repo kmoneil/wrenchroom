@@ -42,8 +42,9 @@ from wrenchroom.fasteners import (
 )
 from wrenchroom.report import FastenerResult, Report, StateModel, Verdict
 from wrenchroom.tools.drivers import SHAFT_RADIUS, driver_attempt
-from wrenchroom.tools.hex_keys import ISO_2936, hex_key_attempts
+from wrenchroom.tools.hex_keys import HEX_KEYS, hex_key_attempts
 from wrenchroom.tools.kits import DEFAULT_KIT, Kit, kit_named, missing
+from wrenchroom.tools.sizes import INCH_FLATS, METRIC_FLATS, inch_mm, size_mm, size_name, snap
 from wrenchroom.tools.sockets import socket_attempts, socket_for
 from wrenchroom.tools.spanners import ring_attempts, spanner_for
 from wrenchroom.tools.sweep import (
@@ -63,8 +64,6 @@ if TYPE_CHECKING:
 #: How parallel a face normal must be to the axis to count as an end face.
 _AXIAL = 0.99
 
-#: A measured across-flats lands on a tool size within this, mm.
-_AF_SNAP = 0.05
 
 #: A hex band shorter than this, mm, gives a ring nothing to grip.
 _MIN_BAND = 0.5
@@ -770,7 +769,7 @@ def _attempts_for(
     if fastener.head in _KEYED_HEADS:
         return _keyed_attempts(fastener, mount, scene, tools)
     if fastener.head is Head.PHILLIPS:
-        size = _metric_size(fastener)
+        size = _known_size(fastener)
         number = PHILLIPS_NUMBER.get(size.designation)
         if number is None:
             raise NotCovered(f"no Phillips number for {size.designation}")
@@ -786,49 +785,47 @@ def _attempts_for(
     raise NotCovered("head unknown: name it in the sidecar")
 
 
-def _metric_size(fastener: Fastener) -> Size:
-    """The size, which a table lookup needs: known, and metric until M6's kit."""
+def _known_size(fastener: Fastener) -> Size:
+    """The size, which a table lookup needs: metric or inch, but known."""
     if fastener.size is None:
         raise NotCovered("size unknown: name it in the sidecar")
-    if not fastener.size.is_metric:
-        raise NotCovered("imperial sizes need the imperial kit (M6)")
     return fastener.size
 
 
-def _given_af(fastener: Fastener) -> float | None:
-    """The drive's across-flats when measured or given, on a metric size; else None.
+#: Every hex size a spanner or socket comes in, metric and inch, mm.
+_FLATS = METRIC_FLATS + tuple(inch_mm(size) for size in INCH_FLATS)
 
-    A measurement lands on a whole or half millimetre within :data:`_AF_SNAP`
-    or it is no metric tool's size: a 7/16" hex measures 11.11 and must not
-    become a "spanner-11.11".
+
+def _given_af(fastener: Fastener, sizes: tuple[float, ...]) -> float | None:
+    """The drive's across-flats when measured or given, as a tool size; else None.
+
+    A measurement is the tool size nearest it, within a few hundredths of a
+    millimetre, or it is no tool's size: 11.11 is a 7/16 in hex and must not
+    become a "spanner-11.11", and 19.05 is 3/4 in, not 19 mm.
     """
     if fastener.drive_af is None:
         return None
-    snapped = round(fastener.drive_af * 2) / 2
-    if abs(snapped - fastener.drive_af) > _AF_SNAP:
-        raise NotCovered(
-            f"{fastener.drive_af:.2f} across flats is no metric tool size; "
-            "imperial sizes need the imperial kit (M6)"
-        )
+    snapped = snap(fastener.drive_af, sizes)
+    if snapped is None:
+        raise NotCovered(f"{fastener.drive_af:.2f} mm across flats is no tool's size")
     return snapped
 
 
 def _keyed_attempts(
     fastener: Fastener, mount: Mount, scene: Scene, tools: _Tools
 ) -> Iterator[Attempt]:
-    af = _given_af(fastener)
+    af = _given_af(fastener, tuple(HEX_KEYS))
     if af is None:
         if fastener.head is None or fastener.size is None:
             raise NotCovered("head or size unknown: name them in the sidecar")
-        size = _metric_size(fastener)
+        size = _known_size(fastener)
         af = hex_key_af(fastener.head, size)
-        if af is None or af not in ISO_2936:
+        if af is None or af not in HEX_KEYS:
             head = fastener.head.value
             raise NotCovered(f"no standard key for a {size.designation} {head} head")
-    if af not in ISO_2936:
-        raise NotCovered(f"no ISO 2936 key is {af:g} across flats")
-    tools.need(f"hex-key-{af:g}")
-    return hex_key_attempts(mount, ISO_2936[af], scene, tools.step_deg, tools.hand_room)
+    key = HEX_KEYS[af]
+    tools.need(key.name)
+    return hex_key_attempts(mount, key, scene, tools.step_deg, tools.hand_room)
 
 
 def _hex_flats_attempts(
@@ -845,18 +842,18 @@ def _hex_flats_attempts(
     the code that turns it into a verdict (an M3.5 nut, which has no ISO 4032
     row, used to crash the whole check that way).
     """
-    af = _given_af(fastener)
+    af = _given_af(fastener, _FLATS)
     if af is None:
-        size = _metric_size(fastener)
-        af = spanner_af(size)
+        size = _known_size(fastener)
+        af = spanner_af(size, head=fastener.kind is Kind.SCREW)
         if af is None:
             raise NotCovered(f"no across-flats for {size.designation}")
     if geometry.band_height <= _MIN_BAND:
         raise NotCovered("could not measure the hex's height")
     band = (geometry.band_top, geometry.band_bottom)
-    wanted = [f"spanner-{af:g}"]
+    wanted = [f"spanner-{size_name(af)}"]
     if fastener.socket_allowed:
-        wanted.append(f"socket-{af:g}")
+        wanted.append(f"socket-{size_name(af)}")
     held = tools.need(*wanted)
     return _hex_flats_tools(held, mount, af, band, scene, tools)
 
@@ -870,9 +867,9 @@ def _hex_flats_tools(
     tools: _Tools,
 ) -> Iterator[Attempt]:
     step, hand = tools.step_deg, tools.hand_room
-    if f"spanner-{af:g}" in held:
+    if f"spanner-{size_name(af)}" in held:
         yield from ring_attempts(mount, spanner_for(af), af, band, scene, step, hand)
-    if f"socket-{af:g}" in held:
+    if f"socket-{size_name(af)}" in held:
         yield from socket_attempts(mount, socket_for(af), af, scene, step, hand)
 
 
@@ -883,7 +880,7 @@ def _forced_attempts(
     scene: Scene,
     tools: _Tools,
 ) -> Iterator[Attempt]:
-    """A sidecar `tool:` name, e.g. hex-key-5, spanner-10, socket-13, driver-ph2.
+    """A sidecar `tool:` name: hex-key-5, spanner-10, socket-7/16in, driver-ph2.
 
     A forced tool must still be in the kit: the sidecar picks which tool, the
     kit says which tools there are.
@@ -892,20 +889,20 @@ def _forced_attempts(
     family, _, size_text = name.rpartition("-")
     step_deg = tools.step_deg
     if family == "hex-key":
-        key = ISO_2936.get(_as_float(size_text, name))
+        key = HEX_KEYS.get(_tool_mm(size_text, name))
         if key is None:
-            raise NotCovered(f"no ISO 2936 key sized {size_text}")
-        tools.need(name)
+            raise NotCovered(f"no ISO 2936 or ASME B18.3 key sized {size_text}")
+        tools.need(key.name)
         return hex_key_attempts(mount, key, scene, step_deg, tools.hand_room)
     if family == "spanner":
-        af = _as_float(size_text, name)
+        af = _tool_mm(size_text, name)
         if geometry.band_height <= _MIN_BAND:
             raise NotCovered("could not measure the hex's height")
         tools.need(name)
         band = (geometry.band_top, geometry.band_bottom)
         return ring_attempts(mount, spanner_for(af), af, band, scene, step_deg, tools.hand_room)
     if family == "socket":
-        af = _as_float(size_text, name)
+        af = _tool_mm(size_text, name)
         tools.need(name)
         return socket_attempts(mount, socket_for(af), af, scene, step_deg, tools.hand_room)
     if family == "driver":
@@ -917,9 +914,10 @@ def _forced_attempts(
     raise NotCovered(f"unknown tool {name!r}")
 
 
-def _as_float(text: str, tool: str) -> float:
+def _tool_mm(text: str, tool: str) -> float:
+    """A tool name's size in mm: ``13``, ``7/16in``; not covered when it isn't one."""
     try:
-        return float(text)
+        return size_mm(text)
     except ValueError:
         raise NotCovered(f"unknown tool {tool!r}") from None
 

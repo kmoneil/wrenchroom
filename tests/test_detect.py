@@ -188,24 +188,35 @@ def test_across_flats_in_the_sidecar_picks_the_spanner():
     assert result.tool == "spanner-13"
 
 
-def test_an_imperial_hex_is_not_covered_rather_than_guessed():
+def test_an_inch_hex_takes_an_inch_spanner_not_a_metric_guess():
     inch_nut = hex_prism(11.1125, 6) - Cylinder(3.175, 30)  # 7/16" hex
     nut = Assembly([Part("nut", inch_nut), Part("plate", Pos(0, 0, -5) * Box(200, 200, 10))])
-    (result,) = run(nut).results
-    assert result.verdict is Verdict.NOT_COVERED
-    assert "11.11 across flats is no metric tool size" in result.reason
+    (home,) = run(nut).results
+    assert home.verdict is Verdict.NOT_COVERED
+    assert home.reason == (
+        "needs spanner-7/16in or socket-7/16in, which kit metric-home does not hold "
+        "(imperial-home and full have it)"
+    )
+    (inch,) = run(nut, kit="imperial-home").results
+    assert inch.verdict is Verdict.TURNS
+    assert inch.tool == "spanner-7/16in"
+
+
+def _socket_head(af):
+    return Pos(0, 0, -10) * Cylinder(3, 20) + Pos(0, 0, 3) * Cylinder(5, 6) - hex_prism(af, 3.01, 3)
 
 
 def test_a_socket_no_key_fits_is_not_covered():
-    odd = (
-        Pos(0, 0, -10) * Cylinder(3, 20)
-        + Pos(0, 0, 3) * Cylinder(5, 6)
-        - hex_prism(4.7625, 3.01, 3)
-    )
-    report = run(Assembly([Part("screw", odd)]))
+    report = run(Assembly([Part("screw", _socket_head(4.4))]), kit="full")
     (result,) = report.results
     assert result.verdict is Verdict.NOT_COVERED
-    assert "4.76 across flats" in result.reason
+    assert result.reason == "4.40 mm across flats is no tool's size"
+
+
+def test_an_inch_socket_takes_its_inch_key():
+    (result,) = run(Assembly([Part("screw", _socket_head(4.7625))]), kit="full").results
+    assert result.tool == "hex-key-3/16in"
+    assert result.verdict is Verdict.TURNS
 
 
 # ---------------------------------------------------------------------------

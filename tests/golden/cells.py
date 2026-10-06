@@ -579,3 +579,40 @@ def hand_tight():
         ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(6, 20, 10, 4.0)),
         ("nut", hex_nut(6, 10, 5.2)),
     ]
+
+
+#: One inch, mm.
+IN = 25.4
+
+
+@cell(
+    "inch_pair",
+    [
+        {"parts": "screw", "kind": "screw", "head": "socket", "size": "1/4"},
+        {"parts": "nut", "kind": "nut", "size": "1/4"},
+    ],
+    {
+        "screw": {"verdict": "turns", "tool": "hex-key-3/16in", "how": "driver straight in"},
+        "nut": {"verdict": "turns", "tool": "spanner-7/16in", "how": "ring, full length"},
+    },
+)
+def inch_pair():
+    """An inch joint for the inch tools (GOLDEN-BENCH section 6, M6).
+
+    A 1/4-20 x 1 socket head cap screw (ASME B18.3: head 0.375 across, 0.250 tall,
+    3/16 socket) head-up on a plate, its 1/4 hex nut (ASME B18.2.2: 7/16 across
+    flats, 7/32 thick) under the plate. Nothing is above the screw or below the
+    nut: the 3/16 key goes straight in as a driver, and the 7/16 ring swings full
+    circle, full length. Under metric-home neither has a tool (test_kits_bench.py);
+    under imperial-home both turn as here.
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 0.27 * IN / 2)])),
+        (
+            "screw",
+            socket_screw(
+                d=0.25 * IN, length=1.0 * IN, dk=0.375 * IN, k=0.25 * IN, s=3 / 16 * IN, t=0.12 * IN
+            ),
+        ),
+        ("nut", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_nut(0.25 * IN, 7 / 16 * IN, 7 / 32 * IN)),
+    ]
