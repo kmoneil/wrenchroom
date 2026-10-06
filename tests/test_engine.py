@@ -23,7 +23,7 @@ from wrenchroom.engine import (
 )
 from wrenchroom.engine.mesh import MESH_TOLERANCE, solid_mesh
 from wrenchroom.engine.scene import boxes_overlap, shape_bounds
-from wrenchroom.solids import ToolSolid
+from wrenchroom.solids import RadialBox, ToolSolid
 from wrenchroom.tools.sweep import axial_annulus, axial_cylinder, radial_box
 
 
@@ -264,3 +264,21 @@ def test_a_tool_solid_is_placed_once():
         placed + local
     with pytest.raises(ValueError, match="at least one primitive"):
         ToolSolid(()).shape()
+
+
+def test_a_part_across_two_pieces_counts_their_overlaps_together(engine):
+    # Two boxes end to end along x, meeting at x = 10; a sliver of part straddles
+    # the seam, 0.03 mm^3 in each: under the hit floor apiece, over it together.
+    # A tool's pieces never overlap (solids.py), so their overlaps add up to the
+    # whole tool's, and both engines must add them.
+    tool = ToolSolid(
+        (RadialBox(4.0, 2.0, 0.0, 10.0, 0.0, 0.0), RadialBox(4.0, 2.0, 10.0, 20.0, 0.0, 0.0))
+    ).placed((0.0, 0.0, 0.0), (0.0, 0.0, 1.0))
+    sliver = Pos(10, 0, 0) * Box(0.2, 0.6, 0.5)  # 0.1 x 0.6 x 0.5 = 0.03 each side
+    assert 0.03 < HIT_MIN_VOLUME < 0.06
+    scene = make_engine(engine).scene([Part("sliver", sliver)])
+    assert scene.hits(tool) == ("sliver",)
+    alone = ToolSolid((RadialBox(4.0, 2.0, 0.0, 10.0, 0.0, 0.0),)).placed(
+        (0.0, 0.0, 0.0), (0.0, 0.0, 1.0)
+    )
+    assert scene.hits(alone) == ()  # one piece's share alone is under the floor

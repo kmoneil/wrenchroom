@@ -41,12 +41,12 @@ SLOTS = len(CELLS) + 1
 #: The whole bench's verdict counts once every milestone and issue has landed:
 #: the one-line summary of the truth. 37 since M4: the sidecar named 36, and
 #: detection finds torx_open_screw, which no rule names; 42 since M6's hand_tight,
-#: inch_pair and torx_wall.
+#: inch_pair and torx_wall; and since M6's open end, glands_close's two turn.
 FINAL_COUNTS = {
     "fasteners": 42,
-    "turns": 29,
+    "turns": 31,
     "held": 2,
-    "blocked": 10,
+    "blocked": 8,
     "stuck": 1,
     "not_covered": 0,
 }

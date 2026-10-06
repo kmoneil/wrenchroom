@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**42 fasteners: 29 turn, 2 held, 10 blocked, 1 stuck, 0 not covered**
+**42 fasteners: 31 turn, 2 held, 8 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -13,7 +13,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts th
 | M10 hex screw | `spanner-16` | 3 | all pass (ring, full length) |
 | M10 nut | `socket-16` | 2 | all pass (socket, 50 mm extension) |
 | M10 nut | `spanner-16` | 1 | 1 of 1 fail |
-| M16 nut | `spanner-24` | 5 | 3 of 5 fail |
+| M16 nut | `spanner-24` | 5 | 1 of 5 fail |
 | M4 phillips screw | `driver-ph2` | 2 | 1 of 2 fail |
 | M6 button screw | `hex-key-4` | 1 | all pass (long leg in) |
 | M6 carriage screw | - | 1 | all pass (holds itself) |
@@ -28,9 +28,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts th
 
 | Fastener | Tool | Verdict | In the way, or why |
 | --- | --- | --- | --- |
-| `gland_rib_gland` | `spanner-24` | blocked | `gland_rib_rib` |
-| `glands_close_a_gland` | `spanner-24` | blocked | `glands_close_b_gland` |
-| `glands_close_b_gland` | `spanner-24` | blocked | `glands_close_a_gland` |
+| `gland_rib_gland` | `spanner-24` | blocked | `only holds, and it has no nut` |
 | `key_wall_near_screw` | `hex-key-5` | blocked | `key_wall_near_wall` |
 | `pair_both_hold_bolt` | `spanner-13` | blocked | `only holds, and its partner pair_both_hold_nut does not turn` |
 | `pair_both_hold_nut` | `spanner-13` | blocked | `only holds, and its partner pair_both_hold_bolt does not turn` |

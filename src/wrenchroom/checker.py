@@ -47,7 +47,7 @@ from wrenchroom.tools.hex_keys import HEX_KEYS, hex_key_attempts
 from wrenchroom.tools.kits import DEFAULT_KIT, Kit, kit_named, missing
 from wrenchroom.tools.sizes import INCH_FLATS, METRIC_FLATS, inch_mm, size_mm, size_name, snap
 from wrenchroom.tools.sockets import socket_attempts, socket_for
-from wrenchroom.tools.spanners import ring_attempts, spanner_for
+from wrenchroom.tools.spanners import open_end_attempts, ring_attempts, spanner_for
 from wrenchroom.tools.sweep import (
     DEFAULT_STEP_DEG,
     Attempt,
@@ -886,8 +886,18 @@ def _hex_flats_tools(
     step, hand = tools.step_deg, tools.hand_room
     if f"spanner-{size_name(af)}" in held:
         yield from ring_attempts(mount, spanner_for(af), af, band, scene, step, hand)
+        yield from open_end_attempts(mount, spanner_for(af), af, band, scene, step, hand)
     if f"socket-{size_name(af)}" in held:
         yield from socket_attempts(mount, socket_for(af), af, scene, step, hand)
+
+
+def _spanner_ends(
+    mount: Mount, af: float, band: tuple[float, float], scene: Scene, tools: _Tools
+) -> Iterator[Attempt]:
+    """A combination spanner, both ends: the ring first, then the open end."""
+    spanner = spanner_for(af)
+    yield from ring_attempts(mount, spanner, af, band, scene, tools.step_deg, tools.hand_room)
+    yield from open_end_attempts(mount, spanner, af, band, scene, tools.step_deg, tools.hand_room)
 
 
 def _forced_attempts(
@@ -923,7 +933,7 @@ def _forced_attempts(
             raise NotCovered("could not measure the hex's height")
         tools.need(name)
         band = (geometry.band_top, geometry.band_bottom)
-        return ring_attempts(mount, spanner_for(af), af, band, scene, step_deg, tools.hand_room)
+        return _spanner_ends(mount, af, band, scene, tools)
     if family == "socket":
         af = _tool_mm(size_text, name)
         tools.need(name)

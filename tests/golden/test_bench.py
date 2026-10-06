@@ -86,22 +86,21 @@ def test_round_trip_names(bench_dir):
 
 
 def test_socket_false_is_load_bearing():
-    """glands_close with socket: true would turn by socket-24 over the ignored
-    cable: the flag is what keeps the cell honest."""
-    glands_close = next(cell for cell in CELLS if cell.name == "glands_close")
-    shapes = [(f"glands_close_{role}", shape) for role, shape in glands_close.build()]
-    config = Config.from_dict(
-        {
-            "fasteners": [
-                {"parts": "glands_close_*_gland", "kind": "nut", "size": "M16", "socket": True}
-            ],
-            "ignore": ["*_cable"],
-        }
-    )
-    report = check(Assembly.from_shapes(shapes), config, kit=KIT)
-    for result in report.results:
-        assert result.verdict.value == "turns"
-        assert result.tool == "socket-24"
+    """gland_rib with socket: true would turn by socket-24 over the ignored cable,
+    where with socket: false the ring and the open end both fail at the rib: the
+    flag is what keeps the cell honest. (glands_close showed this until M6's open
+    end turned it from the side, before any socket is tried.)"""
+    gland_rib = next(cell for cell in CELLS if cell.name == "gland_rib")
+    shapes = [(f"gland_rib_{role}", shape) for role, shape in gland_rib.build()]
+    rule = {"parts": "gland_rib_gland", "kind": "nut", "size": "M16", "axis": "+z"}
+    verdicts = {}
+    for socket in (True, False):
+        config = Config.from_dict(
+            {"fasteners": [{**rule, "socket": socket}], "ignore": ["*_cable"]}
+        )
+        (result,) = check(Assembly.from_shapes(shapes), config, kit=KIT).results
+        verdicts[socket] = (result.verdict.value, result.tool)
+    assert verdicts == {True: ("turns", "socket-24"), False: ("blocked", "spanner-24")}
 
 
 def test_config_edges(bench_dir):

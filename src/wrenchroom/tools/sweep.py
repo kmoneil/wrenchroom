@@ -120,7 +120,7 @@ def swing_attempt(
     tool: str,
     way: str,
     scene: Scene,
-    engagement: ToolSolid,
+    engagement: ToolSolid | None,
     arm_at: Callable[[float], ToolSolid],
     required_deg: float,
     step_deg: float = DEFAULT_STEP_DEG,
@@ -128,19 +128,24 @@ def swing_attempt(
 ) -> Attempt:
     """Try an engagement solid, then search the arm's swing.
 
-    The engagement (the part of the tool on the fastener) must be clear or the
-    attempt fails outright with its blockers. Then the arm is sampled around the
-    circle: `turns` needs ``required_deg`` of contiguous free arc, `holds` needs
-    any one free position. With ``hand_at``, a position is free only when the
-    hand there is clear too; the hand is tested only where the arm is, so a
-    check without hand room costs exactly what it did.
+    The engagement (the part of the tool on the fastener, the same at every
+    angle: a ring, a key's leg) must be clear or the attempt fails outright with
+    its blockers. Then the arm is sampled around the circle: `turns` needs
+    ``required_deg`` of contiguous free arc, `holds` needs any one free position.
+    A tool whose grip turns with its handle (an open-end jaw) has no separate
+    engagement: ``engagement`` is None and ``arm_at`` is the whole tool. With
+    ``hand_at``, a position is free only when the hand there is clear too; the
+    hand is tested only where the arm is, so a check without hand room costs
+    exactly what it did.
     """
     blockers: list[str] = []
     hand_blockers: list[str] = []
-    engagement_hits = scene.hits(engagement)
-    probes = [Probe(engagement, engagement_hits)]
-    if engagement_hits:
-        return Attempt(tool, way, False, False, 0.0, engagement_hits, tuple(probes))
+    probes: list[Probe] = []
+    if engagement is not None:
+        engagement_hits = scene.hits(engagement)
+        probes.append(Probe(engagement, engagement_hits))
+        if engagement_hits:
+            return Attempt(tool, way, False, False, 0.0, engagement_hits, tuple(probes))
 
     samples = max(1, round(FULL_CIRCLE / step_deg))
     arm_clear: dict[int, bool] = {}
@@ -280,10 +285,20 @@ def hand_on_handle(z: float, start: float, reach: float, phi_deg: float) -> Tool
 
 
 def radial_box(
-    width: float, thickness: float, r_from: float, r_to: float, z: float, phi_deg: float
+    width: float,
+    thickness: float,
+    r_from: float,
+    r_to: float,
+    z: float,
+    phi_deg: float,
+    offset: float = 0.0,
 ) -> ToolSolid:
-    """A box along ``u(phi)``: a handle. ``width`` is tangential, ``thickness`` axial."""
-    return ToolSolid((RadialBox(width, thickness, r_from, r_to, z, phi_deg),))
+    """A box along ``u(phi)``: a handle, a jaw's arm.
+
+    ``width`` is tangential, ``thickness`` axial, ``offset`` a sideways shift off
+    the line through the axis.
+    """
+    return ToolSolid((RadialBox(width, thickness, r_from, r_to, z, phi_deg, offset),))
 
 
 def axial_annulus(inner: float, outer: float, z_from: float, thickness: float) -> ToolSolid:

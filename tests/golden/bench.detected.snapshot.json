@@ -4,9 +4,9 @@
  "kit": "full",
  "summary": {
   "fasteners": 42,
-  "turns": 27,
+  "turns": 29,
   "held": 2,
-  "blocked": 11,
+  "blocked": 9,
   "stuck": 1,
   "not_covered": 1
  },
@@ -123,7 +123,7 @@
     "gland_rib_rib"
    ],
    "stuck_on": [],
-   "reason": null
+   "reason": "only holds, and it has no nut"
   },
   {
    "name": "glands_apart_a_gland",
@@ -199,9 +199,9 @@
    ],
    "source": "name+geometry",
    "tool": "spanner-24",
-   "verdict": "blocked",
-   "how": null,
-   "swing_deg": 0.0,
+   "verdict": "turns",
+   "how": "open end, full length",
+   "swing_deg": 30.0,
    "state": null,
    "pair": null,
    "blocked_by": [
@@ -228,14 +228,12 @@
    ],
    "source": "name+geometry",
    "tool": "spanner-24",
-   "verdict": "blocked",
-   "how": null,
-   "swing_deg": 0.0,
+   "verdict": "turns",
+   "how": "open end, full length",
+   "swing_deg": 30.0,
    "state": null,
    "pair": null,
-   "blocked_by": [
-    "glands_close_a_gland"
-   ],
+   "blocked_by": [],
    "stuck_on": [],
    "reason": null
   },
