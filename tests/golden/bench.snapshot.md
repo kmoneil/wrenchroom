@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**41 fasteners: 28 turn, 2 held, 10 blocked, 1 stuck, 0 not covered**
+**42 fasteners: 29 turn, 2 held, 10 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -20,6 +20,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts th
 | M6 hex screw | `spanner-10` | 3 | all pass (ring, full length) |
 | M6 nut | `spanner-10` | 4 | all pass (ring, full length) |
 | M6 socket screw | `hex-key-5` | 12 | 4 of 12 fail |
+| M6 torx screw | `torx-key-T30` | 1 | all pass (short leg in) |
 | M8 hex screw | `spanner-13` | 3 | 1 of 3 fail |
 | M8 nut | `spanner-13` | 2 | 1 of 2 fail |
 

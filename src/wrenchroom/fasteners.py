@@ -382,6 +382,20 @@ def spanner_af(size: Size, *, head: bool = False) -> float | None:
     return (HEX_HEAD_AF if head else HEX_AF).get(size.designation)
 
 
+#: Hexalobular (Torx) socket heads: thread -> Torx size. ISO 14579 (socket head cap),
+#: ISO 14580 (cheese), ISO 14581 (countersunk) and ISO 14583 (pan) agree, M12 being
+#: in ISO 14579 only; checked 2026-10-06 against fasteners.eu and fasten.it. Some
+#: suppliers sell M8 pan heads as T40; the standards say T45.
+TORX_SIZE: dict[str, str] = {
+    "M3": "T10",
+    "M4": "T20",
+    "M5": "T25",
+    "M6": "T30",
+    "M8": "T45",
+    "M10": "T50",
+    "M12": "T55",
+}
+
 #: Phillips driver number by thread. Approximation (catalogue-typical pairings;
 #: no ISO or ASME table maps thread to recess number across head styles).
 PHILLIPS_NUMBER: dict[str, int] = {

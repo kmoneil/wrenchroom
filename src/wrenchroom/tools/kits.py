@@ -34,6 +34,7 @@ from dataclasses import dataclass
 from wrenchroom.tools.drivers import SHAFT_RADIUS
 from wrenchroom.tools.hex_keys import ASME_B18_3, ISO_2936
 from wrenchroom.tools.sizes import INCH_FLATS, INCH_KEYS, METRIC_FLATS, size_mm, size_name
+from wrenchroom.tools.torx_keys import ISO_10664
 
 _HOME_DRIVERS = ("ph1", "ph2", "ph3", "slotted")
 
@@ -50,6 +51,7 @@ class Kit:
             spanner's stubby).
         sockets: Socket sizes, on the drive set's ratchet and extensions.
         drivers: Screwdriver tips, by the names :data:`SHAFT_RADIUS` uses.
+        torx_keys: Torx L-key sizes (``T30``); the full kit's alone.
     """
 
     name: str
@@ -58,6 +60,7 @@ class Kit:
     spanners: tuple[str, ...]
     sockets: tuple[str, ...]
     drivers: tuple[str, ...]
+    torx_keys: tuple[str, ...] = ()
 
     def holds(self, tool: str) -> bool:
         """True when a tool, named as the report names it (``spanner-13``), is in the kit."""
@@ -67,6 +70,7 @@ class Kit:
             "spanner": self.spanners,
             "socket": self.sockets,
             "driver": self.drivers,
+            "torx-key": self.torx_keys,
         }
         return size in sizes.get(family, ())
 
@@ -120,13 +124,14 @@ IMPERIAL_HOME = Kit(
 FULL = Kit(
     name="full",
     summary=(
-        "every size the tables hold: hex keys 1.5 to 19 mm and 0.050 to 3/4 in, spanners "
-        "and sockets 5.5 to 36 mm and 5/32 to 1-1/2 in, every driver"
+        "every size the tables hold: hex keys 1.5 to 19 mm and 0.050 to 3/4 in, Torx keys "
+        "T10 to T40, spanners and sockets 5.5 to 36 mm and 5/32 to 1-1/2 in, every driver"
     ),
     hex_keys=_names(tuple(ISO_2936)) + _names(tuple(ASME_B18_3)),
     spanners=_names(METRIC_FLATS) + _inch(INCH_FLATS),
     sockets=_names(METRIC_FLATS) + _inch(INCH_FLATS),
     drivers=tuple(SHAFT_RADIUS),
+    torx_keys=tuple(ISO_10664),
 )
 
 #: Every kit by name, the default first.

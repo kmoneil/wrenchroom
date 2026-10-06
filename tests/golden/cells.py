@@ -541,7 +541,7 @@ def torx_open():
     """No rule names this screw in the main sidecar: detection finds it (its name
     ends in "screw") and its solid shows a 5 mm hex socket, so it turns by the
     key. bench_edges.yaml describes it as head: torx, and a rule outranks
-    detection: there it is not-covered naming M6, until the full kit lands."""
+    detection: there it takes the full kit's T30 Torx key (test_config_edges)."""
     return [("plate", plate(holes=[(0, 0, 3)])), ("screw", socket_screw())]
 
 
@@ -615,4 +615,27 @@ def inch_pair():
             ),
         ),
         ("nut", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_nut(0.25 * IN, 7 / 16 * IN, 7 / 32 * IN)),
+    ]
+
+
+@cell(
+    "torx_wall",
+    [{"parts": "screw", "kind": "screw", "head": "torx", "size": "M6"}],
+    {"screw": {"verdict": "turns", "tool": "torx-key-T30", "how": "short leg in"}},
+)
+def torx_wall():
+    """An M6 Torx socket head (ISO 14579: T30) under a wall 40 over its head (GOLDEN-
+    BENCH section 6, M6). No driver (200 long); the T30's short leg (26, the longest
+    of three makers' keys) bends at 26.3 and its long arm (r 2.8) tops out at 29.1,
+    10.9 under the wall, so it swings free; the long leg (122) can't go in. The
+    recess is drawn as its point-to-point circle, which detection can't read as a
+    hex: with no rule it falls back to a socket head's 5 mm key, which also turns
+    here (top 36.1), so its verdict agrees. metric-home and imperial-home hold no
+    Torx key (test_kits_bench.py).
+    """
+    head = Pos(0, 0, 3) * Cylinder(5, 6) - Pos(0, 0, 4.5) * Cylinder(5.6 / 2, 3.01)
+    return [
+        ("plate", plate(holes=[(0, 0, 3)])),
+        ("screw", head + Pos(0, 0, -10) * Cylinder(3, 20)),
+        ("wall", slab(6 + 40)),
     ]

@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 41,
-  "turns": 28,
+  "fasteners": 42,
+  "turns": 29,
   "held": 2,
   "blocked": 10,
   "stuck": 1,
@@ -1070,6 +1070,33 @@
    "reason": null
   },
   {
+   "name": "torx_wall_screw",
+   "kind": "screw",
+   "head": "torx",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    4000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "torx-key-T30",
+   "verdict": "turns",
+   "how": "short leg in",
+   "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
    "name": "twins_a_screw",
    "kind": "screw",
    "head": "socket",
@@ -1081,7 +1108,7 @@
     1.0
    ],
    "seat": [
-    2900.0,
+    3900.0,
     4000.0,
     6.0
    ],
@@ -1110,7 +1137,7 @@
     1.0
    ],
    "seat": [
-    3100.0,
+    4100.0,
     4000.0,
     6.0
    ],

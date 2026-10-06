@@ -30,6 +30,7 @@ PAST_HOME = {
         "needs spanner-7/16in or socket-7/16in, which kit metric-home does not hold "
         "(imperial-home and full have it)"
     ),
+    "torx_wall_screw": "needs torx-key-T30, which kit metric-home does not hold (full has it)",
 }
 
 #: The bench's inch fasteners: all imperial-home can turn.
