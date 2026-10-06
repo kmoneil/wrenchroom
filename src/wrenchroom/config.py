@@ -1,8 +1,9 @@
 """The YAML sidecar: hand-written fastener descriptions, ignores and forced pairs.
 
-At M1 the sidecar is the only source of fasteners. It stays authoritative forever:
-names and geometry (M4) run first and the sidecar overrides them, because the human
-who wrote it has seen the model and the detector hasn't.
+Since M4, part names and geometry find fasteners the sidecar doesn't name
+(``checks: {detect: false}`` turns that off). The sidecar stays authoritative: a rule
+that matches a part describes it outright and detection leaves it alone, because the
+human who wrote it has seen the model and the detector hasn't.
 
 Two rules here are lessons the prototype paid for:
 
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
 
 _SUPPORTED_TOP = {"fasteners", "ignore", "pairs", "states", "checks"}
 _STATE_KEYS = {"remove", "base", "model"}
-_CHECKS_KEYS = {"default_state", "try_states"}
+_CHECKS_KEYS = {"default_state", "try_states", "detect"}
 _RULE_KEYS = {
     "parts",
     "kind",
@@ -45,6 +46,7 @@ _RULE_KEYS = {
     "socket",
     "mates",
     "state",
+    "across_flats",
 }
 
 
@@ -66,6 +68,7 @@ class Rule:
     socket_allowed: bool = True
     mates: tuple[str, ...] = ()
     state: str | None = None
+    drive_af: float | None = None
 
 
 @dataclass(frozen=True)
@@ -92,6 +95,9 @@ class Config:
     states: tuple[StateDef, ...] = ()
     default_state: str | None = None
     try_states: tuple[str, ...] = ()
+    #: Find fasteners the rules don't name, from part names and geometry (M4).
+    #: On unless ``checks: {detect: false}`` says otherwise.
+    detect: bool = True
     source: str = "<none>"
 
     @classmethod
@@ -132,7 +138,7 @@ class Config:
             for index, entry in enumerate(_as_list(raw.get("pairs", []), f"{source}: pairs"))
         )
         states = _parse_states(raw.get("states", {}), source)
-        default_state, try_states = _parse_checks(raw.get("checks", {}), states, source)
+        default_state, try_states, detect = _parse_checks(raw.get("checks", {}), states, source)
         state_names = {state.name for state in states}
         for rule in rules:
             if rule.state is not None and rule.state not in state_names:
@@ -145,6 +151,7 @@ class Config:
             states=states,
             default_state=default_state,
             try_states=try_states,
+            detect=detect,
             source=source,
         )
 
@@ -197,6 +204,7 @@ class Config:
                 socket_allowed=rule.socket_allowed,
                 mates=rule.mates,
                 state=rule.state,
+                drive_af=rule.drive_af,
             )
             for name, rule in by_part.items()
         )
@@ -268,6 +276,7 @@ def _parse_rule(entry: object, index: int, source: str) -> Rule:
             for i, m in enumerate(_as_list(entry.get("mates", []), f"{where}: mates"))
         ),
         state=None if entry.get("state") is None else str(entry["state"]),
+        drive_af=_parse_positive(entry.get("across_flats"), f"{where}: across_flats"),
     )
 
 
@@ -314,6 +323,15 @@ def _parse_axis(value: object, where: str) -> str | tuple[float, float, float]:
         case _:
             msg = f"{where}: axis must be auto, +x style, or [x, y, z]"
             raise ConfigError(msg)
+
+
+def _parse_positive(value: object, where: str) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, int | float) and not isinstance(value, bool) and value > 0:
+        return float(value)
+    msg = f"{where} must be a positive number of millimetres"
+    raise ConfigError(msg)
 
 
 def _parse_length(value: object, where: str) -> float | None:
@@ -409,7 +427,7 @@ def _reject_base_cycles(states: list[StateDef], where: str) -> None:
 
 def _parse_checks(
     raw: object, states: tuple[StateDef, ...], source: str
-) -> tuple[str | None, tuple[str, ...]]:
+) -> tuple[str | None, tuple[str, ...], bool]:
     where = f"{source}: checks"
     if not isinstance(raw, dict):
         msg = f"{where} must be a mapping"
@@ -431,4 +449,5 @@ def _parse_checks(
         if name not in names:
             msg = f"{where}: try_states names unknown state {name!r}"
             raise ConfigError(msg)
-    return default_state, try_states
+    detect = _parse_bool(raw.get("detect", True), f"{where}: detect")
+    return default_state, try_states, detect

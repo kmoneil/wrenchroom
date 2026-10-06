@@ -131,6 +131,15 @@ class Fastener:
             bolt's spacer) and leave its scene.
         state: The named state this fastener is reached in, or ``None`` for the
             run's default state.
+        drive_af: Across flats of the drive, mm, when it is known rather than
+            looked up: measured from the solid (detection) or given in the
+            sidecar (``across_flats``). It outranks the size's table entry, so a
+            gland's 24 mm hex or a DIN-sized nut gets the spanner it really takes.
+        source: Where this description came from: ``sidecar``, ``name``, or
+            ``name+geometry``.
+        basis: What said so, for people (``ISO 4762, M6x20; solid: socket 5``).
+        not_covered: Set when detection found a fastener the kit can't check,
+            with the reason (a set screw, a carriage bolt with no square neck).
     """
 
     name: str
@@ -143,6 +152,10 @@ class Fastener:
     socket_allowed: bool = True
     mates: tuple[str, ...] = field(default=())
     state: str | None = None
+    drive_af: float | None = None
+    source: str = "sidecar"
+    basis: str = ""
+    not_covered: str | None = None
 
     @property
     def self_holding(self) -> bool:

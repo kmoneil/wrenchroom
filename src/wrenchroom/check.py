@@ -29,12 +29,14 @@ from build123d import GeomType
 
 from wrenchroom.assembly import Assembly, Part
 from wrenchroom.config import Config, ConfigError
+from wrenchroom.detect import find_fasteners
 from wrenchroom.engine import DEFAULT_ENGINE, ENGINES, Engine, Scene, make_engine
 from wrenchroom.fasteners import (
     PHILLIPS_NUMBER,
     Fastener,
     Head,
     Kind,
+    Size,
     hex_key_af,
     spanner_af,
 )
@@ -61,6 +63,9 @@ KITS = ("metric-home",)
 
 #: How parallel a face normal must be to the axis to count as an end face.
 _AXIAL = 0.99
+
+#: A measured across-flats lands on a tool size within this, mm.
+_AF_SNAP = 0.05
 
 #: A hex band shorter than this, mm, gives a ring nothing to grip.
 _MIN_BAND = 0.5
@@ -121,14 +126,15 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     if default_state is not None:
         config.state(default_state)  # raises on a typo
     matches = config.apply(assembly)
-    fasteners = sorted(matches.fasteners, key=lambda f: f.name)
-    if only is not None:
-        fasteners = [f for f in fasteners if fnmatchcase(f.name, only)]
+    fasteners = _fasteners(assembly, config, matches.fasteners, only)
 
     space = _StateSpace(assembly, config, model_dir, make_engine(engine))
     frames: dict[str, _Frame] = {}
     failures: dict[str, str] = {}
     for fastener in fasteners:
+        if fastener.not_covered is not None:
+            failures[fastener.name] = fastener.not_covered
+            continue
         try:
             frames[fastener.name] = _frame(assembly[fastener.name], fastener)
         except NotCovered as exc:
@@ -153,6 +159,26 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         unmatched_ignores=matches.unmatched_ignores,
         warnings=tuple(pair_warnings + space.warnings),
     )
+
+
+def _fasteners(
+    assembly: Assembly, config: Config, described: tuple[Fastener, ...], only: str | None
+) -> list[Fastener]:
+    """The sidecar's fasteners, plus what detection finds among the parts it doesn't name.
+
+    A rule that matches a part describes it outright: detection only ever sees
+    parts no rule covers, and never an ignored one.
+    """
+    found = list(described)
+    if config.detect:
+        named = {f.name for f in described}
+        found += find_fasteners(
+            part for part in assembly if part.name not in named and not config.is_ignored(part.name)
+        )
+    found.sort(key=lambda f: f.name)
+    if only is not None:
+        found = [f for f in found if fnmatchcase(f.name, only)]
+    return found
 
 
 # ---------------------------------------------------------------------------
@@ -445,10 +471,10 @@ def _try_in_state(
         return candidate
     try:
         attempts_iter = _attempts_for(fastener, mount, geometry, scene, step_deg)
-    except NotCovered as exc:
+        _run_attempts(candidate, attempts_iter)
+    except NotCovered as exc:  # also any a lazy attempt raises while running
         candidate.reason = str(exc)
         return candidate
-    _run_attempts(candidate, attempts_iter)
     if fastener.kind is Kind.SCREW and (candidate.turns or candidate.hold):
         candidate.extraction_blocked = _extraction_hits(fastener, frame, geometry, mount, scene)
         if candidate.turns and candidate.extraction_blocked:
@@ -680,18 +706,15 @@ def _attempts_for(
 ) -> Iterator[Attempt]:
     if fastener.tool is not None:
         return _forced_attempts(fastener, mount, geometry, scene, step_deg)
-    if fastener.size is None:
-        raise NotCovered("size unknown: name it in the sidecar")
-    if not fastener.size.is_metric:
-        raise NotCovered("imperial sizes need the imperial kit (M6)")
     if fastener.kind is Kind.NUT or fastener.head is Head.HEX:
         return _hex_flats_attempts(fastener, mount, geometry, scene, step_deg)
     if fastener.head in _KEYED_HEADS:
         return _keyed_attempts(fastener, mount, scene, step_deg)
     if fastener.head is Head.PHILLIPS:
-        number = PHILLIPS_NUMBER.get(fastener.size.designation)
+        size = _metric_size(fastener)
+        number = PHILLIPS_NUMBER.get(size.designation)
         if number is None:
-            raise NotCovered(f"no Phillips number for {fastener.size.designation}")
+            raise NotCovered(f"no Phillips number for {size.designation}")
         return iter(
             [driver_attempt(mount, scene, SHAFT_RADIUS[f"ph{number}"], f"driver-ph{number}")]
         )
@@ -702,16 +725,47 @@ def _attempts_for(
     raise NotCovered("head unknown: name it in the sidecar")
 
 
+def _metric_size(fastener: Fastener) -> Size:
+    """The size, which a table lookup needs: known, and metric until M6's kit."""
+    if fastener.size is None:
+        raise NotCovered("size unknown: name it in the sidecar")
+    if not fastener.size.is_metric:
+        raise NotCovered("imperial sizes need the imperial kit (M6)")
+    return fastener.size
+
+
+def _given_af(fastener: Fastener) -> float | None:
+    """The drive's across-flats when measured or given, on a metric size; else None.
+
+    A measurement lands on a whole or half millimetre within :data:`_AF_SNAP`
+    or it is no metric tool's size: a 7/16" hex measures 11.11 and must not
+    become a "spanner-11.11".
+    """
+    if fastener.drive_af is None:
+        return None
+    snapped = round(fastener.drive_af * 2) / 2
+    if abs(snapped - fastener.drive_af) > _AF_SNAP:
+        raise NotCovered(
+            f"{fastener.drive_af:.2f} across flats is no metric tool size; "
+            "imperial sizes need the imperial kit (M6)"
+        )
+    return snapped
+
+
 def _keyed_attempts(
     fastener: Fastener, mount: Mount, scene: Scene, step_deg: float
 ) -> Iterator[Attempt]:
-    if fastener.head is None or fastener.size is None:
-        raise NotCovered("head or size unknown: name them in the sidecar")
-    af = hex_key_af(fastener.head, fastener.size)
-    if af is None or af not in ISO_2936:
-        raise NotCovered(
-            f"no standard key for a {fastener.size.designation} {fastener.head.value} head"
-        )
+    af = _given_af(fastener)
+    if af is None:
+        if fastener.head is None or fastener.size is None:
+            raise NotCovered("head or size unknown: name them in the sidecar")
+        size = _metric_size(fastener)
+        af = hex_key_af(fastener.head, size)
+        if af is None or af not in ISO_2936:
+            head = fastener.head.value
+            raise NotCovered(f"no standard key for a {size.designation} {head} head")
+    if af not in ISO_2936:
+        raise NotCovered(f"no ISO 2936 key is {af:g} across flats")
     return hex_key_attempts(mount, ISO_2936[af], scene, step_deg)
 
 
@@ -722,16 +776,35 @@ def _hex_flats_attempts(
     scene: Scene,
     step_deg: float,
 ) -> Iterator[Attempt]:
-    if fastener.size is None:
-        raise NotCovered("size unknown: name it in the sidecar")
-    af = spanner_af(fastener.size)
+    """Rings, then sockets; every not-covered reason decided before they run.
+
+    The reasons are raised here, before the lazy attempts are handed back: one
+    raised inside a generator would surface only while the attempts ran, past
+    the code that turns it into a verdict (an M3.5 nut, which has no ISO 4032
+    row, used to crash the whole check that way).
+    """
+    af = _given_af(fastener)
     if af is None:
-        raise NotCovered(f"no across-flats for {fastener.size.designation}")
+        size = _metric_size(fastener)
+        af = spanner_af(size)
+        if af is None:
+            raise NotCovered(f"no across-flats for {size.designation}")
     if geometry.band_height <= _MIN_BAND:
         raise NotCovered("could not measure the hex's height")
     band = (geometry.band_top, geometry.band_bottom)
+    return _hex_flats_tools(fastener.socket_allowed, mount, af, band, scene, step_deg)
+
+
+def _hex_flats_tools(
+    socket_allowed: bool,
+    mount: Mount,
+    af: float,
+    band: tuple[float, float],
+    scene: Scene,
+    step_deg: float,
+) -> Iterator[Attempt]:
     yield from ring_attempts(mount, spanner_for(af), af, band, scene, step_deg)
-    if fastener.socket_allowed:
+    if socket_allowed:
         yield from socket_attempts(mount, socket_for(af), af, scene, step_deg)
 
 

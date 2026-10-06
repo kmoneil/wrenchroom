@@ -4,11 +4,11 @@
  "kit": "metric-home",
  "summary": {
   "fasteners": 37,
-  "turns": 24,
+  "turns": 22,
   "held": 2,
-  "blocked": 10,
+  "blocked": 11,
   "stuck": 1,
-  "not_covered": 0
+  "not_covered": 1
  },
  "unmatched_rules": [],
  "unmatched_ignores": [],
@@ -30,7 +30,7 @@
     2000.0,
     3.9
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": null,
    "verdict": "held",
    "how": "holds itself",
@@ -57,7 +57,7 @@
     2000.0,
     -11.2
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-10",
    "verdict": "turns",
    "how": "ring, full length",
@@ -84,7 +84,7 @@
     3000.0,
     6.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "hex-key-5",
    "verdict": "turns",
    "how": "short leg in",
@@ -99,7 +99,7 @@
    "name": "gland_rib_gland",
    "kind": "nut",
    "head": null,
-   "size": "M16",
+   "size": null,
    "length": null,
    "axis": [
     0.0,
@@ -111,7 +111,7 @@
     2000.0,
     22.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-24",
    "verdict": "blocked",
    "how": null,
@@ -128,7 +128,7 @@
    "name": "glands_apart_a_gland",
    "kind": "nut",
    "head": null,
-   "size": "M16",
+   "size": null,
    "length": null,
    "axis": [
     0.0,
@@ -140,7 +140,7 @@
     1000.0,
     22.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-24",
    "verdict": "turns",
    "how": "ring, full length",
@@ -157,7 +157,7 @@
    "name": "glands_apart_b_gland",
    "kind": "nut",
    "head": null,
-   "size": "M16",
+   "size": null,
    "length": null,
    "axis": [
     0.0,
@@ -169,7 +169,7 @@
     1000.0,
     22.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-24",
    "verdict": "turns",
    "how": "ring, full length",
@@ -184,7 +184,7 @@
    "name": "glands_close_a_gland",
    "kind": "nut",
    "head": null,
-   "size": "M16",
+   "size": null,
    "length": null,
    "axis": [
     0.0,
@@ -196,7 +196,7 @@
     1000.0,
     22.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-24",
    "verdict": "blocked",
    "how": null,
@@ -213,7 +213,7 @@
    "name": "glands_close_b_gland",
    "kind": "nut",
    "head": null,
-   "size": "M16",
+   "size": null,
    "length": null,
    "axis": [
     0.0,
@@ -225,7 +225,7 @@
     1000.0,
     22.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-24",
    "verdict": "blocked",
    "how": null,
@@ -254,7 +254,7 @@
     0.0,
     5.3
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-13",
    "verdict": "turns",
    "how": "ring, full length",
@@ -283,7 +283,7 @@
     0.0,
     3.3
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "hex-key-4",
    "verdict": "turns",
    "how": "long leg in",
@@ -310,7 +310,7 @@
     0.0,
     6.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "hex-key-5",
    "verdict": "turns",
    "how": "driver straight in",
@@ -337,7 +337,7 @@
     0.0,
     6.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "hex-key-5",
    "verdict": "turns",
    "how": "short leg in",
@@ -364,7 +364,7 @@
     0.0,
     6.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "hex-key-5",
    "verdict": "blocked",
    "how": null,
@@ -393,7 +393,7 @@
     1000.0,
     -16.4
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-16",
    "verdict": "turns",
    "how": "ring, full length",
@@ -420,7 +420,7 @@
     1000.0,
     8.4
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "socket-16",
    "verdict": "turns",
    "how": "socket, 50 mm extension",
@@ -447,7 +447,7 @@
     0.0,
     -14.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-10",
    "verdict": "turns",
    "how": "ring, full length",
@@ -474,7 +474,7 @@
     0.0,
     5.2
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-10",
    "verdict": "turns",
    "how": "ring, stubby",
@@ -501,7 +501,7 @@
     2000.0,
     -14.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-10",
    "verdict": "turns",
    "how": "ring, full length",
@@ -518,26 +518,18 @@
    "head": null,
    "size": "M6",
    "length": null,
-   "axis": [
-    0.0,
-    0.0,
-    1.0
-   ],
-   "seat": [
-    2000.0,
-    2000.0,
-    5.2
-   ],
-   "source": "sidecar",
-   "tool": "spanner-10",
-   "verdict": "turns",
-   "how": "ring, full length",
-   "swing_deg": 30.0,
+   "axis": null,
+   "seat": null,
+   "source": "name+geometry",
+   "tool": null,
+   "verdict": "not-covered",
+   "how": null,
+   "swing_deg": 0.0,
    "state": null,
    "pair": "nyloc_two_bodies_bolt",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": "cannot tell the nut's free face: both ends are covered"
   },
   {
    "name": "pair_both_hold_bolt",
@@ -555,7 +547,7 @@
     2000.0,
     5.3
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-13",
    "verdict": "blocked",
    "how": null,
@@ -584,7 +576,7 @@
     2000.0,
     -16.8
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-13",
    "verdict": "blocked",
    "how": null,
@@ -613,7 +605,7 @@
     2000.0,
     5.3
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-13",
    "verdict": "turns",
    "how": "ring, full length",
@@ -640,7 +632,7 @@
     2000.0,
     -16.8
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-13",
    "verdict": "held",
    "how": "ring, full length",
@@ -669,7 +661,7 @@
     1000.0,
     3.1
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "driver-ph2",
    "verdict": "turns",
    "how": "driver straight in",
@@ -696,7 +688,7 @@
     1000.0,
     3.1
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "driver-ph2",
    "verdict": "blocked",
    "how": null,
@@ -725,7 +717,7 @@
     3000.0,
     6.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "hex-key-5",
    "verdict": "turns",
    "how": "driver straight in",
@@ -752,14 +744,16 @@
     3000.0,
     6.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "hex-key-5",
-   "verdict": "turns",
-   "how": "driver straight in",
-   "swing_deg": 360.0,
-   "state": "lid-off",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
    "pair": null,
-   "blocked_by": [],
+   "blocked_by": [
+    "state_lid_lid"
+   ],
    "stuck_on": [],
    "reason": null
   },
@@ -779,7 +773,7 @@
     3000.0,
     6.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "hex-key-5",
    "verdict": "stuck",
    "how": "short leg in",
@@ -808,7 +802,7 @@
     3000.0,
     -16.4
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-16",
    "verdict": "turns",
    "how": "ring, full length",
@@ -835,7 +829,7 @@
     3000.0,
     8.4
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "socket-16",
    "verdict": "turns",
    "how": "socket on ratchet",
@@ -862,7 +856,7 @@
     3000.0,
     -16.4
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-16",
    "verdict": "turns",
    "how": "ring, full length",
@@ -889,7 +883,7 @@
     3000.0,
     8.4
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "spanner-16",
    "verdict": "blocked",
    "how": null,
@@ -919,7 +913,7 @@
     1000.0,
     6.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "hex-key-5",
    "verdict": "blocked",
    "how": null,
@@ -976,7 +970,7 @@
     4000.0,
     6.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "hex-key-5",
    "verdict": "blocked",
    "how": null,
@@ -1005,7 +999,7 @@
     4000.0,
     6.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "hex-key-5",
    "verdict": "turns",
    "how": "driver straight in",
@@ -1032,7 +1026,7 @@
     2000.0,
     6.0
    ],
-   "source": "sidecar",
+   "source": "name+geometry",
    "tool": "hex-key-5",
    "verdict": "turns",
    "how": "driver straight in",

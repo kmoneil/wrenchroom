@@ -32,10 +32,11 @@ PITCH = 1000.0
 SLOTS = len(CELLS) + 1
 
 #: The whole bench's verdict counts once every milestone and issue has landed:
-#: the one-line summary of the truth.
+#: the one-line summary of the truth. 37 since M4: the sidecar names 36, and
+#: detection finds torx_open_screw, which no rule names.
 FINAL_COUNTS = {
-    "fasteners": 36,
-    "turns": 23,
+    "fasteners": 37,
+    "turns": 24,
     "held": 2,
     "blocked": 10,
     "stuck": 1,
@@ -191,6 +192,24 @@ def _canonical_fastener(entry):
 def _round_mm(value):
     rounded = round(value, 2)
     return 0.0 if rounded == 0 else rounded  # no -0.0 in a committed snapshot
+
+
+def stripped_sidecar():
+    """The bench's sidecar with every fastener rule taken out: the M4 exit case.
+
+    Ignores, states and checks stay; what the rules said (kinds, heads, sizes,
+    mates, a fastener's own state) must now come from names and geometry.
+    """
+    sidecar, _ = sidecar_and_truth()
+    return {key: value for key, value in sidecar.items() if key != "fasteners"}
+
+
+def check_detected(directory, engine="mesh"):
+    """The written bench checked with no fastener rules: detection finds them all."""
+    directory = Path(directory)
+    assembly = Assembly.from_step(directory / "bench.step")
+    config = Config.from_dict(stripped_sidecar())
+    return check(assembly, config, model="bench.step", model_dir=directory, engine=engine)
 
 
 def check_bench(directory, config_name="wrenchroom.yaml", engine="mesh"):

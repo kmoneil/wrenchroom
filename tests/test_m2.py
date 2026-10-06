@@ -105,7 +105,7 @@ def test_extraction_clear_by_ten_is_not_stuck(engine):
 
 def test_a_nut_is_never_extracted(engine):
     rules = {"fasteners": [{"parts": "nut", "kind": "nut", "size": "M6"}]}
-    report = run(engine, nut_with_bolt_through(), rules)
+    report = run(engine, nut_with_bolt_through(), rules, only="nut")  # the bolt is found too
     (result,) = report.results
     assert result.verdict is Verdict.TURNS
     assert result.stuck_on == ()

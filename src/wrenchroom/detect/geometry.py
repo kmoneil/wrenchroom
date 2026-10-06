@@ -93,7 +93,11 @@ class ShapeReading:
         head_guess: The head from its outline alone, when no drive is modelled.
         drive_af: Across flats of the drive the tool engages, mm: the outer hex
             of a hex head or nut, or the hex pocket of a keyed head.
-        size: The thread size, from the shank (screws) or the bore (nuts).
+        size: The thread size, from the drive or else the shank (screws) or
+            the bore (nuts).
+        size_from_drive: True when the drive settled the size, which a name's
+            size does not outrank; a shank or bore measurement can be fooled by
+            a thread drawn at its minor diameter, a drive can't.
     """
 
     axis: Vec | None = None
@@ -101,6 +105,7 @@ class ShapeReading:
     head_guess: Head | None = None
     drive_af: float | None = None
     size: Size | None = None
+    size_from_drive: bool = False
 
 
 @dataclass(frozen=True)
@@ -128,7 +133,8 @@ def read_shape(shape: Shape, kind: Kind) -> ShapeReading:
     drive_af: float | None = None
     if kind is Kind.NUT:
         bore = _snap([r for r, convex in rounds if not convex])
-        return ShapeReading(direction, None, None, hex_outer, _settle(bore, None, hex_outer))
+        size, settled = _settle(bore, None, hex_outer)
+        return ShapeReading(direction, None, None, hex_outer, size, settled)
     shank = _snap([r for r, convex in rounds if convex])  # the thinnest
     pocket = _regular(inner, 6)
     if hex_outer is not None and (pocket is None or hex_outer > pocket):
@@ -142,7 +148,8 @@ def read_shape(shape: Shape, kind: Kind) -> ShapeReading:
     elif _is_slot(inner):
         head = Head.SLOTTED
     guess = None if head is not None else _keyed_head(faces, origin, direction)
-    return ShapeReading(direction, head, guess, drive_af, _settle(shank, head, drive_af))
+    size, settled = _settle(shank, head, drive_af)
+    return ShapeReading(direction, head, guess, drive_af, size, settled)
 
 
 # ---------------------------------------------------------------------------
@@ -203,8 +210,10 @@ def _snap(radii: list[float]) -> Size | None:
     return Size(designation, nominal)
 
 
-def _settle(measured: Size | None, head: Head | None, drive_af: float | None) -> Size | None:
-    """The size, letting a modelled drive outrank the shank or bore.
+def _settle(
+    measured: Size | None, head: Head | None, drive_af: float | None
+) -> tuple[Size | None, bool]:
+    """The size, letting a modelled drive outrank the shank or bore; and whether it did.
 
     A drive's across-flats names its sizes through the standard tables (a hex
     or nut through ISO 4032/4017, a keyed head through its key table). One
@@ -213,16 +222,16 @@ def _settle(measured: Size | None, head: Head | None, drive_af: float | None) ->
     measurement stands alone.
     """
     if drive_af is None:
-        return measured
+        return measured, False
     table = HEX_AF if head in (None, Head.HEX) else _KEY_TABLES.get(head, {})
     candidates = [d for d, af in table.items() if abs(af - drive_af) < _SAME_DISTANCE]
     if not candidates:
-        return measured
+        return measured, False
     if measured is not None and measured.designation in candidates:
-        return measured
+        return measured, True
     if len(candidates) == 1:
-        return Size.parse(candidates[0])
-    return None
+        return Size.parse(candidates[0]), True
+    return None, False
 
 
 # ---------------------------------------------------------------------------
