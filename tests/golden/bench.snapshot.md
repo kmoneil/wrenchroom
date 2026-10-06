@@ -1,10 +1,10 @@
 ### wrenchroom: `bench.step`
 
-**48 fasteners: 37 turn, 2 held, 8 blocked, 1 stuck, 0 not covered**
+**49 fasteners: 38 turn, 2 held, 8 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
-Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts the model doesn't have.
+Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 21 parts named like a fastener, with no drive in the solid (passed over); parts the model doesn't have.
 
 | Fasteners | Tool | Count | Outcome |
 | --- | --- | ---: | --- |
@@ -13,7 +13,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts th
 | M10 hex screw | `spanner-16` | 3 | all pass (ring, full length) |
 | M10 nut | `socket-16` | 2 | all pass (socket, 50 mm extension) |
 | M10 nut | `spanner-16` | 1 | 1 of 1 fail |
-| M16 nut | `spanner-24` | 5 | 1 of 5 fail |
+| M16 nut | `spanner-24` | 6 | 1 of 6 fail |
 | M4 phillips screw | `driver-ph2` | 2 | 1 of 2 fail |
 | M6 button screw | `hex-key-4` | 1 | all pass (long leg in) |
 | M6 carriage screw | - | 1 | all pass (holds itself) |
@@ -39,3 +39,17 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts th
 | `tapped_hold_screw` | `hex-key-5` | blocked | `only holds, and it has no nut` |
 | `twins_a_screw` | `hex-key-5` | blocked | `twins_wall` |
 | `stuck_screw_screw` | `hex-key-5` | stuck | `stuck_screw_ceiling` |
+
+#### Passed over
+
+- `nut_stubby_box_floor`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `nut_stubby_box_box`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `nut_deep_well_plate`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `nut_deep_well_block`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `glands_close_plate`: noun 'glands', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `glands_apart_plate`: noun 'glands', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `gland_rib_plate`: noun 'gland', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `gland_rib_rib`: noun 'gland', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `nyloc_two_bodies_plate`: noun 'nyloc', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `nyloc_two_bodies_dome`: noun 'nyloc', words after it; its solid shows no hex, hex socket or cross a tool fits
+- and 11 more (the JSON lists every one)

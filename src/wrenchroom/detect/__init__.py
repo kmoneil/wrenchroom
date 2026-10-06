@@ -20,15 +20,22 @@ How a detected fastener is put together, field by field:
   can fool). A gland takes no size at all: its hex is not its thread's nut.
 - **across flats**: measured, when the solid shows a hex or a socket.
 - **length**: the name's, when it gives one.
+
+A name whose fastener noun has ordinary words after it (``box_gland_vent``) is
+only a candidate: it is taken when its solid shows a drive a tool fits, at no
+more than medium confidence, and otherwise passed over, which every report says.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from wrenchroom.detect.geometry import ShapeReading, read_shape
 from wrenchroom.detect.names import NameHint, read_name
-from wrenchroom.fasteners import Fastener, Head, Kind
+from wrenchroom.fasteners import Fastener, Head, Kind, PassedOver, in_hex_band
+from wrenchroom.tools.hex_keys import HEX_KEYS
+from wrenchroom.tools.sizes import FLATS, snap
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -36,7 +43,17 @@ if TYPE_CHECKING:
     from wrenchroom.assembly import Part
     from wrenchroom.fasteners import Size
 
-__all__ = ["NameHint", "ShapeReading", "describe", "find_fasteners", "read_name", "read_shape"]
+__all__ = [
+    "Found",
+    "NameHint",
+    "ShapeReading",
+    "describe",
+    "find",
+    "find_fasteners",
+    "read_name",
+    "read_shape",
+    "shows_drive",
+]
 
 #: Why a carriage bolt by name alone isn't trusted.
 NO_SQUARE_NECK = (
@@ -45,17 +62,63 @@ NO_SQUARE_NECK = (
 )
 
 
-def find_fasteners(parts: Iterable[Part]) -> Iterator[Fastener]:
-    """Every part whose name says it is a fastener, described from name and solid."""
+#: Why a candidate name's part was passed over.
+NO_DRIVE = "its solid shows no hex, hex socket or cross a tool fits"
+
+
+@dataclass(frozen=True)
+class Found:
+    """What detection made of the parts: the fasteners, and the parts passed over."""
+
+    fasteners: tuple[Fastener, ...]
+    passed_over: tuple[PassedOver, ...] = ()
+
+
+def find(parts: Iterable[Part]) -> Found:
+    """Every part whose name says it is a fastener, described from name and solid.
+
+    A candidate name (a fastener noun with ordinary words after it) is taken
+    only when its solid shows a drive; otherwise it is passed over, with why.
+    """
+    fasteners: list[Fastener] = []
+    passed: list[PassedOver] = []
     for part in parts:
         hint = read_name(part.name)
-        if hint is not None:
-            yield describe(part, hint)
+        if hint is None:
+            continue
+        reading = read_shape(part.shape, hint.kind)
+        if hint.needs_drive and not shows_drive(reading):
+            passed.append(PassedOver(part.name, hint.kind, f"{hint.basis}; {NO_DRIVE}"))
+        else:
+            fasteners.append(describe(part, hint, reading))
+    return Found(tuple(fasteners), tuple(passed))
 
 
-def describe(part: Part, hint: NameHint) -> Fastener:
+def find_fasteners(parts: Iterable[Part]) -> Iterator[Fastener]:
+    """The fasteners :func:`find` finds."""
+    yield from find(parts).fasteners
+
+
+def shows_drive(reading: ShapeReading) -> bool:
+    """Whether a solid shows a drive a tool fits: what a candidate name is taken on.
+
+    A hex a spanner fits (a nut, a gland, a hex head), a hex pocket a key fits,
+    or a cross. Not a slot or a square, which a slotted block or a plain plate
+    shows as readily as a fastener does.
+    """
+    if reading.head is Head.PHILLIPS:
+        return True
+    af = reading.drive_af
+    if af is None:
+        return False
+    if reading.head in (None, Head.HEX):
+        return snap(af, FLATS) is not None or any(in_hex_band(af, size) for size in FLATS)
+    return snap(af, tuple(HEX_KEYS)) is not None
+
+
+def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) -> Fastener:
     """One named fastener, its name's hint completed and checked by its solid."""
-    reading = read_shape(part.shape, hint.kind)
+    reading = reading if reading is not None else read_shape(part.shape, hint.kind)
     gland = not hint.socket_allowed
     head, head_note, reason = _head(hint, reading)
     size = None if gland else _size(hint, reading)
@@ -94,7 +157,8 @@ def _confidence(
         return "low"
     guessed_head = hint.kind is Kind.SCREW and reading.head is None and hint.head is None
     shank_only = size is not None and hint.size is None and not reading.size_from_drive
-    return "medium" if guessed_head or shank_only or _disputed(hint, reading) else "high"
+    doubts = (guessed_head, shank_only, _disputed(hint, reading), hint.needs_drive)
+    return "medium" if any(doubts) else "high"
 
 
 def _disputed(hint: NameHint, reading: ShapeReading) -> bool:

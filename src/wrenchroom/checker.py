@@ -29,7 +29,7 @@ from build123d import GeomType
 
 from wrenchroom.assembly import Assembly, Part
 from wrenchroom.config import Config, ConfigError, is_mate
-from wrenchroom.detect import find_fasteners
+from wrenchroom.detect import find
 from wrenchroom.engine import DEFAULT_ENGINE, ENGINES, Engine, Scene, make_engine
 from wrenchroom.fasteners import (
     PHILLIPS_NUMBER,
@@ -37,6 +37,7 @@ from wrenchroom.fasteners import (
     Fastener,
     Head,
     Kind,
+    PassedOver,
     Size,
     hex_key_af,
     in_hex_band,
@@ -49,7 +50,7 @@ from wrenchroom.tools.drivers import SHAFT_RADIUS, driver_attempt
 from wrenchroom.tools.hex_keys import HEX_KEYS, HexKey, hex_key_attempts
 from wrenchroom.tools.kits import DEFAULT_KIT, Kit, kit_named, missing
 from wrenchroom.tools.nut_drivers import NUT_DRIVERS, nut_driver_attempt
-from wrenchroom.tools.sizes import INCH_FLATS, METRIC_FLATS, inch_mm, size_mm, size_name, snap
+from wrenchroom.tools.sizes import FLATS, size_mm, size_name, snap
 from wrenchroom.tools.sockets import socket_attempts, socket_for
 from wrenchroom.tools.spanners import open_end_attempts, ring_attempts, spanner_for
 from wrenchroom.tools.sweep import (
@@ -137,7 +138,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     if default_state is not None:
         config.state(default_state)  # raises on a typo
     matches = config.apply(assembly)
-    fasteners = _fasteners(assembly, config, matches.fasteners, only)
+    fasteners, passed_over = _fasteners(assembly, config, matches.fasteners, only)
     # A narrowing glob that picks nothing checks nothing: as with a sidecar rule
     # that matches nothing, that is how a renamed part hides, so the run says so
     # and exits 2 rather than passing (issue #20).
@@ -184,6 +185,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         unmatched_rules=tuple(rule.parts for rule in matches.unmatched_rules),
         unmatched_ignores=matches.unmatched_ignores,
         warnings=tuple(only_warnings + pair_warnings + space.warnings),
+        passed_over=passed_over,
         default_state=default_state,
         hand_room=tools.hand_room,
         models=models,
@@ -198,22 +200,27 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
 
 def _fasteners(
     assembly: Assembly, config: Config, described: tuple[Fastener, ...], only: str | None
-) -> list[Fastener]:
+) -> tuple[list[Fastener], tuple[PassedOver, ...]]:
     """The sidecar's fasteners, plus what detection finds among the parts it doesn't name.
 
     A rule that matches a part describes it outright: detection only ever sees
-    parts no rule covers, and never an ignored one.
+    parts no rule covers, and never an ignored one. What detection passed over
+    (named like a fastener, no drive in the solid) comes back with them.
     """
     found = list(described)
+    passed: tuple[PassedOver, ...] = ()
     if config.detect:
         named = {f.name for f in described}
-        found += find_fasteners(
+        detection = find(
             part for part in assembly if part.name not in named and not config.is_ignored(part.name)
         )
+        found += detection.fasteners
+        passed = detection.passed_over
     found.sort(key=lambda f: f.name)
     if only is not None:
         found = [f for f in found if fnmatchcase(f.name, only)]
-    return found
+        passed = tuple(p for p in passed if fnmatchcase(p.name, only))
+    return found, passed
 
 
 # ---------------------------------------------------------------------------
@@ -832,10 +839,6 @@ def _known_size(fastener: Fastener) -> Size:
     return fastener.size
 
 
-#: Every hex size a spanner or socket comes in, metric and inch, mm.
-_FLATS = METRIC_FLATS + tuple(inch_mm(size) for size in INCH_FLATS)
-
-
 def _given_af(
     fastener: Fastener, sizes: tuple[float, ...], family: str, *, bands: bool = False
 ) -> float | None:
@@ -939,7 +942,7 @@ def _hex_flats_attempts(
     the code that turns it into a verdict (an M3.5 nut, which has no ISO 4032
     row, used to crash the whole check that way).
     """
-    af = _given_af(fastener, _FLATS, "spanner", bands=True)
+    af = _given_af(fastener, FLATS, "spanner", bands=True)
     if af is None:
         size = _known_size(fastener)
         af = spanner_af(size, head=fastener.kind is Kind.SCREW)

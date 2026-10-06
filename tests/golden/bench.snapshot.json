@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 48,
-  "turns": 37,
+  "fasteners": 49,
+  "turns": 38,
   "held": 2,
   "blocked": 8,
   "stuck": 1,
@@ -14,6 +14,113 @@
  "unmatched_ignores": [],
  "warnings": [],
  "hand_room": false,
+ "passed_over": [
+  {
+   "name": "nut_stubby_box_floor",
+   "kind": "nut",
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "nut_stubby_box_box",
+   "kind": "nut",
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "nut_deep_well_plate",
+   "kind": "nut",
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "nut_deep_well_block",
+   "kind": "nut",
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "glands_close_plate",
+   "kind": "nut",
+   "reason": "noun 'glands', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "glands_apart_plate",
+   "kind": "nut",
+   "reason": "noun 'glands', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "gland_rib_plate",
+   "kind": "nut",
+   "reason": "noun 'gland', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "gland_rib_rib",
+   "kind": "nut",
+   "reason": "noun 'gland', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "nyloc_two_bodies_plate",
+   "kind": "nut",
+   "reason": "noun 'nyloc', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "nyloc_two_bodies_dome",
+   "kind": "nut",
+   "reason": "noun 'nyloc', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "pair_nut_held_upper",
+   "kind": "nut",
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "pair_nut_held_lower",
+   "kind": "nut",
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "pair_nut_held_pocket",
+   "kind": "nut",
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "stuck_screw_plate",
+   "kind": "screw",
+   "reason": "noun 'screw', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "stuck_screw_ceiling",
+   "kind": "screw",
+   "reason": "noun 'screw', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "free_screw_plate",
+   "kind": "screw",
+   "reason": "noun 'screw', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "free_screw_ceiling",
+   "kind": "screw",
+   "reason": "noun 'screw', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "nut_tube_plate",
+   "kind": "nut",
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "nut_tube_tube",
+   "kind": "nut",
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "nut_gap_plate",
+   "kind": "nut",
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "nut_gap_stud",
+   "kind": "nut",
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  }
+ ],
  "fasteners": [
   {
    "name": "ball_tilt_screw",
@@ -1268,7 +1375,7 @@
     1.0
    ],
    "seat": [
-    1900.0,
+    2900.0,
     5000.0,
     6.0
    ],
@@ -1297,7 +1404,7 @@
     1.0
    ],
    "seat": [
-    2100.0,
+    3100.0,
     5000.0,
     6.0
    ],
@@ -1306,6 +1413,33 @@
    "verdict": "turns",
    "how": "driver straight in",
    "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "vented_gland_vent",
+   "kind": "nut",
+   "head": null,
+   "size": "M16",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    5000.0,
+    22.0
+   ],
+   "source": "sidecar",
+   "tool": "spanner-24",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
    "state": null,
    "pair": null,
    "blocked_by": [],

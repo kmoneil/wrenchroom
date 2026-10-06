@@ -145,8 +145,9 @@ class Fastener:
         confidence: How sure detection is, for a detected fastener: ``high``
             (kind, head and size each stated by the name or shown by a drive in
             the solid), ``medium`` (something rests on a head's outline or a
-            measured shank, or the name and the solid's drive disagree on the
-            head), ``low`` (something is missing). Empty from a sidecar.
+            measured shank, the name and the solid's drive disagree on the
+            head, or the name has words after its fastener noun), ``low``
+            (something is missing). Empty from a sidecar.
     """
 
     name: str
@@ -169,6 +170,20 @@ class Fastener:
     def self_holding(self) -> bool:
         """A carriage bolt holds itself: never turned, never extracted."""
         return self.head is Head.CARRIAGE
+
+
+@dataclass(frozen=True)
+class PassedOver:
+    """A part named like a fastener that detection didn't take, and why.
+
+    Its fastener noun has ordinary words after it (``box_gland_vent``), so only
+    its solid could make it a fastener, and the solid shows no drive. Reported,
+    never dropped: that is how a fastener goes unchecked without a word.
+    """
+
+    name: str
+    kind: Kind
+    reason: str
 
 
 # ---------------------------------------------------------------------------

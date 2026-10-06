@@ -769,3 +769,22 @@ def nut_gap():
         ("stud", Pos(0, 0, 2.5) * Cylinder(4, 25)),
         ("nut", Pos(0, 0, 1.5) * hex_nut(8, 13, 6.8)),
     ]
+
+
+@cell(
+    "vented",
+    [{"parts": "gland_vent", "kind": "nut", "size": "M16", "socket": False}],
+    {"gland_vent": {"verdict": "turns", "tool": "spanner-24", "how": "ring, full length"}},
+    ignore=["*_cable"],
+)
+def vented():
+    """A gland whose name has a word after its noun, "gland_vent" (issue #30), alone
+    on a plate with its cable. With no rule, detection reads it as a candidate, and
+    its 24 mm hex makes it a gland; the ring turns it in open air. A name like this
+    used to be passed over without a word.
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 10)])),
+        ("gland_vent", gland()),
+        ("cable", Pos(0, 0, 60) * Cylinder(4, 220)),
+    ]

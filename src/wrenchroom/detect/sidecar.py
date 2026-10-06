@@ -3,7 +3,9 @@
 One rule per detected fastener, each loadable as it stands: a rule here describes
 its part outright, so once the file is kept beside the model, detection leaves those
 parts alone. A fastener detection found but couldn't understand is written
-commented out, because a rule can't say "not covered". Everything that isn't a rule
+commented out, because a rule can't say "not covered", and so is a part it passed
+over (named like a fastener, no drive in its solid), for a person to decide on.
+Everything that isn't a rule
 field (how sure detection was, what found the part, the axis the check resolved,
 how it fares now) goes in a comment above it, because the loader refuses keys it
 doesn't know.
@@ -24,7 +26,7 @@ from typing import TYPE_CHECKING
 import yaml
 
 from wrenchroom import __version__
-from wrenchroom.fasteners import Fastener, Head, Kind, hex_key_af, spanner_af
+from wrenchroom.fasteners import Fastener, Head, Kind, PassedOver, hex_key_af, spanner_af
 from wrenchroom.terminal import UNSAFE, printable
 
 if TYPE_CHECKING:
@@ -54,10 +56,17 @@ def sidecar_text(report: Report, model: str) -> str:
         key=lambda r: r.fastener.name,
     )
     text = _HEADER.format(model=printable(model), version=__version__)
-    if not found:
+    passed = [_passed_block(part) for part in sorted(report.passed_over, key=lambda p: p.name)]
+    if not found and not passed:
         return text + "\nfasteners: []  # nothing in the model is named like a fastener\n"
+    if not found:
+        return (
+            text
+            + "\nfasteners: []  # none taken; the parts passed over follow\n\n"
+            + ("\n".join(passed))
+        )
     blocks = [_block(result) for result in found]
-    return text + "\nfasteners:\n" + "\n".join(blocks)
+    return text + "\nfasteners:\n" + "\n".join(blocks + passed)
 
 
 def glob_escape(name: str) -> str:
@@ -93,6 +102,19 @@ def _block(result: FastenerResult) -> str:
         lines += [f"  # {line}" for line in dumped.splitlines()]
     else:
         lines += [f"  {line}" for line in dumped.splitlines()]
+    return "\n".join(lines) + "\n"
+
+
+def _passed_block(part: PassedOver) -> str:
+    """A part passed over, commented out: uncommented as it stands, it is a fastener."""
+    lines = [
+        f"  # {printable(f'{part.name}: passed over: {part.reason}')}",
+        "  # a fastener after all? complete the rule (size, head), then uncomment",
+    ]
+    entry = {"parts": glob_escape(part.name), "kind": part.kind.value}
+    plain = not any(UNSAFE.search(str(value)) for value in entry.values())
+    dumped = yaml.safe_dump([entry], sort_keys=False, allow_unicode=plain, width=1000)
+    lines += [f"  # {line}" for line in dumped.splitlines()]
     return "\n".join(lines) + "\n"
 
 
