@@ -108,8 +108,22 @@ def test_an_unmatched_rule_fails_the_run(engine):
 
 
 def test_only_narrows_the_run(engine):
+    report = run(engine, screw_facing_wall(50), M6_SOCKET, only="b*")
+    assert [r.fastener.name for r in report.results] == ["bolt"]
+    assert report.warnings == ()
+
+
+def test_an_only_glob_that_matches_nothing_fails_the_run(engine):
+    # Issue #20: a typo or a renamed part must not pass by checking nothing.
     report = run(engine, screw_facing_wall(50), M6_SOCKET, only="nothing_*")
     assert report.results == ()
+    assert report.warnings == ("only glob 'nothing_*' matched no fastener (renamed part?)",)
+    assert report.exit_code == 2
+    assert "WARN only glob 'nothing_*' matched no fastener (renamed part?)" in (
+        report.terminal_lines()
+    )
+    with pytest.raises(AssertionError, match="matched no fastener"):
+        report.assert_all_pass()
 
 
 def test_an_unknown_kit_is_a_loud_error(engine):
