@@ -39,7 +39,9 @@ from wrenchroom.fasteners import (
     Kind,
     Size,
     hex_key_af,
+    in_hex_band,
     spanner_af,
+    standard_hex_afs,
 )
 from wrenchroom.report import FastenerResult, Report, StateModel, Verdict
 from wrenchroom.tools.ball_end import BALL_END_KEYS, BallEndKey, ball_end_attempts
@@ -815,25 +817,51 @@ def _known_size(fastener: Fastener) -> Size:
 _FLATS = METRIC_FLATS + tuple(inch_mm(size) for size in INCH_FLATS)
 
 
-def _given_af(fastener: Fastener, sizes: tuple[float, ...]) -> float | None:
+def _given_af(
+    fastener: Fastener, sizes: tuple[float, ...], family: str, *, bands: bool = False
+) -> float | None:
     """The drive's across-flats when measured or given, as a tool size; else None.
 
     A measurement is the tool size nearest it, within a few hundredths of a
-    millimetre, or it is no tool's size: 11.11 is a 7/16 in hex and must not
-    become a "spanner-11.11", and 19.05 is 3/4 in, not 19 mm.
+    millimetre: 11.11 is a 7/16 in hex and must not become a "spanner-11.11", and
+    19.05 is 3/4 in, not 19 mm. With ``bands`` (a hex a spanner grips), a hex
+    inside a nut standard's band below a spanner size also takes that spanner:
+    an M8 nut drawn at 12.8 is in ISO 4032's 12.73 to 13 (issue #27). In order:
+    the thread's own standard size, exact or in its band (an M8 nut at 12.73 is
+    in 13's band, though a few hundredths from 1/2 in); then any tool size the
+    measurement is; then the one band that holds it. Where two bands hold it and
+    nothing decides (7.85 is in 8 mm's and 5/16 in's), or none does, it is not
+    covered, and the reason says what fits or names the nearest.
     """
     if fastener.drive_af is None:
         return None
-    snapped = snap(fastener.drive_af, sizes)
-    if snapped is None:
-        raise NotCovered(f"{fastener.drive_af:.2f} mm across flats is no tool's size")
-    return snapped
+    measured = fastener.drive_af
+    snapped = snap(measured, sizes)
+    fits = [size for size in sizes if in_hex_band(measured, size)] if bands else []
+    own = standard_hex_afs(fastener.size) if bands and fastener.size is not None else set()
+    ours = [size for size in sizes if size in own and (size == snapped or size in fits)]
+    if len(ours) == 1:
+        return ours[0]
+    if snapped is not None:
+        return snapped
+    if len(fits) == 1:
+        return fits[0]
+    if fits:
+        names = " or ".join(f"{family}-{size_name(size)}" for size in fits)
+        raise NotCovered(f"{measured:.2f} mm across flats fits {names}: set tool: in the sidecar")
+    nearest = min(sizes, key=lambda size: abs(size - measured))
+    side = "larger" if nearest > measured else "smaller"
+    raise NotCovered(
+        f"{measured:.2f} mm across flats is no tool's size: the nearest, "
+        f"{family}-{size_name(nearest)}, is {abs(nearest - measured):.2f} {side}; "
+        "set across_flats: or tool: in the sidecar"
+    )
 
 
 def _keyed_attempts(
     fastener: Fastener, mount: Mount, scene: Scene, tools: _Tools
 ) -> Iterator[Attempt]:
-    af = _given_af(fastener, tuple(HEX_KEYS))
+    af = _given_af(fastener, tuple(HEX_KEYS), "hex-key")
     if af is None:
         if fastener.head is None or fastener.size is None:
             raise NotCovered("head or size unknown: name them in the sidecar")
@@ -892,7 +920,7 @@ def _hex_flats_attempts(
     the code that turns it into a verdict (an M3.5 nut, which has no ISO 4032
     row, used to crash the whole check that way).
     """
-    af = _given_af(fastener, _FLATS)
+    af = _given_af(fastener, _FLATS, "spanner", bands=True)
     if af is None:
         size = _known_size(fastener)
         af = spanner_af(size, head=fastener.kind is Kind.SCREW)

@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 45,
-  "turns": 32,
+  "fasteners": 47,
+  "turns": 34,
   "held": 2,
   "blocked": 9,
   "stuck": 1,
@@ -314,6 +314,60 @@
    "swing_deg": 30.0,
    "state": null,
    "pair": "hand_tight_bolt",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "hex_band_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    0.0,
+    5000.0,
+    -15.3
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "hex_band_nut",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "hex_band_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    5000.0,
+    6.8
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "hex_band_bolt",
    "blocked_by": [],
    "stuck_on": [],
    "reason": null
@@ -1181,7 +1235,7 @@
     1.0
    ],
    "seat": [
-    -100.0,
+    900.0,
     5000.0,
     6.0
    ],
@@ -1210,7 +1264,7 @@
     1.0
    ],
    "seat": [
-    100.0,
+    1100.0,
     5000.0,
     6.0
    ],

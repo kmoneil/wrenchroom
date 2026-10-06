@@ -722,3 +722,31 @@ def nut_tube():
         ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(6, 20, 10, 4.0)),
         ("nut", hex_nut(6, 10, 5.2)),
     ]
+
+
+# ---------------------------------------------------------------- issue cells
+
+
+@cell(
+    "hex_band",
+    [
+        {"parts": "bolt", "kind": "screw", "head": "hex", "size": "M8"},
+        {"parts": "nut", "kind": "nut", "size": "M8"},
+    ],
+    {
+        "bolt": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
+        "nut": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
+    },
+)
+def hex_band():
+    """An M8 nut drawn 12.8 across flats, inside ISO 4032's band of 12.73 to 13
+    (issue #27), on an M8 bolt whose head is under the plate, room all round. The
+    rule names the size, so the main run takes the table's 13; with no rule,
+    detection measures the hex and the band gives it the 13 mm spanner too. It
+    used to be "12.80 mm across flats is no tool's size".
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 4.5)])),
+        ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(8, 20, 13, 5.3)),
+        ("nut", hex_nut(8, 12.8, 6.8)),
+    ]

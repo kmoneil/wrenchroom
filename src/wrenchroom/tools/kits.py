@@ -24,7 +24,8 @@ over a home kit stretched to 24 mm):
   this kit carries (ball-end and Torx keys, nut drivers).
 
 A measured across-flats that is no tool's size (a 22.5 mm gland) stays not covered,
-as it would at a bench.
+as it would at a bench, unless it lies in a nut standard's band just below a
+spanner size (an M8 nut drawn at 12.8 takes the 13: see fasteners.HEX_AF_MIN).
 """
 
 from __future__ import annotations

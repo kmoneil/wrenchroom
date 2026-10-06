@@ -43,6 +43,7 @@ from wrenchroom.fasteners import (
     Head,
     Kind,
     Size,
+    in_hex_band,
 )
 
 if TYPE_CHECKING:
@@ -216,15 +217,21 @@ def _settle(
     """The size, letting a modelled drive outrank the shank or bore; and whether it did.
 
     A drive's across-flats names its sizes through the standard tables (a hex
-    or nut through ISO 4032/4017, a keyed head through its key table). One
-    size: that's it. Several (an ISO 4762 14 mm key fits M16 and M18): the
-    measured diameter picks between them, or nothing does. None: the
+    or nut through ISO 4032/4017, anywhere in the standard's band below its
+    size, so an M8 nut drawn at 12.8 is still M8; a keyed head through its key
+    table). One size: that's it. Several (an ISO 4762 14 mm key fits M16 and
+    M18): the measured diameter picks between them, or nothing does. None: the
     measurement stands alone.
     """
     if drive_af is None:
         return measured, False
-    table = HEX_AF if head in (None, Head.HEX) else _KEY_TABLES.get(head, {})
-    candidates = [d for d, af in table.items() if abs(af - drive_af) < _SAME_DISTANCE]
+    hexagon = head in (None, Head.HEX)
+    table = HEX_AF if hexagon else _KEY_TABLES.get(head, {})
+    candidates = [
+        d
+        for d, af in table.items()
+        if abs(af - drive_af) < _SAME_DISTANCE or (hexagon and in_hex_band(drive_af, af))
+    ]
     if not candidates:
         return measured, False
     if measured is not None and measured.designation in candidates:
