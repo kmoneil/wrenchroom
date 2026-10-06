@@ -15,13 +15,23 @@ Every one of those findings was invisible to the collision check.
 
 ## Status
 
-**Scaffold; nothing works yet.** What exists today:
+**`wrenchroom check` works on real STEP files, with fasteners described by hand.**
+What exists today (M1):
 
-- The package installs, `wrenchroom --help` shows the four commands (`check`, `detect`,
-  `explain`, `tools`), and each exits 2 ("not covered") until it is delivered.
-- The dependency stack is locked and proven on CPython 3.13 and 3.14, Linux and macOS:
-  build123d with headless OCP for STEP and tessellation, trimesh and manifold3d for the
-  mesh collision engine to come.
+- `wrenchroom check model.step` reads a STEP assembly (names kept, repeats made
+  unique), takes fastener descriptions from a `wrenchroom.yaml` sidecar, resolves each
+  fastener's seat and axis from its geometry, and tries real tools against the real
+  parts: metric hex keys (driver straight in, short leg, long leg), ring spanners (full
+  and stubby), sockets on a ratchet with stock extensions, Phillips and slotted
+  drivers. Verdicts per fastener with every blocker named; terminal table, JSON
+  (`--json`), exit codes for CI (0 pass, 1 a fastener fails, 2 not covered or config
+  error).
+- Dimension tables cite their standards (ISO 2936, 4762, 7380-1, 10642, 4032) with the
+  date checked; approximations are labelled as such.
+- A sidecar rule that matches nothing is reported and fails the run: that is how a
+  renamed part hides.
+- `detect`, `explain` and `tools` exist and exit 2 ("not covered") until their
+  milestones deliver them. Pairs, extraction and states are next (M2).
 
 ## What it will do
 
