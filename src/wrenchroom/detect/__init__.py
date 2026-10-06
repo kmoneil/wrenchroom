@@ -179,7 +179,12 @@ def _head(hint: NameHint, reading: ShapeReading) -> tuple[Head | None, str | Non
     if hint.head is not None:
         return hint.head, None, None
     if reading.head_guess is not None:
-        return reading.head_guess, f"{reading.head_guess.value} by its outline", None
+        note = f"{reading.head_guess.value} by its outline"
+        if reading.head_standard:
+            note += f", {reading.head_standard}'s"
+        elif reading.head_unmatched:
+            note += ", fitting no standard head"  # a guess from proportions alone
+        return reading.head_guess, note, None
     return None, None, None
 
 

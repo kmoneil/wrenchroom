@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 49,
-  "turns": 36,
+  "fasteners": 50,
+  "turns": 37,
   "held": 2,
   "blocked": 9,
   "stuck": 1,
@@ -669,6 +669,33 @@
    "blocked_by": [
     "key_wall_near_wall"
    ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "low_head_screw",
+   "kind": "screw",
+   "head": "button",
+   "size": "M5",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    5000.0,
+    2.75
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-3",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
    "stuck_on": [],
    "reason": null
   },
@@ -1369,7 +1396,7 @@
     1.0
    ],
    "seat": [
-    2900.0,
+    3900.0,
     5000.0,
     6.0
    ],
@@ -1398,7 +1425,7 @@
     1.0
    ],
    "seat": [
-    3100.0,
+    4100.0,
     5000.0,
     6.0
    ],
