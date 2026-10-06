@@ -36,6 +36,8 @@ from build123d import GeomType
 from wrenchroom.fasteners import (
     BUTTON_KEY_AF,
     FLAT_KEY_AF,
+    HEAD_OUTLINE,
+    HEAD_STANDARD,
     HEX_AF,
     IMPERIAL_SIZES,
     METRIC_SIZES,
@@ -78,8 +80,13 @@ _KEY_TABLES: dict[Head, dict[str, float]] = {
     Head.FLAT: FLAT_KEY_AF,
 }
 
-#: A head this much shallower than it is wide, with a rounded top, is a button.
+#: A head this much shallower than it is wide is a button, when no standard's
+#: outline says which it is.
 _BUTTON_RATIO = 0.45
+
+#: A head drawn within this fraction of a standard's diameter and height is that
+#: standard's head: models draw the maxima, or near them.
+_OUTLINE_FIT = 0.12
 
 
 @dataclass(frozen=True)
@@ -99,6 +106,10 @@ class ShapeReading:
         size_from_drive: True when the drive settled the size, which a name's
             size does not outrank; a shank or bore measurement can be fooled by
             a thread drawn at its minor diameter, a drive can't.
+        head_standard: The standard whose head a keyed head's flat-topped
+            outline fits (``ISO 7380-1``), when one alone does.
+        head_unmatched: True when a flat-topped keyed head of a known size
+            fits no standard's outline: its head is a guess from proportions.
     """
 
     axis: Vec | None = None
@@ -107,6 +118,8 @@ class ShapeReading:
     drive_af: float | None = None
     size: Size | None = None
     size_from_drive: bool = False
+    head_standard: str | None = None
+    head_unmatched: bool = False
 
 
 @dataclass(frozen=True)
@@ -138,19 +151,25 @@ def read_shape(shape: Shape, kind: Kind) -> ShapeReading:
         return ShapeReading(direction, None, None, hex_outer, size, settled)
     shank = _snap([r for r, convex in rounds if convex])  # the thinnest
     pocket = _regular(inner, 6)
+    outline = _Outline(None)
     if hex_outer is not None and (pocket is None or hex_outer > pocket):
         head, drive_af = Head.HEX, hex_outer
     elif _regular(outer, 4) is not None:
         head = Head.CARRIAGE  # a square neck: it holds itself
     elif pocket is not None:
-        head, drive_af = _keyed_head(faces, origin, direction), pocket
+        outline = _keyed_head(faces, origin, direction, shank)
+        head, drive_af = outline.head, pocket
     elif _is_cross(inner):
         head = Head.PHILLIPS
     elif _is_slot(inner):
         head = Head.SLOTTED
-    guess = None if head is not None else _keyed_head(faces, origin, direction)
+    if head is None:
+        outline = _keyed_head(faces, origin, direction, shank)
+    guess = None if head is not None else outline.head
     size, settled = _settle(shank, head, drive_af)
-    return ShapeReading(direction, head, guess, drive_af, size, settled)
+    return ShapeReading(
+        direction, head, guess, drive_af, size, settled, outline.standard, outline.unmatched
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -328,16 +347,46 @@ def _same_offsets(a: list[float], b: list[float]) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _keyed_head(faces: list[Face], origin: Vec, direction: Vec) -> Head:
-    """Countersunk if the head is a cone, button if low and rounded, else socket."""
+@dataclass(frozen=True)
+class _Outline:
+    """What a keyed head's outline says: the head, and how sure that is."""
+
+    head: Head | None
+    standard: str | None = None
+    unmatched: bool = False
+
+
+def _keyed_head(faces: list[Face], origin: Vec, direction: Vec, shank: Size | None) -> _Outline:
+    """Countersunk if the head is a cone; else the standard head its outline fits.
+
+    A flat-topped cylinder is compared with each standard's head for the
+    shank's size: a button head drawn flat, 9.5 across and 2.75 high for M5, is
+    ISO 7380-1's, not ISO 4762's 8.5 by 5 (issue #31). Failing that, and for a
+    rounded top (whose cylinder is only the head's rim), the proportions decide:
+    a head much shallower than it is wide is a button.
+    """
     kinds = {face.geom_type for face in faces}
     if GeomType.CONE in kinds:
-        return Head.FLAT
+        return _Outline(Head.FLAT)
     rounded = bool(kinds & {GeomType.TORUS, GeomType.SPHERE, GeomType.BSPLINE})
     radius, height = _head_size(faces, origin, direction)
-    if rounded and radius > 0 and height / (2 * radius) < _BUTTON_RATIO:
-        return Head.BUTTON
-    return Head.SOCKET
+    compared = not rounded and shank is not None and radius > 0
+    if compared and shank is not None:
+        fits = [
+            head
+            for head, table in HEAD_OUTLINE.items()
+            if (drawn := table.get(shank.designation)) and _fits((2 * radius, height), drawn)
+        ]
+        if len(fits) == 1:
+            metric = shank.designation.startswith("M")
+            return _Outline(fits[0], HEAD_STANDARD[fits[0], metric])
+    low = radius > 0 and height / (2 * radius) < _BUTTON_RATIO
+    return _Outline(Head.BUTTON if low else Head.SOCKET, unmatched=compared)
+
+
+def _fits(measured: tuple[float, float], drawn: tuple[float, float]) -> bool:
+    """A head's (diameter, height) within :data:`_OUTLINE_FIT` of a standard's."""
+    return all(abs(m - d) <= _OUTLINE_FIT * d for m, d in zip(measured, drawn, strict=True))
 
 
 def _head_size(faces: list[Face], origin: Vec, direction: Vec) -> tuple[float, float]:

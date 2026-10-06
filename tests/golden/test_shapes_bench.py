@@ -3,7 +3,8 @@
 Every part the sidecar describes is read from the written bench.step: the head
 must be the rule's, the drive's across-flats the standard tables' for the rule's
 size (or, for hex_band's nut alone, inside its standard's band below that size),
-and the size the rule's. And the reading from STEP must equal the reading
+and the size the rule's; low_head's screw, drawn with no drive, is held to the
+standard head its outline fits instead. And the reading from STEP must equal the reading
 from the shape as built: the round trip changes nothing a tool depends on.
 
 A Torx head is the one exception: the solid reading knows hex, cross, slot and
@@ -41,7 +42,7 @@ def bench_parts(bench_dir):
 
 
 def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
-    wrong, banded = [], []
+    wrong, banded, outlined = [], [], []
     for name, rule in _described(bench_parts):
         kind = Kind(rule.get("kind", "screw"))
         reading = read_shape(bench_parts[name].shape, kind)
@@ -56,6 +57,10 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
         want = (head, expected_af and round(expected_af, 6), size)  # inch sizes in mm
         if head is Head.TORX:
             got, want = got[2], want[2]  # the size only: no Torx recess is read
+        elif reading.head is None and reading.drive_af is None and reading.head_guess:
+            outlined.append(name)  # no drive drawn: the outline's head, held to a standard
+            got = (reading.head_guess, reading.head_standard, reading.size)
+            want = (head, "ISO 7380-1" if head is Head.BUTTON else "ISO 4762", size)
         elif got != want and expected_af and in_hex_band(reading.drive_af, expected_af):
             banded.append(name)  # drawn inside its standard's band below the size
             got = (got[0], want[1], got[2])
@@ -63,6 +68,7 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
             wrong.append((name, got, want))
     assert not wrong
     assert banded == ["hex_band_nut"]  # issue #27: 12.8, inside ISO 4032's band for 13
+    assert outlined == ["low_head_screw"]  # issue #31: a button head drawn flat
 
 
 def test_the_step_round_trip_changes_no_reading(bench_parts):

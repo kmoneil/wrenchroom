@@ -788,3 +788,21 @@ def vented():
         ("gland_vent", gland()),
         ("cable", Pos(0, 0, 60) * Cylinder(4, 220)),
     ]
+
+
+@cell(
+    "low_head",
+    [{"parts": "screw", "kind": "screw", "head": "button", "size": "M5"}],
+    {"screw": {"verdict": "turns", "tool": "hex-key-3", "how": "driver straight in"}},
+)
+def low_head():
+    """An M5 button head drawn as a plain cylinder, flat-topped with no recess, at
+    ISO 7380-1's 9.5 across and 2.75 high (issue #31), in open air. The rule names
+    it; with no rule its name says no head, and its outline, held to the standards'
+    for its M5 shank, fits ISO 7380-1's and not ISO 4762's 8.5 by 5: a button head,
+    the 3 mm key. It used to be read as a socket head and given the 4 mm key.
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 2.75)])),
+        ("screw", Pos(0, 0, -8) * Cylinder(2.5, 16) + Pos(0, 0, 1.375) * Cylinder(4.75, 2.75)),
+    ]

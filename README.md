@@ -84,7 +84,10 @@ to M5):
   and DIN designations, McMaster-Carr numbers, descriptions such as `M6x20 SHCS` or
   `hex nut M8`, code-CAD names such as `lift_link_bolt`) and completed from their
   solids: the drive the model shows (a hex, a hex socket, a cross, a slot, a carriage
-  bolt's square neck) and the size that drive or the shank gives. A head word counts
+  bolt's square neck) and the size that drive or the shank gives. A head drawn as a
+  plain cylinder is held to the standards' outlines for its size (an M5 head 9.5 across
+  and 2.75 high is ISO 7380-1's button head, not ISO 4762's socket head), and where
+  none fits, the basis says its head is a guess. A head word counts
   where it touches the noun (`lid_button_screw`), as elsewhere it may describe
   something else (`button_panel_screw`); a drive word (`torx`, `hexalobular`,
   `phillips`, `pozidriv`) can describe nothing else and counts anywhere
@@ -97,7 +100,7 @@ to M5):
   is only a candidate: it is taken when its solid shows a drive a tool fits (a hex, a
   hex socket, a cross), and otherwise passed over, which every report lists, so a
   fastener is never missed without a word. With every fastener rule removed, the
-  golden bench's 48 are all found with the right kind and size, each screw with its
+  golden bench's 49 are all found with the right kind and size, each screw with its
   rule's head, and its 21 plates, blocks and studs named for their cells are passed over.
 - `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
   correct and keep: one rule per fastener, and above each a comment with how sure
@@ -109,7 +112,7 @@ to M5):
   file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  539 fasteners is read and checked with the full kit in about 9.7 s on an Apple M5
+  500 fasteners is read and checked with the full kit in about 8.9 s on an Apple M5
   Max laptop (the target is 10 s). The bench is dense with fasteners that fail, and
   a failing one tries every tool it has: open ends, and ball-end keys leant every way
   round, cost most of that. `--exact` swaps in OCP boolean intersections on the

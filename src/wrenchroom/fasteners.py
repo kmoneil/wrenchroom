@@ -373,6 +373,64 @@ HEX_HEAD_AF: dict[str, float] = {
     ),
 }
 
+#: Keyed heads' outlines, thread -> (head diameter, head height), mm, as their
+#: standards give them (the maxima): what a plain cylinder drawn for a head is
+#: compared with, to tell a button head from a socket head with no drive in the
+#: model (issue #31). ISO 4762 socket heads and ISO 7380-1 button heads: fasten.it's
+#: tables, and Engineers Edge's ISO 7380 chart for the button heads' heights, read
+#: 2026-10-06. Inch socket heads, ASME B18.3: AFT Fasteners' table, the same day.
+#: No inch button-head table was to be had that agreed with itself, so an inch head
+#: is held to the socket head's alone.
+HEAD_OUTLINE: dict[Head, dict[str, tuple[float, float]]] = {
+    Head.SOCKET: {
+        "M3": (5.5, 3.0),
+        "M4": (7.0, 4.0),
+        "M5": (8.5, 5.0),
+        "M6": (10.0, 6.0),
+        "M8": (13.0, 8.0),
+        "M10": (16.0, 10.0),
+        "M12": (18.0, 12.0),
+        "M14": (21.0, 14.0),
+        "M16": (24.0, 16.0),
+        "M20": (30.0, 20.0),
+        "M24": (36.0, 24.0),
+        **{
+            size: (dk * _MM_PER_INCH, k * _MM_PER_INCH)
+            for size, (dk, k) in {
+                "#4": (0.183, 0.112),
+                "#6": (0.226, 0.138),
+                "#8": (0.270, 0.164),
+                "#10": (0.312, 0.190),
+                "1/4": (0.375, 0.250),
+                "5/16": (0.469, 0.312),
+                "3/8": (0.562, 0.375),
+                "7/16": (0.656, 0.438),
+                "1/2": (0.750, 0.500),
+                "5/8": (0.938, 0.625),
+                "3/4": (1.125, 0.750),
+            }.items()
+        },
+    },
+    Head.BUTTON: {
+        "M3": (5.7, 1.65),
+        "M4": (7.6, 2.2),
+        "M5": (9.5, 2.75),
+        "M6": (10.5, 3.3),
+        "M8": (14.0, 4.4),
+        "M10": (17.5, 5.5),
+        "M12": (21.0, 6.6),
+        "M16": (28.0, 8.8),
+    },
+}
+
+#: The standards the outlines above come from, for a basis to name.
+HEAD_STANDARD: dict[tuple[Head, bool], str] = {
+    (Head.SOCKET, True): "ISO 4762",
+    (Head.SOCKET, False): "ASME B18.3",
+    (Head.BUTTON, True): "ISO 7380-1",
+}
+
+
 #: DIN 934's across flats where it parts from ISO 4032 (torqbolt.com's DIN 934
 #: table, read 2026-10-06): the spanner a nut drawn to DIN takes.
 DIN_HEX_AF: dict[str, float] = {"M10": 17.0, "M12": 19.0, "M14": 22.0, "M22": 32.0}
