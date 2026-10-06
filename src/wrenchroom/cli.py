@@ -256,6 +256,7 @@ def tools(kit: str) -> None:
     Exactly the tools a check with this kit tries, from the same tables the
     sweeps read: a fastener needing anything not listed is not covered.
     """
+    from wrenchroom.tools.ball_end import BALL_END_KEYS
     from wrenchroom.tools.drivers import SHAFT_RADIUS
     from wrenchroom.tools.hex_keys import HEX_KEYS
     from wrenchroom.tools.kits import kit_named
@@ -296,6 +297,15 @@ def tools(kit: str) -> None:
     _say("drivers (shaft radii approximate, catalogue-typical):")
     for drive in chosen.drivers:
         _say(f"  driver-{drive:<9} shaft r {SHAFT_RADIUS[drive]:g}")
+    if chosen.ball_end_keys:
+        _say()
+        _say("ball-end keys (to 25 deg off the axis; Wera 950 SPKL arms; mm):")
+        for size in chosen.ball_end_keys:
+            ball = BALL_END_KEYS[size_mm(size)]
+            _say(
+                f"  {ball.name:<17} across flats {ball.af:<5g} "
+                f"long arm {ball.long_mm:<6g} short arm {ball.short_mm:g}"
+            )
     if chosen.torx_keys:
         _say()
         _say("Torx keys (ISO 10664 sizes; arms the longest of three makers' catalogues; mm):")

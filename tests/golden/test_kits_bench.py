@@ -33,6 +33,10 @@ PAST_HOME = {
     "torx_wall_screw": "needs torx-key-T30, which kit metric-home does not hold (full has it)",
 }
 
+#: Cells metric-home holds a tool for but can't turn without full's: the ball end.
+#: The plain key is tried and blocked, which is the verdict, not "not covered".
+HOME_BLOCKED = {"ball_tilt_screw": ["ball_tilt_ceiling"]}
+
 #: The bench's inch fasteners: all imperial-home can turn.
 INCH = {"inch_pair_screw", "inch_pair_nut"}
 
@@ -66,22 +70,25 @@ def test_only_the_cells_past_metric_home_change(home_json, bench_json):
     past = {
         name for name, e in bench_json.items() if e["tool"] and not METRIC_HOME.holds(e["tool"])
     }
-    assert past == set(PAST_HOME)
+    assert past == set(PAST_HOME) | set(HOME_BLOCKED)
     changed = {
         name
         for name, full in bench_json.items()
         if (home_json[name]["verdict"], home_json[name]["tool"], home_json[name]["how"])
         != (full["verdict"], full["tool"], full["how"])
     }
-    assert changed == set(PAST_HOME)
+    assert changed == set(PAST_HOME) | set(HOME_BLOCKED)
     for name, reason in sorted(PAST_HOME.items()):
         assert home_json[name]["verdict"] == "not-covered", name
         assert home_json[name]["reason"] == reason, name
+    for name, blockers in HOME_BLOCKED.items():
+        assert home_json[name]["verdict"] == "blocked", name
+        assert home_json[name]["blocked_by"] == blockers, name
 
 
 def test_everything_else_is_the_same_report_under_metric_home(home_json, bench_json):
     for name, full in bench_json.items():
-        if name not in PAST_HOME:
+        if name not in PAST_HOME and name not in HOME_BLOCKED:
             assert home_json[name] == full, name
 
 

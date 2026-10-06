@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 42,
-  "turns": 31,
+  "fasteners": 43,
+  "turns": 32,
   "held": 2,
   "blocked": 8,
   "stuck": 1,
@@ -15,6 +15,33 @@
  "warnings": [],
  "hand_room": false,
  "fasteners": [
+  {
+   "name": "ball_tilt_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4000.0,
+    4000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "ball-end-key-5",
+   "verdict": "turns",
+   "how": "ball end, 25 deg off the axis",
+   "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
   {
    "name": "carriage_boxed_bolt",
    "kind": "screw",
@@ -1106,7 +1133,7 @@
     1.0
    ],
    "seat": [
-    3900.0,
+    4900.0,
     4000.0,
     6.0
    ],
@@ -1135,7 +1162,7 @@
     1.0
    ],
    "seat": [
-    4100.0,
+    5100.0,
     4000.0,
     6.0
    ],

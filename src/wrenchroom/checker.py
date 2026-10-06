@@ -42,8 +42,9 @@ from wrenchroom.fasteners import (
     spanner_af,
 )
 from wrenchroom.report import FastenerResult, Report, StateModel, Verdict
+from wrenchroom.tools.ball_end import BALL_END_KEYS, BallEndKey, ball_end_attempts
 from wrenchroom.tools.drivers import SHAFT_RADIUS, driver_attempt
-from wrenchroom.tools.hex_keys import HEX_KEYS, hex_key_attempts
+from wrenchroom.tools.hex_keys import HEX_KEYS, HexKey, hex_key_attempts
 from wrenchroom.tools.kits import DEFAULT_KIT, Kit, kit_named, missing
 from wrenchroom.tools.sizes import INCH_FLATS, METRIC_FLATS, inch_mm, size_mm, size_name, snap
 from wrenchroom.tools.sockets import socket_attempts, socket_for
@@ -826,8 +827,24 @@ def _keyed_attempts(
             head = fastener.head.value
             raise NotCovered(f"no standard key for a {size.designation} {head} head")
     key = HEX_KEYS[af]
-    tools.need(key.name)
-    return hex_key_attempts(mount, key, scene, tools.step_deg, tools.hand_room)
+    ball = BALL_END_KEYS.get(af)
+    held = tools.need(key.name, *([ball.name] if ball else []))
+    return _keys(held, key, ball, mount, scene, tools)
+
+
+def _keys(
+    held: tuple[str, ...],
+    key: HexKey,
+    ball: BallEndKey | None,
+    mount: Mount,
+    scene: Scene,
+    tools: _Tools,
+) -> Iterator[Attempt]:
+    """The plain key's three ways, then (full kit) the ball end leant off the axis."""
+    if key.name in held:
+        yield from hex_key_attempts(mount, key, scene, tools.step_deg, tools.hand_room)
+    if ball is not None and ball.name in held:
+        yield from ball_end_attempts(mount, ball, scene, tools.step_deg)
 
 
 def _torx_attempts(
