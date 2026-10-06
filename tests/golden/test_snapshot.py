@@ -3,6 +3,11 @@
 The truth layer asserts what each cell is about; this catches everything else:
 swing angles, blocker order, seats, reasons. When a change is meant, regenerate
 with `uv run python scripts/golden.py --update` and let the PR show the diff.
+
+It runs once per engine against the ONE snapshot: the mesh engine (the default)
+and the exact engine (the referee) must produce the same report, field for
+field. A difference that is meant (a cell within the mesh tolerance of a curved
+face) would have to be written down here, with its reason; there is none.
 """
 
 import json

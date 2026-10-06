@@ -1108,18 +1108,6 @@ wheels = [
 ]
 
 [[package]]
-name = "trimesh"
-version = "5.1.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ab/bf/a7efaef127e0f1a228a03e5d00c04f5aeb2c25a60adb4d47003d4d0855bc/trimesh-5.1.1.tar.gz", hash = "sha256:56070be44cd97ac87544c9bd3da4b7a298c6f728e83183aeb1f3524d673d5fac", size = 874580, upload-time = "2026-10-02T21:06:07.704Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/f6/fb68b8c08f864ecee8f7f7ee2f1203ed5cba2335215de69e4f621eb47db5/trimesh-5.1.1-py3-none-any.whl", hash = "sha256:c5be85a3e31e9ff749f9b0aecc204e37a2cf7cca4e92cd066bb5f3d3c1127765", size = 750449, upload-time = "2026-10-02T21:06:05.958Z" },
-]
-
-[[package]]
 name = "ty"
 version = "0.0.84"
 source = { registry = "https://pypi.org/simple" }
@@ -1293,7 +1281,6 @@ dependencies = [
     { name = "manifold3d" },
     { name = "numpy" },
     { name = "pyyaml" },
-    { name = "trimesh" },
 ]
 
 [package.dev-dependencies]
@@ -1310,7 +1297,6 @@ requires-dist = [
     { name = "manifold3d", specifier = ">=3.5" },
     { name = "numpy", specifier = ">=2.5" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "trimesh", specifier = ">=5.1" },
 ]
 
 [package.metadata.requires-dev]

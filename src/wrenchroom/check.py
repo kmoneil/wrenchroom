@@ -29,7 +29,7 @@ from build123d import GeomType
 
 from wrenchroom.assembly import Assembly, Part
 from wrenchroom.config import Config, ConfigError
-from wrenchroom.engine import Scene
+from wrenchroom.engine import DEFAULT_ENGINE, ENGINES, Engine, Scene, make_engine
 from wrenchroom.fasteners import (
     PHILLIPS_NUMBER,
     Fastener,
@@ -78,7 +78,7 @@ class NotCovered(Exception):  # noqa: N818  (it is a verdict carrier, not an err
     """Raised inside the loop when a fastener can't be understood; becomes the verdict."""
 
 
-def check(
+def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hide the API)
     assembly: Assembly,
     config: Config | None = None,
     *,
@@ -88,6 +88,7 @@ def check(
     only: str | None = None,
     state: str | None = None,
     model_dir: str | Path | None = None,
+    engine: str = DEFAULT_ENGINE,
 ) -> Report:
     """Check every fastener the config names against the assembly.
 
@@ -102,13 +103,18 @@ def check(
         state: Overrides the config's ``default_state`` for this run.
         model_dir: Where a state's alternate model files live; the CLI passes
             the model's own directory.
+        engine: Which collision engine answers the queries: ``mesh`` (the
+            default) or ``exact`` (OCP booleans, the referee).
 
     Raises:
-        ValueError: On a kit or state that doesn't exist (a typo, not a model
-            problem).
+        ValueError: On a kit, state or engine that doesn't exist (a typo, not a
+            model problem).
     """
     if kit not in KITS:
         msg = f"unknown kit {kit!r}; available: {', '.join(KITS)}"
+        raise ValueError(msg)
+    if engine not in ENGINES:
+        msg = f"unknown engine {engine!r}; available: {', '.join(ENGINES)}"
         raise ValueError(msg)
     config = config or Config()
     default_state = state if state is not None else config.default_state
@@ -119,7 +125,7 @@ def check(
     if only is not None:
         fasteners = [f for f in fasteners if fnmatchcase(f.name, only)]
 
-    space = _StateSpace(assembly, config, model_dir)
+    space = _StateSpace(assembly, config, model_dir, make_engine(engine))
     frames: dict[str, _Frame] = {}
     failures: dict[str, str] = {}
     for fastener in fasteners:
@@ -141,6 +147,7 @@ def check(
     return Report(
         model=model,
         kit=kit,
+        engine=engine,
         results=tuple(results),
         unmatched_rules=tuple(rule.parts for rule in matches.unmatched_rules),
         unmatched_ignores=matches.unmatched_ignores,
@@ -298,15 +305,40 @@ def _coaxial_offset(screw: _Frame, nut: _Frame) -> float | None:
 
 
 class _StateSpace:
-    """Resolves state names to (assembly, removed parts), loading models lazily."""
+    """Resolves state names to (assembly, removed parts), loading models lazily.
 
-    def __init__(self, assembly: Assembly, config: Config, model_dir: str | Path | None) -> None:
+    It also owns the run's collision engine, so every scene in every state
+    shares one cache of part boxes and meshes.
+    """
+
+    def __init__(
+        self,
+        assembly: Assembly,
+        config: Config,
+        model_dir: str | Path | None,
+        engine: Engine,
+    ) -> None:
         self._default = assembly
         self._config = config
         self._model_dir = None if model_dir is None else Path(model_dir)
         self._models: dict[str, Assembly] = {}
         self._warned: set[tuple[str, str]] = set()
+        self._ignored: dict[str, bool] = {}
+        self.engine = engine
         self.warnings: list[str] = []
+
+    def scene(self, assembly: Assembly, excluded: set[str] | frozenset[str]) -> Scene:
+        """The obstacles: every part but the excluded and the ignored ones."""
+        return self.engine.scene(
+            part for part in assembly if part.name not in excluded and not self._is_ignored(part)
+        )
+
+    def _is_ignored(self, part: Part) -> bool:
+        # Memoised: the ignore globs are tried once per name, not once per scene.
+        ignored = self._ignored.get(part.name)
+        if ignored is None:
+            ignored = self._ignored[part.name] = self._config.is_ignored(part.name)
+        return ignored
 
     def resolve(self, state_name: str | None) -> tuple[Assembly, frozenset[str], bool]:
         """The assembly a state sees, its removed names, and whether it is the default."""
@@ -373,7 +405,7 @@ def _check_fastener(
     order += [s for s in config.try_states if s != own_state]
     first: _Candidate | None = None
     for index, state_name in enumerate(order):
-        candidate = _try_in_state(fastener, frame, state_name, space, config, step_deg)
+        candidate = _try_in_state(fastener, frame, state_name, space, step_deg)
         if first is None:
             first = candidate
         if candidate.reason is not None and index == 0:
@@ -391,7 +423,6 @@ def _try_in_state(
     default_frame: _Frame,
     state_name: str | None,
     space: _StateSpace,
-    config: Config,
     step_deg: float,
 ) -> _Candidate:
     assembly, removed, same_model = space.resolve(state_name)
@@ -403,10 +434,7 @@ def _try_in_state(
             frame = _frame(assembly[fastener.name], fastener)
         except NotCovered as exc:
             return _Candidate(fastener, reason=str(exc), state=state_name)
-    excluded = {fastener.name, *fastener.mates} | removed
-    scene = Scene(
-        part for part in assembly if part.name not in excluded and not config.is_ignored(part.name)
-    )
+    scene = space.scene(assembly, {fastener.name, *fastener.mates} | removed)
     try:
         mount, geometry = _orient(frame, fastener, scene)
     except NotCovered as exc:

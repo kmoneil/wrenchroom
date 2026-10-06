@@ -58,6 +58,11 @@ def main() -> None:
 @click.option("--step-deg", default=15.0, show_default=True, help="Swing sampling step.")
 @click.option("--only", help="Check only fasteners whose name matches this glob.")
 @click.option("--state", help="Check in this state instead of the config's default.")
+@click.option(
+    "--exact",
+    is_flag=True,
+    help="Use the exact OCP boolean engine: slow, the referee for borderline results.",
+)
 def check(
     model: Path,
     config_path: Path | None,
@@ -66,9 +71,12 @@ def check(
     step_deg: float,
     only: str | None,
     state: str | None,
+    exact: bool,
 ) -> None:
     """Check every fastener in MODEL and report the verdicts."""
-    report = _run(model, config_path, kit=kit, step_deg=step_deg, only=only, state=state)
+    report = _run(
+        model, config_path, kit=kit, step_deg=step_deg, only=only, state=state, exact=exact
+    )
     for line in report.terminal_lines():
         click.echo(line)
     if json_path is not None:
@@ -84,6 +92,7 @@ def _run(
     step_deg: float = 15.0,
     only: str | None = None,
     state: str | None = None,
+    exact: bool = False,
 ) -> Report:
     """Load, check, and turn config mistakes into exit 2; shared by check and explain."""
     from wrenchroom.assembly import Assembly
@@ -104,6 +113,7 @@ def _run(
             only=only,
             state=state,
             model_dir=model.parent,
+            engine="exact" if exact else "mesh",
         )
     except (ConfigError, ValueError) as exc:
         click.echo(f"error: {exc}", err=True)
@@ -128,11 +138,21 @@ def detect(model: str) -> None:
 )
 @click.option("--kit", default="metric-home", show_default=True, help="Which tool kit.")
 @click.option("--step-deg", default=15.0, show_default=True, help="Swing sampling step.")
+@click.option(
+    "--exact",
+    is_flag=True,
+    help="Use the exact OCP boolean engine: slow, the referee for borderline results.",
+)
 def explain(
-    model: Path, fastener: str, config_path: Path | None, kit: str, step_deg: float
+    model: Path,
+    fastener: str,
+    config_path: Path | None,
+    kit: str,
+    step_deg: float,
+    exact: bool,
 ) -> None:
     """Show every attempt for one FASTENER in MODEL, with the blockers."""
-    report = _run(model, config_path, kit=kit, step_deg=step_deg, only=fastener)
+    report = _run(model, config_path, kit=kit, step_deg=step_deg, only=fastener, exact=exact)
     if not report.results:
         click.echo(f"error: no fastener named {fastener!r} (is it in the sidecar?)", err=True)
         sys.exit(EXIT_NOT_COVERED)

@@ -16,15 +16,12 @@ across 0 degrees counts whole: the scan walks the circle twice.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import cached_property
 from typing import TYPE_CHECKING
 
-from build123d import Box, Cylinder, Plane, Pos, Rot
+from wrenchroom.solids import AxialCylinder, AxialRing, RadialBox, RadialCylinder, ToolSolid
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-    from build123d import Location, Shape
 
     from wrenchroom.engine import Scene
 
@@ -45,13 +42,9 @@ class Mount:
     seat: tuple[float, float, float]
     axis: tuple[float, float, float]
 
-    @cached_property
-    def _location(self) -> Location:
-        return Plane(origin=self.seat, z_dir=self.axis).location
-
-    def place(self, local_shape: Shape) -> Shape:
-        """Map a shape from the local frame (seat at origin, axis +Z) to the assembly."""
-        return self._location * local_shape
+    def place(self, local: ToolSolid) -> ToolSolid:
+        """Put a tool solid built in the local frame (seat at origin, axis +Z) here."""
+        return local.placed(self.seat, self.axis)
 
 
 @dataclass(frozen=True)
@@ -81,8 +74,8 @@ def swing_attempt(
     tool: str,
     way: str,
     scene: Scene,
-    engagement: Shape,
-    arm_at: Callable[[float], Shape],
+    engagement: ToolSolid,
+    arm_at: Callable[[float], ToolSolid],
     required_deg: float,
     step_deg: float = DEFAULT_STEP_DEG,
 ) -> Attempt:
@@ -129,7 +122,7 @@ def swing_attempt(
     return Attempt(tool, way, turns, holds, swing, tuple(blockers))
 
 
-def straight_attempt(*, tool: str, way: str, scene: Scene, solid: Shape) -> Attempt:
+def straight_attempt(*, tool: str, way: str, scene: Scene, solid: ToolSolid) -> Attempt:
     """Try a tool that turns in place: clear means it turns, blocked means it doesn't."""
     hits = scene.hits(solid)
     ok = not hits
@@ -141,29 +134,25 @@ def straight_attempt(*, tool: str, way: str, scene: Scene, solid: Shape) -> Atte
 # ---------------------------------------------------------------------------
 
 
-def axial_cylinder(radius: float, z_from: float, z_to: float) -> Shape:
+def axial_cylinder(radius: float, z_from: float, z_to: float) -> ToolSolid:
     """A cylinder along the local axis from ``z_from`` to ``z_to``."""
-    return Pos(0, 0, (z_from + z_to) / 2) * Cylinder(radius, z_to - z_from)
+    return ToolSolid((AxialCylinder(radius, z_from, z_to),))
 
 
-def radial_cylinder(radius: float, r_from: float, r_to: float, z: float, phi_deg: float) -> Shape:
+def radial_cylinder(
+    radius: float, r_from: float, r_to: float, z: float, phi_deg: float
+) -> ToolSolid:
     """A cylinder along ``u(phi)`` at height ``z``, spanning the radial interval."""
-    length = r_to - r_from
-    arm = Pos(r_from + length / 2, 0, z) * Rot(0, 90, 0) * Cylinder(radius, length)
-    return Rot(0, 0, phi_deg) * arm
+    return ToolSolid((RadialCylinder(radius, r_from, r_to, z, phi_deg),))
 
 
 def radial_box(
     width: float, thickness: float, r_from: float, r_to: float, z: float, phi_deg: float
-) -> Shape:
+) -> ToolSolid:
     """A box along ``u(phi)``: a handle. ``width`` is tangential, ``thickness`` axial."""
-    length = r_to - r_from
-    handle = Pos(r_from + length / 2, 0, z) * Box(length, width, thickness)
-    return Rot(0, 0, phi_deg) * handle
+    return ToolSolid((RadialBox(width, thickness, r_from, r_to, z, phi_deg),))
 
 
-def axial_annulus(inner: float, outer: float, z_from: float, thickness: float) -> Shape:
-    """A ring around the local axis: outer cylinder minus a slightly longer bore."""
-    solid = axial_cylinder(outer, z_from, z_from + thickness)
-    bore = axial_cylinder(inner, z_from - 0.1, z_from + thickness + 0.1)
-    return solid - bore
+def axial_annulus(inner: float, outer: float, z_from: float, thickness: float) -> ToolSolid:
+    """A ring around the local axis, ``thickness`` long from ``z_from``."""
+    return ToolSolid((AxialRing(inner, outer, z_from, z_from + thickness),))

@@ -2,6 +2,7 @@
 
 Seat at the origin, axis +Z (toward the tool) throughout. Every boundary here is
 computed in the test from the tool tables, never hardcoded from a prototype run.
+Every test runs on both engines (the `scene_of` fixture, conftest.py).
 """
 
 import math
@@ -9,8 +10,6 @@ import math
 import pytest
 from build123d import Box, Cylinder, Pos
 
-from wrenchroom.assembly import Part
-from wrenchroom.engine import Scene
 from wrenchroom.tools.hex_keys import ISO_2936, hex_key_attempts
 from wrenchroom.tools.sockets import RATCHET_HEAD_RADIUS, socket_attempts, socket_for
 from wrenchroom.tools.spanners import ring_attempts, spanner_for
@@ -18,15 +17,12 @@ from wrenchroom.tools.sweep import (
     CONTACT_OFFSET,
     Attempt,
     Mount,
+    axial_cylinder,
     radial_cylinder,
     swing_attempt,
 )
 
 ORIGIN_MOUNT = Mount(seat=(0.0, 0.0, 0.0), axis=(0.0, 0.0, 1.0))
-
-
-def scene_of(**shapes):
-    return Scene(Part(name, shape) for name, shape in shapes.items())
 
 
 def run_until_turning(attempts):
@@ -53,7 +49,7 @@ KEY_5 = ISO_2936[5.0]
 SHORT_LEG_CLEARANCE = CONTACT_OFFSET + KEY_5.short_mm + KEY_5.radius  # 36.135 mm
 
 
-def test_a_close_wall_blocks_every_way_of_a_5mm_key():
+def test_a_close_wall_blocks_every_way_of_a_5mm_key(scene_of):
     scene = scene_of(wall=slab_above(15.0))
     tried = run_until_turning(hex_key_attempts(ORIGIN_MOUNT, KEY_5, scene))
     assert not any(a.turns for a in tried)
@@ -61,7 +57,7 @@ def test_a_close_wall_blocks_every_way_of_a_5mm_key():
     assert len(tried) == 3  # driver, short leg, long leg: all tried, all blocked
 
 
-def test_the_boundary_flips_within_one_millimetre():
+def test_the_boundary_flips_within_one_millimetre(scene_of):
     just_blocked = scene_of(wall=slab_above(SHORT_LEG_CLEARANCE - 0.5))
     tried = run_until_turning(hex_key_attempts(ORIGIN_MOUNT, KEY_5, just_blocked))
     assert not any(a.turns for a in tried)
@@ -73,7 +69,7 @@ def test_the_boundary_flips_within_one_millimetre():
     assert winner.way == "short leg in"
 
 
-def test_open_space_takes_the_driver_straight_in():
+def test_open_space_takes_the_driver_straight_in(scene_of):
     scene = scene_of(bystander=Pos(200, 0, 0) * Box(10, 10, 10))
     tried = run_until_turning(hex_key_attempts(ORIGIN_MOUNT, KEY_5, scene))
     assert tried[0].turns
@@ -101,7 +97,7 @@ def ring_on_gland(scene):
     )
 
 
-def test_glands_25mm_apart_leave_no_room_for_a_ring():
+def test_glands_25mm_apart_leave_no_room_for_a_ring(scene_of):
     # Ring outer radius 19.6; the neighbour's flank is 25 - 12.7 = 12.3 away.
     tried = ring_on_gland(scene_of(neighbour=gland_neighbour(25.0)))
     assert not any(a.turns for a in tried)
@@ -109,7 +105,7 @@ def test_glands_25mm_apart_leave_no_room_for_a_ring():
     assert not any(a.holds for a in tried)  # the ring itself cannot even get on
 
 
-def test_glands_40mm_apart_take_the_ring():
+def test_glands_40mm_apart_take_the_ring(scene_of):
     tried = ring_on_gland(scene_of(neighbour=gland_neighbour(40.0)))
     winner = tried[-1]
     assert winner.turns
@@ -117,7 +113,7 @@ def test_glands_40mm_apart_take_the_ring():
     assert "neighbour" in winner.blockers  # it blocked part of the arc, not enough
 
 
-def test_walls_leaving_15_degrees_hold_but_do_not_turn():
+def test_walls_leaving_15_degrees_hold_but_do_not_turn(scene_of):
     # Two walls flanking the handle: free only around phi = 0, one 15 deg step.
     reach = 0.85 * SPANNER_22.length + 10
     # The back wall starts outside the ring itself (outer radius 19.6), or it would
@@ -138,7 +134,7 @@ def test_walls_leaving_15_degrees_hold_but_do_not_turn():
 # ---------------------------------------------------------------------------
 
 
-def test_a_deep_well_needs_an_extension():
+def test_a_deep_well_needs_an_extension(scene_of):
     socket = socket_for(16.0)  # M10 nut
     assert socket.outer_radius < 14 < RATCHET_HEAD_RADIUS  # the well admits only the socket
     well = Pos(0, 0, 30) * Box(200, 200, 60) - Pos(0, 0, 30) * Cylinder(14, 61)
@@ -170,14 +166,14 @@ def quarter_wall_at(phi_from, phi_to):
     return shapes
 
 
-def test_a_free_arc_across_zero_counts_whole():
+def test_a_free_arc_across_zero_counts_whole(scene_of):
     # Posts from 60 to 300 degrees: the free arc is 300..360..60, through zero.
     scene = scene_of(**quarter_wall_at(60, 300))
     attempt = swing_attempt(
         tool="probe",
         way="probe",
         scene=scene,
-        engagement=ORIGIN_MOUNT.place(Pos(0, 0, 25) * Cylinder(1, 10)),
+        engagement=ORIGIN_MOUNT.place(axial_cylinder(1, 20, 30)),
         arm_at=arm_probe,
         required_deg=60.0,
     )
@@ -185,13 +181,13 @@ def test_a_free_arc_across_zero_counts_whole():
     assert attempt.swing_deg >= 60
 
 
-def test_blocked_everywhere_neither_turns_nor_holds():
+def test_blocked_everywhere_neither_turns_nor_holds(scene_of):
     scene = scene_of(**quarter_wall_at(0, 360))
     attempt = swing_attempt(
         tool="probe",
         way="probe",
         scene=scene,
-        engagement=ORIGIN_MOUNT.place(Pos(0, 0, 25) * Cylinder(1, 10)),
+        engagement=ORIGIN_MOUNT.place(axial_cylinder(1, 20, 30)),
         arm_at=arm_probe,
         required_deg=60.0,
     )
@@ -201,27 +197,27 @@ def test_blocked_everywhere_neither_turns_nor_holds():
     assert attempt.blockers  # names collected
 
 
-def test_a_blocked_engagement_fails_without_sweeping():
+def test_a_blocked_engagement_fails_without_sweeping(scene_of):
     scene = scene_of(cap=Pos(0, 0, 27) * Box(50, 50, 10))
     attempt = swing_attempt(
         tool="probe",
         way="probe",
         scene=scene,
-        engagement=ORIGIN_MOUNT.place(Pos(0, 0, 25) * Cylinder(1, 10)),
+        engagement=ORIGIN_MOUNT.place(axial_cylinder(1, 20, 30)),
         arm_at=arm_probe,
         required_deg=60.0,
     )
     assert attempt == Attempt("probe", "probe", False, False, 0.0, ("cap",))
 
 
-def test_fully_free_turns_and_stops_at_the_required_arc():
+def test_fully_free_turns_and_stops_at_the_required_arc(scene_of):
     # The search stops as soon as the required arc is proven; swing_deg is what
     # was proven, not the whole free circle. That early stop is the speed story.
     attempt = swing_attempt(
         tool="probe",
         way="probe",
         scene=scene_of(far=Pos(500, 0, 0) * Box(10, 10, 10)),
-        engagement=ORIGIN_MOUNT.place(Pos(0, 0, 25) * Cylinder(1, 10)),
+        engagement=ORIGIN_MOUNT.place(axial_cylinder(1, 20, 30)),
         arm_at=arm_probe,
         required_deg=60.0,
     )

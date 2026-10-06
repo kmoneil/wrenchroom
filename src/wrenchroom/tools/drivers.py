@@ -13,9 +13,8 @@ from typing import TYPE_CHECKING
 from wrenchroom.tools.sweep import CONTACT_OFFSET, Attempt, Mount, axial_cylinder, straight_attempt
 
 if TYPE_CHECKING:
-    from build123d import Shape
-
     from wrenchroom.engine import Scene
+    from wrenchroom.solids import ToolSolid
 
 #: Shaft length, mm, before the handle begins. Approximation: a standard-length
 #: driver; stubby drivers can come later as another way.
@@ -34,7 +33,7 @@ SHAFT_RADIUS: dict[str, float] = {
 }
 
 
-def driver_solid(shaft_radius: float) -> Shape:
+def driver_solid(shaft_radius: float) -> ToolSolid:
     """The local-frame driver: shaft then handle, starting off the seat."""
     shaft = axial_cylinder(shaft_radius, CONTACT_OFFSET, CONTACT_OFFSET + SHAFT_LENGTH)
     handle_from = CONTACT_OFFSET + SHAFT_LENGTH
