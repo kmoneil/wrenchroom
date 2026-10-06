@@ -7,8 +7,13 @@ dynamic = ["version"]
 description = "Checks that a real hand tool can reach, turn and remove every fastener in a mechanical assembly."
 readme = "README.md"
 requires-python = ">=3.13"
-# Licence is an open question for the owner (MIT or Apache-2.0). Deliberately absent
-# until decided; nothing is published before then either.
+license = "Apache-2.0"
+# The SPDX expression alone puts the identifier in METADATA and ships no grant text;
+# Apache-2.0 section 4(a) requires the copy to travel with the distribution, and a
+# compliance scan looks for the file, not the identifier. Decided 2026-10-06: Apache
+# over MIT for the explicit patent grant, which matters in a space with commercial
+# players.
+license-files = ["LICENSE"]
 authors = [{ name = "Kevin O'Neil", email = "kevin@oneil.xyz" }]
 keywords = [
   "cad",
@@ -47,6 +52,11 @@ dependencies = [
   "pyyaml>=6.0",
   "trimesh>=5.1",
 ]
+
+[project.urls]
+Homepage = "https://github.com/kmoneil/wrenchroom"
+Source = "https://github.com/kmoneil/wrenchroom"
+Issues = "https://github.com/kmoneil/wrenchroom/issues"
 
 [project.scripts]
 wrenchroom = "wrenchroom.cli:main"
