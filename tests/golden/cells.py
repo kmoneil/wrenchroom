@@ -321,7 +321,7 @@ def wire_across():
     "nyloc_two_bodies",
     [
         {"parts": "bolt", "kind": "screw", "head": "hex", "size": "M6"},
-        {"parts": "nut", "kind": "nut", "size": "M6", "mates": ["dome"]},
+        {"parts": "nut", "kind": "nut", "size": "M6", "mates": ["do*"]},
     ],
     {
         "bolt": {"verdict": "turns", "tool": "spanner-10", "how": "ring, full length"},
@@ -330,7 +330,8 @@ def wire_across():
 )
 def nyloc_two_bodies():
     """A nyloc modelled as nut + separate nylon dome: the dome is a mate, so it
-    leaves the nut's scene and the free face reads clear."""
+    leaves the nut's scene and the free face reads clear. The mate is named by a
+    glob, as a sidecar may (issue #32: a glob used to match nothing, silently)."""
     dome = Pos(0, 0, 5.2 + 1.25) * (Cylinder(4.8, 2.5) - Cylinder(3, 3))
     return [
         ("plate", plate(holes=[(0, 0, 3)])),

@@ -129,8 +129,8 @@ class Fastener:
         tool: A forced tool name, else chosen from head and size.
         socket_allowed: False for fasteners with a cable through them (glands):
             a socket cannot pass over a cable.
-        mates: Part names that travel with this fastener (washers, a carriage
-            bolt's spacer) and leave its scene.
+        mates: Globs for the parts that travel with this fastener (washers, a
+            carriage bolt's spacer) and leave its scene.
         state: The named state this fastener is reached in, or ``None`` for the
             run's default state.
         drive_af: Across flats of the drive, mm, when it is known rather than

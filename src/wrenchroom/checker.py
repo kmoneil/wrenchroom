@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 from build123d import GeomType
 
 from wrenchroom.assembly import Assembly, Part
-from wrenchroom.config import Config, ConfigError
+from wrenchroom.config import Config, ConfigError, is_mate
 from wrenchroom.detect import find_fasteners
 from wrenchroom.engine import DEFAULT_ENGINE, ENGINES, Engine, Scene, make_engine
 from wrenchroom.fasteners import (
@@ -140,6 +140,12 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         if only is not None and not fasteners
         else []
     )
+    # A mate that names nothing leaves its part in the scene, and the fastener
+    # blocked by the very part it was told it may touch (issue #32).
+    only_warnings += [
+        f"rule {parts!r}: mate glob {glob!r} matched nothing (renamed part?)"
+        for parts, glob in matches.unmatched_mates
+    ]
 
     space = _StateSpace(assembly, config, model_dir, make_engine(engine))
     frames: dict[str, _Frame] = {}
@@ -491,7 +497,8 @@ def _try_in_state(
             frame = _frame(assembly[fastener.name], fastener)
         except NotCovered as exc:
             return _Candidate(fastener, reason=str(exc), state=state_name)
-    scene = space.scene(assembly, {fastener.name, *fastener.mates} | removed)
+    mates = {name for name in assembly.names if is_mate(name, fastener.mates)}
+    scene = space.scene(assembly, {fastener.name, *mates} | removed)
     try:
         mount, geometry = _orient(frame, fastener, scene)
     except NotCovered as exc:

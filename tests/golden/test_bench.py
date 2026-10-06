@@ -104,12 +104,15 @@ def test_socket_false_is_load_bearing():
 
 
 def test_config_edges(bench_dir):
-    """The edges sidecar: unmatched rule and ignore reported, exit 2; the rule
-    calling torx_open's screw a Torx head outranks detection, so it takes the
-    full kit's T30 straight in (open above), and metric-home has no Torx key."""
+    """The edges sidecar: unmatched rule, ignore and mate reported, exit 2; the
+    rule calling torx_open's screw a Torx head outranks detection, so it takes
+    the full kit's T30 straight in (open above), and metric-home has no Torx key."""
     report = check_bench(bench_dir, config_name="bench_edges.yaml")
     assert report.unmatched_rules == ("gone_*",)
     assert report.unmatched_ignores == ("*_hose",)
+    assert report.warnings == (
+        "rule 'torx_open_screw': mate glob 'gone_washer_*' matched nothing (renamed part?)",
+    )
     (torx,) = [r for r in report.results if r.fastener.name == "torx_open_screw"]
     assert (torx.verdict.value, torx.tool, torx.how) == (
         "turns",

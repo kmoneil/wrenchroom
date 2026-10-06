@@ -153,7 +153,14 @@ def edges_sidecar():
             {"parts": "gone_*", "kind": "screw"},
             # The torx_open screw is a plain socket head described as Torx: the
             # rule outranks the solid's 5 mm hex, so it takes the T30 Torx key.
-            {"parts": "torx_open_screw", "kind": "screw", "head": "torx", "size": "M6"},
+            # Its mate names a washer the model doesn't have: reported (#32).
+            {
+                "parts": "torx_open_screw",
+                "kind": "screw",
+                "head": "torx",
+                "size": "M6",
+                "mates": ["gone_washer_*"],
+            },
         ],
         "ignore": ["*_hose"],
     }
