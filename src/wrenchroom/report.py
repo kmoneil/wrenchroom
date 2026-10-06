@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 from wrenchroom import __version__
 from wrenchroom.fasteners import Fastener
+from wrenchroom.terminal import printable
 
 if TYPE_CHECKING:
     from wrenchroom.tools.sweep import Attempt
@@ -138,7 +139,12 @@ class Report:
     # -------------------------------------------------------------- terminal
 
     def terminal_lines(self) -> list[str]:
-        """The human output: summary, a table by type, a line per failure."""
+        """The human output: summary, a table by type, a line per failure.
+
+        Safe to print as it stands: names come from the model, so every line is
+        passed through :func:`wrenchroom.terminal.printable` and none of them can
+        steer a terminal or break into a second line.
+        """
         counts = self.summary
         lines = [
             f"{counts['fasteners']} fasteners: {counts['turns']} turn, "
@@ -156,7 +162,7 @@ class Report:
         for glob in self.unmatched_ignores:
             lines.append(f"WARN ignore matched nothing: {glob!r}")
         lines.extend(f"WARN {warning}" for warning in self.warnings)
-        return lines
+        return [printable(line) for line in lines]
 
 
 def _result_json(result: FastenerResult) -> dict[str, object]:

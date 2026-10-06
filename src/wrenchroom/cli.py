@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, NoReturn
 import click
 
 from wrenchroom import __version__
+from wrenchroom.terminal import printable
 
 if TYPE_CHECKING:
     from wrenchroom.report import Report
@@ -28,9 +29,19 @@ if TYPE_CHECKING:
 EXIT_NOT_COVERED = 2
 
 
+def _say(text: str = "", *, err: bool = False) -> None:
+    """Print one line for a person: the only way text reaches the terminal here.
+
+    Part names come from the model, and a model can come from anybody, so every
+    line goes through :func:`wrenchroom.terminal.printable` and nothing in it can
+    steer the terminal. A blank line is its own call, never a newline inside one.
+    """
+    click.echo(printable(text), err=err)
+
+
 def _not_built(command: str) -> NoReturn:
     """Exit with the not-covered code: the command is promised but not delivered yet."""
-    click.echo(f"wrenchroom {command} is not built yet.", err=True)
+    _say(f"wrenchroom {command} is not built yet.", err=True)
     sys.exit(EXIT_NOT_COVERED)
 
 
@@ -78,7 +89,7 @@ def check(
         model, config_path, kit=kit, step_deg=step_deg, only=only, state=state, exact=exact
     )
     for line in report.terminal_lines():
-        click.echo(line)
+        _say(line)
     if json_path is not None:
         report.to_json(json_path)
     sys.exit(report.exit_code)
@@ -116,7 +127,7 @@ def _run(
             engine="exact" if exact else "mesh",
         )
     except (ConfigError, ValueError) as exc:
-        click.echo(f"error: {exc}", err=True)
+        _say(f"error: {exc}", err=True)
         sys.exit(EXIT_NOT_COVERED)
 
 
@@ -154,7 +165,7 @@ def explain(
     """Show every attempt for one FASTENER in MODEL, with the blockers."""
     report = _run(model, config_path, kit=kit, step_deg=step_deg, only=fastener, exact=exact)
     if not report.results:
-        click.echo(f"error: no fastener named {fastener!r} (is it in the sidecar?)", err=True)
+        _say(f"error: no fastener named {fastener!r} (is it in the sidecar?)", err=True)
         sys.exit(EXIT_NOT_COVERED)
     (result,) = report.results
     header = f"{result.fastener.name}: {result.verdict}"
@@ -164,9 +175,9 @@ def explain(
         header += f" (in state {result.state})"
     if result.pair:
         header += f"; paired with {result.pair}"
-    click.echo(header)
+    _say(header)
     if result.reason:
-        click.echo(f"  reason: {result.reason}")
+        _say(f"  reason: {result.reason}")
     for attempt in result.attempts:
         outcome = "turns" if attempt.turns else ("holds" if attempt.holds else "blocked")
         line = f"  tried {attempt.tool}, {attempt.way}: {outcome}"
@@ -174,9 +185,9 @@ def explain(
             line += f", swing {attempt.swing_deg:g} deg"
         if attempt.blockers:
             line += f"; hit {', '.join(attempt.blockers)}"
-        click.echo(line)
+        _say(line)
     if result.stuck_on:
-        click.echo(f"  cannot come out: {', '.join(result.stuck_on)} in the way")
+        _say(f"  cannot come out: {', '.join(result.stuck_on)} in the way")
     sys.exit(report.exit_code)
 
 
@@ -198,31 +209,31 @@ def tools(kit: str) -> None:
     from wrenchroom.tools.spanners import spanner_for
 
     if kit not in KITS:
-        click.echo(f"error: unknown kit {kit!r}; available: {', '.join(KITS)}", err=True)
+        _say(f"error: unknown kit {kit!r}; available: {', '.join(KITS)}", err=True)
         sys.exit(EXIT_NOT_COVERED)
-    click.echo(f"kit {kit}\n")
-    click.echo("hex keys (DIN ISO 2936:2016-10; all mm):")
+    _say(f"kit {kit}")
+    _say()
+    _say("hex keys (DIN ISO 2936:2016-10; all mm):")
     for key in ISO_2936.values():
-        click.echo(
+        _say(
             f"  hex-key-{key.af:<6g} across flats {key.af:<5g} "
             f"long arm {key.long_mm:<6g} short arm {key.short_mm:g}"
         )
-    click.echo("\nring spanners, full and stubby (approximate until DIN 3113 is read out):")
+    _say()
+    _say("ring spanners, full and stubby (approximate until DIN 3113 is read out):")
     for af in sorted(set(HEX_AF.values())):
         spanner = spanner_for(af)
-        click.echo(
+        _say(
             f"  spanner-{spanner.af:<7g} length {spanner.length:<6g} "
             f"ring outer r {spanner.ring_outer_radius:<5g} stubby {spanner.stubby_length:g}"
         )
     extensions = "/".join(f"{e:g}" for e in EXTENSION_LENGTHS)
-    click.echo(
-        f"\nsockets on a 72-tooth ratchet, extensions {extensions} mm (approximate until DIN 3124):"
-    )
+    _say()
+    _say(f"sockets on a 72-tooth ratchet, extensions {extensions} mm (approximate until DIN 3124):")
     for af in sorted(set(HEX_AF.values())):
         socket = socket_for(af)
-        click.echo(
-            f"  socket-{socket.af:<8g} outer r {socket.outer_radius:<5g} length {socket.length:g}"
-        )
-    click.echo("\ndrivers (shaft radii approximate, catalogue-typical):")
+        _say(f"  socket-{socket.af:<8g} outer r {socket.outer_radius:<5g} length {socket.length:g}")
+    _say()
+    _say("drivers (shaft radii approximate, catalogue-typical):")
     for drive, radius in SHAFT_RADIUS.items():
-        click.echo(f"  driver-{drive:<9} shaft r {radius:g}")
+        _say(f"  driver-{drive:<9} shaft r {radius:g}")
