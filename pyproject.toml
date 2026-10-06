@@ -70,6 +70,17 @@ dev = [
   "ty>=0.0.1a10",
 ]
 
+# Pillow is overridden past a published upper bound. It arrives through build123d ->
+# threejs-materials, and every threejs-materials release so far (1.2.4, 2026-09-27) pins
+# pillow<12.3.0; 12.2.0 carries 13 advisories fixed in 12.3.0 (image decoders: fonts,
+# EPS, JPEG2000, TGA, PDF streams). wrenchroom never decodes an image, but the lock is
+# what CI and every developer installs, so it carries the fixed release. The evidence
+# that build123d still works on it is the whole suite passing. This only affects the
+# lock: an install from an index still resolves threejs-materials' own bound. Remove it
+# once https://github.com/bernhard-42/threejs-materials/issues/1 lands upstream.
+[tool.uv]
+override-dependencies = ["pillow>=12.3.0"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
