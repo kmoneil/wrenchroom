@@ -80,6 +80,13 @@ to M5):
   model of the mechanism, retries that say where a fastener passed), `explain`
   (every attempt for one fastener, with the blockers) and `tools` (the kit's
   dimensions, caveats inline) all work.
+- Fixed threads (`kind: insert`): a well nut, rivnut, threaded insert, cage, T-,
+  press or weld nut holds itself, like a carriage bolt. It is never given a tool and
+  is reported as held, and the screw into it is the one that must turn. Detection
+  knows them by name (`rivnut`, `threaded_insert`, `base_well_nut`; a word before
+  "nut" counts only if the solid shows no hex, so a nut deep in a well stays a nut),
+  and a nut whose solid shows no hex is not covered rather than given a spanner that
+  couldn't grip it.
 - No sidecar needed for named parts. Fasteners are found from their part names (ISO
   and DIN designations, McMaster-Carr numbers, descriptions such as `M6x20 SHCS` or
   `hex nut M8`, code-CAD names such as `lift_link_bolt`) and completed from their
@@ -100,7 +107,7 @@ to M5):
   is only a candidate: it is taken when its solid shows a drive a tool fits (a hex, a
   hex socket, a cross), and otherwise passed over, which every report lists, so a
   fastener is never missed without a word. With every fastener rule removed, the
-  golden bench's 49 are all found with the right kind and size, each screw with its
+  golden bench's 51 are all found with the right kind and size, each screw with its
   rule's head, and its 21 plates, blocks and studs named for their cells are passed over.
 - `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
   correct and keep: one rule per fastener, and above each a comment with how sure
@@ -112,7 +119,7 @@ to M5):
   file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  500 fasteners is read and checked with the full kit in about 8.9 s on an Apple M5
+  520 fasteners is read and checked with the full kit in about 9.0 s on an Apple M5
   Max laptop (the target is 10 s). The bench is dense with fasteners that fail, and
   a failing one tries every tool it has: open ends, and ball-end keys leant every way
   round, cost most of that. `--exact` swaps in OCP boolean intersections on the

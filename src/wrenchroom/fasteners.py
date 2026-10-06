@@ -18,10 +18,16 @@ from wrenchroom.tools.sizes import inch_mm
 
 
 class Kind(enum.StrEnum):
-    """Screw (turned by its head) or nut."""
+    """Screw (turned by its head), nut, or insert.
+
+    An insert is a fixed thread: a well nut, a rivnut, a threaded insert, a cage,
+    T-, press or weld nut. It holds itself, like a carriage bolt: never turned,
+    never given a tool, and the screw into it is the one that must turn.
+    """
 
     SCREW = "screw"
     NUT = "nut"
+    INSERT = "insert"
 
 
 class Head(enum.StrEnum):
@@ -168,8 +174,8 @@ class Fastener:
 
     @property
     def self_holding(self) -> bool:
-        """A carriage bolt holds itself: never turned, never extracted."""
-        return self.head is Head.CARRIAGE
+        """A carriage bolt or an insert holds itself: never turned, never extracted."""
+        return self.head is Head.CARRIAGE or self.kind is Kind.INSERT
 
 
 @dataclass(frozen=True)

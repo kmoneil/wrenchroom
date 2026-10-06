@@ -29,7 +29,7 @@ def _rule_for(name, rules):
 def test_the_bench_names_read_as_its_sidecar_says():
     sidecar, _ = sidecar_and_truth()
     rules = sidecar["fasteners"] + edges_sidecar()["fasteners"]
-    wrong, candidates = [], []
+    wrong, candidates, by_word = [], [], []
     found_count = 0
     for name in _bench_names():
         rule = _rule_for(name, rules)
@@ -41,7 +41,9 @@ def test_the_bench_names_read_as_its_sidecar_says():
                 wrong.append((name, "read as a fastener", found))
             continue
         want = Kind(rule.get("kind", "screw"))
-        if found is None or found.kind is not want:
+        if found is not None and found.unless_hex and want is Kind.NUT:
+            by_word.append(name)  # "well nut" by its name; its hex makes it a nut
+        elif found is None or found.kind is not want:
             wrong.append((name, f"want {want}", found))
             continue
         found_count += 1
@@ -49,6 +51,9 @@ def test_the_bench_names_read_as_its_sidecar_says():
             assert not found.socket_allowed, name
     assert not wrong
     assert [name for name in candidates if _rule_for(name, rules)] == ["vented_gland_vent"]
+    # Issue #29: a nut deep in a well reads as a well nut by its name alone; its
+    # solid's hex settles it (test_inserts.py, and the detected bench).
+    assert by_word == ["nut_deep_well_nut"]
     # The sidecar's fasteners (FINAL_COUNTS less the torx screw only detection finds)
     # and the edges file's torx screw.
     assert found_count == FINAL_COUNTS["fasteners"]

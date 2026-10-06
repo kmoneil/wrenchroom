@@ -28,7 +28,7 @@ more than medium confidence, and otherwise passed over, which every report says.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 from wrenchroom.detect.geometry import ShapeReading, read_shape
@@ -64,6 +64,12 @@ NO_SQUARE_NECK = (
 
 #: Why a candidate name's part was passed over.
 NO_DRIVE = "its solid shows no hex, hex socket or cross a tool fits"
+
+#: Why a nut whose solid is round isn't given its thread's spanner (issue #29).
+NO_HEX = (
+    "named as a nut, but its solid shows no hex for a spanner to grip; a fixed "
+    "thread (a well nut, an insert) is kind: insert in the sidecar"
+)
 
 
 @dataclass(frozen=True)
@@ -119,11 +125,18 @@ def shows_drive(reading: ShapeReading) -> bool:
 def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) -> Fastener:
     """One named fastener, its name's hint completed and checked by its solid."""
     reading = reading if reading is not None else read_shape(part.shape, hint.kind)
+    if hint.unless_hex and reading.drive_af is not None:
+        # "nut_deep_well_nut": a nut deep in a well, as its hex says (issue #29).
+        hint = replace(hint, kind=Kind.NUT)
     gland = not hint.socket_allowed
     head, head_note, reason = _head(hint, reading)
     size = None if gland else _size(hint, reading)
+    if hint.kind is Kind.NUT and reading.drive_af is None:
+        reason = reason or NO_HEX  # a round nut: nothing a spanner can grip
     not_covered = hint.not_covered or reason
     used = [head_note] if head_note else []
+    if hint.unless_hex and hint.kind is Kind.NUT:
+        used.append("a hex, so a nut")
     if reading.drive_af is not None:
         used.append(f"{reading.drive_af:g} across flats")
     if size is not None and (reading.size_from_drive or hint.size is None):
@@ -157,7 +170,8 @@ def _confidence(
         return "low"
     guessed_head = hint.kind is Kind.SCREW and reading.head is None and hint.head is None
     shank_only = size is not None and hint.size is None and not reading.size_from_drive
-    doubts = (guessed_head, shank_only, _disputed(hint, reading), hint.needs_drive)
+    hexed = hint.unless_hex and hint.kind is Kind.NUT  # named an insert, solid a nut
+    doubts = (guessed_head, shank_only, _disputed(hint, reading), hint.needs_drive, hexed)
     return "medium" if any(doubts) else "high"
 
 
@@ -168,7 +182,7 @@ def _disputed(hint: NameHint, reading: ShapeReading) -> bool:
 
 def _head(hint: NameHint, reading: ShapeReading) -> tuple[Head | None, str | None, str | None]:
     """(head, what the solid said about it, a not-covered reason)."""
-    if hint.kind is Kind.NUT:
+    if hint.kind is not Kind.SCREW:
         return None, None, None
     if reading.head is not None:
         named = hint.head.value if hint.head and _disputed(hint, reading) else None

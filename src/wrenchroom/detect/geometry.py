@@ -145,7 +145,7 @@ def read_shape(shape: Shape, kind: Kind) -> ShapeReading:
     hex_outer = _regular(outer, 6)
     head: Head | None = None
     drive_af: float | None = None
-    if kind is Kind.NUT:
+    if kind is not Kind.SCREW:  # a nut or an insert: its bore gives the size
         bore = _snap([r for r, convex in rounds if not convex])
         size, settled = _settle(bore, None, hex_outer)
         return ShapeReading(direction, None, None, hex_outer, size, settled)
