@@ -177,3 +177,120 @@ def test_check_and_explain_find_fasteners_with_no_sidecar(tmp_path):
     explained = CliRunner().invoke(main, ["explain", str(model), "bolt"])
     assert "found by name" in explained.output
     assert "noun 'bolt'" in explained.output
+
+
+# ---------------------------------------------------------------------------
+# A report's FILE may be -, for stdout, so it can be piped (issue #21).
+# ---------------------------------------------------------------------------
+
+REPORTS = [("--json", "r.json"), ("--md", "r.md"), ("--html", "r.html")]
+
+
+@pytest.fixture
+def in_tmp(tmp_path, monkeypatch):
+    """Run from tmp_path, where a stray file named - would land."""
+    monkeypatch.chdir(tmp_path)
+    return tmp_path
+
+
+def _check(*args):
+    return CliRunner().invoke(main, ["check", *map(str, args)])
+
+
+@pytest.mark.parametrize(("option", "file"), REPORTS)
+def test_a_dash_sends_the_report_to_stdout_byte_for_byte_as_its_file(
+    exported, in_tmp, option, file
+):
+    to_file = _check(exported, option, file)
+    to_stdout = _check(exported, option, "-")
+    assert to_stdout.exit_code == to_file.exit_code == 1
+    assert to_stdout.stdout_bytes == (in_tmp / file).read_bytes()
+    assert not (in_tmp / "-").exists()  # issue #21: it used to be written here
+    # The table moved to stderr, out of the pipe's way, word for word.
+    assert to_file.stderr == ""
+    assert to_stdout.stderr == to_file.stdout
+    assert "FAIL bolt  hex-key-5  blocked  wall" in to_stdout.stderr
+
+
+def test_json_on_stdout_pipes_into_a_reader(exported, in_tmp):
+    result = _check(exported, "--json", "-")
+    report = json.loads(result.stdout)  # as `--json - | jq` would read it
+    assert report["summary"]["blocked"] == 1
+    assert report["fasteners"][0]["blocked_by"] == ["wall"]
+
+
+def test_with_one_report_on_stdout_the_others_still_go_to_their_files(exported, in_tmp):
+    result = _check(exported, "--json", "-", "--md", "r.md", "--html", "r.html")
+    assert result.exit_code == 1
+    assert json.loads(result.stdout)["summary"]["blocked"] == 1
+    assert (in_tmp / "r.md").read_text().startswith("### wrenchroom: `model.step`\n")
+    assert (in_tmp / "r.html").read_text().startswith("<!doctype html>\n")
+    assert "1 fasteners" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "dashed",
+    [("--json", "--md"), ("--json", "--html"), ("--md", "--html"), ("--json", "--md", "--html")],
+)
+def test_only_one_report_can_go_to_stdout(exported, in_tmp, dashed):
+    result = _check(exported, *(arg for option in dashed for arg in (option, "-")))
+    assert result.exit_code == EXIT_NOT_COVERED
+    message = f"only one report can go to stdout (-), not {len(dashed)}: {', '.join(dashed)}"
+    assert message in result.stderr
+    assert result.stdout == ""
+    assert "fasteners" not in result.output  # refused before any check ran
+    assert not (in_tmp / "-").exists()
+
+
+def test_a_dash_is_stdout_even_beside_a_directory_named_dash(exported, in_tmp):
+    (in_tmp / "-").mkdir()  # as a path, - would be refused: it's a directory
+    result = _check(exported, "--json", "-")
+    assert result.exit_code == 1
+    assert json.loads(result.stdout)["summary"]["blocked"] == 1
+
+
+def test_a_file_really_named_dash_is_dot_slash_dash(exported, in_tmp):
+    result = _check(exported, "--md", "./-")
+    assert result.exit_code == 1
+    assert (in_tmp / "-").read_text().startswith("### wrenchroom: `model.step`\n")
+    assert "1 fasteners" in result.stdout  # nothing went to stdout, so the table stays
+    assert result.stderr == ""
+
+
+def test_a_report_goes_out_as_utf_8_as_its_file_does(exported, in_tmp, monkeypatch):
+    # A name in the Markdown keeps its accents and CJK; build123d 0.13 can't put
+    # one in a STEP file, so the report is given one here.
+    from wrenchroom.report import Report  # noqa: PLC0415
+
+    markdown = Report.markdown
+    monkeypatch.setattr(Report, "markdown", lambda self: markdown(self) + "- `螺丝 é`\n")
+    to_file = _check(exported, "--md", "r.md")
+    to_stdout = _check(exported, "--md", "-")
+    assert to_file.exit_code == to_stdout.exit_code == 1
+    assert "- `螺丝 é`\n".encode() in to_stdout.stdout_bytes
+    assert to_stdout.stdout_bytes == (in_tmp / "r.md").read_bytes()
+
+
+def test_explain_html_dash_sends_the_view_to_stdout_and_the_story_to_stderr(exported, in_tmp):
+    to_file = CliRunner().invoke(main, ["explain", str(exported), "bolt", "--html", "bolt.html"])
+    to_stdout = CliRunner().invoke(main, ["explain", str(exported), "bolt", "--html", "-"])
+    assert to_stdout.exit_code == to_file.exit_code == 1
+    assert to_stdout.stdout_bytes == (in_tmp / "bolt.html").read_bytes()
+    assert not (in_tmp / "-").exists()
+    assert to_file.stderr == ""
+    assert to_stdout.stderr == to_file.stdout
+    assert "tried hex-key-5, driver straight in: blocked" in to_stdout.stderr
+
+
+def test_explain_without_a_dash_keeps_its_story_on_stdout(exported, in_tmp):
+    result = CliRunner().invoke(main, ["explain", str(exported), "bolt"])
+    assert result.stderr == ""
+    assert result.stdout.splitlines()[0].startswith("bolt: blocked")
+
+
+def test_help_names_file_and_dash_for_every_report():
+    for command, options in (("check", ("--json", "--md", "--html")), ("explain", ("--html",))):
+        text = " ".join(CliRunner().invoke(main, [command, "--help"]).output.split())
+        for option in options:
+            assert f"{option} FILE" in text
+        assert text.count("- for stdout") == len(options)

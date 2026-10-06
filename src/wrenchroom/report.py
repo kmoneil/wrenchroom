@@ -225,9 +225,13 @@ class Report:
             "fasteners": [_result_json(result) for result in self.results],
         }
 
+    def json_text(self) -> str:
+        """The JSON document as text, as :meth:`to_json` writes it."""
+        return json.dumps(self.to_json_dict(), indent=2) + "\n"
+
     def to_json(self, path: str | Path) -> None:
         """Write the JSON document to a file."""
-        Path(path).write_text(json.dumps(self.to_json_dict(), indent=2) + "\n")
+        Path(path).write_text(self.json_text(), encoding="utf-8")
 
     # -------------------------------------------------------------- terminal
 
@@ -331,8 +335,8 @@ class Report:
         return "\n".join(lines) + "\n"
 
     def to_markdown(self, path: str | Path) -> None:
-        """Write the Markdown report to a file."""
-        Path(path).write_text(self.markdown())
+        """Write the Markdown report to a file, as UTF-8 whatever the locale."""
+        Path(path).write_text(self.markdown(), encoding="utf-8")
 
     # ------------------------------------------------------------------ HTML
 

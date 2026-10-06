@@ -5,6 +5,10 @@ Four commands: check, explain, detect (writes the sidecar) and tools.
 Exit codes, fixed: 0 every fastener passes, 1 a fastener fails, 2 something not covered
 or a config error.
 
+A report's FILE may be ``-``, for stdout: the report can then be piped, and what
+would have been printed for a person goes to stderr instead, out of its way. Only one
+report can go to stdout; a file really named ``-`` is ``./-``.
+
 The heavy imports (build123d pulls OCP, seconds) happen inside the commands that need
 them, so `--help` and `--version` stay instant.
 """
@@ -12,6 +16,7 @@ them, so `--help` and `--version` stay instant.
 from __future__ import annotations
 
 import sys
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -21,10 +26,15 @@ from wrenchroom import __version__
 from wrenchroom.terminal import printable
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from wrenchroom.report import Report
 
 #: Exit code for "not covered or a config error".
 EXIT_NOT_COVERED = 2
+
+#: The FILE that means stdout, as in most command-line tools.
+STDOUT = "-"
 
 _HAND_ROOM_HELP = (
     "Also check room for a hand on each handle (as `checks: {hand_room: true}`); "
@@ -33,13 +43,43 @@ _HAND_ROOM_HELP = (
 
 
 def _say(text: str = "", *, err: bool = False) -> None:
-    """Print one line for a person: the only way text reaches the terminal here.
+    """Print one line for a person: the only way such text reaches the terminal here.
 
     Part names come from the model, and a model can come from anybody, so every
     line goes through :func:`wrenchroom.terminal.printable` and nothing in it can
     steer the terminal. A blank line is its own call, never a newline inside one.
+    A whole report sent to stdout goes by :func:`_emit` instead.
     """
     click.echo(printable(text), err=err)
+
+
+def _emit(document: str) -> None:
+    """Write one whole report to stdout as UTF-8, as its file would hold it.
+
+    Not through :func:`_say`, which would write the report's own newlines out as
+    escapes. Each report is safe on a terminal as made: the JSON encoder and the
+    page's data escape every control character, and the Markdown writes names
+    through :func:`wrenchroom.terminal.printable` (tests/test_terminal.py holds
+    all three to that).
+    """
+    click.echo(document.encode("utf-8"), nl=False)  # bytes: written as they are
+
+
+def _wants_stdout(**outputs: str | None) -> bool:
+    """Whether a report goes to stdout; two can't share it (exit 2, before any work)."""
+    dashed = [f"--{option}" for option, path in outputs.items() if path == STDOUT]
+    if len(dashed) > 1:
+        msg = f"only one report can go to stdout (-), not {len(dashed)}: {', '.join(dashed)}"
+        raise click.UsageError(msg)
+    return bool(dashed)
+
+
+def _write(path: str, document: Callable[[], str], to_file: Callable[[str], None]) -> None:
+    """Write one report to its file, or to stdout when the path is ``-``."""
+    if path == STDOUT:
+        _emit(document())
+    else:
+        to_file(path)
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
@@ -60,20 +100,20 @@ def main() -> None:
 @click.option(
     "--json",
     "json_path",
-    type=click.Path(dir_okay=False, path_type=Path),
-    help="Also write the machine-readable report here.",
+    type=click.Path(dir_okay=False, allow_dash=True),
+    help="Also write the machine-readable report here; - for stdout.",
 )
 @click.option(
     "--md",
     "md_path",
-    type=click.Path(dir_okay=False, path_type=Path),
-    help="Also write the report as Markdown here, for a CI summary or a PR comment.",
+    type=click.Path(dir_okay=False, allow_dash=True),
+    help="Also write the report as Markdown here, for a CI summary or a PR comment; - for stdout.",
 )
 @click.option(
     "--html",
     "html_path",
-    type=click.Path(dir_okay=False, path_type=Path),
-    help="Also write the 3D view here: one self-contained file to open in a browser.",
+    type=click.Path(dir_okay=False, allow_dash=True),
+    help="Also write the 3D view here: one self-contained file to open in a browser; - for stdout.",
 )
 @click.option("--step-deg", default=15.0, show_default=True, help="Swing sampling step.")
 @click.option("--only", help="Check only fasteners whose name matches this glob.")
@@ -88,16 +128,21 @@ def check(  # noqa: PLR0913, PLR0917  (Click passes one parameter per option)
     model: Path,
     config_path: Path | None,
     kit: str,
-    json_path: Path | None,
-    md_path: Path | None,
-    html_path: Path | None,
+    json_path: str | None,
+    md_path: str | None,
+    html_path: str | None,
     step_deg: float,
     only: str | None,
     state: str | None,
     exact: bool,
     hand_room: bool | None,
 ) -> None:
-    """Check every fastener in MODEL and report the verdicts."""
+    """Check every fastener in MODEL and report the verdicts.
+
+    A report sent to stdout (-) moves the table to stderr, so the report can be
+    piped: --json - | jq, or --md - >> "$GITHUB_STEP_SUMMARY".
+    """
+    to_stdout = _wants_stdout(json=json_path, md=md_path, html=html_path)
     report = _run(
         model,
         config_path,
@@ -109,13 +154,15 @@ def check(  # noqa: PLR0913, PLR0917  (Click passes one parameter per option)
         hand_room=hand_room,
     )
     for line in report.terminal_lines():
-        _say(line)
+        _say(line, err=to_stdout)
     if json_path is not None:
-        report.to_json(json_path)
+        _write(json_path, report.json_text, report.to_json)
     if md_path is not None:
-        report.to_markdown(md_path)
+        _write(md_path, report.markdown, report.to_markdown)
     if html_path is not None:
-        report.to_html(html_path)
+        from wrenchroom.view import html_text
+
+        _write(html_path, partial(html_text, report), report.to_html)
     sys.exit(report.exit_code)
 
 
@@ -204,8 +251,8 @@ def detect(model: Path, kit: str) -> None:
 @click.option(
     "--html",
     "html_path",
-    type=click.Path(dir_okay=False, path_type=Path),
-    help="Also write the 3D view here, opening on this fastener's attempts.",
+    type=click.Path(dir_okay=False, allow_dash=True),
+    help="Also write the 3D view here, opening on this fastener's attempts; - for stdout.",
 )
 @click.option("--hand-room", is_flag=True, default=None, help=_HAND_ROOM_HELP)
 def explain(
@@ -215,10 +262,13 @@ def explain(
     kit: str,
     step_deg: float,
     exact: bool,
-    html_path: Path | None,
+    html_path: str | None,
     hand_room: bool | None,
 ) -> None:
-    """Show every attempt for one FASTENER in MODEL, with the blockers."""
+    """Show every attempt for one FASTENER in MODEL, with the blockers.
+
+    With --html - the view goes to stdout and the attempts to stderr.
+    """
     from wrenchroom.report import attempt_text
 
     report = _run(
@@ -235,16 +285,24 @@ def explain(
         sys.exit(EXIT_NOT_COVERED)
     (result,) = report.results
     if html_path is not None:
-        report.to_html(html_path, select=result.fastener.name)
-    _say(result.headline)
+        from wrenchroom.view import html_text
+
+        name = result.fastener.name
+        _write(
+            html_path,
+            partial(html_text, report, select=name),
+            partial(report.to_html, select=name),
+        )
+    lines = [result.headline]
     if result.fastener.source != "sidecar":
-        _say(f"  found by {result.fastener.source}: {result.fastener.basis}")
+        lines.append(f"  found by {result.fastener.source}: {result.fastener.basis}")
     if result.reason:
-        _say(f"  reason: {result.reason}")
-    for attempt in result.attempts:
-        _say(f"  tried {attempt_text(attempt)}")
+        lines.append(f"  reason: {result.reason}")
+    lines.extend(f"  tried {attempt_text(attempt)}" for attempt in result.attempts)
     if result.stuck_on:
-        _say(f"  cannot come out: {', '.join(result.stuck_on)} in the way")
+        lines.append(f"  cannot come out: {', '.join(result.stuck_on)} in the way")
+    for line in lines:
+        _say(line, err=html_path == STDOUT)
     sys.exit(report.exit_code)
 
 

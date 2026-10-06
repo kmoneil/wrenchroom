@@ -24,8 +24,11 @@ to M5):
   parts: metric hex keys (driver straight in, short leg, long leg), combination
   spanners (the ring, then the open end from the side, each full and stubby), sockets
   on a ratchet with stock extensions, Phillips and slotted drivers. Verdicts per fastener with every blocker named; terminal table, JSON
-  (`--json`), Markdown for a CI job summary or a PR comment (`--md`), exit codes for
-  CI (0 pass, 1 a fastener fails, 2 not covered or config error). Names come from the
+  (`--json FILE`), Markdown for a CI job summary or a PR comment (`--md FILE`), exit
+  codes for CI (0 pass, 1 a fastener fails, 2 not covered or config error). A FILE of
+  `-` writes that report to stdout instead and moves the table to stderr, so it can be
+  piped: `--json - | jq`, `--md - >> "$GITHUB_STEP_SUMMARY"`. Only one report can go
+  to stdout; a file really named `-` is `./-`. Names come from the
   model, so the terminal shows control characters written out and the Markdown puts
   every name in a code span: a crafted part name can't steer a terminal or post a
   link or an image in a comment.
@@ -53,7 +56,7 @@ to M5):
   naming what the hand hit. Off by default: the spec's figures are not yet tuned
   against real hands, and L-key arms, turned with the fingertips, get no hand. Every
   report ends by saying what it didn't check.
-- `--html report.html` writes the 3D view: one self-contained file that opens
+- `--html FILE` writes the 3D view: one self-contained file that opens
   offline. The assembly is grey and each fastener coloured by how it fared (green
   turns, blue held, amber passes only in another state, red blocked or stuck, grey
   not covered). Click one, or pick it from the list, to see every tool position that
