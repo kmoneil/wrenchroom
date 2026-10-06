@@ -74,6 +74,10 @@ _AXIAL = 0.99
 #: A hex band shorter than this, mm, gives a ring nothing to grip.
 _MIN_BAND = 0.5
 
+#: How far out from each end of a nut whose ends are both clear the room is
+#: probed, mm, nearest first: the end that meets nothing longer is the free face.
+_ROOM_DEPTHS = (2.0, 5.0, 10.0, 25.0, 50.0)
+
 #: A screw and a nut pair when their axes agree this closely (spec 7.3).
 _PAIR_MAX_ANGLE_DEG = 0.5
 _PAIR_MAX_OFFSET_MM = 0.3
@@ -733,6 +737,12 @@ def _free_face_is_at_bottom(frame: _Frame, scene: Scene) -> bool:
     at the ends of the widest region (the hex), not of the whole part: a gland's
     thread stub and dome extend past its hex on both sides, so the part's own
     extremes read as free air.
+
+    Both ends clear is a nut drawn off its seat, or with its washer left out
+    (issue #26): the probes reach further out from each end in turn
+    (:data:`_ROOM_DEPTHS`), and the end with the more room is the free face, the
+    other being where the plate is. Open on both sides, either end will do and
+    the frame's own direction stands; the same room on both is not covered.
     """
     outer = max(frame.radials) * 0.95
     inner = frame.bore + 0.5
@@ -743,11 +753,20 @@ def _free_face_is_at_bottom(frame: _Frame, scene: Scene) -> bool:
     plane_bottom = Mount(seat=frame.point_at(band_lo), axis=_neg(frame.direction))
     top_free = scene.clear(plane_top.place(axial_annulus(inner, outer, 0.1, 1.0)))
     bottom_free = scene.clear(plane_bottom.place(axial_annulus(inner, outer, 0.1, 1.0)))
-    if top_free == bottom_free:
-        raise NotCovered(
-            "cannot tell the nut's free face: both ends are " + ("clear" if top_free else "covered")
-        )
-    return bottom_free
+    if top_free != bottom_free:
+        return bottom_free
+    if not top_free:
+        raise NotCovered("cannot tell the nut's free face: both ends are covered")
+    for depth in _ROOM_DEPTHS:
+        top_room = scene.clear(plane_top.place(axial_annulus(inner, outer, 0.1, depth)))
+        bottom_room = scene.clear(plane_bottom.place(axial_annulus(inner, outer, 0.1, depth)))
+        if top_room != bottom_room:
+            return bottom_room
+        if not top_room:
+            raise NotCovered(
+                "cannot tell the nut's free face: both ends are clear, with the same room"
+            )
+    return False
 
 
 # ---------------------------------------------------------------------------
