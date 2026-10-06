@@ -17,6 +17,7 @@ from wrenchroom.tools.sweep import (
     CONTACT_OFFSET,
     Attempt,
     Mount,
+    Probe,
     axial_cylinder,
     radial_cylinder,
     swing_attempt,
@@ -199,15 +200,17 @@ def test_blocked_everywhere_neither_turns_nor_holds(scene_of):
 
 def test_a_blocked_engagement_fails_without_sweeping(scene_of):
     scene = scene_of(cap=Pos(0, 0, 27) * Box(50, 50, 10))
+    engagement = ORIGIN_MOUNT.place(axial_cylinder(1, 20, 30))
     attempt = swing_attempt(
         tool="probe",
         way="probe",
         scene=scene,
-        engagement=ORIGIN_MOUNT.place(axial_cylinder(1, 20, 30)),
+        engagement=engagement,
         arm_at=arm_probe,
         required_deg=60.0,
     )
-    assert attempt == Attempt("probe", "probe", False, False, 0.0, ("cap",))
+    probes = (Probe(engagement, ("cap",)),)  # the engagement alone: no arm was tried
+    assert attempt == Attempt("probe", "probe", False, False, 0.0, ("cap",), probes)
 
 
 def test_fully_free_turns_and_stops_at_the_required_arc(scene_of):

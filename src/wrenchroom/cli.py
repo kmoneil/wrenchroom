@@ -21,7 +21,7 @@ from wrenchroom import __version__
 from wrenchroom.terminal import printable
 
 if TYPE_CHECKING:
-    from wrenchroom.report import FastenerResult, Report
+    from wrenchroom.report import Report
 
 #: Exit code for "not covered or a config error".
 EXIT_NOT_COVERED = 2
@@ -64,6 +64,12 @@ def main() -> None:
     type=click.Path(dir_okay=False, path_type=Path),
     help="Also write the report as Markdown here, for a CI summary or a PR comment.",
 )
+@click.option(
+    "--html",
+    "html_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Also write the 3D view here: one self-contained file to open in a browser.",
+)
 @click.option("--step-deg", default=15.0, show_default=True, help="Swing sampling step.")
 @click.option("--only", help="Check only fasteners whose name matches this glob.")
 @click.option("--state", help="Check in this state instead of the config's default.")
@@ -78,6 +84,7 @@ def check(  # noqa: PLR0913, PLR0917  (Click passes one parameter per option)
     kit: str,
     json_path: Path | None,
     md_path: Path | None,
+    html_path: Path | None,
     step_deg: float,
     only: str | None,
     state: str | None,
@@ -93,6 +100,8 @@ def check(  # noqa: PLR0913, PLR0917  (Click passes one parameter per option)
         report.to_json(json_path)
     if md_path is not None:
         report.to_markdown(md_path)
+    if html_path is not None:
+        report.to_html(html_path)
     sys.exit(report.exit_code)
 
 
@@ -175,6 +184,12 @@ def detect(model: Path) -> None:
     is_flag=True,
     help="Use the exact OCP boolean engine: slow, the referee for borderline results.",
 )
+@click.option(
+    "--html",
+    "html_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Also write the 3D view here, opening on this fastener's attempts.",
+)
 def explain(
     model: Path,
     fastener: str,
@@ -182,41 +197,28 @@ def explain(
     kit: str,
     step_deg: float,
     exact: bool,
+    html_path: Path | None,
 ) -> None:
     """Show every attempt for one FASTENER in MODEL, with the blockers."""
+    from wrenchroom.report import attempt_text
+
     report = _run(model, config_path, kit=kit, step_deg=step_deg, only=fastener, exact=exact)
     if not report.results:
         _say(f"error: no fastener named {fastener!r} (is it in the sidecar?)", err=True)
         sys.exit(EXIT_NOT_COVERED)
     (result,) = report.results
-    _say(_explain_header(result))
+    if html_path is not None:
+        report.to_html(html_path, select=result.fastener.name)
+    _say(result.headline)
     if result.fastener.source != "sidecar":
         _say(f"  found by {result.fastener.source}: {result.fastener.basis}")
     if result.reason:
         _say(f"  reason: {result.reason}")
     for attempt in result.attempts:
-        outcome = "turns" if attempt.turns else ("holds" if attempt.holds else "blocked")
-        line = f"  tried {attempt.tool}, {attempt.way}: {outcome}"
-        if attempt.swing_deg and not attempt.turns:
-            line += f", swing {attempt.swing_deg:g} deg"
-        if attempt.blockers:
-            line += f"; hit {', '.join(attempt.blockers)}"
-        _say(line)
+        _say(f"  tried {attempt_text(attempt)}")
     if result.stuck_on:
         _say(f"  cannot come out: {', '.join(result.stuck_on)} in the way")
     sys.exit(report.exit_code)
-
-
-def _explain_header(result: FastenerResult) -> str:
-    """One fastener's verdict in a line: tool and way, state, partner."""
-    header = f"{result.fastener.name}: {result.verdict}"
-    if result.tool:
-        header += f" with {result.tool}" + (f", {result.how}" if result.how else "")
-    if result.state:
-        header += f" (in state {result.state})"
-    if result.pair:
-        header += f"; paired with {result.pair}"
-    return header
 
 
 @main.command()

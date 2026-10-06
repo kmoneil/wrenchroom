@@ -48,6 +48,19 @@ class Mount:
 
 
 @dataclass(frozen=True)
+class Probe:
+    """One tool position tested, and every part it ran into: what the HTML view draws.
+
+    Attributes:
+        solid: The tool solid as placed for the test.
+        hits: The parts it overlapped, in assembly order; empty when it was clear.
+    """
+
+    solid: ToolSolid
+    hits: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class Attempt:
     """One way one tool was tried, and how it went. The unit `explain` prints.
 
@@ -59,6 +72,9 @@ class Attempt:
         swing_deg: The largest free arc proven before the search stopped; 360
             for a straight-in driver that turns in place.
         blockers: Every part any probed position ran into, first-seen order.
+        probes: Every position tested, in order: the engagement (or the whole
+            tool, for one that turns in place) first, then each arm position the
+            swing search tried. Its hits are the blockers, position by position.
     """
 
     tool: str
@@ -67,6 +83,7 @@ class Attempt:
     holds: bool
     swing_deg: float
     blockers: tuple[str, ...]
+    probes: tuple[Probe, ...] = ()
 
 
 def swing_attempt(
@@ -88,15 +105,18 @@ def swing_attempt(
     """
     blockers: list[str] = []
     engagement_hits = scene.hits(engagement)
+    probes = [Probe(engagement, engagement_hits)]
     if engagement_hits:
-        return Attempt(tool, way, False, False, 0.0, tuple(engagement_hits))
+        return Attempt(tool, way, False, False, 0.0, engagement_hits, tuple(probes))
 
     samples = max(1, round(FULL_CIRCLE / step_deg))
     free: dict[int, bool] = {}
 
     def is_free(index: int) -> bool:
         if index not in free:
-            hits = scene.hits(arm_at(index * step_deg))
+            arm = arm_at(index * step_deg)
+            hits = scene.hits(arm)
+            probes.append(Probe(arm, hits))
             for name in hits:
                 if name not in blockers:
                     blockers.append(name)
@@ -119,14 +139,15 @@ def swing_attempt(
     swing = FULL_CIRCLE if best == samples else max(0.0, (best - 1) * step_deg)
     turns = swing >= required_deg
     holds = best >= 1
-    return Attempt(tool, way, turns, holds, swing, tuple(blockers))
+    return Attempt(tool, way, turns, holds, swing, tuple(blockers), tuple(probes))
 
 
 def straight_attempt(*, tool: str, way: str, scene: Scene, solid: ToolSolid) -> Attempt:
     """Try a tool that turns in place: clear means it turns, blocked means it doesn't."""
     hits = scene.hits(solid)
     ok = not hits
-    return Attempt(tool, way, ok, ok, FULL_CIRCLE if ok else 0.0, tuple(hits))
+    probes = (Probe(solid, hits),)
+    return Attempt(tool, way, ok, ok, FULL_CIRCLE if ok else 0.0, hits, probes)
 
 
 # ---------------------------------------------------------------------------

@@ -15,7 +15,7 @@ from __future__ import annotations
 import enum
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -24,7 +24,10 @@ from wrenchroom.fasteners import Fastener
 from wrenchroom.terminal import printable
 
 if TYPE_CHECKING:
-    from wrenchroom.tools.sweep import Attempt
+    from collections.abc import Mapping
+
+    from wrenchroom.assembly import Assembly
+    from wrenchroom.tools.sweep import Attempt, Probe
 
 
 class Verdict(enum.StrEnum):
@@ -54,6 +57,9 @@ class FastenerResult:
     blockers: tuple[str, ...] = ()
     stuck_on: tuple[str, ...] = ()
     attempts: tuple[Attempt, ...] = ()
+    #: A screw's way out as tested, when extraction was checked: the head's
+    #: circle swept its length, and what stood in it.
+    way_out: Probe | None = None
     reason: str | None = None
     axis: tuple[float, float, float] | None = None
     seat: tuple[float, float, float] | None = None
@@ -64,6 +70,42 @@ class FastenerResult:
     def passed(self) -> bool:
         """True when this fastener needs nothing further."""
         return self.verdict in PASSING
+
+    @property
+    def headline(self) -> str:
+        """The verdict in a line, as ``explain`` opens: tool and way, state, partner."""
+        header = f"{self.fastener.name}: {self.verdict}"
+        if self.tool:
+            header += f" with {self.tool}" + (f", {self.how}" if self.how else "")
+        if self.state:
+            header += f" (in state {self.state})"
+        if self.pair:
+            header += f"; paired with {self.pair}"
+        return header
+
+
+def attempt_text(attempt: Attempt) -> str:
+    """One attempt in a line, as ``explain`` lists them: tool, way, outcome, what it hit."""
+    outcome = "turns" if attempt.turns else ("holds" if attempt.holds else "blocked")
+    line = f"{attempt.tool}, {attempt.way}: {outcome}"
+    if attempt.swing_deg and not attempt.turns:
+        line += f", swing {attempt.swing_deg:g} deg"
+    if attempt.blockers:
+        line += f"; hit {', '.join(attempt.blockers)}"
+    return line
+
+
+@dataclass(frozen=True)
+class StateModel:
+    """The model as one state shows it: the assembly the check read, less what it took off."""
+
+    assembly: Assembly
+    removed: frozenset[str] = frozenset()
+
+    @property
+    def names(self) -> tuple[str, ...]:
+        """The parts present in this state, in assembly order."""
+        return tuple(name for name in self.assembly.names if name not in self.removed)
 
 
 @dataclass(frozen=True)
@@ -81,6 +123,14 @@ class Report:
     #: Config-grade problems found while checking (a forced pair naming nothing,
     #: a state's remove glob matching nothing): reported, and the run exits 2.
     warnings: tuple[str, ...] = ()
+    #: The state the run took as normal: ``--state``, else the sidecar's
+    #: ``default_state``, else None (the model as given).
+    default_state: str | None = None
+    #: The geometry the run read, for the HTML view: the model as given (key
+    #: None) and every state it resolved. Not part of the JSON, and not compared.
+    models: Mapping[str | None, StateModel] = field(default_factory=dict, compare=False, repr=False)
+    #: Every part the sidecar's ignore list takes out of the way (wires, hoses).
+    ignored: frozenset[str] = field(default=frozenset(), compare=False, repr=False)
 
     def failures(self) -> tuple[FastenerResult, ...]:
         """Everything that did not pass, worst first (not-covered last)."""
@@ -232,6 +282,24 @@ class Report:
     def to_markdown(self, path: str | Path) -> None:
         """Write the Markdown report to a file."""
         Path(path).write_text(self.markdown())
+
+    # ------------------------------------------------------------------ HTML
+
+    def to_html(self, path: str | Path, *, select: str | None = None) -> None:
+        """Write the self-contained 3D view: see :mod:`wrenchroom.view`.
+
+        Args:
+            path: The file to write.
+            select: A fastener to show selected when the file opens, as
+                ``explain --html`` does.
+
+        Raises:
+            ValueError: When the report carries no geometry (it wasn't made by
+                ``check``), or ``select`` names no fastener in it.
+        """
+        from wrenchroom.view import write_html  # noqa: PLC0415  (pulls the mesh engine)
+
+        write_html(self, path, select=select)
 
 
 def _result_json(result: FastenerResult) -> dict[str, object]:

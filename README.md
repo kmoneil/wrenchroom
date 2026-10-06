@@ -15,7 +15,8 @@ re-order seen late, and a collision check can't see it either way.
 ## Status
 
 **`wrenchroom check` works on real STEP files, finds fasteners by their names and
-solids, and is fast enough for CI.** What exists today (M1 to M4):
+solids, is fast enough for CI, and shows its answers in 3D.** What exists today (M1
+to M5):
 
 - `wrenchroom check model.step` reads a STEP assembly (names kept, repeats made
   unique), takes fastener descriptions from a `wrenchroom.yaml` sidecar, resolves each
@@ -28,6 +29,17 @@ solids, and is fast enough for CI.** What exists today (M1 to M4):
   model, so the terminal shows control characters written out and the Markdown puts
   every name in a code span: a crafted part name can't steer a terminal or post a
   link or an image in a comment.
+- `--html report.html` writes the 3D view: one self-contained file that opens
+  offline. The assembly is grey and each fastener coloured by how it fared (green
+  turns, blue held, amber passes only in another state, red blocked or stuck, grey
+  not covered). Click one, or pick it from the list, to see every tool position that
+  was tried, drawn translucent where the check put it (orange where it hit
+  something), with the parts in its way in magenta; a fastener reached in another
+  state is drawn in that state. `wrenchroom explain model.step NAME --html f.html`
+  writes the same view opened on one fastener, and `report.html#NAME` opens any
+  fastener directly. The page embeds three.js (r186, MIT) and its content security
+  policy lets it load nothing and run nothing but its own two scripts, so a report
+  of a private model can't send anything anywhere.
 - Dimension tables cite their standards (ISO 2936, 4762, 7380-1, 10642, 4032) with the
   date checked; approximations are labelled as such.
 - A sidecar rule that matches nothing is reported and fails the run: that is how a
@@ -81,8 +93,7 @@ FAIL key_wall_near_screw  hex-key-5  blocked  key_wall_near_wall
   along its axis; retried with parts removed or the mechanism moved.
 - **Every failure explained**: which tool, which way it was tried, what it hit.
 - **Fast enough for CI**: 500 fasteners in under 10 seconds, with JSON output and exit
-  codes, a terminal table, Markdown to post, and (coming) a self-contained HTML 3D
-  view.
+  codes, a terminal table, Markdown to post, and a self-contained HTML 3D view.
 
 ## Development
 
@@ -106,6 +117,15 @@ times it; CI reports that number on every push and fails if any verdict count mo
 `uv run python scripts/golden.py --out some-dir` writes `bench.step` and its sidecars
 for you to open and check against; a nightly job re-runs the bench against upgraded
 dependencies so a CAD-kernel update that moves a verdict shows up before it lands.
+
+The bench's HTML report is tested in the page itself: Node runs the page's own
+scripts against a stand-in DOM (three's scene graph is real, so every colour can be
+read), and headless Chrome opens the file and draws it with WebGL. Both come with
+CI's runners; locally each test skips, saying why, if its tool is missing. The
+three.js bundle in `src/wrenchroom/view/vendor/` is built by
+`scripts/vendor_three.py` from a pinned npm tarball (its sha512 checked) and a pinned
+esbuild; `uv run python scripts/lanes.py vendor-check` rebuilds it and compares byte
+for byte, and the nightly job does the same.
 
 CI runs the same lanes by the same names; `scripts/lanes.py` is the only spelling of how
 this project runs its checks.

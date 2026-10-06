@@ -172,8 +172,7 @@ class MeshQuery:
     def _piece(self, index: int) -> Manifold | None:
         if index not in self._built:
             if self._primitives:
-                unit, local = _unit_mesh(self._primitives[index])
-                placed = self._matrix @ local
+                unit, placed = primitive_mesh(self._primitives[index], self._matrix)
                 self._built[index] = unit.transform(np.ascontiguousarray(placed[:3, :]))
             else:
                 shape = self._tool
@@ -192,6 +191,32 @@ def solid_mesh(shape: Shape, tolerance: float = MESH_TOLERANCE) -> Manifold | No
 
     Any triangulation already on the shape is dropped first, so the result
     depends only on the tolerance, never on what meshed the shape before.
+    """
+    arrays = shape_triangles(shape, tolerance)
+    if arrays is None:
+        return None
+    vertices, triangles = arrays
+    mesh = Mesh64(
+        vert_properties=np.ascontiguousarray(vertices),
+        tri_verts=np.ascontiguousarray(triangles.astype(np.uint64)),
+    )
+    mesh.merge()  # faces share edge nodes by position; weld them into one solid
+    manifold = Manifold(mesh)
+    if manifold.status() != Error.NoError or manifold.volume() <= 0:
+        return None
+    return manifold
+
+
+def shape_triangles(
+    shape: Shape, tolerance: float = MESH_TOLERANCE
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """An OCP shape's triangles as placed, face by face: vertices (n, 3), indices (m, 3).
+
+    Each face keeps its own vertices, so an edge between two faces appears once
+    per face; :func:`solid_mesh` welds them, the HTML view draws them as they
+    are (a sharp edge stays sharp). Triangles wind outward. None when a face
+    would not mesh, which leaves a hole. The shape's earlier triangulation is
+    dropped first, as :func:`solid_mesh` says.
     """
     topo = shape.wrapped
     if topo is None:
@@ -217,15 +242,7 @@ def solid_mesh(shape: Shape, tolerance: float = MESH_TOLERANCE) -> Manifold | No
         offset += len(nodes)
     if not triangles:
         return None
-    mesh = Mesh64(
-        vert_properties=np.ascontiguousarray(np.concatenate(vertices)),
-        tri_verts=np.ascontiguousarray(np.concatenate(triangles).astype(np.uint64)),
-    )
-    mesh.merge()  # faces share edge nodes by position; weld them into one solid
-    manifold = Manifold(mesh)
-    if manifold.status() != Error.NoError or manifold.volume() <= 0:
-        return None
-    return manifold
+    return np.concatenate(vertices), np.concatenate(triangles)
 
 
 def _face_arrays(
@@ -288,6 +305,18 @@ def _ring(inner: float, outer: float, height: float) -> Manifold:
 def _cube(x: float, y: float, z: float) -> Manifold:
     """A box from the origin to ``(x, y, z)``."""
     return Manifold.cube((x, y, z))
+
+
+def primitive_mesh(primitive: Primitive, placement: np.ndarray) -> tuple[Manifold, np.ndarray]:
+    """A tool primitive as a shared unit mesh and the 4x4 that puts it in the assembly.
+
+    The unit mesh is cached and shared by every primitive of its shape and size;
+    ``placement`` is the tool's own (:meth:`ToolSolid.matrix`). The collision
+    test and the HTML view both place pieces through here, so what the view
+    draws is what was tested.
+    """
+    unit, local = _unit_mesh(primitive)
+    return unit, placement @ local
 
 
 def _unit_mesh(primitive: Primitive) -> tuple[Manifold, np.ndarray]:

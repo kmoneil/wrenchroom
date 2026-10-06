@@ -40,7 +40,7 @@ from wrenchroom.fasteners import (
     hex_key_af,
     spanner_af,
 )
-from wrenchroom.report import FastenerResult, Report, Verdict
+from wrenchroom.report import FastenerResult, Report, StateModel, Verdict
 from wrenchroom.tools.drivers import SHAFT_RADIUS, driver_attempt
 from wrenchroom.tools.hex_keys import ISO_2936, hex_key_attempts
 from wrenchroom.tools.sockets import socket_attempts, socket_for
@@ -49,6 +49,7 @@ from wrenchroom.tools.sweep import (
     DEFAULT_STEP_DEG,
     Attempt,
     Mount,
+    Probe,
     axial_annulus,
     axial_cylinder,
 )
@@ -150,6 +151,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
             _check_fastener(fastener, frames[fastener.name], space, config, default_state, step_deg)
         )
     results = _resolve_joints(candidates, pairs)
+    models = {None: StateModel(assembly), **space.models}
     return Report(
         model=model,
         kit=kit,
@@ -158,6 +160,14 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         unmatched_rules=tuple(rule.parts for rule in matches.unmatched_rules),
         unmatched_ignores=matches.unmatched_ignores,
         warnings=tuple(pair_warnings + space.warnings),
+        default_state=default_state,
+        models=models,
+        ignored=frozenset(
+            name
+            for state_model in models.values()
+            for name in state_model.assembly.names
+            if config.is_ignored(name)
+        ),
     )
 
 
@@ -352,6 +362,9 @@ class _StateSpace:
         self._ignored: dict[str, bool] = {}
         self.engine = engine
         self.warnings: list[str] = []
+        #: Every state resolved so far, as the check saw it: kept for the report,
+        #: whose HTML view draws a fastener in the state it was reached in.
+        self.models: dict[str, StateModel] = {}
 
     def scene(self, assembly: Assembly, excluded: set[str] | frozenset[str]) -> Scene:
         """The obstacles: every part but the excluded and the ignored ones."""
@@ -381,6 +394,7 @@ class _StateSpace:
                     f"state {state_name!r}: remove glob {glob!r} matched nothing (renamed part?)"
                 )
             removed |= hits
+        self.models[state_name] = StateModel(assembly, frozenset(removed))
         return assembly, frozenset(removed), model is None
 
     def _load(self, filename: str) -> Assembly:
@@ -416,6 +430,7 @@ class _Candidate:
     seat: Vec | None = None
     state: str | None = None
     extraction_blocked: tuple[str, ...] = field(default=())
+    way_out: Probe | None = None
 
 
 def _check_fastener(
@@ -476,7 +491,8 @@ def _try_in_state(
         candidate.reason = str(exc)
         return candidate
     if fastener.kind is Kind.SCREW and (candidate.turns or candidate.hold):
-        candidate.extraction_blocked = _extraction_hits(fastener, frame, geometry, mount, scene)
+        candidate.way_out = _way_out(fastener, frame, geometry, mount, scene)
+        candidate.extraction_blocked = candidate.way_out.hits if candidate.way_out else ()
         if candidate.turns and candidate.extraction_blocked:
             candidate.stuck = True
             candidate.stuck_on = candidate.extraction_blocked
@@ -515,21 +531,24 @@ def _tried_iter(attempts_iter: Iterator[Attempt], tried: list[Attempt]) -> Itera
         yield attempt
 
 
-def _extraction_hits(
+def _way_out(
     fastener: Fastener,
     frame: _Frame,
     geometry: _Geometry,
     mount: Mount,
     scene: Scene,
-) -> tuple[str, ...]:
-    """What stands in the screw's way out: head's circle swept its length past the seat."""
+) -> Probe | None:
+    """The screw's way out, head's circle swept its length past the seat, and what's in it.
+
+    None when there is no length to sweep.
+    """
     length = fastener.length_mm
     if length is None:
         length = frame.extent - geometry.band_height
     if length <= 0:
-        return ()
+        return None
     swept = mount.place(axial_cylinder(geometry.circumradius, 0.0, length))
-    return scene.hits(swept)
+    return Probe(swept, scene.hits(swept))
 
 
 # ---------------------------------------------------------------------------
@@ -588,6 +607,7 @@ def _finish(
         blockers=candidate.blockers,
         stuck_on=stuck_on,
         attempts=candidate.attempts,
+        way_out=candidate.way_out,
         reason=reason,
         axis=candidate.axis,
         seat=candidate.seat,

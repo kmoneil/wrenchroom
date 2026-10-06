@@ -1,0 +1,6 @@
+{
+  "three": "0.186.1",
+  "integrity": "sha512-blFeqb49wRCSGUGj7gtpfnSGHy2lwDk94RhUmS1c/hTby70kvChbWpkJ4Pm1390LqzzvTmzgXKHPEafJwCb8jA==",
+  "esbuild": "0.28.2",
+  "sha256": "edd9e09ee8dd13c99fbfee2a98016ddb1e8345c1e2b2050e6a96996d107a4ea5"
+}
