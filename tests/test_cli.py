@@ -24,10 +24,11 @@ def test_version_reports_the_package_version():
     assert wrenchroom.__version__ in result.output
 
 
-def test_unbuilt_commands_exit_not_covered():
-    result = CliRunner().invoke(main, ["detect", "model.step"])
-    assert result.exit_code == EXIT_NOT_COVERED
-    assert "not built yet" in result.output
+def test_every_command_is_built():
+    for command in ("check", "detect", "explain", "tools"):
+        result = CliRunner().invoke(main, [command, "--help"])
+        assert result.exit_code == 0
+        assert "not built" not in result.output
 
 
 def test_tools_lists_the_kit_with_its_caveats():

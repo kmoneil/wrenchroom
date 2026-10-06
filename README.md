@@ -15,7 +15,7 @@ re-order seen late, and a collision check can't see it either way.
 ## Status
 
 **`wrenchroom check` works on real STEP files, finds fasteners by their names and
-solids, and is fast enough for CI.** What exists today (M1 to M3, and most of M4):
+solids, and is fast enough for CI.** What exists today (M1 to M4):
 
 - `wrenchroom check model.step` reads a STEP assembly (names kept, repeats made
   unique), takes fastener descriptions from a `wrenchroom.yaml` sidecar, resolves each
@@ -33,7 +33,7 @@ solids, and is fast enough for CI.** What exists today (M1 to M3, and most of M4
   screw that turns but can't come out is `stuck`), states (parts removed, another
   model of the mechanism, retries that say where a fastener passed), `explain`
   (every attempt for one fastener, with the blockers) and `tools` (the kit's
-  dimensions, caveats inline) all work. `detect` exits 2 until M4 delivers it.
+  dimensions, caveats inline) all work.
 - No sidecar needed for named parts. Fasteners are found from their part names (ISO
   and DIN designations, McMaster-Carr numbers, descriptions such as `M6x20 SHCS` or
   `hex nut M8`, code-CAD names such as `lift_link_bolt`) and completed from their
@@ -41,8 +41,12 @@ solids, and is fast enough for CI.** What exists today (M1 to M3, and most of M4
   bolt's square neck) and the size that drive or the shank gives. A sidecar rule still
   describes a part outright, `across_flats:` gives a hex its measured size, and
   `checks: {detect: false}` turns detection off. With every fastener rule removed, the
-  golden bench's 36 are all found with the right kind and size. `wrenchroom detect`,
-  which writes the sidecar for you to correct and keep, is next.
+  golden bench's 36 are all found with the right kind and size.
+- `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
+  correct and keep: one rule per fastener, and above each a comment with how sure
+  detection was, what found it, the axis it resolved and how the part fares now. A
+  fastener found but not understood (a set screw, say) is written commented out with
+  its reason, for you to complete. Kept as written, the file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
   504 fasteners is read and checked in about 7 s on an Apple M5 Max laptop (the

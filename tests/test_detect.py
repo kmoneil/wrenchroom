@@ -241,3 +241,31 @@ def test_a_nut_whose_size_has_no_spanner_is_not_covered_not_a_crash():
     (result,) = run(nut, {"fasteners": [rule], "checks": {"detect": False}}).results
     assert result.verdict is Verdict.NOT_COVERED
     assert result.reason == "no across-flats for M3.5"
+
+
+# ---------------------------------------------------------------------------
+# Confidence: what the evidence supports, for the sidecar detect writes.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("name", "shape", "level"),
+    [
+        ("ISO 4762 M6x20", lambda: socket_screw("M6"), "high"),  # standard, socket shown
+        ("frame_bolt", lambda: hex_bolt("M8"), "high"),  # hex shown, size settled by it
+        ("frame_nut", lambda: hex_nut("M10"), "high"),
+        ("button head screw M6", lambda: socket_screw("M6", pocket=False), "high"),  # name says all
+        ("lift_bolt", lambda: socket_screw("M6", pocket=False), "medium"),  # head by outline
+        ("frame_screw", pan_phillips, "medium"),  # size from the shank alone
+        ("set screw M6x10", lambda: Cylinder(3, 10), "low"),  # not covered
+        ("bolt", lambda: Box(5, 5, 5), "low"),  # nothing measurable, no size
+    ],
+)
+def test_confidence_follows_the_evidence(name, shape, level):
+    assert detected(name, shape()).confidence == level
+
+
+def test_a_sidecar_fastener_has_no_confidence():
+    config = Config.from_dict({"fasteners": [{"parts": "bolt", "size": "M6", "head": "socket"}]})
+    (fastener,) = config.apply(screw_facing_wall(50.0)).fasteners
+    assert fastener.confidence == ""
