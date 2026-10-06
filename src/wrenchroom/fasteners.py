@@ -145,3 +145,105 @@ class Fastener:
     def self_holding(self) -> bool:
         """A carriage bolt holds itself: never turned, never extracted."""
         return self.head is Head.CARRIAGE
+
+
+# ---------------------------------------------------------------------------
+# Drive tables: which tool size a head takes. Metric only until the imperial
+# kit (M6). A size missing from a table is a statement: that head does not
+# come in that size, and the checker says `not-covered` rather than guessing.
+#
+# Values marked "catalogue" are common across supplier catalogues but not yet
+# read out of the standard document itself; replace the marker when checked.
+# ---------------------------------------------------------------------------
+
+#: ISO 4762 socket head cap screws: thread -> hexagon socket across-flats, mm.
+#: Checked 2026-10-06 against engineersedge.com's ISO 4762 table.
+SOCKET_KEY_AF: dict[str, float] = {
+    "M3": 2.5,
+    "M4": 3.0,
+    "M5": 4.0,
+    "M6": 5.0,
+    "M8": 6.0,
+    "M10": 8.0,
+    "M12": 10.0,
+    "M14": 12.0,  # catalogue
+    "M16": 14.0,
+    "M18": 14.0,  # catalogue
+    "M20": 17.0,
+    "M22": 17.0,  # catalogue
+    "M24": 19.0,
+}
+
+#: ISO 7380-1 button head screws: thread -> socket across-flats, mm.
+#: Checked 2026-10-06 against trfastenings.com's ISO 7380 table (M3..M12).
+BUTTON_KEY_AF: dict[str, float] = {
+    "M3": 2.0,
+    "M4": 2.5,
+    "M5": 3.0,
+    "M6": 4.0,
+    "M8": 5.0,
+    "M10": 6.0,
+    "M12": 8.0,
+    "M16": 10.0,  # catalogue
+}
+
+#: ISO 10642 countersunk (flat) head screws: thread -> socket across-flats, mm.
+#: Checked 2026-10-06 against accu-components.com product pages (M3..M12) and
+#: engineersedge.com's ISO 10642 note; the spec's own M8 -> 5 example agrees.
+FLAT_KEY_AF: dict[str, float] = {
+    "M3": 2.0,
+    "M4": 2.5,
+    "M5": 3.0,
+    "M6": 4.0,
+    "M8": 5.0,
+    "M10": 6.0,
+    "M12": 8.0,
+    "M14": 10.0,  # catalogue
+    "M16": 10.0,  # catalogue
+    "M20": 12.0,  # catalogue
+}
+
+#: ISO 4032 hex nuts and ISO 4017 hex head bolts: thread -> across-flats, mm.
+#: Checked 2026-10-06 against wermac.org's DIN/ISO nut table. Note the ISO/DIN
+#: split: DIN 934 gives M10 -> 17, M12 -> 19, M14 -> 22, M22 -> 32; these are the
+#: ISO values, and a DIN-dimensioned model will need the sidecar's `tool:` until
+#: detection learns to measure the hex instead of trusting the thread.
+HEX_AF: dict[str, float] = {
+    "M3": 5.5,
+    "M4": 7.0,
+    "M5": 8.0,
+    "M6": 10.0,
+    "M8": 13.0,
+    "M10": 16.0,
+    "M12": 18.0,
+    "M14": 21.0,
+    "M16": 24.0,
+    "M18": 27.0,  # catalogue
+    "M20": 30.0,
+    "M22": 34.0,  # catalogue
+    "M24": 36.0,
+}
+
+_KEY_TABLES: dict[Head, dict[str, float]] = {
+    Head.SOCKET: SOCKET_KEY_AF,
+    Head.BUTTON: BUTTON_KEY_AF,
+    Head.FLAT: FLAT_KEY_AF,
+}
+
+
+def hex_key_af(head: Head, size: Size) -> float | None:
+    """The hex key a head takes, in across-flats mm, or None when there isn't one.
+
+    None means "no hex key applies": a hex head takes a spanner, a Phillips a
+    driver, and a size absent from its head's table has no standard key, which
+    the caller reports as `not-covered` rather than rounding to a neighbour.
+    """
+    table = _KEY_TABLES.get(head)
+    if table is None:
+        return None
+    return table.get(size.designation)
+
+
+def spanner_af(size: Size) -> float | None:
+    """The across-flats a hex head or nut presents to a spanner, in mm."""
+    return HEX_AF.get(size.designation)
