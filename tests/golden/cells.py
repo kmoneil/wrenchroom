@@ -242,11 +242,26 @@ CELLS.append(
         (GLAND_RULE,),
         {
             # The neighbour's corner is 32 - 13.9 = 18.1 from the axis, inside the
-            # ring's outer r 21.2. The socket (r 15.6) would fit and pass falsely
-            # over the ignored cable: socket: false is what makes this right
-            # (test_socket_flag_matters proves the flag is load-bearing).
-            "a_gland": {"verdict": "blocked", "tool": "spanner-24", "blocked_by": ["b_gland"]},
-            "b_gland": {"verdict": "blocked", "tool": "spanner-24", "blocked_by": ["a_gland"]},
+            # ring's outer r 21.2: no ring. The socket (r 15.6) would fit and pass
+            # falsely over the ignored cable: socket: false is what makes this right
+            # (test_socket_flag_matters proves the flag is load-bearing). Until M6
+            # that left both blocked. The open end (M6) is the side approach this
+            # cell was waiting for (GOLDEN-BENCH section 6): handle pointing away
+            # from the neighbour, the jaw (52 wide, tips 12 past the centre) stops
+            # 6 short of its corner, and the arms' outer tip corners (r 28.6, 65 deg
+            # off the line of centres) swing +/-15 deg while the neighbour spans
+            # +/-23 deg at that radius; the gland's own corners (r 13.9, 14.2 with
+            # the clearance) clear the neighbour's 18.1, so it can turn at all.
+            "a_gland": {
+                "verdict": "turns",
+                "tool": "spanner-24",
+                "how": "open end, full length",
+            },
+            "b_gland": {
+                "verdict": "turns",
+                "tool": "spanner-24",
+                "how": "open end, full length",
+            },
         },
         ("*_cable",),
     )
@@ -275,7 +290,10 @@ CELLS.append(
 def gland_rib():
     """The ring must sit on the hex (0..8 up), where the rib (top at 6, inner
     face 16 from the axis, ring outer r 21.2) is in the way; the dome above is
-    round and grips nothing. Axis given on purpose: this tests placement alone."""
+    round and grips nothing. Axis given on purpose: this tests placement alone.
+    The open end (M6), handle away from the rib, holds at that one angle (tips
+    at 12, short of 16) but swung 15 deg its arms' outer tips reach 18.3, into
+    the rib: it holds, can't turn, and with no partner it stays blocked."""
     return [
         ("plate", plate(holes=[(0, 0, 10)])),
         ("gland", gland()),

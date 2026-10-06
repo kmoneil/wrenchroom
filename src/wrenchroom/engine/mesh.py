@@ -329,8 +329,10 @@ def _unit_mesh(primitive: Primitive) -> tuple[Manifold, np.ndarray]:
         case RadialCylinder(radius=radius, r0=r0, r1=r1, z=z, phi_deg=phi):
             local = _turn_z(phi) @ _translate(r0, 0.0, z) @ _Z_TO_X
             return _cylinder(radius, r1 - r0), local
-        case RadialBox(width=width, thickness=thickness, r0=r0, r1=r1, z=z, phi_deg=phi):
-            local = _turn_z(phi) @ _translate(r0, -width / 2, z - thickness / 2)
+        case RadialBox(
+            width=width, thickness=thickness, r0=r0, r1=r1, z=z, phi_deg=phi, offset=offset
+        ):
+            local = _turn_z(phi) @ _translate(r0, offset - width / 2, z - thickness / 2)
             return _cube(r1 - r0, width, thickness), local
     msg = f"no mesh for {primitive!r}"
     raise TypeError(msg)

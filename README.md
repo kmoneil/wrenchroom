@@ -21,9 +21,9 @@ to M5):
 - `wrenchroom check model.step` reads a STEP assembly (names kept, repeats made
   unique), takes fastener descriptions from a `wrenchroom.yaml` sidecar, resolves each
   fastener's seat and axis from its geometry, and tries real tools against the real
-  parts: metric hex keys (driver straight in, short leg, long leg), ring spanners (full
-  and stubby), sockets on a ratchet with stock extensions, Phillips and slotted
-  drivers. Verdicts per fastener with every blocker named; terminal table, JSON
+  parts: metric hex keys (driver straight in, short leg, long leg), combination
+  spanners (the ring, then the open end from the side, each full and stubby), sockets
+  on a ratchet with stock extensions, Phillips and slotted drivers. Verdicts per fastener with every blocker named; terminal table, JSON
   (`--json`), Markdown for a CI job summary or a PR comment (`--md`), exit codes for
   CI (0 pass, 1 a fastener fails, 2 not covered or config error). Names come from the
   model, so the terminal shows control characters written out and the Markdown puts

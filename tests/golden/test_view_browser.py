@@ -119,7 +119,7 @@ def _node(page, arg):
 def test_every_failure_is_drawn_red_with_its_blockers_in_node(bench_page):
     page, view = bench_page
     failing = _failing(view)
-    assert len(failing) == 11
+    assert len(failing) == FINAL_COUNTS["blocked"] + FINAL_COUNTS["stuck"]
     with ThreadPoolExecutor(max_workers=4) as pool:
         loads = list(pool.map(lambda f: _node(page, _hash(f["name"]))[0], failing))
     for entry, load in zip(failing, loads, strict=True):
@@ -340,12 +340,15 @@ def test_failures_show_red_and_their_blockers_magenta_on_screen(bench_page, tmp_
     page, _ = bench_page
     shots = {
         hash_: _screenshot(chrome, tmp_path, page, hash_)
-        for hash_ in ("", "#key_wall_near_screw", "#glands_close_a_gland")
+        for hash_ in ("", "#key_wall_near_screw", "#gland_rib_gland")
     }
     # The overview: nothing is highlighted until a fastener is chosen.
     assert shots[""][0] == 0, shots
     # A screw under a wall: from above, the highlighted wall fills the frame.
     assert shots["#key_wall_near_screw"][0] > 2000, shots
-    # Two glands too close: the chosen one red, its neighbour magenta, both in view.
-    assert shots["#glands_close_a_gland"][0] > 300, shots
-    assert shots["#glands_close_a_gland"][1] > 100, shots
+    # A gland beside a rib: the gland red, the rib in its way magenta, both in view.
+    # The open end's fan of 24 positions, drawn over it, hides most of the low rib:
+    # CI measured 129 magenta and 617 red pixels (2026-10-06); the floors keep
+    # about 2.5 times margin under those.
+    assert shots["#gland_rib_gland"][0] > 50, shots
+    assert shots["#gland_rib_gland"][1] > 250, shots

@@ -34,6 +34,9 @@ PRIMITIVES = [
     AxialRing(3.5, 5.5, 0.1, 1.1),  # a free-face probe
     *(RadialCylinder(2.835, 0.0, 85.0, 33.3, phi) for phi in (0.0, 15.0, 90.0, 187.5, 345.0)),
     *(RadialBox(16.0, 10.0, 18.0, 180.0, 50.0, phi) for phi in (0.0, 30.0, 135.0, 270.0)),
+    # An open-end jaw's arms: off to either side, reaching past the axis.
+    *(RadialBox(6.0, 4.9, -7.15, 7.6, 2.5, phi, 8.0) for phi in (0.0, 75.0, 200.0)),
+    RadialBox(6.0, 4.9, -7.15, 7.6, 2.5, 45.0, -8.0),
 ]
 
 

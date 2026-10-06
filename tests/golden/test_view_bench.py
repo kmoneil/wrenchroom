@@ -56,7 +56,7 @@ def test_every_blocked_and_stuck_cell_is_red_with_its_blockers(bench_view, bench
 
 def test_the_hand_worked_blockers_are_not_vacuous(bench_truth):
     named = [t for t in bench_truth.values() if t.get("blocked_by") or t.get("stuck_on")]
-    assert len(named) >= 8
+    assert len(named) >= 6  # 8 until M6's open end turned glands_close's two
 
 
 def test_nothing_that_passes_is_red(bench_view):

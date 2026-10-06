@@ -98,9 +98,12 @@ class RadialCylinder:
 
 @dataclass(frozen=True)
 class RadialBox:
-    """A box along ``u(phi)`` at height ``z``, from ``r0`` to ``r1``: a handle.
+    """A box along ``u(phi)`` at height ``z``, from ``r0`` to ``r1``: a handle, a jaw.
 
-    ``width`` is across the handle (tangential), ``thickness`` along the axis.
+    ``width`` is across the box (tangential), ``thickness`` along the axis, and
+    ``offset`` moves it sideways, tangentially, off the line through the axis
+    (an open-end jaw's arms, either side of the hex). ``r0`` may be negative: the
+    box then reaches past the axis.
     """
 
     width: float
@@ -109,17 +112,22 @@ class RadialBox:
     r1: float
     z: float
     phi_deg: float
+    offset: float = 0.0
 
     def shape(self) -> Shape:
         """The OCP solid, in the local frame."""
         length = self.r1 - self.r0
-        handle = Pos(self.r0 + length / 2, 0, self.z) * Box(length, self.width, self.thickness)
-        return Rot(0, 0, self.phi_deg) * handle
+        box = Pos(self.r0 + length / 2, self.offset, self.z) * Box(
+            length, self.width, self.thickness
+        )
+        return Rot(0, 0, self.phi_deg) * box
 
     def local_bounds(self) -> Bounds:
         """The axis-aligned box of the solid, in the local frame."""
         w, t = self.width / 2, self.thickness / 2
-        return _rotated_bounds((self.r0, -w, self.z - t), (self.r1, w, self.z + t), self.phi_deg)
+        low = (self.r0, self.offset - w, self.z - t)
+        high = (self.r1, self.offset + w, self.z + t)
+        return _rotated_bounds(low, high, self.phi_deg)
 
 
 Primitive = AxialCylinder | AxialRing | RadialCylinder | RadialBox
