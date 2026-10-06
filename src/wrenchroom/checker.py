@@ -190,11 +190,18 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         hand_room=tools.hand_room,
         models=models,
         ignored=frozenset(
-            name
+            part.name
             for state_model in models.values()
-            for name in state_model.assembly.names
-            if config.is_ignored(name)
+            for part in state_model.assembly
+            if _ignored(config, part)
         ),
+    )
+
+
+def _ignored(config: Config, part: Part) -> bool:
+    """An ignore glob takes the part out, by its own name or, for a piece, its leaf's."""
+    return config.is_ignored(part.name) or (
+        part.piece_of is not None and config.is_ignored(part.piece_of)
     )
 
 
@@ -212,7 +219,9 @@ def _fasteners(
     if config.detect:
         named = {f.name for f in described}
         detection = find(
-            part for part in assembly if part.name not in named and not config.is_ignored(part.name)
+            part
+            for part in assembly
+            if part.name not in named and part.piece_of is None and not config.is_ignored(part.name)
         )
         found += detection.fasteners
         passed = detection.passed_over
@@ -408,7 +417,7 @@ class _StateSpace:
         # Memoised: the ignore globs are tried once per name, not once per scene.
         ignored = self._ignored.get(part.name)
         if ignored is None:
-            ignored = self._ignored[part.name] = self._config.is_ignored(part.name)
+            ignored = self._ignored[part.name] = _ignored(self._config, part)
         return ignored
 
     def resolve(self, state_name: str | None) -> tuple[Assembly, frozenset[str], bool]:
@@ -515,7 +524,8 @@ def _try_in_state(
         except NotCovered as exc:
             return _Candidate(fastener, reason=str(exc), state=state_name)
     mates = {name for name in assembly.names if is_mate(name, fastener.mates)}
-    scene = space.scene(assembly, {fastener.name, *mates} | removed)
+    pieces = assembly.pieces(fastener.name)  # its other solids, which go with it
+    scene = space.scene(assembly, {fastener.name, *mates, *pieces} | removed)
     try:
         mount, geometry = _orient(frame, fastener, scene)
     except NotCovered as exc:

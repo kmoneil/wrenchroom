@@ -99,9 +99,14 @@ def test_every_part_is_drawn_and_marked(bench_view, bench_report):
     names = _names(bench_view, overview["parts"])
     assert sorted(names) == sorted(bench_report.models[None].assembly.names)
     roles = {part["name"]: part["role"] for part in bench_view["parts"]}
-    assert {n for n, role in roles.items() if role == "fastener"} == {
-        r.fastener.name for r in bench_report.results
-    }
+    # A fastener's pieces (issue #28: a leaf of several solids) are drawn as it.
+    assembly = bench_report.models[None].assembly
+    fastener_names = {r.fastener.name for r in bench_report.results}
+    pieces = {part.name for part in assembly if part.piece_of in fastener_names}
+    assert pieces == {"one_part_lock_nut#2"}
+    assert {n for n, role in roles.items() if role == "fastener"} == fastener_names | pieces
+    owners = {part["name"]: part["owner"] for part in bench_view["parts"] if part["owner"]}
+    assert owners == {"one_part_lock_nut#2": "one_part_lock_nut"}
     assert {n for n, role in roles.items() if role == "ignored"} == set(bench_report.ignored)
     assert bench_report.ignored  # the bench ignores its hoses and wires
     assert all(part["shape"] is not None for part in bench_view["parts"])

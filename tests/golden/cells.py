@@ -15,7 +15,7 @@ cannot change the answer.
 import math
 from dataclasses import dataclass, field
 
-from build123d import Box, Cylinder, Pos, Rot
+from build123d import Box, Compound, Cylinder, Pos, Rot
 from parts import (
     button_screw,
     carriage_bolt,
@@ -832,3 +832,30 @@ def rubber():
     panel = Pos(0, 0, 3) * (Box(80, 80, 3) - Cylinder(2.2, 3))
     screw = Pos(0, 0, -1.5) * Cylinder(2, 12) + Pos(0, 0, 5.6) * Cylinder(3.8, 2.2)
     return [("wall", wall), ("well_nut", flange + body), ("panel", panel), ("screw", screw)]
+
+
+@cell(
+    "one_part_lock",
+    [
+        {"parts": "bolt", "kind": "screw", "head": "hex", "size": "M6"},
+        {"parts": "nut", "kind": "nut", "size": "M6"},
+    ],
+    {
+        "bolt": {"verdict": "turns", "tool": "spanner-10", "how": "ring, full length"},
+        "nut": {"verdict": "turns", "tool": "spanner-10", "how": "ring, full length"},
+    },
+)
+def one_part_lock():
+    """nyloc_two_bodies drawn as one part of two solids, the nut and its nylon dome
+    (issue #28). Read from STEP it is split one part per solid; the nut, the larger,
+    keeps the name and the dome is a piece of it, so no rule or mate is needed: the
+    dome leaves the nut's scene with it and the free face reads clear. It used to be
+    two fasteners, the dome a sizeless "nut" that wasn't covered.
+    """
+    dome = Pos(0, 0, 5.2 + 1.25) * (Cylinder(4.8, 2.5) - Cylinder(3, 3))
+    nut = hex_nut(6, 10, 5.2)
+    return [
+        ("plate", plate(holes=[(0, 0, 3)])),
+        ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(6, 20, 10, 4.0)),
+        ("nut", Compound([dome.solid(), nut.solid()])),  # the dome first, as drawn
+    ]

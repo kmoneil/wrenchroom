@@ -80,9 +80,18 @@ def test_isolation_matches_the_full_bench(bench_json, bench_dir, bench_engine):
 
 
 def test_round_trip_names(bench_dir):
-    expected = sorted(shape.label for shape in build())
+    # A part of several solids reads as one per solid, the rest numbered after it
+    # and marked as its pieces (issue #28): only one_part_lock's nut has two.
+    expected, pieces = [], {}
+    for shape in build():
+        expected.append(shape.label)
+        for k in range(2, len(shape.solids()) + 1):
+            expected.append(f"{shape.label}#{k}")
+            pieces[f"{shape.label}#{k}"] = shape.label
     assembly = Assembly.from_step(bench_dir / "bench.step")
-    assert sorted(assembly.names) == expected
+    assert sorted(assembly.names) == sorted(expected)
+    assert {p.name: p.piece_of for p in assembly if p.piece_of} == pieces
+    assert pieces == {"one_part_lock_nut#2": "one_part_lock_nut"}
 
 
 def test_socket_false_is_load_bearing():

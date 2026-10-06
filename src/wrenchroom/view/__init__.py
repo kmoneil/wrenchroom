@@ -261,7 +261,10 @@ class _Builder:
                     {
                         "name": part.name,
                         "label": printable(part.name),
-                        "role": self._role(part.name),
+                        # A piece of a leaf drawn as several solids is drawn,
+                        # picked and coloured as the part it is a piece of.
+                        "owner": part.piece_of,
+                        "role": self._role(part.piece_of or part.name),
                         "shape": None if arrays is None else self._shape(*arrays),
                     }
                 )

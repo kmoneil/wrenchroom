@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 52,
-  "turns": 38,
+  "fasteners": 54,
+  "turns": 40,
   "held": 3,
   "blocked": 9,
   "stuck": 1,
@@ -935,6 +935,60 @@
    "reason": "cannot tell the nut's free face: both ends are covered"
   },
   {
+   "name": "one_part_lock_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    5000.0,
+    5000.0,
+    -14.0
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-10",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "one_part_lock_nut",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "one_part_lock_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    5000.0,
+    5000.0,
+    5.2
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-10",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "one_part_lock_bolt",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
    "name": "pair_both_hold_bolt",
    "kind": "screw",
    "head": "hex",
@@ -1446,8 +1500,8 @@
     1.0
    ],
    "seat": [
-    4900.0,
-    5000.0,
+    -100.0,
+    6000.0,
     6.0
    ],
    "source": "name+geometry",
@@ -1475,8 +1529,8 @@
     1.0
    ],
    "seat": [
-    5100.0,
-    5000.0,
+    100.0,
+    6000.0,
     6.0
    ],
    "source": "name+geometry",

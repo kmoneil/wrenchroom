@@ -144,7 +144,8 @@ def test_the_overview_colours_every_fastener_by_its_verdict_in_node(bench_page):
     assert set(by_part) == set(view["views"][view["overview"]]["parts"])
     for index, colour in by_part.items():
         part = view["parts"][index]
-        assert colour == colour_of.get(part["name"], COLOURS["part"]), part["name"]
+        owner = part["owner"] or part["name"]  # a piece is coloured as its fastener
+        assert colour == colour_of.get(owner, COLOURS["part"]), part["name"]
     assert record["tools"] == {"hit": 0, "clear": 0}
     assert load["panel"]["fasteners"] == len(view["fasteners"]) == FINAL_COUNTS["fasteners"]
     assert load["panel"]["detail_hidden"] is True
@@ -174,6 +175,22 @@ def test_a_fastener_reached_in_another_state_is_drawn_in_it_in_node(
     colours = {part: colour for part, colour, _ in record["parts"]}
     assert colours[entry["part"]] == COLOURS["elsewhere"]
     assert record["tools"]["clear"] > 0
+
+
+def test_a_fastener_s_piece_is_drawn_as_it_in_node(bench_page):
+    # Issue #28: one_part_lock's nut is two solids, the nut and its dome. Both are
+    # painted as the fastener, selected or not; the bench's other parts are not.
+    page, view = bench_page
+    name = "one_part_lock_nut"
+    index = [f["name"] for f in view["fasteners"]].index(name)
+    entry = view["fasteners"][index]
+    piece = [p["name"] for p in view["parts"]].index(f"{name}#2")
+    for load in (_node(page, _hash(name))[0], _node(page, "")[0]):
+        drawn = {part: (colour, opacity) for part, colour, opacity in load["drawn"]["parts"]}
+        assert drawn[piece] == drawn[entry["part"]]
+        assert drawn[piece][0] == entry["colour"]
+    selected = {part: opacity for part, _, opacity in _node(page, _hash(name))[0]["drawn"]["parts"]}
+    assert selected[piece] == 1  # not ghosted as another part would be
 
 
 def test_an_unknown_hash_shows_everything_and_says_so_in_node(bench_page):
