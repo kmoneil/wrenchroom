@@ -1,0 +1,994 @@
+{
+ "schema": 1,
+ "model": "bench.step",
+ "kit": "metric-home",
+ "summary": {
+  "fasteners": 35,
+  "turns": 21,
+  "held": 1,
+  "blocked": 13,
+  "stuck": 0,
+  "not_covered": 0
+ },
+ "unmatched_rules": [],
+ "unmatched_ignores": [],
+ "fasteners": [
+  {
+   "name": "carriage_boxed_bolt",
+   "kind": "screw",
+   "head": "carriage",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    2000.0,
+    3.9
+   ],
+   "source": "sidecar",
+   "tool": null,
+   "verdict": "held",
+   "how": "holds itself",
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "carriage_boxed_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    3000.0,
+    2000.0,
+    -11.2
+   ],
+   "source": "sidecar",
+   "tool": "spanner-10",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "free_screw_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1000.0,
+    3000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "turns",
+   "how": "short leg in",
+   "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "gland_rib_gland",
+   "kind": "nut",
+   "head": null,
+   "size": "M16",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    2000.0,
+    22.0
+   ],
+   "source": "sidecar",
+   "tool": "spanner-24",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "gland_rib_rib"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "glands_apart_a_gland",
+   "kind": "nut",
+   "head": null,
+   "size": "M16",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4970.0,
+    1000.0,
+    22.0
+   ],
+   "source": "sidecar",
+   "tool": "spanner-24",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "glands_apart_b_gland"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "glands_apart_b_gland",
+   "kind": "nut",
+   "head": null,
+   "size": "M16",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    5030.0,
+    1000.0,
+    22.0
+   ],
+   "source": "sidecar",
+   "tool": "spanner-24",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "glands_close_a_gland",
+   "kind": "nut",
+   "head": null,
+   "size": "M16",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3984.0,
+    1000.0,
+    22.0
+   ],
+   "source": "sidecar",
+   "tool": "spanner-24",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "glands_close_b_gland"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "glands_close_b_gland",
+   "kind": "nut",
+   "head": null,
+   "size": "M16",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4016.0,
+    1000.0,
+    22.0
+   ],
+   "source": "sidecar",
+   "tool": "spanner-24",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "glands_close_a_gland"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "hex_side_wall_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4000.0,
+    0.0,
+    5.3
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "hex_side_wall_wall"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "key_long_leg_screw",
+   "kind": "screw",
+   "head": "button",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    0.0,
+    3.3
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-4",
+   "verdict": "turns",
+   "how": "long leg in",
+   "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "key_open_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    0.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "key_wall_far_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1000.0,
+    0.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "turns",
+   "how": "short leg in",
+   "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "key_wall_near_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    0.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "key_wall_near_wall"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "nut_deep_well_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M10",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    0.0,
+    1000.0,
+    -16.4
+   ],
+   "source": "sidecar",
+   "tool": "spanner-16",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "nut_deep_well_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M10",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    1000.0,
+    8.4
+   ],
+   "source": "sidecar",
+   "tool": "socket-16",
+   "verdict": "turns",
+   "how": "socket, 50 mm extension",
+   "swing_deg": 15.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "nut_stubby_box_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    5000.0,
+    0.0,
+    -14.0
+   ],
+   "source": "sidecar",
+   "tool": "spanner-10",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "nut_stubby_box_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    5000.0,
+    0.0,
+    5.2
+   ],
+   "source": "sidecar",
+   "tool": "spanner-10",
+   "verdict": "turns",
+   "how": "ring, stubby",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "nyloc_two_bodies_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    2000.0,
+    2000.0,
+    -14.0
+   ],
+   "source": "sidecar",
+   "tool": "spanner-10",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "nyloc_two_bodies_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    2000.0,
+    5.2
+   ],
+   "source": "sidecar",
+   "tool": "spanner-10",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "pair_both_hold_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    5000.0,
+    2000.0,
+    5.3
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "pair_both_hold_pocket_high"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "pair_both_hold_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    5000.0,
+    2000.0,
+    -16.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "pair_both_hold_pocket_low"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "pair_nut_held_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4000.0,
+    2000.0,
+    5.3
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "pair_nut_held_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    4000.0,
+    2000.0,
+    -16.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "pair_nut_held_pocket"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "phillips_open_screw",
+   "kind": "screw",
+   "head": "phillips",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1000.0,
+    1000.0,
+    3.1
+   ],
+   "source": "sidecar",
+   "tool": "driver-ph2",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "phillips_shelf_screw",
+   "kind": "screw",
+   "head": "phillips",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    1000.0,
+    3.1
+   ],
+   "source": "sidecar",
+   "tool": "driver-ph2",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "phillips_shelf_shelf"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "state_lever_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    3000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "state_lever_lever"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "state_lid_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    3000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "state_lid_lid"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "stuck_screw_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    3000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "turns",
+   "how": "short leg in",
+   "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "tail_in_socket_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M10",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    4000.0,
+    3000.0,
+    -16.4
+   ],
+   "source": "sidecar",
+   "tool": "spanner-16",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "tail_in_socket_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M10",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4000.0,
+    3000.0,
+    8.4
+   ],
+   "source": "sidecar",
+   "tool": "socket-16",
+   "verdict": "turns",
+   "how": "socket on ratchet",
+   "swing_deg": 15.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "tail_too_long_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M10",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    5000.0,
+    3000.0,
+    -16.4
+   ],
+   "source": "sidecar",
+   "tool": "spanner-16",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "tail_too_long_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M10",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    5000.0,
+    3000.0,
+    8.4
+   ],
+   "source": "sidecar",
+   "tool": "spanner-16",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "tail_too_long_collar",
+    "tail_too_long_bolt"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "tapped_hold_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    1000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "tapped_hold_ceiling",
+    "tapped_hold_slot"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "twins_b_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    900.0,
+    4000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "twins_wall"
+   ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "wire_across_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1000.0,
+    2000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  }
+ ]
+}

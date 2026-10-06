@@ -61,8 +61,16 @@ Python 3.13+, managed with [uv](https://docs.astral.sh/uv/).
 $ uv sync
 $ uv run python scripts/lanes.py          # the table of lanes
 $ uv run python scripts/lanes.py gates    # ruff lint, ruff format, ty
-$ uv run python scripts/lanes.py fast     # the unit suite
+$ uv run python scripts/lanes.py fast     # the unit suite, golden bench included
+$ uv run python scripts/lanes.py golden   # only the bench: truth, counts, snapshot
 ```
+
+The golden bench (`tests/golden/`) is a generated assembly of small cells, one
+mechanism each, with every verdict worked out by hand; features that haven't landed
+yet are strict xfails naming their milestone. `uv run python scripts/golden.py --out
+some-dir` writes `bench.step` and its sidecars for you to open and check against; a
+nightly job re-runs the bench against upgraded dependencies so a CAD-kernel update
+that moves a verdict shows up before it lands.
 
 CI runs the same lanes by the same names; `scripts/lanes.py` is the only spelling of how
 this project runs its checks.

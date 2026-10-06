@@ -52,8 +52,13 @@ LANES: tuple[Lane, ...] = (
     ),
     Lane(
         name="fast",
-        summary="the unit suite",
+        summary="the unit suite, golden bench included",
         steps=(("pytest",),),
+    ),
+    Lane(
+        name="golden",
+        summary="only the golden bench: truth, counts, isolation, snapshot",
+        steps=(("pytest", "tests/golden"),),
     ),
 )
 

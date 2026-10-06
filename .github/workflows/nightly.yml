@@ -1,0 +1,36 @@
+# The golden bench against tomorrow's dependencies.
+#
+# The per-push lanes run `uv sync --frozen`: they prove this code against the lock.
+# This one syncs with `--upgrade` first, so a new OCP or build123d that moves a
+# bench verdict shows up here before a Dependabot PR lands it. It opens nothing and
+# pushes nothing; a failure is just a red run for a person to read.
+#
+# Same SHA-pinning rule as ci.yml.
+
+name: nightly
+
+on:
+  schedule:
+    - cron: "41 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  golden-upgraded:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+      - run: uv python install ${{ matrix.python }}
+      - run: uv lock --upgrade
+      - run: uv sync --python ${{ matrix.python }}
+      - run: uv run python scripts/lanes.py golden
