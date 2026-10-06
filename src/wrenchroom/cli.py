@@ -163,5 +163,46 @@ def explain(
 @main.command()
 @click.option("--kit", default="metric-home", show_default=True, help="Which tool kit.")
 def tools(kit: str) -> None:
-    """List the kit's tools and their dimensions."""
-    _not_built("tools")
+    """List the kit's tools and their dimensions, citations and approximations.
+
+    Today this lists every tool the checker can deploy, derived from the same
+    tables the sweeps read, so what you see is exactly what gets tried. Strict
+    kit membership (metric-home's spanner range against full's) arrives with
+    the M6 kit work.
+    """
+    from wrenchroom.check import KITS
+    from wrenchroom.fasteners import HEX_AF
+    from wrenchroom.tools.drivers import SHAFT_RADIUS
+    from wrenchroom.tools.hex_keys import ISO_2936
+    from wrenchroom.tools.sockets import EXTENSION_LENGTHS, socket_for
+    from wrenchroom.tools.spanners import spanner_for
+
+    if kit not in KITS:
+        click.echo(f"error: unknown kit {kit!r}; available: {', '.join(KITS)}", err=True)
+        sys.exit(EXIT_NOT_COVERED)
+    click.echo(f"kit {kit}\n")
+    click.echo("hex keys (DIN ISO 2936:2016-10; all mm):")
+    for key in ISO_2936.values():
+        click.echo(
+            f"  hex-key-{key.af:<6g} across flats {key.af:<5g} "
+            f"long arm {key.long_mm:<6g} short arm {key.short_mm:g}"
+        )
+    click.echo("\nring spanners, full and stubby (approximate until DIN 3113 is read out):")
+    for af in sorted(set(HEX_AF.values())):
+        spanner = spanner_for(af)
+        click.echo(
+            f"  spanner-{spanner.af:<7g} length {spanner.length:<6g} "
+            f"ring outer r {spanner.ring_outer_radius:<5g} stubby {spanner.stubby_length:g}"
+        )
+    extensions = "/".join(f"{e:g}" for e in EXTENSION_LENGTHS)
+    click.echo(
+        f"\nsockets on a 72-tooth ratchet, extensions {extensions} mm (approximate until DIN 3124):"
+    )
+    for af in sorted(set(HEX_AF.values())):
+        socket = socket_for(af)
+        click.echo(
+            f"  socket-{socket.af:<8g} outer r {socket.outer_radius:<5g} length {socket.length:g}"
+        )
+    click.echo("\ndrivers (shaft radii approximate, catalogue-typical):")
+    for drive, radius in SHAFT_RADIUS.items():
+        click.echo(f"  driver-{drive:<9} shaft r {radius:g}")

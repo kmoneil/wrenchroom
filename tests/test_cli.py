@@ -24,18 +24,26 @@ def test_version_reports_the_package_version():
     assert wrenchroom.__version__ in result.output
 
 
-@pytest.mark.parametrize(
-    "argv",
-    [
-        ["detect", "model.step"],
-        ["tools"],
-    ],
-    ids=["detect", "tools"],
-)
-def test_unbuilt_commands_exit_not_covered(argv):
-    result = CliRunner().invoke(main, argv)
+def test_unbuilt_commands_exit_not_covered():
+    result = CliRunner().invoke(main, ["detect", "model.step"])
     assert result.exit_code == EXIT_NOT_COVERED
     assert "not built yet" in result.output
+
+
+def test_tools_lists_the_kit_with_its_caveats():
+    result = CliRunner().invoke(main, ["tools"])
+    assert result.exit_code == 0
+    assert "hex-key-5" in result.output
+    assert "long arm 85" in result.output  # the ISO 2936 row, not the old provisional one
+    assert "spanner-10" in result.output
+    assert "socket-24" in result.output
+    assert "driver-ph2" in result.output
+    assert "approximate" in result.output  # the caveat travels with the numbers
+
+
+def test_tools_unknown_kit_exits_2():
+    result = CliRunner().invoke(main, ["tools", "--kit", "mars"])
+    assert result.exit_code == EXIT_NOT_COVERED
 
 
 # ---------------------------------------------------------------------------
