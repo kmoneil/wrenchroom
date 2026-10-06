@@ -14,6 +14,8 @@ import enum
 import re
 from dataclasses import dataclass, field
 
+from wrenchroom.tools.sizes import inch_mm
+
 
 class Kind(enum.StrEnum):
     """Screw (turned by its head) or nut."""
@@ -224,6 +226,71 @@ FLAT_KEY_AF: dict[str, float] = {
     "M20": 12.0,  # catalogue
 }
 
+
+def _inch(rows: dict[str, str]) -> dict[str, float]:
+    """An inch table, size -> tool size as written (``5/32``), in mm."""
+    return {size: inch_mm(tool) for size, tool in rows.items()}
+
+
+# Inch heads, ASME B18.3 (socket, button and flat countersunk heads), checked
+# 2026-10-06 against the Unbrako Engineering Guide (Form 5519, citing ANSI B18.3)
+# and fasten.it's ASME B18.3 tables 1A, 2A and 3: the two agree on every key. A flat
+# head takes the button head's key, smaller than a socket head's (#10: 1/8 against
+# 5/32), whatever some supplier pages say. No #12 socket head screw is standard.
+SOCKET_KEY_AF.update(
+    _inch(
+        {
+            "#2": "5/64",
+            "#4": "3/32",
+            "#6": "7/64",
+            "#8": "9/64",
+            "#10": "5/32",
+            "1/4": "3/16",
+            "5/16": "1/4",
+            "3/8": "5/16",
+            "7/16": "3/8",
+            "1/2": "3/8",
+            "9/16": "7/16",
+            "5/8": "1/2",
+            "3/4": "5/8",
+        }
+    )
+)
+BUTTON_KEY_AF.update(
+    _inch(
+        {
+            "#2": "0.050",
+            "#4": "1/16",
+            "#6": "5/64",
+            "#8": "3/32",
+            "#10": "1/8",
+            "1/4": "5/32",
+            "5/16": "3/16",
+            "3/8": "7/32",
+            "1/2": "5/16",
+            "5/8": "3/8",
+        }
+    )
+)
+FLAT_KEY_AF.update(
+    _inch(
+        {
+            "#2": "0.050",
+            "#4": "1/16",
+            "#6": "5/64",
+            "#8": "3/32",
+            "#10": "1/8",
+            "1/4": "5/32",
+            "5/16": "3/16",
+            "3/8": "7/32",
+            "7/16": "1/4",
+            "1/2": "5/16",
+            "5/8": "3/8",
+            "3/4": "1/2",
+        }
+    )
+)
+
 #: ISO 4032 hex nuts and ISO 4017 hex head bolts: thread -> across-flats, mm.
 #: Checked 2026-10-06 against wermac.org's DIN/ISO nut table. Note the ISO/DIN
 #: split: DIN 934 gives M10 -> 17, M12 -> 19, M14 -> 22, M22 -> 32; these are the
@@ -243,6 +310,51 @@ HEX_AF: dict[str, float] = {
     "M20": 30.0,
     "M22": 34.0,  # catalogue
     "M24": 36.0,
+}
+
+# Inch nuts: ASME B18.2.2 hex nuts (1/4 and up) and ASME B18.6.3 machine screw nuts
+# (#4 to #10), basic width across flats. Checked 2026-10-06: Engineers Edge and
+# torqbolt agree for B18.2.2; Engineers Edge, torqbolt and Aspen Fasteners product
+# pages for B18.6.3 (Aspen's #8 maximum, 0.334, sits below its own basic size and is
+# taken for a typo).
+HEX_AF.update(
+    _inch(
+        {
+            "#4": "1/4",
+            "#6": "5/16",
+            "#8": "11/32",
+            "#10": "3/8",
+            "1/4": "7/16",
+            "5/16": "1/2",
+            "3/8": "9/16",
+            "7/16": "11/16",
+            "1/2": "3/4",
+            "9/16": "7/8",
+            "5/8": "15/16",
+            "3/4": "1-1/8",
+        }
+    )
+)
+
+#: Hex head bolts and screws: thread -> across-flats, mm. Metric heads take their
+#: nut's spanner (ISO 4017 and 4032 agree). Inch heads, ASME B18.2.1 (checked
+#: 2026-10-06, fasten.it's B18.2.1 table 6, AFT Fasteners, Portland Bolt), do not
+#: always: a 7/16 head is 5/8 where its nut is 11/16, a 9/16 head 13/16 where its
+#: nut is 7/8.
+HEX_HEAD_AF: dict[str, float] = {
+    **{size: af for size, af in HEX_AF.items() if size.startswith("M")},
+    **_inch(
+        {
+            "1/4": "7/16",
+            "5/16": "1/2",
+            "3/8": "9/16",
+            "7/16": "5/8",
+            "1/2": "3/4",
+            "9/16": "13/16",
+            "5/8": "15/16",
+            "3/4": "1-1/8",
+        }
+    ),
 }
 
 _KEY_TABLES: dict[Head, dict[str, float]] = {
@@ -265,13 +377,13 @@ def hex_key_af(head: Head, size: Size) -> float | None:
     return table.get(size.designation)
 
 
-def spanner_af(size: Size) -> float | None:
-    """The across-flats a hex head or nut presents to a spanner, in mm."""
-    return HEX_AF.get(size.designation)
+def spanner_af(size: Size, *, head: bool = False) -> float | None:
+    """The across-flats a nut (or with ``head``, a hex head) presents to a spanner, mm."""
+    return (HEX_HEAD_AF if head else HEX_AF).get(size.designation)
 
 
 #: Phillips driver number by thread. Approximation (catalogue-typical pairings;
-#: no ISO table maps thread to recess number across head styles).
+#: no ISO or ASME table maps thread to recess number across head styles).
 PHILLIPS_NUMBER: dict[str, int] = {
     "M3": 1,
     "M3.5": 2,
@@ -279,4 +391,11 @@ PHILLIPS_NUMBER: dict[str, int] = {
     "M5": 2,
     "M6": 3,
     "M8": 3,
+    "#2": 1,
+    "#4": 1,
+    "#6": 2,
+    "#8": 2,
+    "#10": 2,
+    "#12": 3,
+    "1/4": 3,
 }

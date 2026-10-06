@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from wrenchroom.tools.drivers import driver_attempt
+from wrenchroom.tools.sizes import MM_PER_INCH, inch_mm, size_name
 from wrenchroom.tools.sweep import (
     CONTACT_OFFSET,
     DEFAULT_STEP_DEG,
@@ -36,13 +37,13 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class HexKey:
-    """One ISO 2936 key, dimensions in mm.
+    """One hex L-key, ISO 2936 or ASME B18.3, dimensions in mm.
 
     Attributes:
         af: Across flats (the nominal size).
-        across_corners: ``e`` max; the shaft's circumscribed diameter.
-        long_mm: Long arm ``l1``, standard series.
-        short_mm: Short arm ``l2``.
+        across_corners: ``e`` (``Y``) max; the shaft's circumscribed diameter.
+        long_mm: Long arm ``l1`` (``C``), the standard (short-arm) series.
+        short_mm: Short arm ``l2`` (``B``).
     """
 
     af: float
@@ -54,6 +55,11 @@ class HexKey:
     def radius(self) -> float:
         """The swept shaft radius: half the across-corners width."""
         return self.across_corners / 2
+
+    @property
+    def name(self) -> str:
+        """The tool's name in a report: ``hex-key-5``, ``hex-key-5/32in``."""
+        return f"hex-key-{size_name(self.af)}"
 
 
 #: DIN ISO 2936:2016-10 standard series, af -> key. Checked 2026-10-06 (fasten.it).
@@ -79,6 +85,53 @@ ISO_2936: dict[float, HexKey] = {
 # in the table read on 2026-10-06): across corners extrapolated as 1.1375 * af, the
 # e/af ratio the verified rows hold to within 0.4%; lengths from supplier listings.
 # Replace from the standard before anything above M12 is load-bearing.
+
+
+def _inch_key(size: str, corners: float, short: float, long: float) -> HexKey:
+    """An ASME B18.3 key from its inch row: Y max, B max, C max (short-arm series)."""
+    return HexKey(
+        af=inch_mm(size),
+        across_corners=corners * MM_PER_INCH,
+        long_mm=long * MM_PER_INCH,
+        short_mm=short * MM_PER_INCH,
+    )
+
+
+#: ASME B18.3 hexagon keys, inch series, af (mm) -> key: across corners Y max, short
+#: arm B max, long arm C max (short-arm series), all from the inch rows. Checked
+#: 2026-10-06: the American Fastener hex wrench sheet and amesweb (citing
+#: ASME B18.3-2003) agree row for row, as do Engineers Edge and the Unbrako
+#: Engineering Guide (citing ANSI B18.3) on W, B and C. For 3/8 and up Engineers
+#: Edge gives a slightly larger Y (3/8: .4300 against .4285); the larger is used,
+#: which errs toward a fatter key. Maxima throughout, where ISO 2936 above gives
+#: the standard series' nominal lengths: a longer leg or arm only asks for more
+#: room, so the maxima err safe.
+ASME_B18_3: dict[float, HexKey] = {
+    key.af: key
+    for key in (
+        _inch_key("0.050", 0.0560, 0.625, 1.750),
+        _inch_key("1/16", 0.0701, 0.656, 1.844),
+        _inch_key("5/64", 0.0880, 0.703, 1.969),
+        _inch_key("3/32", 0.1058, 0.750, 2.094),
+        _inch_key("7/64", 0.1238, 0.797, 2.219),
+        _inch_key("1/8", 0.1418, 0.844, 2.344),
+        _inch_key("9/64", 0.1593, 0.891, 2.469),
+        _inch_key("5/32", 0.1774, 0.938, 2.594),
+        _inch_key("3/16", 0.2135, 1.031, 2.844),
+        _inch_key("7/32", 0.2490, 1.125, 3.094),
+        _inch_key("1/4", 0.2845, 1.219, 3.344),
+        _inch_key("5/16", 0.3570, 1.344, 3.844),
+        _inch_key("3/8", 0.4300, 1.469, 4.344),
+        _inch_key("7/16", 0.5018, 1.594, 4.844),
+        _inch_key("1/2", 0.5735, 1.719, 5.344),
+        _inch_key("9/16", 0.6452, 1.844, 5.844),
+        _inch_key("5/8", 0.7169, 1.969, 6.344),
+        _inch_key("3/4", 0.8603, 2.219, 7.344),
+    )
+}
+
+#: Every key there is, metric and inch, by across flats in mm.
+HEX_KEYS: dict[float, HexKey] = {**ISO_2936, **ASME_B18_3}
 
 
 # ---------------------------------------------------------------------------
@@ -113,7 +166,7 @@ def hex_key_attempts(
     ``hand_room``, the key used as a driver must leave room for the fist round
     its handle; the arms, turned with the fingertips, are left alone (sweep.py).
     """
-    tool = f"hex-key-{key.af:g}"
+    tool = key.name
     yield driver_attempt(mount, scene, key.radius, tool, hand_room)
     legs = (
         ("short leg in", key.short_mm, key.long_mm),

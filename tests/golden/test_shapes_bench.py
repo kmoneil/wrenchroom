@@ -48,7 +48,7 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
         elif head is not None:
             expected_af = hex_key_af(head, size)
         got = (reading.head, reading.drive_af and round(reading.drive_af, 6), reading.size)
-        want = (head, expected_af, size)
+        want = (head, expected_af and round(expected_af, 6), size)  # inch sizes in mm
         if got != want:
             wrong.append((name, got, want))
     assert not wrong
