@@ -103,15 +103,18 @@ def hex_key_attempts(
     key: HexKey,
     scene: Scene,
     step_deg: float = DEFAULT_STEP_DEG,
+    hand_room: bool = False,
 ) -> Iterator[Attempt]:
     """Every way to try one key, lazily, in the spec's order.
 
     Driver straight in first (cheapest and strongest), then the short leg in
     with the long arm swinging, then the long leg in with the short arm.
-    The caller stops consuming at the first attempt that turns.
+    The caller stops consuming at the first attempt that turns. With
+    ``hand_room``, the key used as a driver must leave room for the fist round
+    its handle; the arms, turned with the fingertips, are left alone (sweep.py).
     """
     tool = f"hex-key-{key.af:g}"
-    yield driver_attempt(mount, scene, key.radius, tool)
+    yield driver_attempt(mount, scene, key.radius, tool, hand_room)
     legs = (
         ("short leg in", key.short_mm, key.long_mm),
         ("long leg in", key.long_mm, key.short_mm),

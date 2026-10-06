@@ -543,3 +543,39 @@ def torx_open():
     key. bench_edges.yaml describes it as head: torx, and a rule outranks
     detection: there it is not-covered naming M6, until the full kit lands."""
     return [("plate", plate(holes=[(0, 0, 3)])), ("screw", socket_screw())]
+
+
+# ---------------------------------------------------------------- M6 cells
+
+
+@cell(
+    "hand_tight",
+    [
+        {"parts": "bolt", "kind": "screw", "head": "hex", "size": "M6"},
+        {"parts": "nut", "kind": "nut", "size": "M6"},
+    ],
+    {
+        "bolt": {"verdict": "turns", "tool": "spanner-10", "how": "ring, full length"},
+        "nut": {"verdict": "turns", "tool": "spanner-10", "how": "ring, full length"},
+    },
+)
+def hand_tight():
+    """A nut a spanner reaches and a hand can't follow (GOLDEN-BENCH section 6, M6).
+
+    A block 300 tall sits 6.8 over the nut (underside at z 12), bored r 20 round it.
+    Hand room off (the bench's way): the ring (z 0.35..4.85, outer r 10) and its
+    handle pass under the block, so the nut turns, ring, full length; the bolt turns
+    from below. Hand room on (test_hand_room_bench.py): the hand rests on the handle
+    (underside z 2.6, r 35) over the handle's last 90 mm, from r 24.75 on the full
+    spanner and from the axis on the stubby, so it meets the block at every angle,
+    4.75 past the bore at the least; the socket's ratchet handle (z 36.5) hits the
+    block whatever the extension, the tool itself blocked. The ring alone would turn,
+    so the nut is blocked for want of a hand. The bolt below is in open air.
+    """
+    block = Pos(0, 0, 12 + 150) * Box(300, 300, 300) - Pos(0, 0, 12 + 150) * Cylinder(20, 301)
+    return [
+        ("plate", plate(holes=[(0, 0, 3)])),
+        ("block", block),
+        ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(6, 20, 10, 4.0)),
+        ("nut", hex_nut(6, 10, 5.2)),
+    ]

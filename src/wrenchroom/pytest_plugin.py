@@ -58,6 +58,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         type="bool",
         default=False,
     )
+    parser.addini(
+        "wrenchroom_hand_room",
+        "Also check room for a hand on each handle; default: the sidecar's setting.",
+        type="bool",
+        default=None,
+    )
 
 
 @pytest.fixture(scope="session")
@@ -92,6 +98,7 @@ def wrenchroom_report(pytestconfig: pytest.Config) -> Report:
             state=state,
             model_dir=model.parent,
             engine="exact" if pytestconfig.getini("wrenchroom_exact") else "mesh",
+            hand_room=pytestconfig.getini("wrenchroom_hand_room"),
         )
     except (ConfigError, ValueError) as exc:
         pytest.fail(f"wrenchroom: {exc}", pytrace=False)

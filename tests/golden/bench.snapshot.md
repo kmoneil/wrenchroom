@@ -1,8 +1,10 @@
 ### wrenchroom: `bench.step`
 
-**37 fasteners: 24 turn, 2 held, 10 blocked, 1 stuck, 0 not covered**
+**39 fasteners: 26 turn, 2 held, 10 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
+
+Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts the model doesn't have.
 
 | Fasteners | Tool | Count | Outcome |
 | --- | --- | ---: | --- |
@@ -13,8 +15,8 @@ Kit `full`, ENGINE engine, wrenchroom VERSION.
 | M4 phillips screw | `driver-ph2` | 2 | 1 of 2 fail |
 | M6 button screw | `hex-key-4` | 1 | all pass (long leg in) |
 | M6 carriage screw | - | 1 | all pass (holds itself) |
-| M6 hex screw | `spanner-10` | 2 | all pass (ring, full length) |
-| M6 nut | `spanner-10` | 3 | all pass (ring, full length) |
+| M6 hex screw | `spanner-10` | 3 | all pass (ring, full length) |
+| M6 nut | `spanner-10` | 4 | all pass (ring, full length) |
 | M6 socket screw | `hex-key-5` | 12 | 4 of 12 fail |
 | M8 hex screw | `spanner-13` | 3 | 1 of 3 fail |
 | M8 nut | `spanner-13` | 2 | 1 of 2 fail |

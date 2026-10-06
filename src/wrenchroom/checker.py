@@ -93,6 +93,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     state: str | None = None,
     model_dir: str | Path | None = None,
     engine: str = DEFAULT_ENGINE,
+    hand_room: bool | None = None,
 ) -> Report:
     """Check every fastener the config names against the assembly.
 
@@ -110,16 +111,19 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
             the model's own directory.
         engine: Which collision engine answers the queries: ``mesh`` (the
             default) or ``exact`` (OCP booleans, the referee).
+        hand_room: Check room for the hand round each handle (spec 6.4);
+            ``None`` takes the sidecar's ``checks: {hand_room: ...}``, off by
+            default.
 
     Raises:
         ValueError: On a kit, state or engine that doesn't exist (a typo, not a
             model problem).
     """
-    tools = _Tools(kit_named(kit), step_deg)
+    config = config or Config()
+    tools = _Tools(kit_named(kit), step_deg, config.hand_room if hand_room is None else hand_room)
     if engine not in ENGINES:
         msg = f"unknown engine {engine!r}; available: {', '.join(ENGINES)}"
         raise ValueError(msg)
-    config = config or Config()
     default_state = state if state is not None else config.default_state
     if default_state is not None:
         config.state(default_state)  # raises on a typo
@@ -158,6 +162,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         unmatched_ignores=matches.unmatched_ignores,
         warnings=tuple(pair_warnings + space.warnings),
         default_state=default_state,
+        hand_room=tools.hand_room,
         models=models,
         ignored=frozenset(
             name
@@ -428,6 +433,9 @@ class _Candidate:
     state: str | None = None
     extraction_blocked: tuple[str, ...] = field(default=())
     way_out: Probe | None = None
+    #: What the hand ran into, when no attempt turns because the hand can't
+    #: follow a tool that would: the spec's ``blocked (no room for a hand)``.
+    no_hand_room: tuple[str, ...] = ()
 
 
 def _check_fastener(
@@ -518,7 +526,18 @@ def _run_attempts(candidate: _Candidate, attempts_iter: Iterator[Attempt]) -> No
             candidate.hold.tool if candidate.hold else (tried[0].tool if tried else None)
         )
         candidate.swing_deg = max((a.swing_deg for a in tried), default=0.0)
-        candidate.blockers = tuple(blockers)
+        candidate.no_hand_room = _hand_blockers(tried)
+        hand = candidate.no_hand_room
+        candidate.blockers = tuple(blockers) + tuple(n for n in hand if n not in blockers)
+
+
+def _hand_blockers(tried: list[Attempt]) -> tuple[str, ...]:
+    """What the hand hit, over every attempt the hand alone stopped; first-seen order."""
+    hand: list[str] = []
+    for attempt in tried:
+        if attempt.no_hand_room:
+            hand.extend(name for name in attempt.hand_blockers if name not in hand)
+    return tuple(hand)
 
 
 def _tried_iter(attempts_iter: Iterator[Attempt], tried: list[Attempt]) -> Iterator[Attempt]:
@@ -595,6 +614,8 @@ def _finish(
         )
     else:
         how = None
+        if candidate.no_hand_room:
+            reason = f"no room for a hand ({', '.join(candidate.no_hand_room)} in the way)"
     return FastenerResult(
         fastener,
         verdict,
@@ -720,6 +741,7 @@ class _Tools:
 
     kit: Kit
     step_deg: float
+    hand_room: bool = False
 
     def need(self, *wanted: str) -> tuple[str, ...]:
         """Those of ``wanted`` the kit holds, in order; not covered when it holds none.
@@ -753,10 +775,12 @@ def _attempts_for(
         if number is None:
             raise NotCovered(f"no Phillips number for {size.designation}")
         (tool,) = tools.need(f"driver-ph{number}")
-        return iter([driver_attempt(mount, scene, SHAFT_RADIUS[f"ph{number}"], tool)])
+        radius = SHAFT_RADIUS[f"ph{number}"]
+        return iter([driver_attempt(mount, scene, radius, tool, tools.hand_room)])
     if fastener.head is Head.SLOTTED:
         (tool,) = tools.need("driver-slotted")
-        return iter([driver_attempt(mount, scene, SHAFT_RADIUS["slotted"], tool)])
+        radius = SHAFT_RADIUS["slotted"]
+        return iter([driver_attempt(mount, scene, radius, tool, tools.hand_room)])
     if fastener.head is Head.TORX:
         raise NotCovered("Torx keys arrive with the full kit (M6)")
     raise NotCovered("head unknown: name it in the sidecar")
@@ -804,7 +828,7 @@ def _keyed_attempts(
     if af not in ISO_2936:
         raise NotCovered(f"no ISO 2936 key is {af:g} across flats")
     tools.need(f"hex-key-{af:g}")
-    return hex_key_attempts(mount, ISO_2936[af], scene, tools.step_deg)
+    return hex_key_attempts(mount, ISO_2936[af], scene, tools.step_deg, tools.hand_room)
 
 
 def _hex_flats_attempts(
@@ -834,7 +858,7 @@ def _hex_flats_attempts(
     if fastener.socket_allowed:
         wanted.append(f"socket-{af:g}")
     held = tools.need(*wanted)
-    return _hex_flats_tools(held, mount, af, band, scene, tools.step_deg)
+    return _hex_flats_tools(held, mount, af, band, scene, tools)
 
 
 def _hex_flats_tools(
@@ -843,12 +867,13 @@ def _hex_flats_tools(
     af: float,
     band: tuple[float, float],
     scene: Scene,
-    step_deg: float,
+    tools: _Tools,
 ) -> Iterator[Attempt]:
+    step, hand = tools.step_deg, tools.hand_room
     if f"spanner-{af:g}" in held:
-        yield from ring_attempts(mount, spanner_for(af), af, band, scene, step_deg)
+        yield from ring_attempts(mount, spanner_for(af), af, band, scene, step, hand)
     if f"socket-{af:g}" in held:
-        yield from socket_attempts(mount, socket_for(af), af, scene, step_deg)
+        yield from socket_attempts(mount, socket_for(af), af, scene, step, hand)
 
 
 def _forced_attempts(
@@ -871,24 +896,24 @@ def _forced_attempts(
         if key is None:
             raise NotCovered(f"no ISO 2936 key sized {size_text}")
         tools.need(name)
-        return hex_key_attempts(mount, key, scene, step_deg)
+        return hex_key_attempts(mount, key, scene, step_deg, tools.hand_room)
     if family == "spanner":
         af = _as_float(size_text, name)
         if geometry.band_height <= _MIN_BAND:
             raise NotCovered("could not measure the hex's height")
         tools.need(name)
         band = (geometry.band_top, geometry.band_bottom)
-        return ring_attempts(mount, spanner_for(af), af, band, scene, step_deg)
+        return ring_attempts(mount, spanner_for(af), af, band, scene, step_deg, tools.hand_room)
     if family == "socket":
         af = _as_float(size_text, name)
         tools.need(name)
-        return socket_attempts(mount, socket_for(af), af, scene, step_deg)
+        return socket_attempts(mount, socket_for(af), af, scene, step_deg, tools.hand_room)
     if family == "driver":
         radius = SHAFT_RADIUS.get(size_text)
         if radius is None:
             raise NotCovered(f"unknown driver {size_text!r}")
         tools.need(name)
-        return iter([driver_attempt(mount, scene, radius, name)])
+        return iter([driver_attempt(mount, scene, radius, name, tools.hand_room)])
     raise NotCovered(f"unknown tool {name!r}")
 
 

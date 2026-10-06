@@ -36,6 +36,13 @@ to M5):
   A fastener that needs a tool the kit lacks is not covered, and the reason names
   the tool and the kit that has it (`needs spanner-24, which kit metric-home does
   not hold (full has it)`).
+- Room for the hand (`--hand-room`, or `checks: {hand_room: true}` in the sidecar):
+  a hand of radius 35 mm along each handle's last 90 mm, resting on it from the side
+  the tool comes from, and a fist round a driver's handle. Where the tool alone would
+  turn and the hand can't follow, the fastener is blocked, "no room for a hand",
+  naming what the hand hit. Off by default: the spec's figures are not yet tuned
+  against real hands, and L-key arms, turned with the fingertips, get no hand. Every
+  report ends by saying what it didn't check.
 - `--html report.html` writes the 3D view: one self-contained file that opens
   offline. The assembly is grey and each fastener coloured by how it fared (green
   turns, blue held, amber passes only in another state, red blocked or stuck, grey

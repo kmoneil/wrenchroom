@@ -17,6 +17,7 @@ from wrenchroom.tools.sweep import (
     Mount,
     axial_annulus,
     axial_cylinder,
+    hand_on_handle,
     radial_box,
     swing_attempt,
 )
@@ -81,6 +82,7 @@ def socket_attempts(
     hex_af: float,
     scene: Scene,
     step_deg: float = DEFAULT_STEP_DEG,
+    hand_room: bool = False,
 ) -> Iterator[Attempt]:
     """The socket on the ratchet directly, then on each stock extension, lazily.
 
@@ -123,4 +125,13 @@ def socket_attempts(
             ),
             required_deg=RATCHET_72_SWING_DEG,
             step_deg=step_deg,
+            hand_at=(
+                (
+                    lambda phi, z=handle_z: mount.place(
+                        hand_on_handle(z, RATCHET_HEAD_RADIUS + 1, RATCHET_HANDLE_REACH, phi)
+                    )
+                )
+                if hand_room
+                else None
+            ),
         )

@@ -10,7 +10,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from wrenchroom.tools.sweep import CONTACT_OFFSET, Attempt, Mount, axial_cylinder, straight_attempt
+from wrenchroom.tools.sweep import (
+    CONTACT_OFFSET,
+    HAND_LENGTH,
+    HAND_RADIUS,
+    Attempt,
+    Mount,
+    axial_cylinder,
+    straight_attempt,
+)
 
 if TYPE_CHECKING:
     from wrenchroom.engine import Scene
@@ -41,11 +49,20 @@ def driver_solid(shaft_radius: float) -> ToolSolid:
     return shaft + handle
 
 
-def driver_attempt(mount: Mount, scene: Scene, shaft_radius: float, tool: str) -> Attempt:
-    """One straight-in clearance test for a driver of the given shaft."""
+def driver_hand() -> ToolSolid:
+    """The fist round the handle's last HAND_LENGTH mm, in the local frame."""
+    handle_to = CONTACT_OFFSET + SHAFT_LENGTH + HANDLE_LENGTH
+    return axial_cylinder(HAND_RADIUS, handle_to - HAND_LENGTH, handle_to)
+
+
+def driver_attempt(
+    mount: Mount, scene: Scene, shaft_radius: float, tool: str, hand_room: bool = False
+) -> Attempt:
+    """One straight-in clearance test for a driver of the given shaft (and its hand)."""
     return straight_attempt(
         tool=tool,
         way="driver straight in",
         scene=scene,
         solid=mount.place(driver_solid(shaft_radius)),
+        hand=mount.place(driver_hand()) if hand_room else None,
     )

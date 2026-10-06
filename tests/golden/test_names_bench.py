@@ -7,7 +7,7 @@ and no other part may be: not a plate, not a wall, not the pocket block named
 
 import fnmatch
 
-from bench import edges_sidecar, sidecar_and_truth
+from bench import FINAL_COUNTS, edges_sidecar, sidecar_and_truth
 from cells import CELLS
 
 from wrenchroom.detect.names import read_name
@@ -44,4 +44,6 @@ def test_the_bench_names_read_as_its_sidecar_says():
         if "gland" in name:
             assert not found.socket_allowed, name
     assert not wrong
-    assert found_count == 37  # the bench's 36 fasteners and the edges file's torx screw
+    # The sidecar's fasteners (FINAL_COUNTS less the torx screw only detection finds)
+    # and the edges file's torx screw.
+    assert found_count == FINAL_COUNTS["fasteners"]
