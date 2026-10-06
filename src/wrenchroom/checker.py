@@ -132,6 +132,14 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         config.state(default_state)  # raises on a typo
     matches = config.apply(assembly)
     fasteners = _fasteners(assembly, config, matches.fasteners, only)
+    # A narrowing glob that picks nothing checks nothing: as with a sidecar rule
+    # that matches nothing, that is how a renamed part hides, so the run says so
+    # and exits 2 rather than passing (issue #20).
+    only_warnings = (
+        [f"only glob {only!r} matched no fastener (renamed part?)"]
+        if only is not None and not fasteners
+        else []
+    )
 
     space = _StateSpace(assembly, config, model_dir, make_engine(engine))
     frames: dict[str, _Frame] = {}
@@ -163,7 +171,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         results=tuple(results),
         unmatched_rules=tuple(rule.parts for rule in matches.unmatched_rules),
         unmatched_ignores=matches.unmatched_ignores,
-        warnings=tuple(pair_warnings + space.warnings),
+        warnings=tuple(only_warnings + pair_warnings + space.warnings),
         default_state=default_state,
         hand_room=tools.hand_room,
         models=models,

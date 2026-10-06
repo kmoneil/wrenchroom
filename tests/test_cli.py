@@ -86,10 +86,19 @@ def test_check_reports_the_blocked_bolt_and_exits_1(exported, tmp_path):
     assert report["fasteners"][0]["blocked_by"] == ["wall"]
 
 
-def test_check_only_mismatch_passes_empty(exported):
+def test_check_only_mismatch_fails_saying_so(exported):
+    # Issue #20: it used to check nothing and exit 0.
     result = CliRunner().invoke(main, ["check", str(exported), "--only", "nothing_*"])
-    assert result.exit_code == 0
+    assert result.exit_code == EXIT_NOT_COVERED
     assert "0 fasteners" in result.output
+    assert "WARN only glob 'nothing_*' matched no fastener (renamed part?)" in result.output
+
+
+def test_check_only_that_matches_checks_just_those(exported):
+    result = CliRunner().invoke(main, ["check", str(exported), "--only", "bo*"])
+    assert result.exit_code == 1  # the bolt, blocked
+    assert "1 fasteners" in result.output
+    assert "WARN" not in result.output
 
 
 def test_check_bad_config_exits_2(exported, tmp_path):

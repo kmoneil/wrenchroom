@@ -339,7 +339,8 @@ def test_a_passing_report_has_no_failures_or_warnings_sections():
 
 
 def test_an_empty_report_is_just_its_summary():
-    report = check(screw_facing_wall(40.0), Config(), only="nothing_*", engine="exact")
+    no_fasteners = Config.from_dict({"checks": {"detect": False}})
+    report = check(screw_facing_wall(40.0), no_fasteners, engine="exact")
     assert report.summary["fasteners"] == 0
     lines = report.markdown().splitlines()
     assert lines[:4] == [
