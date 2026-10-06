@@ -92,3 +92,8 @@ dependencies so a CAD-kernel update that moves a verdict shows up before it land
 
 CI runs the same lanes by the same names; `scripts/lanes.py` is the only spelling of how
 this project runs its checks.
+
+`main` is protected: changes land by pull request, rebased, with `gates`, every `fast` row
+and both `perf` rows green, and no new high-severity CodeQL alert. The rule lives in
+`.github/rulesets/main.json`, exported from GitHub; change both together. Security
+reports go through [SECURITY.md](SECURITY.md).
