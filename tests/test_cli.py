@@ -117,3 +117,37 @@ def test_explain_unknown_fastener_exits_2(exported):
     result = CliRunner().invoke(main, ["explain", str(exported), "ghost"])
     assert result.exit_code == EXIT_NOT_COVERED
     assert "no fastener named" in result.output
+
+
+# ---------------------------------------------------------------------------
+# --exact: the referee engine, same contract.
+# ---------------------------------------------------------------------------
+
+
+def test_check_and_explain_offer_exact():
+    for command in ("check", "explain"):
+        result = CliRunner().invoke(main, [command, "--help"])
+        assert "--exact" in result.output
+
+
+def test_check_exact_gives_the_same_report_by_the_other_engine(exported, tmp_path):
+    runs = {}
+    for engine, flags in (("mesh", []), ("exact", ["--exact"])):
+        json_path = tmp_path / f"{engine}.json"
+        result = CliRunner().invoke(
+            main, ["check", str(exported), *flags, "--json", str(json_path)]
+        )
+        runs[engine] = (result, json.loads(json_path.read_text()))
+    (mesh, mesh_doc), (exact, exact_doc) = runs["mesh"], runs["exact"]
+    assert mesh.exit_code == exact.exit_code == 1
+    assert mesh.output == exact.output
+    assert mesh_doc.pop("engine") == "mesh"
+    assert exact_doc.pop("engine") == "exact"
+    assert mesh_doc == exact_doc
+
+
+def test_explain_exact_tells_the_same_story(exported):
+    default = CliRunner().invoke(main, ["explain", str(exported), "bolt"])
+    exact = CliRunner().invoke(main, ["explain", str(exported), "bolt", "--exact"])
+    assert exact.exit_code == default.exit_code == 1
+    assert exact.output == default.output

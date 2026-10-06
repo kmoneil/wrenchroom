@@ -33,12 +33,13 @@ def test_truth(request, name, expected, bench_json):
             assert got == want, f"{name}.{key}"
 
 
-def test_whole_bench_counts(bench_report):
+def test_whole_bench_counts(bench_report, bench_engine):
     assert bench_report.summary == FINAL_COUNTS
     assert bench_report.exit_code == 1  # the bench has deliberate failures
+    assert bench_report.engine == bench_engine
 
 
-def test_isolation_matches_the_full_bench(bench_json, bench_dir):
+def test_isolation_matches_the_full_bench(bench_json, bench_dir, bench_engine):
     """Each cell alone (from shapes, no STEP) must agree with the whole bench:
     a difference means a tool reaches across cells or the STEP path changes
     something. Twins are excluded: they exist to test the STEP path itself.
@@ -66,7 +67,9 @@ def test_isolation_matches_the_full_bench(bench_json, bench_dir):
                 "checks": bench_sidecar["checks"],
             }
         )
-        report = check(Assembly.from_shapes(shapes), config, model_dir=bench_dir)
+        report = check(
+            Assembly.from_shapes(shapes), config, model_dir=bench_dir, engine=bench_engine
+        )
         for result in report.results:
             alone = (result.verdict.value, result.tool, result.how)
             entry = bench_json[result.fastener.name]

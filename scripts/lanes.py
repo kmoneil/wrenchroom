@@ -60,6 +60,16 @@ LANES: tuple[Lane, ...] = (
         summary="only the golden bench: truth, counts, isolation, snapshot",
         steps=(("pytest", "tests/golden"),),
     ),
+    Lane(
+        name="perf",
+        summary="the bench scaled to 500 fasteners, read and checked inside 10 s",
+        steps=(("python", "scripts/perf.py"),),
+    ),
+    Lane(
+        name="perf-report",
+        summary="the same run, timing reported not gated; wrong verdict counts still fail",
+        steps=(("python", "scripts/perf.py", "--budget", "0"),),
+    ),
 )
 
 

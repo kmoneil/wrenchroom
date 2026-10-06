@@ -71,6 +71,9 @@ class Report:
     model: str
     kit: str
     results: tuple[FastenerResult, ...]
+    #: The collision engine that answered: ``mesh`` by default, ``exact`` under
+    #: ``--exact``. Recorded so a report says how it was computed.
+    engine: str = "mesh"
     unmatched_rules: tuple[str, ...] = ()
     unmatched_ignores: tuple[str, ...] = ()
     #: Config-grade problems found while checking (a forced pair naming nothing,
@@ -119,6 +122,7 @@ class Report:
             "schema": 1,
             "model": self.model,
             "kit": self.kit,
+            "engine": self.engine,
             "tool_version": __version__,
             "summary": self.summary,
             "unmatched_rules": list(self.unmatched_rules),

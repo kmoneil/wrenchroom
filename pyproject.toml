@@ -41,16 +41,18 @@ classifiers = [
 # dependency that matters here is binary: build123d 0.13 pulls cadquery-ocp-novtk 8.0.x,
 # which is the headless OCP wheel and the reason this project can run in CI at all.
 #
-# manifold3d rather than python-fcl for the collision engine (either would do): it is a
-# clean self-contained wheel on both platforms and both Pythons. Revisit at M3 when the
-# mesh engine is actually built; python-fcl 0.7.0.11 also resolved.
+# manifold3d is the mesh collision engine, decided by benchmark at M3 (2026-10-06): on
+# the 686 tool-part tests the golden bench makes it agreed with the exact OCP engine on
+# every one, at about 0.1 ms a test. python-fcl (through trimesh.collision, the other
+# route the spec allowed) was twice as fast and missed 10 real hits, each a probe lying
+# wholly inside a plate, which a surface BVH cannot see. trimesh was here only for that
+# route and has gone with it. The full reasoning is in src/wrenchroom/engine/mesh.py.
 dependencies = [
   "build123d>=0.13",
   "click>=8.5",
   "manifold3d>=3.5",
   "numpy>=2.5",
   "pyyaml>=6.0",
-  "trimesh>=5.1",
 ]
 
 [project.urls]
@@ -167,14 +169,18 @@ python = ".venv"
 [tool.ty.rules]
 deprecated = "error"
 
-# assembly.py talks to OCP (OpenCascade) directly for the XCAF STEP walk, and the
-# cadquery-ocp wheel is compiled modules with no stubs, so ty cannot resolve any
-# member of them. Not fixable at the source (upstream ships no py.typed); scoped to
-# the one file that imports OCP rather than waived globally. Revisit if an ocp-stubs
-# release matching OCP 8.x appears; then this section goes and the stubs come in as
-# a dev dependency.
+# assembly.py (the XCAF STEP walk) and the engine (tessellation, quick boxes) talk
+# to OCP (OpenCascade) directly, and the cadquery-ocp wheel is compiled modules
+# with no stubs, so ty cannot resolve any member of them. Not fixable at the
+# source (upstream ships no py.typed); scoped to the files that import OCP rather
+# than waived globally. Revisit if an ocp-stubs release matching OCP 8.x appears;
+# then this section goes and the stubs come in as a dev dependency.
 [[tool.ty.overrides]]
-include = ["src/wrenchroom/assembly.py"]
+include = [
+  "src/wrenchroom/assembly.py",
+  "src/wrenchroom/engine/mesh.py",
+  "src/wrenchroom/engine/scene.py",
+]
 
 [tool.ty.overrides.rules]
 unresolved-import = "ignore"

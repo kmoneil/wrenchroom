@@ -60,3 +60,26 @@ jobs:
       - run: uv python install ${{ matrix.python }}
       - run: uv sync --frozen --python ${{ matrix.python }}
       - run: uv run --frozen python scripts/lanes.py fast
+
+  # The speed target: the golden bench scaled to 500 fasteners, read and checked
+  # inside 10 s. The timing REPORTS for now (the perf-report lane writes it to
+  # the run summary and doesn't gate on it): hosted runners are slower and
+  # noisier than the laptop the target is set for. The verdict counts DO gate,
+  # so this is also a 500-fastener correctness run on every push. Once a few
+  # weeks of numbers show where the runners sit, switch to the gating perf lane
+  # with the budget those numbers support.
+  perf:
+    timeout-minutes: 20
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+      - run: uv python install 3.13
+      - run: uv sync --frozen --python 3.13
+      - run: uv run --frozen python scripts/lanes.py perf-report

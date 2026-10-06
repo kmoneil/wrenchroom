@@ -1,4 +1,4 @@
-"""M2: pairs, extraction, states; each mechanism alone, hand-computed."""
+"""M2: pairs, extraction, states; each mechanism alone, hand-computed, on both engines."""
 
 import pytest
 from build123d import Box, Compound, Pos, export_step
@@ -22,15 +22,15 @@ M8_PAIR = [
 ]
 
 
-def run(assembly, config_dict, **kwargs):
-    return check(assembly, Config.from_dict(config_dict), **kwargs)
+def run(engine, assembly, config_dict, **kwargs):
+    return check(assembly, Config.from_dict(config_dict), engine=engine, **kwargs)
 
 
 # ---------------------------------------------------------------------- pairs
 
 
-def test_a_nut_that_only_holds_passes_through_its_turning_bolt():
-    report = run(bolt_with_slotted_nut(), {"fasteners": M8_PAIR})
+def test_a_nut_that_only_holds_passes_through_its_turning_bolt(engine):
+    report = run(engine, bolt_with_slotted_nut(), {"fasteners": M8_PAIR})
     by_name = {r.fastener.name: r for r in report.results}
     bolt, nut = by_name["bolt"], by_name["nut"]
     assert bolt.verdict is Verdict.TURNS
@@ -41,8 +41,8 @@ def test_a_nut_that_only_holds_passes_through_its_turning_bolt():
     assert report.exit_code == 0
 
 
-def test_two_holding_sides_fail_with_the_reason():
-    report = run(bolt_with_slotted_nut(head_boxed=True), {"fasteners": M8_PAIR})
+def test_two_holding_sides_fail_with_the_reason(engine):
+    report = run(engine, bolt_with_slotted_nut(head_boxed=True), {"fasteners": M8_PAIR})
     by_name = {r.fastener.name: r for r in report.results}
     assert by_name["bolt"].verdict is Verdict.BLOCKED
     assert by_name["nut"].verdict is Verdict.BLOCKED
@@ -50,7 +50,7 @@ def test_two_holding_sides_fail_with_the_reason():
     assert report.exit_code == 1
 
 
-def test_a_forced_pair_overrides_and_an_unknown_name_warns():
+def test_a_forced_pair_overrides_and_an_unknown_name_warns(engine):
     config = {
         "fasteners": [
             {"parts": "bolt", "kind": "screw", "head": "hex", "size": "M6"},
@@ -58,16 +58,16 @@ def test_a_forced_pair_overrides_and_an_unknown_name_warns():
         ],
         "pairs": [["bolt", "nut"]],
     }
-    report = run(nut_with_bolt_through(), config)
+    report = run(engine, nut_with_bolt_through(), config)
     assert all(r.pair for r in report.results)
 
     config["pairs"] = [["bolt", "ghost"]]
-    report = run(nut_with_bolt_through(), config)
+    report = run(engine, nut_with_bolt_through(), config)
     assert any("ghost" in w for w in report.warnings)
     assert report.exit_code == 2
 
 
-def test_a_tapped_screw_that_only_holds_is_blocked():
+def test_a_tapped_screw_that_only_holds_is_blocked(engine):
     # No nut anywhere: holding is worthless, and the reason says so.
     # Seat at 26; the short leg's arm swings at 26 + 0.3 + 33 = 59.3, inside the
     # slot band (50..68); the ceiling at 71 stops the driver and the long leg.
@@ -78,7 +78,7 @@ def test_a_tapped_screw_that_only_holds_is_blocked():
             Part("ceiling", Pos(0, 0, 76) * Box(300, 300, 10)),
         ]
     )
-    report = run(assembly, {"fasteners": [M6_SOCKET]})
+    report = run(engine, assembly, {"fasteners": [M6_SOCKET]})
     (result,) = report.results
     assert result.verdict is Verdict.BLOCKED
     assert "it has no nut" in result.reason
@@ -87,9 +87,9 @@ def test_a_tapped_screw_that_only_holds_is_blocked():
 # ------------------------------------------------------------------ extraction
 
 
-def test_a_screw_that_turns_but_cannot_come_out_is_stuck():
+def test_a_screw_that_turns_but_cannot_come_out_is_stuck(engine):
     # Turns by the short leg (36.1 < 45) but 50 of shank must rise into a wall at 45.
-    report = run(screw_facing_wall(45.0, length=50.0), {"fasteners": [M6_SOCKET]})
+    report = run(engine, screw_facing_wall(45.0, length=50.0), {"fasteners": [M6_SOCKET]})
     (result,) = report.results
     assert result.verdict is Verdict.STUCK
     assert result.stuck_on == ("wall",)
@@ -97,15 +97,15 @@ def test_a_screw_that_turns_but_cannot_come_out_is_stuck():
     assert report.exit_code == 1
 
 
-def test_extraction_clear_by_ten_is_not_stuck():
-    report = run(screw_facing_wall(60.0, length=50.0), {"fasteners": [M6_SOCKET]})
+def test_extraction_clear_by_ten_is_not_stuck(engine):
+    report = run(engine, screw_facing_wall(60.0, length=50.0), {"fasteners": [M6_SOCKET]})
     (result,) = report.results
     assert result.verdict is Verdict.TURNS
 
 
-def test_a_nut_is_never_extracted():
+def test_a_nut_is_never_extracted(engine):
     rules = {"fasteners": [{"parts": "nut", "kind": "nut", "size": "M6"}]}
-    report = run(nut_with_bolt_through(), rules)
+    report = run(engine, nut_with_bolt_through(), rules)
     (result,) = report.results
     assert result.verdict is Verdict.TURNS
     assert result.stuck_on == ()
@@ -117,41 +117,41 @@ def test_a_nut_is_never_extracted():
 WALL_CASE = {"fasteners": [M6_SOCKET]}
 
 
-def test_a_fastener_pinned_to_a_remove_state_passes_there():
+def test_a_fastener_pinned_to_a_remove_state_passes_there(engine):
     config = {
         "fasteners": [{**M6_SOCKET, "state": "lid-off"}],
         "states": {"lid-off": {"remove": ["wall"]}},
     }
-    report = run(screw_facing_wall(15.0), config)
+    report = run(engine, screw_facing_wall(15.0), config)
     (result,) = report.results
     assert result.verdict is Verdict.TURNS
     assert result.how == "driver straight in"
     assert result.state == "lid-off"
 
 
-def test_try_states_retries_and_reports_where_it_passed():
+def test_try_states_retries_and_reports_where_it_passed(engine):
     config = {
         "fasteners": [M6_SOCKET],
         "states": {"open": {"remove": ["wall"]}},
         "checks": {"try_states": ["open"]},
     }
-    report = run(screw_facing_wall(15.0), config)
+    report = run(engine, screw_facing_wall(15.0), config)
     (result,) = report.results
     assert result.verdict is Verdict.TURNS
     assert result.state == "open"
 
 
-def test_a_state_remove_glob_matching_nothing_warns():
+def test_a_state_remove_glob_matching_nothing_warns(engine):
     config = {
         "fasteners": [{**M6_SOCKET, "state": "open"}],
         "states": {"open": {"remove": ["ghost_*"]}},
     }
-    report = run(screw_facing_wall(60.0), config)
+    report = run(engine, screw_facing_wall(60.0), config)
     assert any("ghost_*" in w for w in report.warnings)
     assert report.exit_code == 2
 
 
-def test_base_chains_accumulate_removals():
+def test_base_chains_accumulate_removals(engine):
     config = {
         "fasteners": [{**M6_SOCKET, "state": "fully-open"}],
         "states": {
@@ -166,13 +166,13 @@ def test_base_chains_accumulate_removals():
             Part("bystander", Pos(0, 0, 150) * Box(400, 400, 10)),
         ]
     )
-    report = run(assembly, config)
+    report = run(engine, assembly, config)
     (result,) = report.results
     assert result.verdict is Verdict.TURNS
     assert result.how == "driver straight in"  # both obstacles off
 
 
-def test_an_alternate_model_state_is_loaded_and_matched_by_name(tmp_path):
+def test_an_alternate_model_state_is_loaded_and_matched_by_name(engine, tmp_path):
     blocked = screw_facing_wall(15.0)
     moved = screw_facing_wall(300.0)
     for name, assembly in (("main.step", blocked), ("moved.step", moved)):
@@ -190,19 +190,20 @@ def test_an_alternate_model_state_is_loaded_and_matched_by_name(tmp_path):
         Assembly.from_step(tmp_path / "main.step"),
         Config.from_dict(config),
         model_dir=tmp_path,
+        engine=engine,
     )
     (result,) = report.results
     assert result.verdict is Verdict.TURNS
     assert result.state == "lever-up"
 
 
-def test_the_state_override_parameter_wins():
+def test_the_state_override_parameter_wins(engine):
     config = {
         "fasteners": [M6_SOCKET],
         "states": {"open": {"remove": ["wall"]}},
     }
-    report = run(screw_facing_wall(15.0), config, state="open")
+    report = run(engine, screw_facing_wall(15.0), config, state="open")
     (result,) = report.results
     assert result.verdict is Verdict.TURNS
     with pytest.raises(ValueError, match="unknown state"):
-        run(screw_facing_wall(15.0), config, state="ghost")
+        run(engine, screw_facing_wall(15.0), config, state="ghost")

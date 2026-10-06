@@ -1,4 +1,4 @@
-"""Fastener and furniture builders for the golden bench (GOLDEN-BENCH.md section 4).
+"""Fastener and furniture builders for the golden bench.
 
 Standard proportions, threads not modelled, all dimensions mm. Everything here is
 generic: round numbers and ISO/DIN proportions, never anybody's design.
@@ -84,7 +84,7 @@ def slot_block(z0, z1, pocket_r, half_width, edge=60.0, size=120.0):
     """A block with a round pocket about the axis and one slot out to its edge.
 
     The slot's half-width sets the handle swing it leaves free: a handle of
-    half-width w clears when h = w + edge * tan(W / 2) (GOLDEN-BENCH section 4).
+    half-width w clears when h = w + edge * tan(W / 2).
     """
     h = z1 - z0
     blk = Pos(0, 0, z0 + h / 2) * Box(size, size, h)
