@@ -256,62 +256,12 @@ def tools(kit: str) -> None:
     Exactly the tools a check with this kit tries, from the same tables the
     sweeps read: a fastener needing anything not listed is not covered.
     """
-    from wrenchroom.tools.ball_end import BALL_END_KEYS
-    from wrenchroom.tools.drivers import SHAFT_RADIUS
-    from wrenchroom.tools.hex_keys import HEX_KEYS
-    from wrenchroom.tools.kits import kit_named
-    from wrenchroom.tools.sizes import size_mm
-    from wrenchroom.tools.sockets import EXTENSION_LENGTHS, socket_for
-    from wrenchroom.tools.spanners import spanner_for
-    from wrenchroom.tools.torx_keys import ISO_10664
+    from wrenchroom.tools.kits import kit_named, listing
 
     try:
         chosen = kit_named(kit)
     except ValueError as exc:
         _say(f"error: {exc}", err=True)
         sys.exit(EXIT_NOT_COVERED)
-    _say(f"kit {chosen.name}: {chosen.summary}")
-    _say()
-    _say("hex keys (DIN ISO 2936:2016-10 and ASME B18.3; dimensions in mm):")
-    for size in chosen.hex_keys:
-        key = HEX_KEYS[size_mm(size)]
-        _say(
-            f"  {key.name:<17} across flats {key.af:<7.4g} "
-            f"long arm {key.long_mm:<6.4g} short arm {key.short_mm:.4g}"
-        )
-    _say()
-    _say("ring spanners, full and stubby (approximate until DIN 3113 is read out; mm):")
-    for size in chosen.spanners:
-        spanner = spanner_for(size_mm(size))
-        _say(
-            f"  spanner-{size:<9} length {spanner.length:<6.4g} "
-            f"ring outer r {spanner.ring_outer_radius:<5.3g} stubby {spanner.stubby_length:.4g}"
-        )
-    extensions = "/".join(f"{e:g}" for e in EXTENSION_LENGTHS)
-    _say()
-    _say(f"sockets on a 72-tooth ratchet, extensions {extensions} mm (approximate until DIN 3124):")
-    for size in chosen.sockets:
-        socket = socket_for(size_mm(size))
-        _say(f"  socket-{size:<10} outer r {socket.outer_radius:<5.3g} length {socket.length:.4g}")
-    _say()
-    _say("drivers (shaft radii approximate, catalogue-typical):")
-    for drive in chosen.drivers:
-        _say(f"  driver-{drive:<9} shaft r {SHAFT_RADIUS[drive]:g}")
-    if chosen.ball_end_keys:
-        _say()
-        _say("ball-end keys (to 25 deg off the axis; Wera 950 SPKL arms; mm):")
-        for size in chosen.ball_end_keys:
-            ball = BALL_END_KEYS[size_mm(size)]
-            _say(
-                f"  {ball.name:<17} across flats {ball.af:<5g} "
-                f"long arm {ball.long_mm:<6g} short arm {ball.short_mm:g}"
-            )
-    if chosen.torx_keys:
-        _say()
-        _say("Torx keys (ISO 10664 sizes; arms the longest of three makers' catalogues; mm):")
-        for size in chosen.torx_keys:
-            torx = ISO_10664[size]
-            _say(
-                f"  {torx.name:<17} point to point {torx.point_to_point:<5g} "
-                f"long arm {torx.long_mm:<6.4g} short arm {torx.short_mm:.4g}"
-            )
+    for line in listing(chosen):
+        _say(line)
