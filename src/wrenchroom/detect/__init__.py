@@ -11,8 +11,10 @@ How a detected fastener is put together, field by field:
 - **kind**: the name's. Geometry doesn't second-guess a nut for a screw.
 - **head**: a drive the solid shows (a hex, a socket, a cross, a slot, a
   square neck) outranks the name; the name outranks a guess from the head's
-  outline. A carriage bolt holds itself and is never checked, so a name alone
-  never makes one: without a square neck in the solid it is not covered.
+  outline. Where the drive and the name disagree, the basis says what the name
+  said and confidence is no more than medium, for a person to settle. A carriage
+  bolt holds itself and is never checked, so a name alone never makes one:
+  without a square neck in the solid it is not covered.
 - **size**: a size the solid's drive settles outranks the name's; the name's
   outranks a measured shank or bore (which a thread drawn at its minor diameter
   can fool). A gland takes no size at all: its hex is not its thread's nut.
@@ -92,7 +94,12 @@ def _confidence(
         return "low"
     guessed_head = hint.kind is Kind.SCREW and reading.head is None and hint.head is None
     shank_only = size is not None and hint.size is None and not reading.size_from_drive
-    return "medium" if guessed_head or shank_only else "high"
+    return "medium" if guessed_head or shank_only or _disputed(hint, reading) else "high"
+
+
+def _disputed(hint: NameHint, reading: ShapeReading) -> bool:
+    """The name says one head and the solid's drive shows another."""
+    return None not in (hint.head, reading.head) and hint.head is not reading.head
 
 
 def _head(hint: NameHint, reading: ShapeReading) -> tuple[Head | None, str | None, str | None]:
@@ -100,7 +107,9 @@ def _head(hint: NameHint, reading: ShapeReading) -> tuple[Head | None, str | Non
     if hint.kind is Kind.NUT:
         return None, None, None
     if reading.head is not None:
-        return reading.head, reading.head.value, None
+        named = hint.head.value if hint.head and _disputed(hint, reading) else None
+        said = f" (the name says {named})" if named else ""
+        return reading.head, reading.head.value + said, None
     if hint.head is Head.CARRIAGE:
         return None, None, NO_SQUARE_NECK
     if hint.head is not None:

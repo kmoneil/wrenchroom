@@ -1145,7 +1145,7 @@
   {
    "name": "torx_wall_screw",
    "kind": "screw",
-   "head": "socket",
+   "head": "torx",
    "size": "M6",
    "length": null,
    "axis": [
@@ -1159,7 +1159,7 @@
     6.0
    ],
    "source": "name+geometry",
-   "tool": "hex-key-5",
+   "tool": "torx-key-T30",
    "verdict": "turns",
    "how": "short leg in",
    "swing_deg": 60.0,

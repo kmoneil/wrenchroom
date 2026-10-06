@@ -145,7 +145,8 @@ class Fastener:
         confidence: How sure detection is, for a detected fastener: ``high``
             (kind, head and size each stated by the name or shown by a drive in
             the solid), ``medium`` (something rests on a head's outline or a
-            measured shank), ``low`` (something is missing). Empty from a sidecar.
+            measured shank, or the name and the solid's drive disagree on the
+            head), ``low`` (something is missing). Empty from a sidecar.
     """
 
     name: str

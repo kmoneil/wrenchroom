@@ -13,6 +13,9 @@ only a sidecar can say, and are pinned here so they stay explained:
 - state_lid_screw: reached with the lid off, which only the sidecar's
   `state: lid-off` says. Without it the lid blocks the screw.
 
+Since issue #19 the tools agree too, and each screw's head is its rule's: a
+verdict alone let torx_wall_screw pass turned by a hex key that can't drive it.
+
 The whole detected report is snapshotted too (bench.detected.snapshot.json),
 on both engines against the one file, so any change in what detection finds or
 how shows up in review.
@@ -93,6 +96,26 @@ def test_verdicts_match_the_truth_but_where_the_sidecar_is_needed(detected):
         if name in by_name and by_name[name].verdict.value != expected["verdict"]
     }
     assert differ == NEEDS_THE_SIDECAR
+
+
+def test_every_detected_screw_has_its_rule_s_head(detected):
+    rules, truth = _described()
+    by_name = {result.fastener.name: result.fastener for result in detected.results}
+    screws = [name for name in truth if (rule := _rule(name, rules)) and "head" in rule]
+    assert len(screws) > 20  # a vacuity guard: most of the bench is screws
+    heads = {name: by_name[name].head.value for name in screws}
+    assert heads == {name: _rule(name, rules)["head"] for name in screws}
+    assert heads["torx_wall_screw"] == "torx"  # issue #19, by its name
+
+
+def test_detected_tools_match_the_truth_but_where_the_sidecar_is_needed(detected):
+    _, truth = _described()
+    by_name = {result.fastener.name: result for result in detected.results}
+    named = {name: want["tool"] for name, want in truth.items() if "tool" in want}
+    assert len(named) > 20  # a vacuity guard
+    differ = {name for name, tool in named.items() if by_name[name].tool != tool}
+    assert differ <= set(NEEDS_THE_SIDECAR)
+    assert by_name["torx_wall_screw"].tool == "torx-key-T30"
 
 
 def test_the_detected_report_matches_its_snapshot(detected):

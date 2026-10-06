@@ -13,7 +13,7 @@ import json
 import numpy as np
 import pytest
 import yaml
-from build123d import Box, Compound, Pos, export_step
+from build123d import Box, Compound, Cylinder, Pos, export_step
 from click.testing import CliRunner
 
 from fastener_models import hex_bolt, hex_nut, socket_screw
@@ -95,6 +95,24 @@ def test_a_fastener_the_kit_cannot_check_is_written_commented_out(tmp_path):
     assert "now not-covered: a set screw" in output
     assert "  # - parts: set screw M5x8" in output
     assert all(e["parts"] != "set screw M5x8" for e in yaml.safe_load(output)["fasteners"])
+
+
+def test_detect_writes_a_torx_head_wherever_the_name_says_it(tmp_path):
+    # Issue #19's reproduction: one solid, the drive word next to the noun or not.
+    head = Pos(0, 0, 3) * Cylinder(5, 6) - Pos(0, 0, 4.5) * Cylinder(2.8, 3.01)
+    screw = head + Pos(0, 0, -5) * Cylinder(3, 10)
+    parts = [
+        ("lid_torx_screw", screw),
+        ("plate_0", Pos(0, 0, -3) * Box(60, 60, 6)),
+        ("torx_lid_screw", Pos(100, 0, 0) * screw),
+        ("plate_1", Pos(100, 0, -3) * Box(60, 60, 6)),
+    ]
+    output = detected_yaml(tmp_path, parts).stdout
+    rules = {rule["parts"]: rule for rule in yaml.safe_load(output)["fasteners"]}
+    assert rules["lid_torx_screw"]["head"] == rules["torx_lid_screw"]["head"] == "torx"
+    assert "found by noun 'screw', drive 'torx'; solid: M6 measured" in output
+    assert "now turns with torx-key-T30" not in output  # metric-home holds no Torx key
+    assert "outline" not in output
 
 
 def test_confidence_reflects_the_evidence(tmp_path):
