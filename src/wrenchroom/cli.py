@@ -1,17 +1,20 @@
 """The command line interface.
 
 The four commands exist from day one so the entry point, the exit-code contract and the
-help text are testable before any of them work. Each stub exits 2, the code for
-"something not covered": a command that does not exist yet is the clearest possible case
-of not covered.
+help text are testable before all of them work. A command not yet delivered exits 2,
+the code for "something not covered".
 
 Exit codes, fixed: 0 every fastener passes, 1 a fastener fails, 2 something not covered
 or a config error.
+
+The heavy imports (build123d pulls OCP, seconds) happen inside the commands that need
+them, so `--help` and `--version` stay instant.
 """
 
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from typing import NoReturn
 
 import click
@@ -35,10 +38,56 @@ def main() -> None:
 
 
 @main.command()
-@click.argument("model")
-def check(model: str) -> None:
+@click.argument("model", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Sidecar YAML; default: wrenchroom.yaml beside the model, if present.",
+)
+@click.option("--kit", default="metric-home", show_default=True, help="Which tool kit.")
+@click.option(
+    "--json",
+    "json_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Also write the machine-readable report here.",
+)
+@click.option("--step-deg", default=15.0, show_default=True, help="Swing sampling step.")
+@click.option("--only", help="Check only fasteners whose name matches this glob.")
+def check(
+    model: Path,
+    config_path: Path | None,
+    kit: str,
+    json_path: Path | None,
+    step_deg: float,
+    only: str | None,
+) -> None:
     """Check every fastener in MODEL and report the verdicts."""
-    _not_built("check")
+    from wrenchroom.assembly import Assembly
+    from wrenchroom.check import check as run_check
+    from wrenchroom.config import Config, ConfigError
+
+    if config_path is None:
+        beside = model.parent / "wrenchroom.yaml"
+        config_path = beside if beside.exists() else None
+    try:
+        config = Config.load(config_path) if config_path else None
+        report = run_check(
+            Assembly.from_step(model),
+            config,
+            kit=kit,
+            step_deg=step_deg,
+            model=model.name,
+            only=only,
+        )
+    except (ConfigError, ValueError) as exc:
+        click.echo(f"error: {exc}", err=True)
+        sys.exit(EXIT_NOT_COVERED)
+    for line in report.terminal_lines():
+        click.echo(line)
+    if json_path is not None:
+        report.to_json(json_path)
+    sys.exit(report.exit_code)
 
 
 @main.command()

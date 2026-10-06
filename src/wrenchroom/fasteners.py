@@ -247,3 +247,15 @@ def hex_key_af(head: Head, size: Size) -> float | None:
 def spanner_af(size: Size) -> float | None:
     """The across-flats a hex head or nut presents to a spanner, in mm."""
     return HEX_AF.get(size.designation)
+
+
+#: Phillips driver number by thread. Approximation (catalogue-typical pairings;
+#: no ISO table maps thread to recess number across head styles).
+PHILLIPS_NUMBER: dict[str, int] = {
+    "M3": 1,
+    "M3.5": 2,
+    "M4": 2,
+    "M5": 2,
+    "M6": 3,
+    "M8": 3,
+}

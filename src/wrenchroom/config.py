@@ -127,7 +127,7 @@ class Config:
         """
         by_part: dict[str, Rule] = {}
         unmatched_rules: list[Rule] = []
-        names = [name for name in assembly.names if not self._ignored(name)]
+        names = [name for name in assembly.names if not self.is_ignored(name)]
         for rule in self.rules:
             hits = [name for name in names if fnmatchcase(name, rule.parts)]
             if not hits:
@@ -159,7 +159,8 @@ class Config:
             unmatched_ignores=unmatched_ignores,
         )
 
-    def _ignored(self, name: str) -> bool:
+    def is_ignored(self, name: str) -> bool:
+        """True when a part name matches an ignore glob (wires, springs: pushed aside)."""
         return any(fnmatchcase(name, glob) for glob in self.ignore)
 
 

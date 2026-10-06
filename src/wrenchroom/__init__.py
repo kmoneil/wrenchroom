@@ -12,15 +12,25 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from wrenchroom.assembly import Assembly, Part
+    from wrenchroom.check import check
+    from wrenchroom.config import Config
+    from wrenchroom.report import Report, Verdict
 
 __version__ = "0.1.0.dev0"
 
-__all__ = ["Assembly", "Part", "__version__"]
+__all__ = ["Assembly", "Config", "Part", "Report", "Verdict", "__version__", "check"]
 
 # `import wrenchroom` must stay light. Assembly pulls build123d, which pulls OCP
 # (OpenCascade, seconds of import time); loading that to print `--help` or a version
 # would make the CLI feel broken. So the public names resolve lazily on first touch.
-_LAZY = {"Assembly": "wrenchroom.assembly", "Part": "wrenchroom.assembly"}
+_LAZY = {
+    "Assembly": "wrenchroom.assembly",
+    "Part": "wrenchroom.assembly",
+    "Config": "wrenchroom.config",
+    "check": "wrenchroom.check",
+    "Report": "wrenchroom.report",
+    "Verdict": "wrenchroom.report",
+}
 
 
 def __getattr__(name: str) -> object:

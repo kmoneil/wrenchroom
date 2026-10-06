@@ -106,6 +106,9 @@ select = [
 ignore = [
   "D105",    # magic method docstrings
   "D107",    # __init__ docstring: documented on the class
+  "TRY003",  # messages are the payload here: NotCovered's text IS the report's reason,
+             # ConfigError's text names the file and rule; a message class per spelling
+             # would scatter what the reader needs in one place
 ]
 
 [tool.ruff.lint.mccabe]
@@ -127,6 +130,10 @@ convention = "google"
 ban-relative-imports = "parents"
 
 [tool.ruff.lint.per-file-ignores]
+# The CLI defers its heavy imports (build123d pulls OCP, seconds) into the commands
+# that need them, so --help and --version stay instant. That is the one place
+# function-level imports are the point rather than an accident.
+"src/wrenchroom/cli.py" = ["PLC0415"]
 # Tests are exempt from docstring and annotation gates and from bandit's assert rule.
 # They are NOT exempt from correctness lints.
 "tests/**" = ["D", "ANN", "S101", "PLR2004", "T20"]
