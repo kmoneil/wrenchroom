@@ -18,7 +18,7 @@ from click.testing import CliRunner
 
 from fastener_models import hex_bolt, hex_nut, socket_screw
 from wrenchroom.assembly import Assembly, Part
-from wrenchroom.check import check
+from wrenchroom.checker import check
 from wrenchroom.cli import EXIT_NOT_COVERED, main
 from wrenchroom.config import Config
 from wrenchroom.detect.sidecar import glob_escape, sidecar_text

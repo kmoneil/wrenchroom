@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from wrenchroom.assembly import Assembly, Part
-    from wrenchroom.check import check
+    from wrenchroom.checker import check
     from wrenchroom.config import Config
     from wrenchroom.report import Report, Verdict
 
@@ -27,7 +27,7 @@ _LAZY = {
     "Assembly": "wrenchroom.assembly",
     "Part": "wrenchroom.assembly",
     "Config": "wrenchroom.config",
-    "check": "wrenchroom.check",
+    "check": "wrenchroom.checker",
     "Report": "wrenchroom.report",
     "Verdict": "wrenchroom.report",
 }

@@ -23,7 +23,7 @@ from click.testing import CliRunner
 import wrenchroom.view
 from fixture_models import screw_facing_wall, socket_screw
 from wrenchroom.assembly import Assembly, Part
-from wrenchroom.check import check
+from wrenchroom.checker import check
 from wrenchroom.cli import main
 from wrenchroom.config import Config
 from wrenchroom.engine import ENGINES

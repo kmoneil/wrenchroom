@@ -5,7 +5,7 @@ from bench import FINAL_COUNTS, KIT, build, check_bench, sidecar_and_truth
 from cells import CELLS
 
 from wrenchroom.assembly import Assembly
-from wrenchroom.check import check
+from wrenchroom.checker import check
 from wrenchroom.config import Config
 
 

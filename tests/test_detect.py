@@ -24,7 +24,7 @@ from fastener_models import (
 )
 from fixture_models import gland_on_wall, screw_facing_wall
 from wrenchroom.assembly import Assembly, Part
-from wrenchroom.check import check
+from wrenchroom.checker import check
 from wrenchroom.config import Config, ConfigError
 from wrenchroom.detect import NO_SQUARE_NECK, describe, find_fasteners, read_name
 from wrenchroom.fasteners import Head, Kind

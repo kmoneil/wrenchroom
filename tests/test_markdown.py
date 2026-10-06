@@ -20,7 +20,7 @@ from markdown_it import MarkdownIt
 
 from fixture_models import screw_facing_wall, socket_screw
 from wrenchroom.assembly import Assembly, Part
-from wrenchroom.check import check
+from wrenchroom.checker import check
 from wrenchroom.cli import main
 from wrenchroom.config import Config
 from wrenchroom.report import NO_TOOL, md_code, md_text

@@ -11,7 +11,7 @@ from fixture_models import (
     socket_screw,
 )
 from wrenchroom.assembly import Assembly, Part
-from wrenchroom.check import check
+from wrenchroom.checker import check
 from wrenchroom.config import Config
 from wrenchroom.report import Verdict
 

@@ -117,7 +117,7 @@ def _run(
 ) -> Report:
     """Load, check, and turn config mistakes into exit 2; shared by check and explain."""
     from wrenchroom.assembly import Assembly
-    from wrenchroom.check import check as run_check
+    from wrenchroom.checker import check as run_check
     from wrenchroom.config import Config, ConfigError
 
     if config_path is None:
@@ -153,7 +153,7 @@ def detect(model: Path, kit: str) -> None:
     the output to wrenchroom.yaml, correct it, and keep it.
     """
     from wrenchroom.assembly import Assembly
-    from wrenchroom.check import check as run_check
+    from wrenchroom.checker import check as run_check
     from wrenchroom.config import Config
     from wrenchroom.detect.sidecar import sidecar_text
 

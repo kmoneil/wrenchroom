@@ -11,7 +11,7 @@ from build123d import Box, Cylinder, Pos, Rectangle, Rot
 
 import wrenchroom.engine.mesh as mesh_module
 from wrenchroom.assembly import Assembly, Part
-from wrenchroom.check import check
+from wrenchroom.checker import check
 from wrenchroom.config import Config
 from wrenchroom.engine import (
     DEFAULT_ENGINE,

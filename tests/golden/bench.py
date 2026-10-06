@@ -24,7 +24,7 @@ from parts import plate, slab, socket_screw, state_lever_raised
 
 from wrenchroom import __version__
 from wrenchroom.assembly import Assembly
-from wrenchroom.check import check
+from wrenchroom.checker import check
 from wrenchroom.config import Config
 from wrenchroom.report import md_text
 

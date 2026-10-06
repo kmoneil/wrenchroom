@@ -79,6 +79,41 @@ to M5):
   engines; its whole-report snapshot is byte-identical across Linux and macOS, 3.13
   and 3.14.
 
+## From Python, and in pytest
+
+```python
+import wrenchroom as wr
+
+asm = wr.Assembly.from_step("robot.step")  # or wr.Assembly.from_shapes([(name, shape), ...])
+cfg = wr.Config.load("wrenchroom.yaml")  # optional
+report = wr.check(asm, cfg, kit="metric-home")
+for f in report.failures():
+    print(f.name, f.tool, f.verdict, f.blocked_by)
+report.to_json("report.json")
+report.to_html("report.html")
+report.to_markdown("report.md")
+```
+
+In CI, the pytest plugin fails the build when a design change buries a fastener.
+Installing wrenchroom registers it; name the model in the project's pytest settings
+(paths relative to that file) and ask for the report:
+
+```ini
+[pytest]
+wrenchroom_model = cad/robot.step
+; optional: wrenchroom_config (default: wrenchroom.yaml beside the model),
+; wrenchroom_kit, wrenchroom_state, wrenchroom_exact = true
+```
+
+```python
+def test_every_fastener_reachable(wrenchroom_report):
+    wrenchroom_report.assert_all_pass()
+```
+
+A failure prints what `wrenchroom check` prints: the summary and a line per problem.
+The model is checked once per session; the plugin loads nothing until a test asks
+for it, and `-p no:wrenchroom` turns it off.
+
 ## What it will do
 
 ```console
