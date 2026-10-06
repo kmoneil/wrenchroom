@@ -6,9 +6,16 @@ there and what are they called".
 
 Names are load-bearing: fastener detection starts from them (sidecar globs now, name
 patterns at M4), so a STEP import that lost or mangled names would quietly turn every
-downstream match off. The import keeps the STEP product and instance names and makes
-repeats unique by appending ``#2``, ``#3``, in document order. Verified against a
-build123d round-trip: labels survive on leaf solids, duplicates arrive duplicated.
+downstream match off. The import keeps names and makes repeats unique by appending
+``#2``, ``#3``, in document order.
+
+The STEP path reads through XCAF itself rather than build123d's importer, and the
+reason is issue #2: a part placed twice as instances of one shared product has ONE
+product name and TWO instance names, and build123d names components after the product,
+so one instance vanished into the other. Here the instance name (the file's
+NEXT_ASSEMBLY_USAGE_OCCURRENCE name, which is what CAD packages put the per-placement
+name in) wins, the product name is the fallback, and the nearest ancestor's name after
+that.
 
 Units are millimetres internally. OCP's STEP reader converts from the file's declared
 units on import, so nothing here rescales.
@@ -21,10 +28,22 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from build123d import Compound, Shape, import_step
+from build123d import Compound, Shape
+from build123d.topology import downcast  # the same table build123d's own importer uses
+from OCP.collections import Sequence_TDF_Label
+from OCP.IFSelect import IFSelect_RetDone
+from OCP.STEPCAFControl import STEPCAFControl_Reader
+from OCP.TCollection import TCollection_AsciiString, TCollection_ExtendedString
+from OCP.TDataStd import TDataStd_Name
+from OCP.TDF import TDF_Label
+from OCP.TDocStd import TDocStd_Document
+from OCP.TopLoc import TopLoc_Location
+from OCP.XCAFDoc import XCAFDoc_DocumentTool
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
+
+    from OCP.XCAFDoc import XCAFDoc_ShapeTool
 
 #: The name given to a solid that arrived with no name at all. It still gets the
 #: ``#2`` treatment, so several anonymous solids stay distinguishable.
@@ -75,10 +94,9 @@ class Assembly:
             The assembly, one part per leaf solid, in document order.
 
         Raises:
-            ValueError: If the file contains no solids.
+            ValueError: If the file cannot be read or contains no solids.
         """
-        shape = import_step(str(path))
-        return cls(_unique(_leaves(shape), source=str(path)))
+        return cls(_unique(_read_step(Path(path)), source=str(path)))
 
     @classmethod
     def from_shapes(cls, shapes: Iterable[tuple[str, Shape]]) -> Assembly:
@@ -149,3 +167,75 @@ def _unique(named: Iterable[tuple[str, Shape]], source: str) -> Iterator[Part]:
     if empty:
         msg = f"no solids found in {source}"
         raise ValueError(msg)
+
+
+# ---------------------------------------------------------------------------
+# The XCAF walk behind from_step.
+# ---------------------------------------------------------------------------
+
+
+def _read_step(path: Path) -> Iterator[tuple[str, Shape]]:
+    """Yield (name, shape) per leaf, instance names winning over product names."""
+    doc = TDocStd_Document(TCollection_ExtendedString("XCAF"))
+    shape_tool = XCAFDoc_DocumentTool.ShapeTool_s(doc.Main())
+    reader = STEPCAFControl_Reader()
+    reader.SetNameMode(True)
+    if reader.ReadFile(str(path)) != IFSelect_RetDone:
+        msg = f"cannot read {path} as STEP"
+        raise ValueError(msg)
+    reader.Transfer(doc)
+    roots = Sequence_TDF_Label()
+    shape_tool.GetFreeShapes(roots)
+    for index in range(1, roots.Length() + 1):
+        yield from _walk_label(shape_tool, roots.Value(index), TopLoc_Location(), "")
+
+
+def _walk_label(
+    shape_tool: XCAFDoc_ShapeTool,
+    label: TDF_Label,
+    location: TopLoc_Location,
+    inherited: str,
+    instance: str = "",
+) -> Iterator[tuple[str, Shape]]:
+    """Walk one product label, carrying the accumulated placement and names.
+
+    ``instance`` is the component (NAUO) name of the reference that brought us
+    here. At a leaf it OUTRANKS the product's own name: two placements of one
+    shared product have one product name between them and their real names on
+    the instances, and product-name-first is exactly issue #2. For a
+    subassembly it only joins the inheritance chain, so leaves inside keep
+    their own names.
+    """
+    if shape_tool.IsAssembly_s(label):
+        name = instance or _label_name(label) or inherited
+        components = Sequence_TDF_Label()
+        shape_tool.GetComponents_s(label, components)
+        for index in range(1, components.Length() + 1):
+            component = components.Value(index)
+            placed = location.Multiplied(shape_tool.GetLocation_s(component))
+            target = component
+            if shape_tool.IsReference_s(component):
+                target = TDF_Label()
+                shape_tool.GetReferredShape_s(component, target)
+            yield from _walk_label(
+                shape_tool, target, placed, name, instance=_label_name(component)
+            )
+        return
+    name = instance or _label_name(label) or inherited
+    topo = shape_tool.GetShape_s(label).Moved(location)
+    shape = Shape.cast(downcast(topo))
+    solids = shape.solids()
+    if not solids:
+        return  # curves and sketch junk: not parts
+    if len(solids) == 1:
+        yield (name or UNNAMED), shape
+    else:
+        for solid in solids:
+            yield (name or UNNAMED), solid
+
+
+def _label_name(label: TDF_Label) -> str:
+    attribute = TDataStd_Name()
+    if label.FindAttribute(TDataStd_Name.GetID_s(), attribute):
+        return TCollection_AsciiString(attribute.Get()).ToCString()
+    return ""

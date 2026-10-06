@@ -33,10 +33,6 @@ def test_truth(request, name, expected, bench_json):
             assert got == want, f"{name}.{key}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="waiting on issue-2: the twins import as one name, so one fastener is missing",
-)
 def test_whole_bench_counts(bench_report):
     assert bench_report.summary == FINAL_COUNTS
     assert bench_report.exit_code == 1  # the bench has deliberate failures
@@ -80,7 +76,6 @@ def test_isolation_matches_the_full_bench(bench_json, bench_dir):
     assert not differences
 
 
-@pytest.mark.xfail(strict=True, reason="waiting on issue-2 (STEP instance names)")
 def test_round_trip_names(bench_dir):
     expected = sorted(shape.label for shape in build())
     assembly = Assembly.from_step(bench_dir / "bench.step")

@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "metric-home",
  "summary": {
-  "fasteners": 35,
-  "turns": 22,
+  "fasteners": 36,
+  "turns": 23,
   "held": 2,
   "blocked": 10,
   "stuck": 1,
@@ -934,7 +934,7 @@
    "reason": "only holds, and it has no nut"
   },
   {
-   "name": "twins_b_screw",
+   "name": "twins_a_screw",
    "kind": "screw",
    "head": "socket",
    "size": "M6",
@@ -959,6 +959,33 @@
    "blocked_by": [
     "twins_wall"
    ],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "twins_b_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1100.0,
+    4000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
    "stuck_on": [],
    "reason": null
   },

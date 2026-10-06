@@ -61,12 +61,8 @@ def sidecar_and_truth():
                 entry["pair"] = f"{cell.name}_{entry['pair']}"
             truth[f"{cell.name}_{role}"] = entry
     rules.append({"parts": "twins_*_screw", "kind": "screw", "head": "socket", "size": "M6"})
-    truth["twins_a_screw"] = {
-        "verdict": "blocked",
-        "blocked_by": ["twins_wall"],
-        "needs": "issue-2",
-    }
-    truth["twins_b_screw"] = {"verdict": "turns", "needs": "issue-2"}
+    truth["twins_a_screw"] = {"verdict": "blocked", "blocked_by": ["twins_wall"]}
+    truth["twins_b_screw"] = {"verdict": "turns"}
     sidecar = {
         "fasteners": rules,
         "ignore": sorted(ignore),
