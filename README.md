@@ -69,8 +69,10 @@ to M5):
   of a private model can't send anything anywhere.
 - Dimension tables cite their standards (ISO 2936, 4762, 7380-1, 10642, 4032) with the
   date checked; approximations are labelled as such.
-- A sidecar rule that matches nothing is reported and fails the run: that is how a
-  renamed part hides.
+- A sidecar glob that matches nothing (a rule's parts or mates, an ignore, a state's
+  removal, `--only`) is reported and fails the run: that is how a renamed part hides.
+  A rule's `mates:` (parts that travel with the fastener and leave its scene, such as
+  a washer or a nyloc's separate dome) take globs like the rest.
 - Pairs (a nut that only holds passes through its turning bolt), extraction (a
   screw that turns but can't come out is `stuck`), states (parts removed, another
   model of the mechanism, retries that say where a fastener passed), `explain`

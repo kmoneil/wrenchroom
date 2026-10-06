@@ -9,6 +9,7 @@ Two rules here are lessons the prototype paid for:
 
 - A rule that matches no part is reported, never dropped. A glob that stops matching
   is usually a renamed part, and silence turns that into a fastener nobody checks.
+  So is every other glob: an ignore, a state's removal, a rule's mate.
 - Nothing is ignored silently. An unknown key is a loud error, because a sidecar
   section that did nothing would look exactly like one that worked.
 
@@ -185,12 +186,14 @@ class Config:
     def apply(self, assembly: Assembly) -> Matches:
         """Match the rules against an assembly's part names.
 
-        Later rules override earlier ones for the same part. Every rule and ignore
-        glob that matched nothing is reported in the result; dropping one silently
-        is how a renamed part stops being checked.
+        Later rules override earlier ones for the same part. Every rule, ignore and
+        mate glob that matched nothing is reported in the result; dropping one
+        silently is how a renamed part stops being checked. (A mate is looked for
+        only where its rule matched: an unmatched rule is reported already.)
         """
         by_part: dict[str, Rule] = {}
         unmatched_rules: list[Rule] = []
+        unmatched_mates: list[tuple[str, str]] = []
         names = [name for name in assembly.names if not self.is_ignored(name)]
         for rule in self.rules:
             hits = [name for name in names if fnmatchcase(name, rule.parts)]
@@ -198,6 +201,11 @@ class Config:
                 unmatched_rules.append(rule)
             for name in hits:
                 by_part[name] = rule
+            unmatched_mates.extend(
+                (rule.parts, glob)
+                for glob in rule.mates
+                if hits and not any(is_mate(name, (glob,)) for name in assembly.names)
+            )
         fasteners = tuple(
             Fastener(
                 name=name,
@@ -223,6 +231,7 @@ class Config:
             fasteners=fasteners,
             unmatched_rules=tuple(unmatched_rules),
             unmatched_ignores=unmatched_ignores,
+            unmatched_mates=tuple(unmatched_mates),
         )
 
     def is_ignored(self, name: str) -> bool:
@@ -232,16 +241,29 @@ class Config:
 
 @dataclass(frozen=True)
 class Matches:
-    """What a sidecar found in an assembly, and what it failed to find."""
+    """What a sidecar found in an assembly, and what it failed to find.
+
+    ``unmatched_mates`` holds (the rule's parts glob, the mate glob) pairs.
+    """
 
     fasteners: tuple[Fastener, ...]
     unmatched_rules: tuple[Rule, ...] = ()
     unmatched_ignores: tuple[str, ...] = ()
+    unmatched_mates: tuple[tuple[str, str], ...] = ()
 
     @property
     def clean(self) -> bool:
-        """True when every rule and ignore glob matched something."""
-        return not self.unmatched_rules and not self.unmatched_ignores
+        """True when every rule, ignore and mate glob matched something."""
+        return not (self.unmatched_rules or self.unmatched_ignores or self.unmatched_mates)
+
+
+def is_mate(name: str, mates: tuple[str, ...]) -> bool:
+    """Whether a part is one of a fastener's mates: a glob, as every other part list.
+
+    A name also matches itself exactly, as mates were exact names before they
+    took globs: ``washer[1]`` still names the part called that, not ``washer1``.
+    """
+    return any(name == glob or fnmatchcase(name, glob) for glob in mates)
 
 
 def _parse_rule(entry: object, index: int, source: str) -> Rule:
