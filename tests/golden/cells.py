@@ -750,3 +750,22 @@ def hex_band():
         ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(8, 20, 13, 5.3)),
         ("nut", hex_nut(8, 12.8, 6.8)),
     ]
+
+
+@cell(
+    "nut_gap",
+    [{"parts": "nut", "kind": "nut", "size": "M8"}],
+    {"nut": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"}},
+)
+def nut_gap():
+    """An M8 nut drawn 1.5 off its plate, as when its washer is left out (issue #26),
+    on a stud up through the plate. Both ends read clear at the 1 mm probe; probed
+    2 out, the bottom meets the plate and the top is still clear, so the top is the
+    free face and the ring goes on from above. It used to be "cannot tell the nut's
+    free face: both ends are clear".
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 4.5)])),
+        ("stud", Pos(0, 0, 2.5) * Cylinder(4, 25)),
+        ("nut", Pos(0, 0, 1.5) * hex_nut(8, 13, 6.8)),
+    ]

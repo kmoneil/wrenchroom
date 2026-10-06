@@ -20,7 +20,9 @@ to M5):
 
 - `wrenchroom check model.step` reads a STEP assembly (names kept, repeats made
   unique), takes fastener descriptions from a `wrenchroom.yaml` sidecar, resolves each
-  fastener's seat and axis from its geometry, and tries real tools against the real
+  fastener's seat and axis from its geometry (a nut is turned from the end nothing sits
+  against, or, drawn off its seat with its washer left out, from the end with the more
+  room), and tries real tools against the real
   parts: metric hex keys (driver straight in, short leg, long leg), combination
   spanners (the ring, then the open end from the side, each full and stubby), sockets
   on a ratchet with stock extensions, Phillips and slotted drivers. Verdicts per fastener with every blocker named; terminal table, JSON
@@ -102,7 +104,7 @@ to M5):
   its reason, for you to complete. Kept as written, the file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  517 fasteners is read and checked with the full kit in about 9.4 s on an Apple M5
+  528 fasteners is read and checked with the full kit in about 9.4 s on an Apple M5
   Max laptop (the target is 10 s). The bench is dense with fasteners that fail, and
   a failing one tries every tool it has: open ends, and ball-end keys leant every way
   round, cost most of that. `--exact` swaps in OCP boolean intersections on the
