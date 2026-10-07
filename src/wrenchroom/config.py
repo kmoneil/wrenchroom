@@ -20,7 +20,7 @@ family and a narrow one the exception, in reading order.
 from __future__ import annotations
 
 import enum
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from fnmatch import fnmatchcase
 from math import sqrt
 from pathlib import Path
@@ -106,6 +106,9 @@ class Config:
     #: The sidecar's own tools (spec 5.3), which join whatever kit is used.
     tools: CustomTools = field(default_factory=CustomTools)
     source: str = "<none>"
+    #: The folder the sidecar was read from, when it was read from a file: where a
+    #: state's ``model:`` is looked for first (issue #73). None for a mapping.
+    directory: Path | None = None
 
     @classmethod
     def load(cls, path: str | Path) -> Config:
@@ -122,7 +125,8 @@ class Config:
         except yaml.YAMLError as exc:
             msg = f"{path}: not valid YAML: {exc}"
             raise ConfigError(msg) from exc
-        return cls.from_dict(raw if raw is not None else {}, source=str(path))
+        config = cls.from_dict(raw if raw is not None else {}, source=str(path))
+        return replace(config, directory=path.parent)
 
     @classmethod
     def from_dict(cls, raw: object, source: str = "<dict>") -> Config:

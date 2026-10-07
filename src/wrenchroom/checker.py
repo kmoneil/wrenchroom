@@ -634,7 +634,7 @@ class _StateSpace:
         if state_name is None:
             return self._default, frozenset(), True
         model = self._config.state_model(state_name)
-        assembly = self._default if model is None else self._load(model)
+        assembly = self._default if model is None else self._load(state_name, model)
         if model is not None and state_name not in self.models:
             self._compare(state_name, model, assembly)
         removed: set[str] = set()
@@ -684,13 +684,38 @@ class _StateSpace:
         if said:
             self.notes.append(f"state {state_name!r}: its model {model} {'; '.join(said)}")
 
-    def _load(self, filename: str) -> Assembly:
+    def _load(self, state_name: str, filename: str) -> Assembly:
         if filename not in self._models:
-            if self._model_dir is None:
-                msg = f"state model {filename!r} needs a model directory to load from"
-                raise ConfigError(msg)
-            self._models[filename] = Assembly.from_step(self._model_dir / filename)
+            self._models[filename] = Assembly.from_step(self._locate(state_name, filename))
         return self._models[filename]
+
+    def _locate(self, state_name: str, filename: str) -> Path:
+        """Where a state's model is: beside the sidecar, else beside the model (#73).
+
+        A path in a config file is read as one beside it, as the pytest plugin's
+        paths are; beside the model is where the CLI looked before, and still
+        does when the sidecar's folder hasn't the file. An absolute path is taken
+        as it is. A file found nowhere is said to be missing, apart from one found
+        and not readable as STEP, which says that instead.
+        """
+        path = Path(filename)
+        folders = [self._config.directory, self._model_dir]
+        found = [path] if path.is_absolute() else [d / path for d in folders if d is not None]
+        if not found:
+            msg = f"state model {filename!r} needs a model directory to load from"
+            raise ConfigError(msg)
+        for candidate in dict.fromkeys(found):
+            if candidate.exists():
+                return candidate
+        where = ", ".join(str(c.parent) for c in dict.fromkeys(found))
+        owner = self._config.state(state_name)
+        while owner.model is None and owner.base is not None:  # the state that names it
+            owner = self._config.state(owner.base)
+        msg = (
+            f"state {state_name!r}: its model {filename} not found "
+            f"({self._config.source}, states.{owner.name}.model; looked in {where})"
+        )
+        raise ConfigError(msg)
 
 
 def _count(names: tuple[str, ...], noun: str) -> str:

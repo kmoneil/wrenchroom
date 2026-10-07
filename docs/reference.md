@@ -159,6 +159,10 @@ and `grazes` in the JSON).
 - **Extraction.** A screw that turns but can't come out along its axis is `stuck`.
 - **States.** A state takes parts off (`remove:`), or is another model of the same
   parts with the mechanism moved (`model:`), and may build on another (`base:`). A
+  `model:` path is read as one beside the sidecar, as a path in a config file
+  usually is, then beside the model if the sidecar's folder hasn't it (issue #73);
+  an absolute one is taken as it is. One found nowhere is an error naming the state,
+  the sidecar entry and where it was looked for. A
   rule's `state:` says a fastener is reached in that state; `checks: {try_states:
   [...]}` retries failures in each state in turn, and says where a fastener passed.
   A state's model is the same parts, moved, and matched by name (issue #74): a
