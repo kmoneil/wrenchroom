@@ -12,9 +12,12 @@ How a detected fastener is put together, field by field:
 - **head**: a drive the solid shows (a hex, a socket, a cross, a slot, a
   square neck) outranks the name; the name outranks a guess from the head's
   outline. Where the drive and the name disagree, the basis says what the name
-  said and confidence is no more than medium, for a person to settle. A carriage
-  bolt holds itself and is never checked, so a name alone never makes one:
-  without a square neck in the solid it is not covered.
+  said and confidence is no more than medium, for a person to settle. Which
+  keyed head a hex socket is in (socket, button, countersunk) only the outline
+  says, so a keyed head the name gives stands; where a countersink or a
+  standard's outline shows another, the basis says so and confidence is low
+  (issue #81). A carriage bolt holds itself and is never checked, so a name
+  alone never makes one: without a square neck in the solid it is not covered.
 - **size**: a size the solid's drive settles outranks the name's; the name's
   outranks a measured shank or bore (which a thread drawn at its minor diameter
   can fool). A gland takes no size at all: its hex is not its thread's nut.
@@ -195,7 +198,7 @@ def _confidence(
     has_size = size is not None or reading.drive_af is not None
     if not_covered or not has_size or (hint.kind is Kind.SCREW and head is None):
         return "low"
-    if _head_guessed(hint, reading):
+    if _head_guessed(hint, reading) or reading.outline_head is not None:
         return "low"
     guessed_head = hint.kind is Kind.SCREW and reading.head is None and hint.head is None
     shank_only = size is not None and hint.size is None and not reading.size_from_drive
@@ -216,11 +219,11 @@ def _head(hint: NameHint, reading: ShapeReading) -> tuple[Head | None, str | Non
     if reading.head is not None:
         named = hint.head.value if hint.head and _disputed(hint, reading) else None
         said = f" (the name says {named})" if named else ""
-        return reading.head, reading.head.value + said, None
+        return reading.head, _outline_said(reading) or reading.head.value + said, None
     if hint.head is Head.CARRIAGE:
         return None, None, NO_SQUARE_NECK
     if hint.head is not None:
-        return hint.head, None, None
+        return hint.head, _outline_said(reading, hint.head), None
     if reading.head_guess is not None:
         note = f"{reading.head_guess.value} by its outline"
         if reading.head_standard:
@@ -229,6 +232,18 @@ def _head(hint: NameHint, reading: ShapeReading) -> tuple[Head | None, str | Non
             note += ", fitting no standard head"  # a guess from proportions alone
         return reading.head_guess, note, None
     return None, None, None
+
+
+def _outline_said(reading: ShapeReading, head: Head | None = None) -> str | None:
+    """What a countersink or a standard's outline says against the name's head (issue #81).
+
+    The name's keyed head stands (``head``, the reading's own where a pocket showed
+    a key goes in); this says what the outline shows instead, for a person to settle.
+    """
+    kept = head or reading.head
+    if reading.outline_head is None or kept is None:
+        return None
+    return f"a {reading.outline_head.value} head's outline (the name's {kept.value} stands)"
 
 
 def _size(hint: NameHint, reading: ShapeReading) -> Size | None:

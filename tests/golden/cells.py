@@ -15,8 +15,10 @@ cannot change the answer.
 import math
 from dataclasses import dataclass, field
 
-from build123d import Box, Compound, Cylinder, Pos, Rot, Torus
+from bd_warehouse.fastener import HexNut, SocketHeadCapScrew
+from build123d import Box, Compound, Cone, Cylinder, Pos, Rot, Torus
 from parts import (
+    VENDOR_FLAT,
     button_screw,
     carriage_bolt,
     gland,
@@ -28,6 +30,9 @@ from parts import (
     slab,
     slot_block,
     socket_screw,
+    vendor_button_screw,
+    vendor_flat_screw,
+    vendor_socket_screw,
 )
 
 
@@ -1576,3 +1581,114 @@ def wrong_tool():
         ("phillips_screw", Pos(screws["phillips"], 40, 0) * pan_phillips()),
     ]
     return parts
+
+
+# ---------------------------------------------------------------- issue #81: real solids
+#
+# Fasteners as makers and bd_warehouse draw them, with names that say no head: the
+# solid has to. A maker chamfers every edge, countersinks a socket's mouth, leaves
+# the drill's point at its bottom and chamfers the tip; none of those cones is a
+# countersunk head, and a domed head's flat ring is no larger than its tip's end.
+
+
+@cell(
+    "chamfers",
+    [{"parts": "screw", "kind": "screw", "head": "socket", "size": "M4"}],
+    {"screw": {"verdict": "turns", "tool": "hex-key-3", "how": "driver straight in"}},
+)
+def chamfers():
+    """An ISO 4762 M4 as a maker draws it (7 by 4, a 3 mm socket 2 deep), on a plate,
+    nothing above: the 3 mm key goes straight in. Its eleven cones (the head's two
+    chamfers, the socket's mouth and point, the tip) used to make it countersunk,
+    and so M5, whose countersunk head a 3 mm key fits.
+    """
+    return [("plate", plate(holes=[(0, 0, 2.2)])), ("screw", vendor_socket_screw("M4"))]
+
+
+@cell(
+    "dome_tip",
+    [{"parts": "screw", "kind": "screw", "head": "button", "size": "M3"}],
+    {"screw": {"verdict": "turns", "tool": "hex-key-2", "how": "driver straight in"}},
+)
+def dome_tip():
+    """An ISO 7380-1 M3x8 as a maker draws it: a spherical dome cut flat round its
+    2 mm socket (a ring of 2.2 mm^2), the tip chamfered to a 5.2 mm^2 end, in a
+    plate 10 thick with a floor 3 below. Taking the larger flat end for the head
+    put the head at the tip, 8 down in the plate's hole: the key, coming up from
+    there, met the floor within 3 mm. The head is the wide end: from the dome's top
+    at 1.65 the key goes straight in.
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 1.7)])),
+        ("floor", slab(-10 - 3 - 10)),
+        ("screw", vendor_button_screw("M3", length=8.0)),
+    ]
+
+
+def _countersunk_plate(d, dk, gap=0.7):
+    """A plate with a 90 degree countersink a flat head sits in, ``gap`` clear all round."""
+    sink = (dk - d) / 2 + gap
+    hole = Pos(0, 0, -sink / 2 + 0.005) * Cone(d / 2, d / 2 + sink, sink + 0.01)
+    return plate() - hole - Pos(0, 0, -5) * Cylinder(d / 2 + gap, 12)
+
+
+@cell(
+    "sunk_tip",
+    [{"parts": "screw", "kind": "screw", "head": "flat", "size": "M4"}],
+    {"screw": {"verdict": "turns", "tool": "hex-key-2.5", "how": "driver straight in"}},
+)
+def sunk_tip():
+    """An ISO 10642 M4 as a maker draws it, its 90 degree countersink under a rim
+    band, flush in a countersunk plate: still countersunk, which only its own cone
+    says (shank to rim, at 90 degrees, facing out), past the socket's two cones and
+    the tip's. The 2.5 mm key goes straight in.
+    """
+    d, dk, _, _ = VENDOR_FLAT["M4"]
+    top = (dk - d) / 2 + 0.05 * dk  # the countersink and the rim band
+    return [
+        ("plate", _countersunk_plate(d, dk)),
+        ("screw", Pos(0, 0, -top) * vendor_flat_screw("M4")),
+    ]
+
+
+@cell(
+    "named_head",
+    [{"parts": "bhcs", "kind": "screw", "head": "button", "size": "M4"}],
+    {"bhcs": {"verdict": "turns", "tool": "hex-key-2.5", "how": "driver straight in"}},
+)
+def named_head():
+    """A screw named a button head (BHCS) and drawn with ISO 4762's M4 outline,
+    7 by 4, round ISO 7380-1's M4 socket, 2.5. Which keyed head a socket sits in
+    is the outline's guess and the name's word, and the name's stands: a button
+    head, M4, its 2.5 mm key straight in. Taken by its outline, it was a socket
+    head, and 2.5 is ISO 4762's M3.
+    """
+    return [("plate", plate(holes=[(0, 0, 2.2)])), ("bhcs", vendor_socket_screw("M4", key=2.5))]
+
+
+@cell(
+    "w4762",
+    [{"parts": "screw", "kind": "screw", "head": "socket", "size": "M5"}],
+    {"screw": {"verdict": "turns", "tool": "hex-key-4", "how": "driver straight in"}},
+)
+def w4762():
+    """bd_warehouse's ISO 4762 M5x16, its head's top edge rounded, on a plate,
+    nothing above: the 4 mm key goes straight in."""
+    screw = SocketHeadCapScrew(size="M5-0.8", length=16, fastener_type="iso4762", simple=True)
+    return [("plate", plate(holes=[(0, 0, 2.75)])), ("screw", screw)]
+
+
+@cell(
+    "w4032",
+    [{"parts": "nut", "kind": "nut", "size": "M5"}],
+    {"nut": {"verdict": "turns", "tool": "spanner-8", "how": "ring, full length"}},
+)
+def w4032():
+    """bd_warehouse's ISO 4032 M5 nut, its corners chamfered, on a stud up through a
+    plate: the free face is the top, and the ring goes on from above."""
+    nut = HexNut(size="M5-0.8", fastener_type="iso4032", simple=True)
+    return [
+        ("plate", plate(holes=[(0, 0, 2.75)])),
+        ("stud", Pos(0, 0, 2.5) * Cylinder(2.5, 25)),
+        ("nut", nut),
+    ]

@@ -15,8 +15,16 @@ only), this measures what the name may have left out:
 
 Every field is reported only when the solid shows it plainly, and is None
 otherwise, so whatever the name said stands. A head comes from a drive the model
-shows; the head's outline alone (a plain cylinder, a dome, a cone) is only
-``head_guess``, worth using when the name says nothing.
+shows; the head's outline alone (a plain cylinder, a dome, a countersink) is only
+``head_guess``, worth using when the name says nothing. Which keyed head a hex
+socket is in (socket, button, countersunk) is the outline's to say too, so a
+head the name gives outranks it there as well (issue #81).
+
+Makers' models are full of cones: a chamfer on each edge of the head, a
+socket's countersunk mouth and drilled point, a chamfered tip. A countersunk
+head is only the one cone that is the head itself (:func:`_countersunk`), and
+the head's end and size are read from the screw's widest section
+(:func:`wide_end`), never from a cone or the larger flat face (issue #81).
 
 Flats are found as planar faces parallel to the axis. A face whose outward
 normal points away from the axis is the outside of a prism (a hex head, a nut, a
@@ -92,6 +100,24 @@ _BUTTON_RATIO = 0.45
 #: standard's head: models draw the maxima, or near them.
 _OUTLINE_FIT = 0.12
 
+#: A point this far out, as a fraction of the screw's widest radius, is on its
+#: head: any standard head is at least 1.5 times its thread (ISO 7379's over its
+#: shoulder, 13 over 8, the narrowest), so the shank is never this far out.
+_WIDE = 0.75
+
+#: A countersunk head's cone, half its included angle, degrees: 82 to 120
+#: degree heads (ASME B18.3's and ISO 10642's are 82 and 90), with room for a
+#: model drawn loosely.
+_COUNTERSINK_HALF_DEG = (35.0, 65.0)
+
+#: A countersunk head's cone reaches the screw's widest radius within this
+#: fraction of it, and runs at least this fraction of the way down to the shank.
+_COUNTERSINK_RIM = 0.9
+_COUNTERSINK_SPAN = 0.6
+
+#: Surfaces a head's top is rounded by: a dome, a fillet.
+_ROUNDED = {GeomType.TORUS, GeomType.SPHERE, GeomType.BSPLINE}
+
 
 @dataclass(frozen=True)
 class ShapeReading:
@@ -119,6 +145,9 @@ class ShapeReading:
             fits no standard's outline: its head is a guess from proportions.
         head_drawn: The head's diameter and height as drawn, mm, when its
             outline was read.
+        outline_head: The head a countersink or a standard's outline shows,
+            where the name gives another keyed head, which stands: a person
+            should settle which is right (issue #81).
     """
 
     axis: Vec | None = None
@@ -131,6 +160,7 @@ class ShapeReading:
     head_unmatched: bool = False
     size_from_band: bool = False
     head_drawn: tuple[float, float] | None = None
+    outline_head: Head | None = None
 
 
 @dataclass(frozen=True)
@@ -145,10 +175,13 @@ class _Flat:
 def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeReading:
     """Measure a fastener's solid; ``kind`` comes from its name.
 
-    ``named`` is the head the name says, for the one head only a name can tell:
-    a shoulder screw's (ISO 7379), whose socket head looks like any other. Its
-    pocket then settles the size through ISO 7379's keys, and a shank drawn as
-    the shoulder alone is sized by the shoulder (issue #40).
+    ``named`` is the head the name says. A shoulder screw's (ISO 7379) is the one
+    only a name can tell, whose socket head looks like any other: its pocket then
+    settles the size through ISO 7379's keys, and a shank drawn as the shoulder
+    alone is sized by the shoulder (issue #40). Any keyed head the name gives
+    outranks the outline's, as the pocket says only that a key goes in; where a
+    countersink or a standard's outline shows another, ``outline_head`` says so
+    (issue #81).
     """
     axis = _main_axis(shape)
     if axis is None:
@@ -170,36 +203,41 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
     shank = _snap(convex)  # the thinnest
     shoulder = named is Head.SHOULDER
     pocket = _regular(inner, 6)
+    profile = _Profile.of(shape, origin, direction)
     outline = _Outline(None)
     if hex_outer is not None and (pocket is None or hex_outer > pocket):
         head, drive_af = Head.HEX, hex_outer
     elif _regular(outer, 4) is not None:
         head = Head.CARRIAGE  # a square neck: it holds itself
     elif pocket is not None:
-        keyed = _keyed_head(faces, origin, direction, shank, convex)
-        outline = _Outline(Head.SHOULDER) if shoulder else keyed
-        head, drive_af = outline.head, pocket
+        outline = _keyed_head(faces, origin, direction, convex, profile, shank)
+        head, drive_af = named if named in _KEY_TABLES else outline.head, pocket
     elif _is_cross(inner):
         head = Head.PHILLIPS
     elif _is_slot(inner):
         head = Head.SLOTTED
     if head is None:
-        outline = _keyed_head(faces, origin, direction, shank, convex)
+        outline = _keyed_head(faces, origin, direction, convex, profile, shank)
     if shoulder or outline.head is Head.SHOULDER:  # by its name, or by its outline
         shank = _shoulder_shank(convex, shank, outline.shoulder)
     guess = None if head is not None else outline.head
     size, settled, banded = _settle(shank, head, drive_af)
+    kept = head or named  # the head the outline is held to: the drive's or the name's
+    disputed = outline.evident and kept in _KEY_TABLES and not shoulder
+    disputed = disputed and outline.head is not kept
     return ShapeReading(
         direction,
         head,
         guess,
         drive_af,
         size,
-        settled,
-        outline.standard,
+        # A key's size says the thread only through its head's table, which is in doubt.
+        settled and not disputed,
+        outline.standard if outline.head in (kept, guess) else None,
         outline.unmatched,
         size_from_band=banded,
         head_drawn=outline.drawn,
+        outline_head=outline.head if disputed else None,
     )
 
 
@@ -226,6 +264,60 @@ def _main_axis(shape: Shape) -> tuple[Vec, Vec] | None:
         return None
     _, point, direction = max(totals, key=lambda t: t[0])
     return point, direction
+
+
+@dataclass(frozen=True)
+class _Profile:
+    """A solid's vertices measured about its axis: how far along it, how far out."""
+
+    along: tuple[float, ...]
+    out: tuple[float, ...]
+
+    @classmethod
+    def of(cls, shape: Shape, origin: Vec, direction: Vec) -> _Profile:
+        points = [_vec(v) for v in shape.vertices()]
+        along = tuple(_dot(_sub(p, origin), direction) for p in points)
+        return cls(along, tuple(_off_axis(p, origin, direction) for p in points))
+
+    @property
+    def widest(self) -> float:
+        return max(self.out, default=0.0)
+
+    def head(self) -> tuple[float, float]:
+        """(radius, height) of the head: the widest section, and how far it runs.
+
+        From the head's end to the far side of its wide region: the underside
+        of a socket or button head, chamfers and all, where the widest cylinder
+        alone misses a chamfered head's edges and a domed head (ISO 7380-1 drawn
+        as one revolved profile, as bd_warehouse draws it) has none (issue #81).
+        """
+        end = wide_end(self.along, self.out)
+        wide = [a for a, r in zip(self.along, self.out, strict=True) if r > _WIDE * self.widest]
+        if end == 0 or not wide:
+            return self.widest, max(wide, default=0.0) - min(wide, default=0.0)
+        top = max(self.along) if end > 0 else min(self.along)
+        under = min(wide) if end > 0 else max(wide)
+        return self.widest, abs(top - under)
+
+
+def wide_end(along: tuple[float, ...], out: tuple[float, ...]) -> int:
+    """Which end of a screw its head is at: +1 the far end along the axis, -1 the near.
+
+    A screw's head is its widest section, so its end is the one the wide region
+    reaches (issue #81), not the end with the larger flat face: a domed head's
+    only flat may be a ring round its socket, smaller than a chamfered tip's
+    end. ``along`` and ``out`` are the solid's points, how far along the axis
+    and how far out from it. 0 when the wide region reaches both ends alike (a
+    plain pin) or there are no points.
+    """
+    widest = max(out, default=0.0)
+    wide = [a for a, r in zip(along, out, strict=True) if r > _WIDE * widest]
+    if not wide:
+        return 0
+    below, above = min(wide) - min(along), max(along) - max(wide)
+    if abs(below - above) <= _SAME_DISTANCE:
+        return 0
+    return 1 if above < below else -1
 
 
 def _coaxial_rounds(faces: list[Face], origin: Vec, direction: Vec) -> list[tuple[float, bool]]:
@@ -421,25 +513,34 @@ class _Outline:
     drawn: tuple[float, float] | None = None
     shoulder: float | None = None
 
+    @property
+    def evident(self) -> bool:
+        """Shown plainly, a countersink or a standard's outline; not proportions alone."""
+        return self.head is Head.FLAT or self.standard is not None
+
 
 def _keyed_head(
-    faces: list[Face], origin: Vec, direction: Vec, shank: Size | None, convex: list[float]
+    faces: list[Face],
+    origin: Vec,
+    direction: Vec,
+    convex: list[float],
+    profile: _Profile,
+    shank: Size | None,
 ) -> _Outline:
-    """Countersunk if the head is a cone; else the standard head its outline fits.
+    """Countersunk if the head is a countersink; else the standard head its outline fits.
 
-    A flat-topped cylinder is compared with each standard's head for the
-    shank's size: a button head drawn flat, 9.5 across and 2.75 high for M5, is
-    ISO 7380-1's, not ISO 4762's 8.5 by 5 (issue #31). A shoulder screw's head
-    goes with its shoulder, the widest round under the head, not its thread:
-    13 by 5.5 over an 8 mm shoulder is ISO 7379's (issue #48). Failing that, and
-    for a rounded top (whose cylinder is only the head's rim), the proportions
-    decide: a head much shallower than it is wide is a button.
+    A flat-topped head is compared with each standard's head for the shank's
+    size: a button head drawn flat, 9.5 across and 2.75 high for M5, is ISO
+    7380-1's, not ISO 4762's 8.5 by 5 (issue #31). A shoulder screw's head goes
+    with its shoulder, the widest round under the head, not its thread: 13 by
+    5.5 over an 8 mm shoulder is ISO 7379's (issue #48). Failing that, and for a
+    rounded top, the proportions decide: a head much shallower than it is wide
+    is a button.
     """
-    kinds = {face.geom_type for face in faces}
-    if GeomType.CONE in kinds:
+    if _countersunk(faces, origin, direction, convex, profile.widest):
         return _Outline(Head.FLAT)
-    rounded = bool(kinds & {GeomType.TORUS, GeomType.SPHERE, GeomType.BSPLINE})
-    radius, height = _head_size(faces, origin, direction)
+    rounded = any(face.geom_type in _ROUNDED for face in faces)
+    radius, height = profile.head()
     drawn = (2 * radius, height)
     shoulder = _shoulder_under(convex, radius)
     flat = not rounded and radius > 0
@@ -476,20 +577,43 @@ def _fits(measured: tuple[float, float], drawn: tuple[float, float]) -> bool:
     return all(abs(m - d) <= _OUTLINE_FIT * d for m, d in zip(measured, drawn, strict=True))
 
 
-def _head_size(faces: list[Face], origin: Vec, direction: Vec) -> tuple[float, float]:
-    """(radius, axial height) of the widest coaxial cylinder: the head's band."""
-    best = (0.0, 0.0)
+def _countersunk(
+    faces: list[Face], origin: Vec, direction: Vec, convex: list[float], widest: float
+) -> bool:
+    """Whether a cone on the screw is a countersunk head (issue #81).
+
+    The head's cone runs under the head from the shank out to the screw's
+    widest radius, at 82 to 120 degrees, facing out. A chamfer on a head's edge
+    is a cone too, as are a socket's countersunk mouth and drilled point and a
+    chamfered tip, and each fails one of those: a chamfer spans a sliver of the
+    way, a socket's cones face in, a tip's stops at the shank.
+    """
+    shank = min(convex, default=0.0)
     for face in faces:
-        if face.geom_type is not GeomType.CYLINDER or face.axis_of_rotation is None:
+        if face.geom_type is not GeomType.CONE or face.axis_of_rotation is None:
             continue
-        if abs(_dot(_unit(_vec(face.axis_of_rotation.direction)), direction)) < _PARALLEL:
+        axis = face.axis_of_rotation
+        if abs(_dot(_unit(_vec(axis.direction)), direction)) < _PARALLEL:
             continue
-        radius = face.radius
-        if radius is None or radius <= best[0]:
+        if _off_axis(_vec(axis.position), origin, direction) > _COAXIAL_MM:
             continue
-        heights = [_dot(_sub(_vec(v), origin), direction) for v in face.vertices()]
-        best = (radius, max(heights) - min(heights) if heights else 0.0)
-    return best
+        # Its half angle from its ends: how far out it runs against how far along.
+        points = [_vec(v) for v in face.vertices()]
+        radii = [_off_axis(p, origin, direction) for p in points]
+        heights = [_dot(_sub(p, origin), direction) for p in points]
+        inner, outer = min(radii, default=0.0), max(radii, default=0.0)
+        rise = max(heights, default=0.0) - min(heights, default=0.0)
+        low, high = _COUNTERSINK_HALF_DEG
+        if not low <= math.degrees(math.atan2(outer - inner, rise)) <= high:
+            continue
+        centre = _vec(face.center())
+        if _dot(_vec(face.normal_at(face.center())), _radial_from(centre, origin, direction)) <= 0:
+            continue  # facing in: a socket's mouth or point
+        if outer >= _COUNTERSINK_RIM * widest and widest - inner >= _COUNTERSINK_SPAN * (
+            widest - shank
+        ):
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**88 fasteners: 67 turn, 3 held, 17 blocked, 1 stuck, 0 not covered**
+**94 fasteners: 73 turn, 3 held, 17 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -18,10 +18,15 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 8 parts 
 | M12 nut | `short-ring-18` | 1 | all pass (ring, full length) |
 | M16 nut | `spanner-24` | 6 | 1 of 6 fail |
 | M24 nut | `spanner-36` | 1 | 1 of 1 fail |
-| M4 button screw | `hex-key-2.5` | 5 | 2 of 5 fail |
+| M3 button screw | `hex-key-2` | 1 | all pass (driver straight in) |
+| M4 button screw | `hex-key-2.5` | 6 | 2 of 6 fail |
+| M4 flat screw | `hex-key-2.5` | 1 | all pass (driver straight in) |
 | M4 insert | - | 1 | all pass (holds itself) |
 | M4 phillips screw | `driver-ph2` | 2 | 1 of 2 fail |
+| M4 socket screw | `hex-key-3` | 1 | all pass (driver straight in) |
 | M5 button screw | `hex-key-3` | 1 | all pass (driver straight in) |
+| M5 nut | `spanner-8` | 1 | all pass (ring, full length) |
+| M5 socket screw | `hex-key-4` | 1 | all pass (driver straight in) |
 | M6 button screw | `hex-key-4` | 4 | 1 of 4 fail |
 | M6 carriage screw | - | 1 | all pass (holds itself) |
 | M6 hex screw | `spanner-10` | 5 | all pass (ring, full length) |
