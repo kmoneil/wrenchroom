@@ -139,7 +139,10 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
         used.append("a hex, so a nut")
     if reading.drive_af is not None:
         used.append(f"{reading.drive_af:g} across flats")
-    if size is not None and (reading.size_from_drive or hint.size is None):
+    guessed = size is not None and reading.size_from_band and hint.size is None
+    if guessed:
+        used.append(f"{size.designation} by its hex's tolerance band alone")
+    elif size is not None and (reading.size_from_drive or hint.size is None):
         used.append(f"{size.designation} measured")
     basis = hint.basis + (f"; solid: {', '.join(used)}" if used else "")
     return Fastener(
@@ -154,6 +157,7 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
         basis=basis,
         not_covered=not_covered,
         confidence=_confidence(hint, reading, head, size, not_covered),
+        size_guessed=guessed,
     )
 
 

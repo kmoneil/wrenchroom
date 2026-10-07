@@ -109,6 +109,9 @@ class ShapeReading:
         size_from_drive: True when the drive settled the size, which a name's
             size does not outrank; a shank or bore measurement can be fooled by
             a thread drawn at its minor diameter, a drive can't.
+        size_from_band: True when a hex's tolerance band alone gave the size,
+            no exact drive or measured thread behind it: a name's size, or the
+            bolt a nut runs on, outranks it (issue #50).
         head_standard: The standard whose head a keyed head's flat-topped
             outline fits (``ISO 7380-1``), when one alone does.
         head_unmatched: True when a flat-topped keyed head of a known size
@@ -123,6 +126,7 @@ class ShapeReading:
     size_from_drive: bool = False
     head_standard: str | None = None
     head_unmatched: bool = False
+    size_from_band: bool = False
 
 
 @dataclass(frozen=True)
@@ -156,8 +160,8 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
     drive_af: float | None = None
     if kind is not Kind.SCREW:  # a nut or an insert: its bore gives the size
         bore = _snap([r for r, convex in rounds if not convex])
-        size, settled = _settle(bore, None, hex_outer)
-        return ShapeReading(direction, None, None, hex_outer, size, settled)
+        size, settled, banded = _settle(bore, None, hex_outer)
+        return ShapeReading(direction, None, None, hex_outer, size, settled, size_from_band=banded)
     shank = _snap([r for r, convex in rounds if convex])  # the thinnest
     shoulder = named is Head.SHOULDER
     if shoulder:
@@ -179,9 +183,17 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
     if head is None:
         outline = _keyed_head(faces, origin, direction, shank)
     guess = None if head is not None else outline.head
-    size, settled = _settle(shank, head, drive_af)
+    size, settled, banded = _settle(shank, head, drive_af)
     return ShapeReading(
-        direction, head, guess, drive_af, size, settled, outline.standard, outline.unmatched
+        direction,
+        head,
+        guess,
+        drive_af,
+        size,
+        settled,
+        outline.standard,
+        outline.unmatched,
+        size_from_band=banded,
     )
 
 
@@ -261,32 +273,36 @@ def _shoulder_thread(radii: list[float]) -> Size | None:
 
 def _settle(
     measured: Size | None, head: Head | None, drive_af: float | None
-) -> tuple[Size | None, bool]:
-    """The size, letting a modelled drive outrank the shank or bore; and whether it did.
+) -> tuple[Size | None, bool, bool]:
+    """The size, whether a modelled drive settled it, and whether a band alone did.
 
     A drive's across-flats names its sizes through the standard tables (a hex
     or nut through ISO 4032/4017, anywhere in the standard's band below its
     size, so an M8 nut drawn at 12.8 is still M8; a keyed head through its key
     table). One size: that's it. Several (an ISO 4762 14 mm key fits M16 and
     M18): the measured diameter picks between them, or nothing does. None: the
-    measurement stands alone.
+    measurement stands alone. A band is weaker than an exact size: it settles
+    the size only when the bore or shank gives none, or agrees, so an M8 nut
+    drawn 12.6 across flats (in 5/16's band for 1/2 in) on an M8 bore stays M8;
+    and a size from a band alone is no more than a guess, which a name or a
+    nut's bolt outranks (issue #50).
     """
     if drive_af is None:
-        return measured, False
+        return measured, False, False
     hexagon = head in (None, Head.HEX)
     table = HEX_AF if hexagon else _KEY_TABLES.get(head, {})
-    candidates = [
-        d
-        for d, af in table.items()
-        if abs(af - drive_af) < _SAME_DISTANCE or (hexagon and in_hex_band(drive_af, af))
-    ]
+    exact = [d for d, af in table.items() if abs(af - drive_af) < _SAME_DISTANCE]
+    banded = [d for d, af in table.items() if hexagon and in_hex_band(drive_af, af)]
+    candidates = exact or banded
     if not candidates:
-        return measured, False
+        return measured, False, False
     if measured is not None and measured.designation in candidates:
-        return measured, True
+        return measured, True, False
+    if measured is not None and not exact:
+        return measured, False, False
     if len(candidates) == 1:
-        return Size.parse(candidates[0]), True
-    return None, False
+        return Size.parse(candidates[0]), bool(exact), not exact
+    return None, False, False
 
 
 # ---------------------------------------------------------------------------

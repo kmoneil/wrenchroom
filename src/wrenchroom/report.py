@@ -68,6 +68,9 @@ class FastenerResult:
     #: What the attempt that decided the verdict only grazed: overlapped by no
     #: more than the hit floor, a tool rubbing along a face (issue #25).
     grazes: tuple[str, ...] = ()
+    #: Caveats on how the verdict was reached, for a person to weigh: a hex drawn
+    #: under its standard, a size taken from the bolt (issue #50).
+    notes: tuple[str, ...] = ()
 
     @property
     def passed(self) -> bool:
@@ -284,8 +287,17 @@ class Report:
         if len(marginal) > PASSED_OVER_SHOWN:
             more = len(marginal) - PASSED_OVER_SHOWN
             lines.append(f"NOTE and {more} more marginal (the JSON lists every one)")
+        noted = self.noted()
+        lines.extend(f"NOTE {name}: {note}" for name, note in noted[:PASSED_OVER_SHOWN])
+        if len(noted) > PASSED_OVER_SHOWN:
+            more = len(noted) - PASSED_OVER_SHOWN
+            lines.append(f"NOTE and {more} more (the JSON lists every note)")
         lines.append(f"NOTE {self.not_checked}")
         return [printable(line) for line in lines]
+
+    def noted(self) -> tuple[tuple[str, str], ...]:
+        """Every result's caveats, as (fastener, note), in result order."""
+        return tuple((r.fastener.name, note) for r in self.results for note in r.notes)
 
     def marginal(self) -> tuple[FastenerResult, ...]:
         """The results whose deciding tool only grazed something: a verdict on a graze."""
@@ -364,27 +376,26 @@ class Report:
         if warnings:
             lines += ["", "#### Warnings", ""]
             lines.extend(f"- {warning}" for warning in warnings)
-        marginal = self.marginal()
-        if marginal:
-            lines += ["", "#### Marginal", ""]
-            lines.extend(
-                f"- {md_code(r.fastener.name, in_table=False)}: {r.verdict} with "
+        lines += _md_list(
+            "Notes",
+            [f"{md_code(name, in_table=False)}: {md_text(note)}" for name, note in self.noted()],
+        )
+        lines += _md_list(
+            "Marginal",
+            [
+                f"{md_code(r.fastener.name, in_table=False)}: {r.verdict} with "
                 f"{_md_tool(r.tool)}, grazing "
                 + ", ".join(md_code(name, in_table=False) for name in r.grazes)
-                for r in marginal[:PASSED_OVER_SHOWN]
-            )
-            if len(marginal) > PASSED_OVER_SHOWN:
-                more = len(marginal) - PASSED_OVER_SHOWN
-                lines.append(f"- and {more} more (the JSON lists every one)")
-        if self.passed_over:
-            shown = self.passed_over[:PASSED_OVER_SHOWN]
-            lines += ["", "#### Passed over", ""]
-            lines.extend(
-                f"- {md_code(part.name, in_table=False)}: {md_text(part.reason)}" for part in shown
-            )
-            if len(self.passed_over) > len(shown):
-                more = len(self.passed_over) - len(shown)
-                lines.append(f"- and {more} more (the JSON lists every one)")
+                for r in self.marginal()
+            ],
+        )
+        lines += _md_list(
+            "Passed over",
+            [
+                f"{md_code(part.name, in_table=False)}: {md_text(part.reason)}"
+                for part in self.passed_over
+            ],
+        )
         return "\n".join(lines) + "\n"
 
     def to_markdown(self, path: str | Path) -> None:
@@ -431,6 +442,7 @@ def _result_json(result: FastenerResult) -> dict[str, object]:
         "stuck_on": list(result.stuck_on),
         "reason": result.reason,
         "grazes": list(result.grazes),
+        "notes": list(result.notes),
     }
 
 
@@ -439,6 +451,17 @@ NO_TOOL = "no tool found"
 
 #: How many passed-over parts the terminal and Markdown name; the JSON has all.
 PASSED_OVER_SHOWN = 10
+
+
+def _md_list(heading: str, items: list[str]) -> list[str]:
+    """A capped Markdown list under its heading, or nothing when there is nothing."""
+    if not items:
+        return []
+    lines = ["", f"#### {heading}", ""]
+    lines.extend(f"- {item}" for item in items[:PASSED_OVER_SHOWN])
+    if len(items) > PASSED_OVER_SHOWN:
+        lines.append(f"- and {len(items) - PASSED_OVER_SHOWN} more (the JSON lists every one)")
+    return lines
 
 
 def _marginal_text(result: FastenerResult) -> str:

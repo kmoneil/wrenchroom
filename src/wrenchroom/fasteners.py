@@ -157,6 +157,9 @@ class Fastener:
             measured shank, the name and the solid's drive disagree on the
             head, or the name has words after its fastener noun), ``low``
             (something is missing). Empty from a sidecar.
+        size_guessed: True when detection had the size from a hex's tolerance
+            band alone, which can't tell an M8 nut drawn small from a 5/16 one:
+            the bolt a nut runs on outranks it (issue #50).
     """
 
     name: str
@@ -174,6 +177,7 @@ class Fastener:
     basis: str = ""
     not_covered: str | None = None
     confidence: str = ""
+    size_guessed: bool = False
 
     @property
     def self_holding(self) -> bool:

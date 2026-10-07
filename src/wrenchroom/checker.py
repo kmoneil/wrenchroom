@@ -20,7 +20,7 @@ socket carries a real bore for the bolt's end.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -32,6 +32,7 @@ from wrenchroom.config import Config, ConfigError, is_mate
 from wrenchroom.detect import find
 from wrenchroom.engine import DEFAULT_ENGINE, ENGINES, Engine, Scene, make_engine
 from wrenchroom.fasteners import (
+    HEX_AF_MIN,
     PHILLIPS_NUMBER,
     TORX_SIZE,
     Fastener,
@@ -50,7 +51,7 @@ from wrenchroom.tools.drivers import SHAFT_RADIUS, driver_attempt
 from wrenchroom.tools.hex_keys import HEX_KEYS, HexKey, hex_key_attempts
 from wrenchroom.tools.kits import DEFAULT_KIT, Kit, kit_named, missing
 from wrenchroom.tools.nut_drivers import NUT_DRIVERS, nut_driver_attempt
-from wrenchroom.tools.sizes import FLATS, size_mm, size_name, snap
+from wrenchroom.tools.sizes import FLATS, is_inch, size_mm, size_name, snap
 from wrenchroom.tools.sockets import socket_attempts, socket_for
 from wrenchroom.tools.spanners import open_end_attempts, ring_attempts, spanner_for
 from wrenchroom.tools.sweep import (
@@ -172,6 +173,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         except NotCovered as exc:
             failures[fastener.name] = str(exc)
     pairs, pair_warnings = _find_pairs(fasteners, frames, config)
+    fasteners, size_notes = _sized_by_partners(fasteners, pairs)
     reported = {f.name for f in chosen}
     checked = reported | {pairs[name] for name in reported if name in pairs}
 
@@ -185,7 +187,11 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         candidates.append(
             _check_fastener(fastener, frames[fastener.name], space, config, default_state, tools)
         )
-    results = [r for r in _resolve_joints(candidates, pairs) if r.fastener.name in reported]
+    results = [
+        replace(r, notes=(*size_notes.get(r.fastener.name, ()), *_drive_notes(r.fastener)))
+        for r in _resolve_joints(candidates, pairs)
+        if r.fastener.name in reported
+    ]
     models = {None: StateModel(assembly), **space.models}
     return Report(
         model=model,
@@ -364,6 +370,42 @@ def _find_pairs(
             _, nut_name = min(candidates)
             pairs[screw.name], pairs[nut_name] = nut_name, screw.name
     return pairs, warnings
+
+
+def _sized_by_partners(
+    fasteners: list[Fastener], pairs: dict[str, str]
+) -> tuple[list[Fastener], dict[str, tuple[str, ...]]]:
+    """A nut whose own reading gave no size, or guessed one, takes its bolt's.
+
+    A nut on an M8 bolt is M8. Its bore drawn at the minor diameter, or not at
+    all, says nothing, and a hex drawn a little small sits in another size's
+    band (an M8 at 12.6 in a 5/16's); the thread it runs on does say, and with
+    it the system its spanner comes from (issue #50). A gland keeps none: its
+    thread is not its hex's.
+    """
+    by_name = {f.name: f for f in fasteners}
+    sized = []
+    notes: dict[str, tuple[str, ...]] = {}
+    for fastener in fasteners:
+        partner = by_name.get(pairs.get(fastener.name, ""))
+        if (
+            fastener.kind is Kind.NUT
+            and (fastener.size is None or fastener.size_guessed)
+            and fastener.socket_allowed
+            and partner is not None
+            and partner.kind is Kind.SCREW
+            and partner.size is not None
+            and partner.size != fastener.size
+        ):
+            note = f"size {partner.size.designation} from its bolt, {partner.name}"
+            if fastener.size is not None:
+                note += f" (its hex alone said {fastener.size.designation})"
+            basis = f"{fastener.basis}; {note}" if fastener.basis else note
+            sized.append(replace(fastener, size=partner.size, basis=basis, size_guessed=False))
+            notes[fastener.name] = (note,)
+        else:
+            sized.append(fastener)
+    return sized, notes
 
 
 def _coaxial_offset(screw: _Frame, nut: _Frame) -> float | None:
@@ -869,51 +911,136 @@ def _known_size(fastener: Fastener) -> Size:
     return fastener.size
 
 
+#: How far under its standard's band a hex may be drawn and still take its own
+#: thread's spanner, mm: a model drawn a few tenths small (issue #50), which the
+#: result's notes say.
+UNDERSIZE_MM = 0.3
+
+
 def _given_af(
     fastener: Fastener, sizes: tuple[float, ...], family: str, *, bands: bool = False
 ) -> float | None:
-    """The drive's across-flats when measured or given, as a tool size; else None.
+    """The drive's across-flats when measured or given, as a tool size; else None."""
+    return _resolve_af(fastener, sizes, family, bands=bands)[0]
 
-    A measurement is the tool size nearest it, within a few hundredths of a
-    millimetre: 11.11 is a 7/16 in hex and must not become a "spanner-11.11", and
-    19.05 is 3/4 in, not 19 mm. With ``bands`` (a hex a spanner grips), a hex
-    inside a nut standard's band below a spanner size also takes that spanner:
-    an M8 nut drawn at 12.8 is in ISO 4032's 12.73 to 13 (issue #27). In order:
-    the thread's own standard size, exact or in its band (an M8 nut at 12.73 is
-    in 13's band, though a few hundredths from 1/2 in); then any tool size the
-    measurement is; then the one band that holds it. Where two bands hold it and
-    nothing decides (7.85 is in 8 mm's and 5/16 in's), or none does, it is not
-    covered, and the reason says what fits or names the nearest.
+
+def _resolve_af(
+    fastener: Fastener, sizes: tuple[float, ...], family: str, *, bands: bool = False
+) -> tuple[float | None, str | None]:
+    """The drive's across-flats as a tool size, and a note when it was a stretch.
+
+    A measurement is a tool's size within a few hundredths of a millimetre:
+    11.11 is a 7/16 in hex and must not become a "spanner-11.11". With
+    ``bands`` (a hex a spanner grips), a hex inside a nut standard's band below
+    a spanner size takes that spanner: an M8 nut drawn at 12.8 is in ISO 4032's
+    12.73 to 13 (issue #27). A known thread keeps to its own system's tools: an
+    M8 nut drawn at 12.6 never gets an inch spanner for being nearer one (issue
+    #50). In order:
+
+    1. the thread's own standard size, exact or in its band;
+    2. the same, drawn up to :data:`UNDERSIZE_MM` under its band: taken, with a
+       note saying so;
+    3. any tool size of the thread's system the hex exactly is;
+    4. the one band of the thread's system that holds it;
+    5. a tool size of the other system the hex exactly is: taken, with a note.
+
+    Where two bands hold it and nothing decides (7.85 is in 8 mm's and 5/16
+    in's), or none does, it is not covered, and the reason says what fits, or
+    names the tool that fits nearest: the smallest spanner over the hex, the
+    largest key into a socket, from the thread's own system first.
     """
     if fastener.drive_af is None:
-        return None
-    measured = fastener.drive_af
+        return None, None
+    measured, size = fastener.drive_af, fastener.size
+    ours = sizes if size is None else tuple(s for s in sizes if is_inch(s) is not size.is_metric)
+    found = _af_among(measured, size, ours, family, bands=bands)
+    if found is not None:
+        return found
+    other = snap(measured, sizes)
+    if other is None or size is None:
+        raise NotCovered(_no_fit(measured, ours, sizes, family))
+    return other, (
+        f"hex drawn {measured:.2f} across flats, {'an inch' if is_inch(other) else 'a metric'} "
+        f"size, its thread {size.designation}; taken as size {size_name(other)}"
+    )
+
+
+def _af_among(
+    measured: float, size: Size | None, sizes: tuple[float, ...], family: str, *, bands: bool
+) -> tuple[float, str | None] | None:
+    """Steps 1 to 4 of :func:`_resolve_af`, among ``sizes``: None when none takes it."""
     snapped = snap(measured, sizes)
-    fits = [size for size in sizes if in_hex_band(measured, size)] if bands else []
-    own = standard_hex_afs(fastener.size) if bands and fastener.size is not None else set()
-    ours = [size for size in sizes if size in own and (size == snapped or size in fits)]
+    fits = [s for s in sizes if in_hex_band(measured, s)] if bands else []
+    own = standard_hex_afs(size) if bands and size is not None else set()
+    ours = [s for s in sizes if s in own and (s == snapped or s in fits)]
     if len(ours) == 1:
-        return ours[0]
-    if snapped is not None:
-        return snapped
-    if len(fits) == 1:
-        return fits[0]
-    if fits:
-        names = " or ".join(f"{family}-{size_name(size)}" for size in fits)
-        raise NotCovered(f"{measured:.2f} mm across flats fits {names}: set tool: in the sidecar")
-    if measured > max(sizes):
-        largest = f"{family}-{size_name(max(sizes))}"
-        raise NotCovered(
-            f"{measured:.2f} mm across flats is larger than any {family} the tables hold "
-            f"({largest} the largest); set tool: in the sidecar"
+        return ours[0], None
+    floors = {s: HEX_AF_MIN.get(s, s) for s in sizes if s in own}
+    under = [s for s, low in floors.items() if low - UNDERSIZE_MM <= measured < low]
+    if len(under) == 1 and size is not None:
+        tool, low = under[0], floors[under[0]]
+        return tool, (
+            f"hex drawn undersize: {measured:.2f} across flats, {low - measured:.2f} under "
+            f"the least its {size.designation} standard allows ({low:.2f}); "
+            f"taken as size {size_name(tool)}"
         )
-    nearest = min(sizes, key=lambda size: abs(size - measured))
-    side = "larger" if nearest > measured else "smaller"
-    raise NotCovered(
-        f"{measured:.2f} mm across flats is no tool's size: the nearest, "
-        f"{family}-{size_name(nearest)}, is {abs(nearest - measured):.2f} {side}; "
+    if snapped is not None:
+        return snapped, None
+    if len(fits) == 1:
+        return fits[0], None
+    if fits:
+        names = " or ".join(f"{family}-{size_name(s)}" for s in fits)
+        raise NotCovered(f"{measured:.2f} mm across flats fits {names}: set tool: in the sidecar")
+    return None
+
+
+def _no_fit(measured: float, ours: tuple[float, ...], sizes: tuple[float, ...], family: str) -> str:
+    """Why no tool takes a hex, naming the one that fits nearest: never one that doesn't.
+
+    A spanner or socket goes over the hex, so it fits when no smaller; a key
+    goes into a socket, so it fits when no larger. The thread's own system
+    (``ours``) is looked in first, then every size.
+    """
+    key = family == "hex-key"
+
+    def fitting_in(among: tuple[float, ...]) -> list[float]:
+        return [s for s in among if (s <= measured if key else s >= measured)]
+
+    fitting = fitting_in(ours) or fitting_in(sizes)
+    if not fitting:
+        extreme = min(sizes) if key else max(sizes)
+        return (
+            f"{measured:.2f} mm across flats is {'smaller' if key else 'larger'} than any "
+            f"{family} the tables hold ({family}-{size_name(extreme)} the "
+            f"{'smallest' if key else 'largest'}); set tool: in the sidecar"
+        )
+    best = max(fitting) if key else min(fitting)
+    return (
+        f"{measured:.2f} mm across flats is no tool's size: the "
+        f"{'largest' if key else 'smallest'} that fits, {family}-{size_name(best)}, is "
+        f"{abs(best - measured):.2f} {'smaller' if key else 'larger'}; "
         "set across_flats: or tool: in the sidecar"
     )
+
+
+def _drive_notes(fastener: Fastener) -> tuple[str, ...]:
+    """What a result should say about how its drive was sized, as the attempts sized it.
+
+    A hex drawn undersize, or at the other system's size: see :func:`_resolve_af`.
+    """
+    if fastener.tool is not None or fastener.drive_af is None:
+        return ()
+    if fastener.kind is Kind.NUT or fastener.head is Head.HEX:
+        sizes, family, bands = FLATS, "spanner", True
+    elif fastener.head in _KEYED_HEADS:
+        sizes, family, bands = tuple(HEX_KEYS), "hex-key", False
+    else:
+        return ()
+    try:
+        _, note = _resolve_af(fastener, sizes, family, bands=bands)
+    except NotCovered:
+        return ()
+    return (note,) if note else ()
 
 
 def _keyed_attempts(
