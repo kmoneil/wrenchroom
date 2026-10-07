@@ -15,7 +15,12 @@ cannot change the answer.
 import math
 from dataclasses import dataclass, field
 
-from bd_warehouse.fastener import HexNut, SocketHeadCapScrew
+from bd_warehouse.fastener import (
+    ButtonHeadScrew,
+    CounterSunkScrew,
+    HexNut,
+    SocketHeadCapScrew,
+)
 from build123d import Box, Compound, Cone, Cylinder, Pos, Rot, Torus
 from parts import (
     VENDOR_FLAT,
@@ -1827,4 +1832,52 @@ def small():
         ("inch_button_screw", Pos(*at["inch_button_screw"], 0) * vendor_button_screw("#0", 6.0)),
         ("torx_screw", Pos(*at["torx_screw"], 0) * (head + shank)),
         ("phillips_screw", Pos(*at["phillips_screw"], 0) * (pan - cross + shank)),
+    ]
+
+
+# ---------------------------------------------------------------- issue #82: sockets as drawn
+
+
+@cell(
+    "w7380",
+    [{"parts": "screw", "kind": "screw", "head": "button", "size": "M5", "across_flats": 3.08}],
+    {"screw": {"verdict": "turns", "tool": "hex-key-3", "how": "driver straight in"}},
+)
+def w7380():
+    """bd_warehouse's ISO 7380-1 M5x16, its socket drawn 3.08, the standard's most for
+    a 3 mm key, on a plate: the key goes in, straight. A socket is a little larger
+    than its key, and 3.08 used to be no tool's size."""
+    screw = ButtonHeadScrew(size="M5-0.8", length=16, fastener_type="iso7380_1", simple=True)
+    return [("plate", plate(holes=[(0, 0, 2.75)])), ("screw", screw)]
+
+
+@cell(
+    "w10642",
+    [{"parts": "screw", "kind": "screw", "head": "flat", "size": "M4", "across_flats": 2.6}],
+    {"screw": {"verdict": "turns", "tool": "hex-key-2.5", "how": "driver straight in"}},
+)
+def w10642():
+    """bd_warehouse's ISO 10642 M4x12 (DIN 7991's, in fact), flush in a countersunk
+    plate, its socket drawn 2.60: 0.02 past ISO 10642's most for a 2.5 mm key, within
+    the clearance a loosely drawn model gets. The key goes in, and a note says so."""
+    screw = CounterSunkScrew(size="M4-0.7", length=12, fastener_type="iso10642", simple=True)
+    return [("plate", _countersunk_plate(4.0, 7.42)), ("screw", screw)]
+
+
+@cell(
+    "pan_t40",
+    [{"parts": "torx_screw", "kind": "screw", "head": "torx", "size": "M8", "across_flats": 6.75}],
+    {"torx_screw": {"verdict": "turns", "tool": "torx-key-T40", "how": "driver straight in"}},
+)
+def pan_t40():
+    """An M8 pan head with a T40 recess, as some makers sell it, where ISO 14583 says
+    T45: across_flats gives the recess's point to point, 6.75, which is T40's (ISO
+    10664's gauges, 6.673 to 6.814), and the full kit's T40 goes in straight. By its
+    thread alone it needs a T45 key, which no kit holds. The recess is drawn round,
+    as code-CAD draws one; only the sidecar can say its size.
+    """
+    head = Pos(0, 0, 2.4) * Cylinder(8, 4.8) - Pos(0, 0, 3.3) * Cylinder(3.375, 3.01)
+    return [
+        ("plate", plate(holes=[(0, 0, 4.5)])),
+        ("torx_screw", head + Pos(0, 0, -8) * Cylinder(4, 16)),
     ]

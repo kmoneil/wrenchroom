@@ -379,6 +379,7 @@ def test_the_undersize_nut_is_noted_in_every_format(bench_report, bench_json):
     # And #47's own bodies, and #51's pass only a ball end reaches.
     assert noted == {
         "undersize_nut",
+        "w10642_screw",  # its socket drawn loose (issue #82)
         "wide_dome_gland",
         "sunk_cap_cap_nut",
         "ball_tilt_screw",

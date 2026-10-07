@@ -72,9 +72,17 @@ to 0.3 mm under its standard's band (an M8 nut at 12.6) takes that size, and the
 report notes it (`NOTE nut: hex drawn undersize: ...`, and `notes` in the JSON); only
 a hex exactly a size of the other system, and no size of its own, takes that, noted
 too. A size from a band alone is a guess, which the name's size outranks, and a nut
-takes the size of the bolt it runs on. Where no tool takes a hex, the reason names
-the one that fits nearest: the smallest spanner that goes over it, or the largest key
-that goes into it.
+takes the size of the bolt it runs on. A hex socket is drawn a little larger than
+its key, as the standards allow (ISO 4762 draws a 2.5 mm key's 2.52 to 2.58, ASME
+B18.3 a 5/32 in's to 0.1587 in): one drawn up to that most takes the key, and one
+drawn up to 0.15 mm past it, loosely, takes it with a note (`NOTE screw: socket drawn
+loose: ...`). Where no tool takes a hex, the reason names the one that fits nearest:
+the smallest spanner that goes over it, or the largest key that goes into it.
+
+A Torx head takes the size its thread's standard gives (M6 T30), unless its rule's
+`across_flats:` gives the recess's point to point: then the size whose ISO 10664
+recess holds it (an M8 pan head drawn for T40, as some makers sell them, where the
+standards say T45).
 
 A sidecar rule still describes a part outright, `across_flats:` gives a hex its
 measured size, and `checks: {detect: false}` turns detection off. With every

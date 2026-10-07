@@ -12,6 +12,8 @@ only a sidecar can say, and are pinned here so they stay explained:
   free face, both ends read covered, and the nut is honestly not-covered.
 - state_lid_screw: reached with the lid off, which only the sidecar's
   `state: lid-off` says. Without it the lid blocks the screw.
+- pan_t40_torx_screw: an M8 pan head with a T40 recess, which only the sidecar's
+  `across_flats:` says (issue #82). By its thread it needs a T45, which no kit holds.
 
 Since issue #19 the tools agree too, and each screw's head is its rule's: a
 verdict alone let torx_wall_screw pass turned by a hex key that can't drive it.
@@ -33,10 +35,11 @@ from wrenchroom.detect.names import ends_in_part_noun
 
 SNAPSHOT = Path(__file__).parent / "bench.detected.snapshot.json"
 
-#: The two verdicts that need the sidecar, and what they read without it.
+#: The verdicts that need the sidecar, and what they read without it.
 NEEDS_THE_SIDECAR = {
     "nyloc_two_bodies_nut": "not-covered",
     "state_lid_screw": "blocked",
+    "pan_t40_torx_screw": "not-covered",
 }
 
 
@@ -184,6 +187,7 @@ def test_a_nut_drawn_small_says_so_and_where_its_size_came_from(detected):
         "named_size_m8_nut",
         "tee_hold_tnut",
         "badge_boss_insert",  # sized by its screw too
+        "w10642_screw",  # its socket drawn loose (issue #82)
         "odd_head_screw",
         "wide_dome_gland",
         "sunk_cap_cap_nut",

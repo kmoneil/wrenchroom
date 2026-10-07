@@ -46,6 +46,9 @@ from wrenchroom.engine.scene import boxes_overlap
 from wrenchroom.fasteners import (
     HEX_AF_MIN,
     PHILLIPS_NUMBER,
+    RECESS_AF_MAX,
+    RECESS_LOOSE_MM,
+    TORX_RECESS_A,
     TORX_SIZE,
     Fastener,
     Head,
@@ -54,6 +57,8 @@ from wrenchroom.fasteners import (
     Size,
     hex_key_af,
     in_hex_band,
+    in_recess_band,
+    loosely_fits,
     no_such_head,
     spanner_af,
     standard_hex_afs,
@@ -1416,6 +1421,8 @@ def _resolve_af(
         return None, None
     measured, size = fastener.drive_af, fastener.size
     ours = sizes if size is None else tuple(s for s in sizes if is_inch(s) is not size.is_metric)
+    if family == "hex-key":
+        return _resolve_key(measured, size, ours, sizes)
     found = _af_among(measured, size, ours, family, bands=bands)
     if found is not None:
         return found
@@ -1457,6 +1464,48 @@ def _af_among(
     return None
 
 
+def _resolve_key(
+    measured: float, size: Size | None, ours: tuple[float, ...], sizes: tuple[float, ...]
+) -> tuple[float, str | None]:
+    """A hex socket's across-flats as a key size, and a note when it was a stretch.
+
+    A key goes into a socket, so a socket is never smaller than its key, and the
+    standards draw it a little larger (:data:`RECESS_AF_MAX`): bd_warehouse draws
+    every socket at that most, ISO 7380-1's M4 at 2.58 for a 2.5 key (issue #82).
+    In order, from the thread's own system (``ours``) first, as for a hex:
+
+    1. a key the socket exactly is, as before (within a few hundredths);
+    2. the one key whose standard socket holds it;
+    3. the largest key it fits, drawn up to :data:`RECESS_LOOSE_MM` past the
+       most: taken, with a note saying so;
+    4. a key of the other system it exactly is: taken, with a note.
+
+    Otherwise not covered, naming the largest key that goes in.
+    """
+    snapped = snap(measured, ours)
+    if snapped is not None:
+        return snapped, None
+    held = [key for key in ours if in_recess_band(measured, key)]
+    if len(held) == 1:
+        return held[0], None
+    loose = [key for key in ours if loosely_fits(measured, key)]
+    if not held and loose:
+        key = max(loose)
+        most = RECESS_AF_MAX.get(key, key)
+        return key, (
+            f"socket drawn loose: {measured:.2f} across flats, {measured - most:.2f} past the "
+            f"most the standards allow a {size_name(key)} key's ({most:g}); "
+            f"taken as size {size_name(key)}"
+        )
+    other = snap(measured, sizes)
+    if held or other is None or size is None:
+        raise NotCovered(_no_fit(measured, ours, sizes, "hex-key"))
+    return other, (
+        f"hex drawn {measured:.2f} across flats, {'an inch' if is_inch(other) else 'a metric'} "
+        f"size, its thread {size.designation}; taken as size {size_name(other)}"
+    )
+
+
 def _no_fit(measured: float, ours: tuple[float, ...], sizes: tuple[float, ...], family: str) -> str:
     """Why no tool takes a hex, naming the one that fits nearest: never one that doesn't.
 
@@ -1489,10 +1538,17 @@ def _no_fit(measured: float, ours: tuple[float, ...], sizes: tuple[float, ...], 
 def _drive_notes(fastener: Fastener) -> tuple[str, ...]:
     """What a result should say about how its drive was sized, as the attempts sized it.
 
-    A hex drawn undersize, or at the other system's size: see :func:`_resolve_af`.
+    A hex drawn undersize, a socket or a Torx recess drawn loose, or either at the
+    other system's size: see :func:`_resolve_af` and :func:`_torx_size`.
     """
     if fastener.tool is not None or fastener.drive_af is None:
         return ()
+    if fastener.head is Head.TORX:
+        try:
+            note = _torx_size(fastener)[1]
+        except NotCovered:
+            return ()
+        return (note,) if note else ()
     if fastener.kind is Kind.NUT or fastener.head is Head.HEX:
         sizes, family, bands = FLATS, "spanner", True
     elif fastener.head in _KEYED_HEADS:
@@ -1553,17 +1609,50 @@ def _keys(
 def _torx_attempts(
     fastener: Fastener, mount: Mount, scene: Scene, tools: _Tools
 ) -> Iterator[Attempt]:
-    """A Torx head: the key its thread takes (ISO 14579 and kin), swept as a hex key."""
-    size = _known_size(fastener)
-    torx = TORX_SIZE.get(size.designation)
-    if torx is None:
-        raise NotCovered(no_such_head(Head.TORX, size))
+    """A Torx head: the key its recess or its thread takes, swept as a hex key."""
+    torx, _ = _torx_size(fastener)
     key = ISO_10664.get(torx)
     customs = tools.custom.torx_keys(torx)
     if key is None and not customs:
         raise NotCovered(missing((f"torx-key-{torx}",), tools.kit))
     held = tools.need(*([key.name] if key else []), *(custom.name for custom in customs))
     return _torx_keys(held, (*([key] if key else []), *customs), mount, scene, tools)
+
+
+def _torx_size(fastener: Fastener) -> tuple[str, str | None]:
+    """The Torx size a head takes, and a note when it was a stretch.
+
+    A recess's point to point, given as ``across_flats:``, decides it (issue #82):
+    the size whose ISO 10664 recess holds it (:data:`TORX_RECESS_A`), or the
+    largest it is drawn loosely past, by up to :data:`RECESS_LOOSE_MM`, noted. An
+    M8 pan head drawn for T40, as some makers sell it, takes T40, where the
+    standards say T45. Else the thread's size, by ISO 14579 and its kin.
+    """
+    measured = fastener.drive_af
+    if measured is None:
+        size = _known_size(fastener)
+        torx = TORX_SIZE.get(size.designation)
+        if torx is None:
+            raise NotCovered(no_such_head(Head.TORX, size))
+        return torx, None
+    held = [t for t, (least, most) in TORX_RECESS_A.items() if least <= measured <= most]
+    if held:
+        return held[0], None
+    loose = [
+        t for t, (_, most) in TORX_RECESS_A.items() if most < measured <= most + RECESS_LOOSE_MM
+    ]
+    if loose:
+        torx, most = loose[-1], TORX_RECESS_A[loose[-1]][1]
+        return torx, (
+            f"Torx recess drawn loose: {measured:.2f} point to point, {measured - most:.2f} past "
+            f"the most ISO 10664 allows a {torx} ({most:.3f}); taken as {torx}"
+        )
+    under = [t for t, (least, _) in TORX_RECESS_A.items() if least <= measured]
+    nearest = f"; the largest that fits, {under[-1]}" if under else ""
+    raise NotCovered(
+        f"{measured:.2f} mm point to point is no Torx recess's size{nearest}; "
+        "set tool: in the sidecar"
+    )
 
 
 def _torx_keys(
@@ -1936,7 +2025,10 @@ def _drive_size(kind: str, fastener: Fastener, tools: _Tools) -> float | str | N
     if kind == "key":
         return _quietly(_key_af, fastener, tools)
     if kind == "torx":
-        return TORX_SIZE.get(known)
+        try:
+            return _torx_size(fastener)[0]  # its recess's, where given (issue #82)
+        except NotCovered:
+            return None
     number = PHILLIPS_NUMBER.get(known) if kind == "phillips" else None
     return None if number is None else f"ph{number}"
 

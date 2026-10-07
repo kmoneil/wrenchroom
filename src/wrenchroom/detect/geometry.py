@@ -57,6 +57,8 @@ from wrenchroom.fasteners import (
     Kind,
     Size,
     in_hex_band,
+    in_recess_band,
+    loosely_fits,
 )
 
 if TYPE_CHECKING:
@@ -408,20 +410,35 @@ def _settle(
     the size only when the bore or shank gives none, or agrees, so an M8 nut
     drawn 12.6 across flats (in 5/16's band for 1/2 in) on an M8 bore stays M8;
     and a size from a band alone is no more than a guess, which a name or a
-    nut's bolt outranks (issue #50).
+    nut's bolt outranks (issue #50). A socket is drawn from its key up to its
+    standard's most, which is its key's as surely as the key's own size (an ISO
+    7380-1 M5's 3.08 is its 3 mm key's), and a little past that, drawn loosely,
+    the key's as a band is a nut's: a guess (issue #82). Unlike a nut's bore, a
+    shank thinner than every size its socket allows is no rival to it: a thread
+    drawn at its minor diameter (an M3's 2.46 is M2.5's 2.5 within the snap).
     """
     if drive_af is None:
         return measured, False, False
     hexagon = head in (None, Head.HEX)
     table = HEX_AF if hexagon else _KEY_TABLES.get(head, {})
     exact = [d for d, af in table.items() if abs(af - drive_af) < _SAME_DISTANCE]
-    banded = [d for d, af in table.items() if hexagon and in_hex_band(drive_af, af)]
+    if not exact and not hexagon:  # drawn above its key: 4.0 is the 4 mm key's, not 5/32's
+        exact = [d for d, af in table.items() if in_recess_band(drive_af, af)]
+    banded = [
+        d
+        for d, af in table.items()
+        if (in_hex_band(drive_af, af) if hexagon else loosely_fits(drive_af, af))
+    ]
     candidates = exact or banded
     if not candidates:
         return measured, False, False
     if measured is not None and measured.designation in candidates:
         return measured, True, False
-    if measured is not None and not exact:
+    thinner = not hexagon and all(
+        measured is not None and measured.diameter_mm < Size.parse(d).diameter_mm
+        for d in candidates
+    )
+    if measured is not None and not exact and not thinner:
         return measured, False, False
     if len(candidates) == 1:
         return Size.parse(candidates[0]), bool(exact), not exact
