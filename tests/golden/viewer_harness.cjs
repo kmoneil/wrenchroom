@@ -17,12 +17,19 @@ const vm = require("vm");
 const page = fs.readFileSync(process.argv[2], "utf8");
 if (process.argv.length !== 4) throw new Error("usage: viewer_harness.cjs PAGE (HASH | --walk)");
 const walk = process.argv[3] === "--walk";
-const scripts = [...page.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
-const data = page.match(/<script type="application\/json" id="wrenchroom-data">([\s\S]*?)<\/script>/)[1];
+// Every script element, its attributes and its body, ended as a browser ends one:
+// at "</script" in any case, whatever follows it up to ">" ("</SCRIPT>",
+// "</script >" and "</script foo>" all end it).
+const SCRIPT = /<script\b([^>]*)>([\s\S]*?)<\/script[^>]*>/gi;
+const all = [...page.matchAll(SCRIPT)].map((m) => ({ attributes: m[1], body: m[2] }));
+// The page's own code, which its content security policy lets run, carries no type;
+// its data is a JSON block, which never runs.
+const scripts = all.filter((s) => !/\btype=/i.test(s.attributes)).map((s) => s.body);
+const data = all.find((s) => /\bid="wrenchroom-data"/.test(s.attributes)).body;
 if (scripts.length !== 2) throw new Error("expected two scripts, found " + scripts.length);
 // Every element the page gives an id, with its hidden attribute as written; the
 // scripts' bodies are left out of the search, so nothing in them reads as a tag.
-const markup = page.replace(/(<script[^>]*>)[\s\S]*?<\/script>/g, "$1</script>");
+const markup = page.replace(SCRIPT, "<script$1></script>");
 const elements = [...markup.matchAll(/<(\w+)\b([^>]*)>/g)]
   .map((m) => [m[1], (m[2].match(/\bid="([\w-]+)"/) || [])[1], /\bhidden\b/.test(m[2])])
   .filter(([, id]) => id);
