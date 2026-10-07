@@ -50,12 +50,12 @@ SLOTS = len(CELLS) + 1
 #: undersize, guessed, band_agrees and named_size, 70 with minor_bore, 73 with
 #: #48's plain_pin, stepped_pin, minor_pin and odd_head (two), 77 with #47's
 #: snug_dome, wide_dome, dome_rib, sunk_cap and flange_nut, 82 with #49's reach_13
-#: and big_tube, 84 with #51's ball_button and ball_shoulder.
+#: and big_tube, 84 with #51's ball_button and ball_shoulder, 85 with #52's post_ring.
 FINAL_COUNTS = {
-    "fasteners": 84,
+    "fasteners": 85,
     "turns": 65,
     "held": 3,
-    "blocked": 15,
+    "blocked": 16,
     "stuck": 1,
     "not_covered": 0,
 }
@@ -130,7 +130,7 @@ def sidecar_and_truth(copies=1, which="all"):
 def _named_truth(expected, name):
     """A cell's truth with its roles turned into full part names."""
     entry = dict(expected)
-    for key in ("blocked_by", "stuck_on", "grazes"):
+    for key in ("blocked_by", "stuck_on", "grazes", "deciding"):
         if key in entry:
             entry[key] = [f"{name}_{role}" for role in entry[key]]
     if "pair" in entry:

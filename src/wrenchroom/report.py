@@ -71,6 +71,9 @@ class FastenerResult:
     #: Caveats on how the verdict was reached, for a person to weigh: a hex drawn
     #: under its standard, a size taken from the bolt (issue #50).
     notes: tuple[str, ...] = ()
+    #: Of the blockers, the parts that decided a blocked verdict: those at each
+    #: end of the best arc any tool found (issue #52). ``blockers`` leads with them.
+    deciding: tuple[str, ...] = ()
 
     @property
     def passed(self) -> bool:
@@ -108,8 +111,19 @@ def attempt_text(attempt: Attempt) -> str:
     if attempt.no_hand_room:
         outcome += " (no room for a hand)"
     line = f"{attempt.tool}, {attempt.way}: {outcome}"
-    if attempt.swing_deg and not attempt.turns:
+    if attempt.holds and not attempt.turns and attempt.required_deg:
+        line += (
+            f", best {attempt.swing_deg:g} of {attempt.required_deg:g} deg"
+            if attempt.swing_deg
+            else f", at one angle only ({attempt.required_deg:g} deg needed)"
+        )
+    elif attempt.swing_deg and not attempt.turns:
         line += f", swing {attempt.swing_deg:g} deg"
+    if attempt.no_hand_room:  # the bounds are the hand's: say so, if they narrow it
+        if attempt.bounds and set(attempt.bounds) != set(attempt.hand_blockers):
+            line += f", the hand stopped by {', '.join(attempt.bounds)} on its best arc"
+    elif attempt.bounds:
+        line += f", {_bounded(attempt.bounds)}"
     if attempt.blockers:
         line += f"; hit {', '.join(attempt.blockers)}"
     if attempt.hand_blockers:
@@ -270,6 +284,8 @@ class Report:
         for result in self.failures():
             names, reason = _why(result)
             what = reason or ", ".join(names) or NO_TOOL
+            if reason and result.deciding:
+                what += f"; best arc {_bounded(result.deciding)}"
             tool = result.tool or "-"
             lines.append(f"FAIL {result.fastener.name}  {tool}  {result.verdict}  {what}")
         for glob in self.unmatched_rules:
@@ -358,6 +374,9 @@ class Report:
                     if reason
                     else ", ".join(md_code(name) for name in names) or NO_TOOL
                 )
+                if reason and result.deciding:
+                    ends = tuple(md_code(name) for name in result.deciding)
+                    what += f"; best arc {_bounded(ends)}"
                 lines.append(
                     f"| {md_code(result.fastener.name)} | {_md_tool(result.tool)} "
                     f"| {result.verdict} | {what} |"
@@ -439,6 +458,7 @@ def _result_json(result: FastenerResult) -> dict[str, object]:
         "state": result.state,
         "pair": result.pair,
         "blocked_by": list(result.blockers),
+        "deciding": list(result.deciding),
         "stuck_on": list(result.stuck_on),
         "reason": result.reason,
         "grazes": list(result.grazes),
@@ -484,8 +504,19 @@ def _summary_text(counts: dict[str, int]) -> str:
     )
 
 
+def _bounded(bounds: tuple[str, ...]) -> str:
+    """``between a and b``, or ``bounded by a`` (one part both sides), or by several."""
+    if len(bounds) == 2:  # noqa: PLR2004  (one each side)
+        return f"between {bounds[0]} and {bounds[1]}"
+    return f"bounded by {', '.join(bounds)}"
+
+
 def _why(result: FastenerResult) -> tuple[tuple[str, ...], str | None]:
-    """What a failure ran into (stuck: what's in its way out), or the reason it has."""
+    """What a failure ran into (stuck: what's in its way out), or the reason it has.
+
+    A fastener with deciding parts always has a reason too (a tool that holds, or
+    a hand that can't follow it), and the line adds them to it (issue #52).
+    """
     names = result.stuck_on if result.verdict is Verdict.STUCK else result.blockers
     return names, result.reason
 

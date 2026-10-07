@@ -35,7 +35,12 @@ to M5):
   room for its wall round the hex. A tool grips the hex where its flats are, not the
   part's widest region (a flange, or a gland's dome), and a ring, socket or nut
   driver has to get on over whatever the part has past its hex: a dome wider than
-  their bore leaves only the open end, and the report says so. Verdicts per fastener with every blocker named; terminal table, JSON
+  their bore leaves only the open end, and the report says so. Verdicts per fastener
+  with every blocker named, led by the ones that decided it: where a tool swings
+  some of the arc it needs, the parts at each end of its best arc (`explain` says
+  `holds, best 15 of 30 deg, between post_a and post_b`), and with hand room what
+  stopped the hand along that arc; the terminal and Markdown name those, and how
+  many more the JSON lists (`blocked_by`, and `deciding`). Terminal table, JSON
   (`--json FILE`), Markdown for a CI job summary or a PR comment (`--md FILE`), exit
   codes for CI (0 pass, 1 a fastener fails, 2 not covered or config error). A FILE of
   `-` writes that report to stdout instead and moves the table to stderr, so it can be
@@ -137,8 +142,8 @@ to M5):
   is only a candidate: it is taken when its solid shows a drive a tool fits (a hex, a
   hex socket, a cross), and otherwise passed over, which every report lists, so a
   fastener is never missed without a word. With every fastener rule removed, the
-  golden bench's 83 are all found with the right kind and size, each screw with its
-  rule's head, and its 24 plates, blocks and studs named for their cells are passed over.
+  golden bench's 84 are all found with the right kind and size, each screw with its
+  rule's head, and its 26 plates, blocks and studs named for their cells are passed over.
 - `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
   correct and keep: one rule per fastener, and above each a comment with how sure
   detection was, what found it, the axis it resolved and how the part fares now.
@@ -149,7 +154,7 @@ to M5):
   file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  560 fasteners is read and checked with the full kit in about 9.0 s on an Apple M5
+  567 fasteners is read and checked with the full kit in about 9.6 s on an Apple M5
   Max laptop (the target is 10 s). Its four graze cells, deliberate worst cases in
   which the exact engine decides every position of a key grazing all the way round,
   are kept out of that figure and timed apart (about 0.7 s for the four). The bench is dense with fasteners that fail, and
@@ -220,7 +225,8 @@ FAIL key_wall_near_screw  hex-key-5  blocked  key_wall_near_wall
 - **The checks that matter**: the tool gets on; it can swing far enough to turn; a nut
   and its screw are a pair, one side turned and the other held; the screw can come out
   along its axis; retried with parts removed or the mechanism moved.
-- **Every failure explained**: which tool, which way it was tried, what it hit.
+- **Every failure explained**: which tool, which way it was tried, what it hit, and
+  which parts decided it.
 - **Fast enough for CI**: 500 fasteners in under 10 seconds, with JSON output and exit
   codes, a terminal table, Markdown to post, and a self-contained HTML 3D view.
 

@@ -154,3 +154,16 @@ def test_the_undersize_nut_is_noted_in_every_format(bench_report, bench_json):
         "ball_tilt_screw",
         "ball_shoulder_screw",
     }
+
+
+def test_a_blocked_nut_names_the_posts_that_decided_it(bench_report, bench_json):
+    """Issue #52: post_ring's nut, hit by all six posts, decided by two."""
+    entry = bench_json["post_ring_nut"]
+    deciding = entry["deciding"]
+    assert sorted(deciding) == ["post_ring_post_a", "post_ring_post_b"]
+    assert entry["blocked_by"][:2] == deciding
+    assert len(entry["blocked_by"]) == 6
+    (fail,) = [line for line in bench_report.terminal_lines() if "post_ring_nut" in line]
+    assert fail.endswith(
+        f"only holds, and it has no nut; best arc between {deciding[0]} and {deciding[1]}"
+    )

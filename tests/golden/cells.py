@@ -1359,3 +1359,32 @@ def ball_shoulder():
     )
     ceiling = slab(5.5 + 20) - Pos(32.25, 0, 5.5 + 25) * Box(55.5, 20, 12)
     return [("plate", plate(holes=[(0, 0, 4.1)])), ("screw", screw), ("ceiling", ceiling)]
+
+
+_POSTS = {"post_a": 340.0, "post_b": 35.0, **{f"post_{k}": 35.0 + 61.0 * k for k in range(1, 5)}}
+
+
+@cell(
+    "post_ring",
+    [{"parts": "nut", "kind": "nut", "size": "M8", "socket": False}],
+    {"nut": {"verdict": "blocked", "tool": "spanner-13", "deciding": ["post_a", "post_b"]}},
+)
+def post_ring():
+    """An M8 nut on a stud ringed by six posts (r 8) 60 out (issue #52), 61 deg
+    apart but for post_a and post_b, 55 apart. Between them the spanner swings 15
+    deg of the 30 it needs, the best arc any way finds; elsewhere it fits at one
+    angle. Every post is hit somewhere round the sweep, and blocked_by names all
+    six, leading with the two that decided it: post_a and post_b. A roof 33 over the nut
+    keeps a socket or nut driver off it, when detection, not the rule, describes it.
+    """
+    posts = [
+        (name, Pos(60 * math.cos(math.radians(a)), 60 * math.sin(math.radians(a)), 10))
+        for name, a in _POSTS.items()
+    ]
+    return [
+        ("plate", plate(holes=[(0, 0, 4.5)])),
+        ("stud", Pos(0, 0, 2.5) * Cylinder(4, 25)),
+        ("nut", hex_nut(8, 13, 6.8)),
+        ("roof", Pos(0, 0, 42) * Box(200, 200, 4)),
+        *((name, at * Cylinder(8, 20)) for name, at in posts),
+    ]
