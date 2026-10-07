@@ -48,11 +48,13 @@ class NutDriver:
     outer_radius: float
     handle_radius: float
     handle_length: float
+    #: A custom nut driver's own name (tools.custom); else ``nut-driver-<size>``.
+    label: str | None = None
 
     @property
     def name(self) -> str:
-        """The tool's name in a report: ``nut-driver-10``."""
-        return f"nut-driver-{size_name(self.af)}"
+        """The tool's name in a report: ``nut-driver-10``, or a custom one's own."""
+        return self.label or f"nut-driver-{size_name(self.af)}"
 
 
 def _driver(

@@ -309,18 +309,32 @@ def explain(
 
 @main.command()
 @click.option("--kit", default="metric-home", show_default=True, help="Which tool kit.")
-def tools(kit: str) -> None:
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="A sidecar whose own tools (its tools: list) join the kit, listed after it.",
+)
+def tools(kit: str, config_path: Path | None) -> None:
     """List the kit's tools and their dimensions, citations and approximations.
 
     Exactly the tools a check with this kit tries, from the same tables the
-    sweeps read: a fastener needing anything not listed is not covered.
+    sweeps read: a fastener needing anything not listed is not covered. With
+    --config, a sidecar's own tools too, which a check tries after the kit's.
     """
+    from wrenchroom.config import Config, ConfigError
+    from wrenchroom.tools import custom
     from wrenchroom.tools.kits import kit_named, listing
 
     try:
         chosen = kit_named(kit)
-    except ValueError as exc:
+        config = Config.load(config_path) if config_path else None
+    except (ConfigError, ValueError) as exc:
         _say(f"error: {exc}", err=True)
         sys.exit(EXIT_NOT_COVERED)
     for line in listing(chosen):
         _say(line)
+    if config is not None and config.tools:
+        _say("")
+        for line in custom.listing(config.tools, config_path.name if config_path else ""):
+            _say(line)

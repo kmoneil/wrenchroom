@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 85,
-  "turns": 63,
+  "fasteners": 87,
+  "turns": 65,
   "held": 3,
   "blocked": 17,
   "stuck": 1,
@@ -2088,6 +2088,66 @@
    "notes": []
   },
   {
+   "name": "shop_spanner_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M12",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    10000.0,
+    10.8
+   ],
+   "source": "name+geometry",
+   "tool": "short-ring-18",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "short_key_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    10000.0,
+    8.0
+   ],
+   "source": "name+geometry",
+   "tool": "stubby-key-6",
+   "verdict": "turns",
+   "how": "short leg in",
+   "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "snug_dome_gland",
    "kind": "nut",
    "head": null,
@@ -2571,7 +2631,7 @@
     1.0
    ],
    "seat": [
-    1900.0,
+    3900.0,
     10000.0,
     6.0
    ],
@@ -2603,7 +2663,7 @@
     1.0
    ],
    "seat": [
-    2100.0,
+    4100.0,
     10000.0,
     6.0
    ],

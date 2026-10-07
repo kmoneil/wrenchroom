@@ -71,6 +71,34 @@ to M5):
   fasteners (`#10`, `1/4`, `3/4`; UNC and UNF alike) take their ASME tools: socket,
   button and flat heads (B18.3), nuts (B18.2.2, B18.6.3) and hex heads (B18.2.1),
   which part ways with their nuts at 7/16 and 9/16.
+- Tools a kit doesn't have (a long-series or short-arm key, a shop-made spanner, a
+  thin-wall socket, a long screwdriver) go in the sidecar's `tools:` list, each by
+  the numbers the built-in tables hold for its kind, and swept the same way. They
+  join whatever kit is used: a fastener of their kind and size tries the kit's own
+  tools first, then the sidecar's, in its order, and a rule's `tool:` may name one.
+  `wrenchroom tools --config wrenchroom.yaml` lists them after the kit's own.
+
+  ```yaml
+  tools:
+    - name: stubby-key-5          # the name reports give it; never a built-in's
+      type: hex-key               # hex-key, torx-key, spanner, socket, nut-driver, driver
+      across_flats: 5
+      long: 60
+      short: 20
+    - name: shop-spanner-24
+      type: spanner
+      across_flats: 24
+      length: 300                 # the head defaults to the built-in 24's
+      ends: [ring]                # ring, open, or both (the default)
+  ```
+
+  The kinds and their numbers, mm (optional ones default to the built-in tool's for
+  the size): `hex-key` across_flats, long, short (across_corners); `torx-key` size,
+  long, short (point_to_point); `spanner` across_flats, length (stubby, ends,
+  head_thickness, ring_outer_radius, handle_width, open_width, open_thickness);
+  `socket` across_flats (outer_radius, length); `nut-driver` across_flats
+  (outer_radius, handle_radius, handle_length); `driver` tip (shaft_radius,
+  shaft_length). Anything else in an entry is an error, as elsewhere in the sidecar.
 - Room for the hand (`--hand-room`, or `checks: {hand_room: true}` in the sidecar):
   a hand of radius 35 mm along each handle's last 90 mm, resting on it from the side
   the tool comes from, and a fist round a driver's handle. Where the tool alone would
@@ -142,7 +170,7 @@ to M5):
   is only a candidate: it is taken when its solid shows a drive a tool fits (a hex, a
   hex socket, a cross), and otherwise passed over, which every report lists, so a
   fastener is never missed without a word. With every fastener rule removed, the
-  golden bench's 84 are all found with the right kind and size, each screw with its
+  golden bench's 86 are all found with the right kind and size, each screw with its
   rule's head, and its 26 plates, blocks and studs named for their cells are passed over.
 - `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
   correct and keep: one rule per fastener, and above each a comment with how sure

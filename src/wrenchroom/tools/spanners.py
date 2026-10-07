@@ -57,6 +57,13 @@ class Spanner:
     open_thickness: float = 0.0
     #: The stubby's length, or None where no stubby of the size is sold.
     stubby_length: float | None = None
+    #: A custom spanner's own name (tools.custom); else ``spanner-<size>``.
+    name: str | None = None
+
+    @property
+    def label(self) -> str:
+        """The tool's name in a report: ``spanner-13``, or a custom one's own."""
+        return self.name or f"spanner-{size_name(self.af)}"
 
 
 #: Full-length combination spanners' overall lengths, mm, by across-flats in mm
@@ -279,7 +286,7 @@ def ring_attempts(
     top is the seat and nothing changes. The engagement tests the hex's own
     :func:`corner_sweep` with the ring.
     """
-    tool = f"spanner-{size_name(spanner.af)}"
+    tool = spanner.label
     band_top, band_bottom = hex_band
     inner = hex_af / sqrt(3) + RING_CLEARANCE  # hex corner radius plus clearance
     thickness = min(spanner.head_thickness, (band_top - band_bottom) - _MIN_GRIP)
@@ -375,7 +382,7 @@ def open_end_attempts(
     :func:`corner_sweep`, which a neighbour 1 mm off the flats (two glands side
     by side) blocks whatever holds it.
     """
-    tool = f"spanner-{size_name(spanner.af)}"
+    tool = spanner.label
     band_top, band_bottom = hex_band
     thickness = min(spanner.open_thickness, (band_top - band_bottom) - _MIN_GRIP)
     mid_z = (band_top + band_bottom) / 2

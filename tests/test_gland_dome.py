@@ -181,3 +181,13 @@ def test_a_hex_head_s_flats_are_its_band():
 def test_a_key_s_pocket_or_a_slot_is_no_flats(shape):
     # Their flats face the axis: nothing a spanner grips, and no band.
     assert flats_heights(shape) == []
+
+
+def test_a_spanner_with_no_stubby_lists_no_stubby_ring():
+    # A 36 mm gland under a dome 50 across: no ring gets on, and a 36 mm spanner has
+    # no stubby (issue #49), so the ring is tried, and fails, at full length only.
+    gland = hex_prism(36, 10) + Pos(0, 0, 15) * Cylinder(25, 10)
+    result = run(on_wall(gland))
+    rings = [a.way for a in result.attempts if a.way.startswith("ring")]
+    assert rings == ["ring, full length"]
+    assert result.how == "open end, full length"

@@ -20,7 +20,7 @@ family and a narrow one the exception, in reading order.
 from __future__ import annotations
 
 import enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fnmatch import fnmatchcase
 from math import sqrt
 from pathlib import Path
@@ -29,11 +29,12 @@ from typing import TYPE_CHECKING, Any
 import yaml
 
 from wrenchroom.fasteners import AUTO, Fastener, Head, Kind, Size
+from wrenchroom.tools.custom import CustomTools, parse_tools
 
 if TYPE_CHECKING:
     from wrenchroom.assembly import Assembly
 
-_SUPPORTED_TOP = {"fasteners", "ignore", "pairs", "states", "checks"}
+_SUPPORTED_TOP = {"fasteners", "ignore", "pairs", "states", "checks", "tools"}
 _STATE_KEYS = {"remove", "base", "model"}
 _CHECKS_KEYS = {"default_state", "try_states", "detect", "hand_room"}
 _RULE_KEYS = {
@@ -102,6 +103,8 @@ class Config:
     #: Check room for the hand round each handle (spec 6.4); off until tuned,
     #: so ``checks: {hand_room: true}`` (or ``--hand-room``) asks for it.
     hand_room: bool = False
+    #: The sidecar's own tools (spec 5.3), which join whatever kit is used.
+    tools: CustomTools = field(default_factory=CustomTools)
     source: str = "<none>"
 
     @classmethod
@@ -145,6 +148,10 @@ class Config:
         default_state, try_states, detect, hand_room = _parse_checks(
             raw.get("checks", {}), states, source
         )
+        try:
+            tools = parse_tools(raw.get("tools"), f"{source}: tools")
+        except ValueError as exc:
+            raise ConfigError(str(exc)) from exc
         state_names = {state.name for state in states}
         for rule in rules:
             if rule.state is not None and rule.state not in state_names:
@@ -159,6 +166,7 @@ class Config:
             try_states=try_states,
             detect=detect,
             hand_room=hand_room,
+            tools=tools,
             source=source,
         )
 

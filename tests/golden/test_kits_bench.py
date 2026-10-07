@@ -7,14 +7,19 @@ exactly as under `full`. Under imperial-home it is the other way round: inch_pai
 comes out exactly as under `full`, and every metric fastener is not covered, naming
 its metric tool, unless it needs no sized tool at all: a Phillips or slotted driver
 fits a screw whatever its thread is measured in, and a carriage bolt holds itself.
+A sidecar's own tool (spec 5.3: short_key's) joins whichever kit is used, so its
+cell comes out as under `full` in each.
 """
 
 import pytest
-from bench import KIT, check_bench
+from bench import KIT, check_bench, sidecar_and_truth
 
 from wrenchroom.tools.kits import IMPERIAL_HOME, METRIC_HOME
 
 _GLAND = "needs spanner-24, which kit metric-home does not hold (full has it)"
+
+#: The bench sidecar's own tools: in every kit.
+CUSTOM = {tool["name"] for tool in sidecar_and_truth()[0]["tools"]}
 
 #: The bench's cells that need a tool metric-home doesn't hold, and why.
 PAST_HOME = {
@@ -75,7 +80,9 @@ def test_the_bench_is_checked_with_the_full_kit(bench_report):
 
 def test_only_the_cells_past_metric_home_change(home_json, bench_json):
     past = {
-        name for name, e in bench_json.items() if e["tool"] and not METRIC_HOME.holds(e["tool"])
+        name
+        for name, e in bench_json.items()
+        if e["tool"] and not METRIC_HOME.holds(e["tool"]) and e["tool"] not in CUSTOM
     }
     assert past == set(PAST_HOME) | set(HOME_BLOCKED)
     changed = {
@@ -111,6 +118,9 @@ def test_imperial_home_covers_nothing_metric_but_drivers(inch_json, bench_json):
         if name in INCH:
             continue
         entry = inch_json[name]
+        if full["tool"] in CUSTOM:  # the sidecar's own: in this kit too
+            assert entry == full, name
+            continue
         if full["tool"] is None or full["tool"].startswith("driver-"):
             # Held by itself, or a driver's tip: no size for the kit to lack.
             assert entry == full, name
