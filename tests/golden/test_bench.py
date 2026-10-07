@@ -10,7 +10,7 @@ from cells import CELLS
 
 from wrenchroom.assembly import Assembly
 from wrenchroom.checker import check
-from wrenchroom.config import Config
+from wrenchroom.config import Config, ConfigError
 from wrenchroom.report import md_text
 
 
@@ -293,6 +293,43 @@ def test_a_state_model_missing_a_fastener_fails_the_run(bench_dir, tmp_path):
         "(renamed?)",
     )
     assert own.warnings == ()
+
+
+def test_a_state_model_is_found_beside_its_sidecar(bench_dir, tmp_path):
+    """Issue #73, as reported: the bench in cad/, its sidecar and lever-up model in
+    conf/. The lever-up model is found beside the sidecar, and the check is the
+    bench's own; taken away, it is said to be missing, and where it was looked for."""
+    (tmp_path / "cad").mkdir()
+    (tmp_path / "conf").mkdir()
+    shutil.copy(bench_dir / "bench.step", tmp_path / "cad")
+    for name in ("wrenchroom.yaml", "bench_lever-up.step"):
+        shutil.copy(bench_dir / name, tmp_path / "conf")
+    model, sidecar = tmp_path / "cad" / "bench.step", tmp_path / "conf" / "wrenchroom.yaml"
+
+    def run():
+        return check(
+            Assembly.from_step(model),
+            Config.load(sidecar),
+            kit=KIT,
+            model="bench.step",
+            model_dir=model.parent,
+        )
+
+    assert run().summary == FINAL_COUNTS
+    (tmp_path / "conf" / "bench_lever-up.step").unlink()
+    with pytest.raises(ConfigError) as missing:
+        run()
+    assert str(missing.value) == (
+        f"state 'lever-up': its model bench_lever-up.step not found ({sidecar}, "
+        f"states.lever-up.model; looked in {sidecar.parent}, {model.parent})"
+    )
+    # The sidecar beside the model, as the bench writes it: the sidecar's folder and
+    # the model's are one, said once.
+    shutil.copy(sidecar, model.parent)
+    beside_config = Config.load(model.parent / "wrenchroom.yaml")
+    with pytest.raises(ConfigError) as beside:
+        check(Assembly.from_step(model), beside_config, model_dir=model.parent)
+    assert str(beside.value).endswith(f"looked in {model.parent})")
 
 
 def test_a_nut_its_corners_cannot_turn_says_so_once(bench_report, bench_json):

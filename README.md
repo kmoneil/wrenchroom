@@ -316,7 +316,7 @@ states:
   lid-off:
     remove: [lid, "lid_screw_*"] # parts taken off
   lever-up:
-    model: robot_lever-up.step   # the same parts, moved: another STEP
+    model: robot_lever-up.step   # the same parts, moved: a STEP beside this file
 
 checks:
   try_states: [lid-off]          # retry each failure in these states
