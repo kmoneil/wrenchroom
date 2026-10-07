@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 54,
-  "turns": 40,
+  "fasteners": 55,
+  "turns": 41,
   "held": 3,
   "blocked": 9,
   "stuck": 1,
@@ -119,6 +119,11 @@
    "name": "nut_gap_stud",
    "kind": "nut",
    "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "big_gland_plate",
+   "kind": "nut",
+   "reason": "noun 'gland', words after it; its solid shows no hex, hex socket or cross a tool fits"
   }
  ],
  "fasteners": [
@@ -143,6 +148,33 @@
    "verdict": "turns",
    "how": "ball end, 25 deg off the axis",
    "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null
+  },
+  {
+   "name": "big_gland_gland",
+   "kind": "nut",
+   "head": null,
+   "size": null,
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    6000.0,
+    30.0
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-41",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
    "state": null,
    "pair": null,
    "blocked_by": [],
@@ -1500,7 +1532,7 @@
     1.0
    ],
    "seat": [
-    -100.0,
+    900.0,
     6000.0,
     6.0
    ],
@@ -1529,7 +1561,7 @@
     1.0
    ],
    "seat": [
-    100.0,
+    1100.0,
     6000.0,
     6.0
    ],

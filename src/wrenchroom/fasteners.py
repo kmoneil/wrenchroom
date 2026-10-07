@@ -470,6 +470,9 @@ HEX_AF_MIN: dict[float, float] = {
     32.0: 31.0,
     34.0: 33.0,
     36.0: 35.0,
+    41.0: 40.0,
+    46.0: 45.0,
+    50.0: 49.0,
     **{
         inch_mm(size): minimum * _MM_PER_INCH
         for size, minimum in {

@@ -23,6 +23,7 @@ PAST_HOME = {
     "glands_apart_b_gland": _GLAND,
     "glands_close_a_gland": _GLAND,
     "glands_close_b_gland": _GLAND,
+    "big_gland_gland": "needs spanner-41, which kit metric-home does not hold (full has it)",
     "vented_gland_vent": _GLAND,
     "inch_pair_screw": (
         "needs hex-key-3/16in, which kit metric-home does not hold (imperial-home and full have it)"

@@ -859,3 +859,24 @@ def one_part_lock():
         ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(6, 20, 10, 4.0)),
         ("nut", Compound([dome.solid(), nut.solid()])),  # the dome first, as drawn
     ]
+
+
+@cell(
+    "big_gland",
+    [{"parts": "gland", "kind": "nut", "socket": False, "across_flats": 41}],
+    {"gland": {"verdict": "turns", "tool": "spanner-41", "how": "ring, full length"}},
+    ignore=["*_cable"],
+)
+def big_gland():
+    """An M32-class cable gland, 41 across flats, through a plate with its cable
+    (issue #33): the full kit's 41 mm spanner (Gedore's 1 B length, 520) turns it
+    in open air. The rule gives the hex, as a gland's thread says nothing of it,
+    so the report lists it as "41 AF gland"; with no rule detection measures the
+    same. It used to be "41.00 mm across flats is no tool's size".
+    """
+    return [
+        ("plate", plate(w=300, d=300, holes=[(0, 0, 16.2)])),
+        # The bore (15) is no thread size, as a gland's isn't: the hex alone sizes it.
+        ("gland", gland(af=41, h=10, dome_r=17, dome_h=20, stub_r=16, stub_h=14, bore=7.5)),
+        ("cable", Pos(0, 0, 80) * Cylinder(7, 300)),
+    ]

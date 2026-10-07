@@ -46,12 +46,12 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
     for name, rule in _described(bench_parts):
         kind = Kind(rule.get("kind", "screw"))
         reading = read_shape(bench_parts[name].shape, kind)
-        size = Size.parse(rule["size"])
+        size = Size.parse(rule["size"]) if "size" in rule else None  # a gland may give none
         head = Head(rule["head"]) if "head" in rule else None
-        expected_af = None
-        if kind is Kind.NUT or head is Head.HEX:
+        expected_af = rule.get("across_flats")
+        if expected_af is None and size is not None and (kind is Kind.NUT or head is Head.HEX):
             expected_af = spanner_af(size)
-        elif head is not None:
+        elif expected_af is None and size is not None and head is not None:
             expected_af = hex_key_af(head, size)
         got = (reading.head, reading.drive_af and round(reading.drive_af, 6), reading.size)
         want = (head, expected_af and round(expected_af, 6), size)  # inch sizes in mm

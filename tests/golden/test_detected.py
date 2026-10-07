@@ -56,11 +56,13 @@ def _rule(name, rules):
 
 def _right(fastener, rule):
     """Right kind, and right size: a gland's, which has no thread size by design,
-    is right when its measured hex is the one the rule's size stands for."""
+    is right when its measured hex is the rule's (its across_flats, or the hex its
+    size stands for: 24 for the M16 rules)."""
     if fastener.kind.value != rule.get("kind", "screw"):
         return False
     if not fastener.socket_allowed:
-        return fastener.size is None and fastener.drive_af == pytest.approx(24.0)
+        hex_af = rule.get("across_flats", 24.0)
+        return fastener.size is None and fastener.drive_af == pytest.approx(hex_af)
     return fastener.size is not None and fastener.size.designation == rule["size"]
 
 

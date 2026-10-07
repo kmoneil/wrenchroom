@@ -15,8 +15,9 @@ from fractions import Fraction
 MM_PER_INCH = 25.4
 
 #: Metric spanner and socket sizes as sold, mm: 5.5 (M3's hex), then every
-#: millimetre to 36 (M24's).
-METRIC_FLATS: tuple[float, ...] = (5.5, *(float(af) for af in range(6, 37)))
+#: millimetre to 36 (M24's), then 41, 46 and 50, which large cable glands take
+#: (M32 commonly 41, M40 50) as M27, M30 and M33 nuts do (issue #33).
+METRIC_FLATS: tuple[float, ...] = (5.5, *(float(af) for af in range(6, 37)), 41.0, 46.0, 50.0)
 
 #: Inch hex key sizes, ASME B18.3 (0.050 in to 3/4 in).
 INCH_KEYS: tuple[str, ...] = (

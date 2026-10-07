@@ -885,6 +885,12 @@ def _given_af(
     if fits:
         names = " or ".join(f"{family}-{size_name(size)}" for size in fits)
         raise NotCovered(f"{measured:.2f} mm across flats fits {names}: set tool: in the sidecar")
+    if measured > max(sizes):
+        largest = f"{family}-{size_name(max(sizes))}"
+        raise NotCovered(
+            f"{measured:.2f} mm across flats is larger than any {family} the tables hold "
+            f"({largest} the largest); set tool: in the sidecar"
+        )
     nearest = min(sizes, key=lambda size: abs(size - measured))
     side = "larger" if nearest > measured else "smaller"
     raise NotCovered(

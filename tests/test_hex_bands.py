@@ -42,7 +42,7 @@ FLATS = set(METRIC_FLATS) | {inch_mm(size) for size in INCH_FLATS}
 
 
 def test_every_band_lies_just_below_a_spanner_size():
-    assert len(HEX_AF_MIN) == 36  # a vacuity guard: 19 metric sizes, 17 inch
+    assert len(HEX_AF_MIN) == 39  # a vacuity guard: 22 metric sizes, 17 inch
     for af, minimum in HEX_AF_MIN.items():
         assert af in FLATS, af
         assert 0 < af - minimum < 0.05 * af, af  # a tolerance, not another size
@@ -57,6 +57,9 @@ def test_every_band_lies_just_below_a_spanner_size():
         (24.0, 23.67),
         (30.0, 29.16),
         (36.0, 35.0),
+        (41.0, 40.0),  # M27, M30 and M33: the sizes large glands share (issue #33)
+        (46.0, 45.0),
+        (50.0, 49.0),
         (17.0, 16.73),  # DIN 934 M10
         (19.0, 18.67),  # DIN 934 M12
         (32.0, 31.0),  # DIN 934 M22
