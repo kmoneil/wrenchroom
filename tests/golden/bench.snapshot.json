@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 68,
-  "turns": 53,
+  "fasteners": 70,
+  "turns": 55,
   "held": 3,
   "blocked": 11,
   "stuck": 1,
@@ -980,6 +980,64 @@
    "swing_deg": 360.0,
    "state": null,
    "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "minor_bore_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    5000.0,
+    7000.0,
+    -15.3
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "minor_bore_nut",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "minor_bore_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    5000.0,
+    7000.0,
+    6.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "minor_bore_bolt",
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
@@ -1972,8 +2030,8 @@
     1.0
    ],
    "seat": [
-    4900.0,
-    7000.0,
+    -100.0,
+    8000.0,
     6.0
    ],
    "source": "sidecar",
@@ -2003,8 +2061,8 @@
     1.0
    ],
    "seat": [
-    5100.0,
-    7000.0,
+    100.0,
+    8000.0,
     6.0
    ],
    "source": "sidecar",
