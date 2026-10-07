@@ -157,7 +157,7 @@ def test_the_terminal_names_each_and_counts_them_under_not_checked(report):
     assert f"NOTE passed over screw_post: noun 'screw', words after it; {NO_DRIVE}" in lines
     assert lines[-1] == (
         "NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); "
-        "2 parts named like a fastener, with no drive in the solid (passed over); "
+        "2 parts named like a fastener, with no drive or bore in the solid (passed over); "
         "parts the model doesn't have"
     )
 
@@ -183,7 +183,9 @@ def test_the_markdown_lists_them(report):
     text = report.markdown()
     assert "#### Passed over" in text
     assert "- `bolt_hole_marker`: noun 'bolt', words after it; its solid shows no hex" in text
-    assert "2 parts named like a fastener, with no drive in the solid (passed over); " in text
+    assert (
+        "2 parts named like a fastener, with no drive or bore in the solid (passed over); " in text
+    )
 
 
 def test_a_long_list_is_cut_in_the_terminal_and_markdown_but_not_the_json():
@@ -201,7 +203,8 @@ def test_one_part_is_counted_in_the_singular():
         model="m", kit="full", results=(), passed_over=(PassedOver("a_nut_x", Kind.NUT, "why"),)
     )
     assert (
-        "1 part named like a fastener, with no drive in the solid (passed over)" in one.not_checked
+        "1 part named like a fastener, with no drive or bore in the solid (passed over)"
+        in one.not_checked
     )
 
 

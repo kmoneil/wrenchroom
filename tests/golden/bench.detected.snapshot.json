@@ -3,10 +3,10 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 94,
-  "turns": 71,
-  "held": 3,
-  "blocked": 18,
+  "fasteners": 99,
+  "turns": 73,
+  "held": 5,
+  "blocked": 19,
   "stuck": 1,
   "not_covered": 1
  },
@@ -55,9 +55,72 @@
    "name": "flange_nut_stud",
    "kind": "nut",
    "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "badge_insert",
+   "kind": "insert",
+   "reason": "noun 'insert'; named only as an insert, with no thread size or word such as threaded, and its solid shows no bore: an inlay, not a fixed thread"
   }
  ],
  "fasteners": [
+  {
+   "name": "badge_boss_insert",
+   "kind": "insert",
+   "head": null,
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": null,
+   "source": "name",
+   "tool": null,
+   "verdict": "held",
+   "how": "holds itself",
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "badge_screw",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "size M4 from its screw, badge_screw"
+   ]
+  },
+  {
+   "name": "badge_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2060.0,
+    12000.0,
+    4.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-3",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": "badge_boss_insert",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
   {
    "name": "ball_button_screw",
    "kind": "screw",
@@ -2121,6 +2184,36 @@
    "notes": []
   },
   {
+   "name": "run_in_hexnut",
+   "kind": "nut",
+   "head": null,
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1000.0,
+    12000.0,
+    5.2
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-10",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "shop_spanner_nut",
    "kind": "nut",
    "head": null,
@@ -2558,6 +2651,69 @@
    "notes": []
   },
   {
+   "name": "tee_hold_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    12000.0,
+    6.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "tee_hold_tnut",
+   "blocked_by": [
+    "tee_hold_slot",
+    "tee_hold_ceiling"
+   ],
+   "deciding": [
+    "tee_hold_slot"
+   ],
+   "stuck_on": [],
+   "reason": "only holds, and it screws into a fixed thread (tee_hold_tnut), so it must turn; best arc bounded by tee_hold_slot",
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "tee_hold_tnut",
+   "kind": "insert",
+   "head": null,
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": null,
+   "source": "name+geometry",
+   "tool": null,
+   "verdict": "held",
+   "how": "holds itself",
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "tee_hold_screw",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "size M6 from its screw, tee_hold_screw (its bore alone said M5)"
+   ]
+  },
+  {
    "name": "torus_deep_screw",
    "kind": "screw",
    "head": "button",
@@ -2694,7 +2850,7 @@
     1.0
    ],
    "seat": [
-    900.0,
+    3900.0,
     12000.0,
     6.0
    ],
@@ -2726,7 +2882,7 @@
     1.0
    ],
    "seat": [
-    1100.0,
+    4100.0,
     12000.0,
     6.0
    ],

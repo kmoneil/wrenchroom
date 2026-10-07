@@ -61,6 +61,10 @@ class NameHint:
         unless_hex: An insert only by the word before "nut" ("well nut", which
             could as well be a nut deep in a well): a nut after all if its solid
             shows a hex, as a fixed thread's doesn't.
+        needs_bore: An insert by the bare word alone (``Logo_Insert``), with no
+            thread size and no word that says threaded: a decorative inlay as
+            readily as a fixed thread, so a fastener only if its solid shows a
+            bore, and passed over if it doesn't (issue #84).
     """
 
     kind: Kind
@@ -72,6 +76,7 @@ class NameHint:
     not_covered: str | None = None
     needs_drive: bool = False
     unless_hex: bool = False
+    needs_bore: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -192,6 +197,13 @@ _INSERT_WORDS = {
     "pem", "weld", "captive",
 }  # fmt: skip
 _LOCK_WORDS = {"lock", "locking", "nylon", "nyloc", "nylock", "nylok"}
+#: An insert by these alone may be an inlay (a logo, a badge): it needs a thread
+#: size, a word below, or a bore in its solid to be a fixed thread (issue #84).
+_BARE_INSERTS = {"insert", "inserts"}
+_THREAD_WORDS = {"threaded", "thread", "tapped", "heatset", "heat", "brass", "helicoil", "knurled"}
+#: Fastener nouns a describing word is run into in one word ("hexnut", "jamnut",
+#: "hexbolt", "nylocnut"): read as the two words they are (issue #84). Longest first.
+_COMPOUND_NOUNS = ("screws", "screw", "bolts", "bolt", "nuts", "nut")
 _SET_SCREW_NOUNS = {"setscrew", "grubscrew"}
 #: Describing words that settle a fastener as one the kit can't check.
 _HAND_WORDS = {"wing", "thumb", "knurled"}
@@ -353,6 +365,7 @@ def read_name(name: str) -> NameHint | None:
             basis.append(f"drive {drive!r}")
     socket_allowed = noun not in _GLAND_NOUNS
     size, length, size_text, size_reason = _size_in(cleaned)
+    bare = kind is Kind.INSERT and noun in _BARE_INSERTS and not set(words) & _THREAD_WORDS
     if not socket_allowed:
         # A gland's thread says nothing about the hex a spanner grips (an M20
         # gland is commonly 24 across flats): geometry measures the hex.
@@ -369,6 +382,7 @@ def read_name(name: str) -> NameHint | None:
         not_covered=reason or size_reason,
         needs_drive=needs_drive,
         unless_hex=kind is Kind.INSERT and word not in _INSERT_NOUNS,
+        needs_bore=bare and size is None and size_reason is None,
     )
 
 
@@ -438,10 +452,33 @@ def ends_in_part_noun(name: str) -> bool:
 
 
 def _words(text: str) -> list[str]:
-    """Lower-case words, split at punctuation and camelCase; sizes left out."""
+    """Lower-case words, split at punctuation, camelCase and a run-in noun; sizes left out."""
     stripped = _IMPERIAL.sub(" ", _METRIC.sub(" ", text))
     spaced = _CAMEL.sub(" ", stripped)
-    return [word.lower() for word in _TOKEN_SPLIT.split(spaced) if word]
+    words = [word.lower() for word in _TOKEN_SPLIT.split(spaced) if word]
+    return [part for word in words for part in _unrun(word)]
+
+
+def _unrun(word: str) -> tuple[str, ...]:
+    """A describing word run into a fastener noun, as its two words: ``hexnut``.
+
+    Only a word the reader knows before the noun counts (hex, jam, flange, lock,
+    nyloc, cage, weld...), so ``peanut`` and ``corkscrew`` stay what they are,
+    and a word that is a noun itself (``locknut``, ``wingnut``, ``capscrew``)
+    keeps its own reading.
+    """
+    if word in _NOUN_KIND:
+        return (word,)
+    for noun in _COMPOUND_NOUNS:
+        before = word.removesuffix(noun)
+        if before != word and before and _runs_in(before):
+            return (before, noun)
+    return (word,)
+
+
+def _runs_in(word: str) -> bool:
+    """A word that describes a fastener and may be run into its noun."""
+    return word in _HEAD_WORDS or word in _INSERT_WORDS | _LOCK_WORDS | _SET_WORDS | _HAND_WORDS
 
 
 def _last_noun(words: list[str]) -> int | None:
@@ -523,8 +560,8 @@ def _noun_hint(noun: str | None, run: set[str]) -> tuple[Kind, Head | None, str 
         return None
     if noun in _SET_SCREW_NOUNS or (kind is Kind.SCREW and run & _SET_WORDS):
         return kind, None, _SET_SCREW, noun
-    if noun in _HAND_TURNED or run & _HAND_WORDS:
-        return kind, None, _BY_HAND, noun
+    if noun in _HAND_TURNED or (kind is not Kind.INSERT and run & _HAND_WORDS):
+        return kind, None, _BY_HAND, noun  # never an insert: a knurled insert is set, not turned
     head = _HEAD_WORDS.get(noun) if kind is Kind.SCREW else None
     return kind, head, None, noun
 

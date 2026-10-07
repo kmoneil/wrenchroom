@@ -172,9 +172,10 @@ class Report:
     ignored: frozenset[str] = field(default=frozenset(), compare=False, repr=False)
     #: Whether room for a hand round each handle was checked (spec 6.4).
     hand_room: bool = False
-    #: Parts named like fasteners that detection didn't take (issue #30): a
-    #: fastener noun with ordinary words after it, and no drive in the solid.
-    #: Not failures, but every report lists them, so none goes unsaid.
+    #: Parts named like fasteners that detection didn't take: a fastener noun
+    #: with ordinary words after it, and no drive in the solid (issue #30), or a
+    #: bare "insert" with no bore (issue #84). Not failures, but every report
+    #: lists them, so none goes unsaid.
     passed_over: tuple[PassedOver, ...] = ()
     #: What the run noticed about the model or the sidecar as a whole, not about one
     #: fastener: a state's model whose part names differ from the main model's
@@ -511,7 +512,10 @@ def _marginal_text(result: FastenerResult) -> str:
 
 def _passed_over_count(passed: tuple[PassedOver, ...]) -> str:
     noun = "part" if len(passed) == 1 else "parts"
-    return f"{len(passed)} {noun} named like a fastener, with no drive in the solid (passed over)"
+    return (
+        f"{len(passed)} {noun} named like a fastener, with no drive or bore in the solid "
+        "(passed over)"
+    )
 
 
 def _summary_text(counts: dict[str, int]) -> str:

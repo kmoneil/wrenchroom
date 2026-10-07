@@ -1692,3 +1692,75 @@ def w4032():
         ("stud", Pos(0, 0, 2.5) * Cylinder(2.5, 25)),
         ("nut", nut),
     ]
+
+
+# ---------------------------------------------------------------- issue #84: a real export's names
+
+
+@cell(
+    "run_in",
+    [{"parts": "hexnut", "kind": "nut", "size": "M6"}],
+    {"hexnut": {"verdict": "turns", "tool": "spanner-10", "how": "ring, full length"}},
+)
+def run_in():
+    """An M6 nut named in one word, as CAD exports write "Hexnut", on a stud up
+    through a plate: the ring goes on from above. Detection used to find no noun
+    in the name, and say nothing.
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 3.5)])),
+        ("stud", Pos(0, 0, 2.5) * Cylinder(3, 25)),
+        ("hexnut", hex_nut(6, 10, 5.2)),
+    ]
+
+
+@cell(
+    "badge",
+    [
+        {"parts": "screw", "kind": "screw", "head": "socket", "size": "M4"},
+        {"parts": "boss_insert", "kind": "insert", "size": "M4"},
+    ],
+    {
+        "screw": {"verdict": "turns", "tool": "hex-key-3", "how": "driver straight in"},
+        "boss_insert": {"verdict": "held", "how": "holds itself", "pair": "screw"},
+    },
+)
+def badge():
+    """A logo inlaid in a plate and named an insert, as a printed part's inlay is:
+    a plaque 30 by 12 by 2, no bore. No thread size, no word that says threaded,
+    and no bore: not a fixed thread, so passed over, saying so. It used to be
+    taken for one, and held. 60 along, boss_insert is named as barely, but its
+    solid shows a bore (3.24, an M4's minor): a fixed thread, which an M4 socket
+    head screws into, its 3 mm key straight in.
+    """
+    plaque = Pos(0, 0, -1) * Box(30, 12, 2)
+    boss = Pos(60, 0, -3) * (Cylinder(3, 6) - Cylinder(1.62, 6.01))
+    board = plate(holes=[(60, 0, 2.2)]) - plaque - Pos(60, 0, -3) * Cylinder(3, 6)
+    screw = Pos(60, 0, 0) * socket_screw(d=4, length=12, dk=7, k=4, s=3, t=2)
+    return [("plate", board), ("insert", plaque), ("boss_insert", boss), ("screw", screw)]
+
+
+@cell(
+    "tee_hold",
+    [{"parts": "screw", **M6_SOCKET}, {"parts": "tnut", "kind": "insert", "size": "M6"}],
+    {
+        "screw": {"verdict": "blocked", "tool": "hex-key-5"},
+        "tnut": {"verdict": "held", "how": "holds itself", "pair": "screw"},
+    },
+)
+def tee_hold():
+    """tapped_hold's M6 socket head screw, into a T-nut under the plate. As there,
+    the key only holds it: the ceiling stops driver and long leg, and the slot
+    leaves the short leg 36 deg of the 60 it needs. A T-nut never turns, so the
+    screw must, which the reason says, not that its partner failed. Detected, the
+    T-nut is bored 5.0, M6's tap drill and M5's diameter: its bore alone says M5,
+    and the screw's M6 outranks it.
+    """
+    half_width = 2.835 + 60 * math.tan(math.radians(18))
+    return [
+        ("plate", plate(holes=[(0, 0, 3)])),
+        ("screw", socket_screw()),
+        ("tnut", Pos(0, 0, -12) * (Box(20, 10, 4) - Cylinder(2.5, 5))),
+        ("slot", slot_block(30, 48, 12, half_width)),
+        ("ceiling", slab(51)),
+    ]

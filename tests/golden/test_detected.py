@@ -126,21 +126,27 @@ def test_detected_tools_match_the_truth_but_where_the_sidecar_is_needed(detected
 def test_every_candidate_name_is_taken_on_its_solid_or_passed_over(detected):
     """Issue #30: a fastener noun with words after it. On the bench the one whose
     solid shows a drive is vented's gland; every other is a plate, block, stud,
-    tube or dome, and none is taken. Those passed over are listed by name, but not
-    a name ending in a part's noun (gland_rib_plate, nut_gap_plate): it says what
-    the part is, and a note would be noise (issue #75)."""
+    tube or dome, and none is taken; nor is badge's bare insert, with no bore
+    (issue #84). Those passed over are listed by name, but not a name ending in a
+    part's noun (gland_rib_plate, nut_gap_plate): it says what the part is, and a
+    note would be noise (issue #75)."""
     names = detected.models[None].assembly.names
     candidates = {
         name
         for name in names
-        if name not in detected.ignored and (hint := read_name(name)) and hint.needs_drive
+        if name not in detected.ignored
+        and (hint := read_name(name))
+        and (hint.needs_drive or hint.needs_bore)
     }
     assert len(candidates) > 15  # a vacuity guard: the bench is full of such names
     said = {name for name in candidates if not ends_in_part_noun(name)}
     assert len(candidates - said) > 5  # and of plates and blocks
-    assert {part.name for part in detected.passed_over} == said - {"vented_gland_vent"}
+    # The two taken on their solids: vented's gland by its hex, badge's boss insert by
+    # its bore (issue #84).
+    taken_on_solid = {"vented_gland_vent", "badge_boss_insert"}
+    assert {part.name for part in detected.passed_over} == said - taken_on_solid
     taken = {r.fastener.name for r in detected.results}
-    assert candidates & taken == {"vented_gland_vent"}
+    assert candidates & taken == taken_on_solid
     (gland,) = [r for r in detected.results if r.fastener.name == "vented_gland_vent"]
     assert (gland.tool, gland.fastener.confidence) == ("spanner-24", "medium")
 
@@ -168,11 +174,16 @@ def test_a_nut_drawn_small_says_so_and_where_its_size_came_from(detected):
     assert notes["guessed_nut"] == (bolt, small)
     assert notes["named_size_m8_nut"] == (small,)
     assert notes["band_agrees_nut"] == ()
+    # Issue #84: a T-nut's bore alone is a guess too, which its screw outranks.
+    screw = "size M6 from its screw, tee_hold_screw (its bore alone said M5)"
+    assert notes["tee_hold_tnut"] == (screw,)
     noted = {name for name, said in notes.items() if said}
     assert noted == {
         "undersize_nut",
         "guessed_nut",
         "named_size_m8_nut",
+        "tee_hold_tnut",
+        "badge_boss_insert",  # sized by its screw too
         "odd_head_screw",
         "wide_dome_gland",
         "sunk_cap_cap_nut",
