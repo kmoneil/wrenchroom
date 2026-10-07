@@ -138,13 +138,19 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     if default_state is not None:
         config.state(default_state)  # raises on a typo
     matches = config.apply(assembly)
-    fasteners, passed_over = _fasteners(assembly, config, matches.fasteners, only)
+    fasteners, passed_over = _fasteners(assembly, config, matches.fasteners)
+    # ``only`` narrows what is reported, not what is resolved (issue #46): pairs
+    # are found over the whole model, and a chosen fastener's partner is checked
+    # with it, so a narrowed verdict is the full run's.
+    chosen = [f for f in fasteners if only is None or fnmatchcase(f.name, only)]
+    if only is not None:
+        passed_over = tuple(p for p in passed_over if fnmatchcase(p.name, only))
     # A narrowing glob that picks nothing checks nothing: as with a sidecar rule
     # that matches nothing, that is how a renamed part hides, so the run says so
     # and exits 2 rather than passing (issue #20).
     only_warnings = (
         [f"only glob {only!r} matched no fastener (renamed part?)"]
-        if only is not None and not fasteners
+        if only is not None and not chosen
         else []
     )
     # A mate that names nothing leaves its part in the scene, and the fastener
@@ -166,16 +172,20 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         except NotCovered as exc:
             failures[fastener.name] = str(exc)
     pairs, pair_warnings = _find_pairs(fasteners, frames, config)
+    reported = {f.name for f in chosen}
+    checked = reported | {pairs[name] for name in reported if name in pairs}
 
     candidates: list[_Candidate] = []
     for fastener in fasteners:
+        if fastener.name not in checked:
+            continue
         if fastener.name in failures:
             candidates.append(_Candidate(fastener, reason=failures[fastener.name]))
             continue
         candidates.append(
             _check_fastener(fastener, frames[fastener.name], space, config, default_state, tools)
         )
-    results = _resolve_joints(candidates, pairs)
+    results = [r for r in _resolve_joints(candidates, pairs) if r.fastener.name in reported]
     models = {None: StateModel(assembly), **space.models}
     return Report(
         model=model,
@@ -206,7 +216,7 @@ def _ignored(config: Config, part: Part) -> bool:
 
 
 def _fasteners(
-    assembly: Assembly, config: Config, described: tuple[Fastener, ...], only: str | None
+    assembly: Assembly, config: Config, described: tuple[Fastener, ...]
 ) -> tuple[list[Fastener], tuple[PassedOver, ...]]:
     """The sidecar's fasteners, plus what detection finds among the parts it doesn't name.
 
@@ -226,9 +236,6 @@ def _fasteners(
         found += detection.fasteners
         passed = detection.passed_over
     found.sort(key=lambda f: f.name)
-    if only is not None:
-        found = [f for f in found if fnmatchcase(f.name, only)]
-        passed = tuple(p for p in passed if fnmatchcase(p.name, only))
     return found, passed
 
 

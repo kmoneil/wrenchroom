@@ -85,7 +85,9 @@ to M5):
   screw that turns but can't come out is `stuck`), states (parts removed, another
   model of the mechanism, retries that say where a fastener passed), `explain`
   (every attempt for one fastener, with the blockers) and `tools` (the kit's
-  dimensions, caveats inline) all work.
+  dimensions, caveats inline) all work. `explain` and `check --only` narrow what is
+  reported, not what is resolved: a fastener's pair is checked with it, so its
+  verdict is the full run's.
 - Fixed threads (`kind: insert`): a well nut, rivnut, threaded insert, cage, T-,
   press or weld nut holds itself, like a carriage bolt. It is never given a tool and
   is reported as held, and the screw into it is the one that must turn. Detection

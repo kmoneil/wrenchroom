@@ -269,6 +269,7 @@ def explain(
 
     With --html - the view goes to stdout and the attempts to stderr.
     """
+    from wrenchroom.detect.sidecar import glob_escape
     from wrenchroom.report import attempt_text
 
     report = _run(
@@ -276,7 +277,7 @@ def explain(
         config_path,
         kit=kit,
         step_deg=step_deg,
-        only=fastener,
+        only=glob_escape(fastener),  # the name exactly: "bolt[1]" is that part
         exact=exact,
         hand_room=hand_room,
     )
