@@ -41,7 +41,9 @@ to M5):
   1.5 to 10 mm, combination spanners and 1/4" and 3/8" drive sockets 5.5 to 19 mm,
   Phillips 1 to 3 and slotted drivers. `imperial-home` is the same in inch sizes, as
   US home sets come: ASME B18.3 keys 0.050 to 3/8 in, spanners 1/4 to 3/4 in, sockets
-  3/16 to 3/4 in. `full` holds every size the tables describe, both systems. A
+  3/16 to 3/4 in. `full` holds every size the tables describe, both systems, its
+  spanners and sockets reaching 50 mm for large cable glands (an M32 gland is
+  commonly 41 across flats). A
   fastener that needs a tool the kit lacks is not covered, and the reason names the
   tool and the kits that have it (`needs spanner-24, which kit metric-home does not
   hold (full has it)`). `full` also has Torx keys T10 to T40 (ISO 10664 sizes, swept
@@ -109,7 +111,7 @@ to M5):
   is only a candidate: it is taken when its solid shows a drive a tool fits (a hex, a
   hex socket, a cross), and otherwise passed over, which every report lists, so a
   fastener is never missed without a word. With every fastener rule removed, the
-  golden bench's 53 are all found with the right kind and size, each screw with its
+  golden bench's 54 are all found with the right kind and size, each screw with its
   rule's head, and its 21 plates, blocks and studs named for their cells are passed over.
 - `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
   correct and keep: one rule per fastener, and above each a comment with how sure
@@ -121,7 +123,7 @@ to M5):
   file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  540 fasteners is read and checked with the full kit in about 9.2 s on an Apple M5
+  550 fasteners is read and checked with the full kit in about 9.3 s on an Apple M5
   Max laptop (the target is 10 s). The bench is dense with fasteners that fail, and
   a failing one tries every tool it has: open ends, and ball-end keys leant every way
   round, cost most of that. `--exact` swaps in OCP boolean intersections on the

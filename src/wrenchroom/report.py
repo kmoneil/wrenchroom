@@ -432,10 +432,23 @@ def _why(result: FastenerResult) -> tuple[tuple[str, ...], str | None]:
 
 
 def _describe(fastener: Fastener) -> str:
-    bits = [fastener.size.designation if fastener.size else "?"]
+    """The table's "what": ``M8 hex screw``; with no size, the hex it was measured by.
+
+    A gland found by its name has no size by design (its thread says nothing of
+    the hex a spanner grips), so it is ``24 AF gland``, not ``? nut`` (issue #33).
+    """
+    kind = fastener.kind.value
+    if fastener.size is not None:
+        size = fastener.size.designation
+    elif fastener.drive_af is not None:
+        size = f"{fastener.drive_af:g} AF"
+        kind = kind if fastener.socket_allowed else "gland"
+    else:
+        size = "?"
+    bits = [size]
     if fastener.head:
         bits.append(fastener.head.value)
-    bits.append(fastener.kind.value)
+    bits.append(kind)
     return " ".join(bits)
 
 

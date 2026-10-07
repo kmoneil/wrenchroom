@@ -63,6 +63,12 @@ class Spanner:
         return self.length * STUBBY_FACTOR
 
 
+#: Lengths of the spanners above 36 mm, which the formula below would make some
+#: 100 mm short (and so err towards passing): Gedore's 1 B combination spanners,
+#: to DIN 3113 and ISO 3318, as published (read 2026-10-06).
+LARGE_LENGTHS: dict[float, float] = {41.0: 520.0, 46.0: 550.0, 50.0: 580.0}
+
+
 def spanner_for(af: float) -> Spanner:
     """The spanner for an across-flats size, from the prototype's approximations.
 
@@ -75,10 +81,12 @@ def spanner_for(af: float) -> Spanner:
     are fits to two makers' published heads (Stahlwille OPEN-BOX and Hazet 600N,
     8 to 24 mm, read 2026-10-06; widths within 1.1 mm of the fit, thicknesses
     within 1.0), inside ISO 3318:2016's maximum head width ``2.1*s + 7``.
+
+    Above 36 mm the length is a maker's (:data:`LARGE_LENGTHS`).
     """
     return Spanner(
         af=af,
-        length=9 * af + 45,
+        length=LARGE_LENGTHS.get(af, 9 * af + 45),
         head_thickness=0.3 * af + 1.5,
         ring_outer_radius=0.8 * af + 2,
         handle_width=0.9 * af + 2,

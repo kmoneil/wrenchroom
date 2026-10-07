@@ -29,7 +29,10 @@ units on import, so nothing here rescales.
 
 from __future__ import annotations
 
+import re
+import tempfile
 from collections import Counter
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -38,6 +41,7 @@ from build123d import Compound, Shape
 from build123d.topology import downcast  # the same table build123d's own importer uses
 from OCP.collections import Sequence_TDF_Label
 from OCP.IFSelect import IFSelect_RetDone
+from OCP.Message import Message, Message_Gravity, Message_PrinterOStream
 from OCP.STEPCAFControl import STEPCAFControl_Reader
 from OCP.TCollection import TCollection_AsciiString, TCollection_ExtendedString
 from OCP.TDataStd import TDataStd_Name
@@ -212,14 +216,58 @@ def _read_step(path: Path) -> Iterator[_Named]:
     shape_tool = XCAFDoc_DocumentTool.ShapeTool_s(doc.Main())
     reader = STEPCAFControl_Reader()
     reader.SetNameMode(True)
-    if reader.ReadFile(str(path)) != IFSelect_RetDone:
-        msg = f"cannot read {path} as STEP"
+    with _kernel_quiet() as heard:
+        status = reader.ReadFile(str(path))
+        if status == IFSelect_RetDone:
+            reader.Transfer(doc)
+    if status != IFSelect_RetDone:
+        said = "; ".join(heard)
+        msg = f"cannot read {path} as STEP" + (f" ({said})" if said else "")
         raise ValueError(msg)
-    reader.Transfer(doc)
     roots = Sequence_TDF_Label()
     shape_tool.GetFreeShapes(roots)
     for index in range(1, roots.Length() + 1):
         yield from _walk_label(shape_tool, roots.Value(index), TopLoc_Location(), "")
+
+
+@contextmanager
+def _kernel_quiet() -> Iterator[list[str]]:
+    """Hold the CAD kernel's own messages, and hand back what it said, cleaned.
+
+    OCP's STEP reader reports a bad file on its default messenger, which prints
+    to stdout in colour: past wrenchroom's own output, and into a report piped
+    from stdout (issue #33). While the block runs, the messenger's printers are
+    set aside for one writing to a file; after it, the list holds each message.
+    """
+    messenger = Message.DefaultMessenger_s()
+    saved = list(messenger.Printers())
+    for printer in saved:
+        messenger.RemovePrinter(printer)
+    heard: list[str] = []
+    with tempfile.TemporaryDirectory() as directory:
+        log = Path(directory) / "kernel.log"
+        capture = Message_PrinterOStream(str(log), False, Message_Gravity.Message_Warning)
+        messenger.AddPrinter(capture)
+        try:
+            yield heard
+        finally:
+            messenger.RemovePrinter(capture)
+            del capture  # closes the file
+            for printer in saved:
+                messenger.AddPrinter(printer)
+            text = log.read_text(errors="replace") if log.exists() else ""
+            heard.extend(_kernel_lines(text))
+
+
+def _kernel_lines(text: str) -> list[str]:
+    """The kernel's messages without its decoration: "**** ERR StepFile : ... ****"."""
+    lines = []
+    for raw in text.splitlines():
+        line = re.sub(r"^\*+\s*(?:ERR|FAIL|WARNING|WARN|INFO)?\s*\w*\s*:\s*|\s*\*+$", "", raw)
+        line = " ".join(line.split())
+        if line:
+            lines.append(line)
+    return lines
 
 
 def _walk_label(

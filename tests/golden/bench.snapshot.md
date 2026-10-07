@@ -1,15 +1,16 @@
 ### wrenchroom: `bench.step`
 
-**54 fasteners: 42 turn, 3 held, 8 blocked, 1 stuck, 0 not covered**
+**55 fasteners: 43 turn, 3 held, 8 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
-Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 21 parts named like a fastener, with no drive in the solid (passed over); parts the model doesn't have.
+Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 22 parts named like a fastener, with no drive in the solid (passed over); parts the model doesn't have.
 
 | Fasteners | Tool | Count | Outcome |
 | --- | --- | ---: | --- |
 | 1/4 nut | `spanner-7/16in` | 1 | all pass (ring, full length) |
 | 1/4 socket screw | `hex-key-3/16in` | 1 | all pass (driver straight in) |
+| 41 AF gland | `spanner-41` | 1 | all pass (ring, full length) |
 | M10 hex screw | `spanner-16` | 3 | all pass (ring, full length) |
 | M10 nut | `socket-16` | 2 | all pass (socket, 50 mm extension) |
 | M10 nut | `spanner-16` | 1 | 1 of 1 fail |
@@ -55,4 +56,4 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 21 parts
 - `gland_rib_rib`: noun 'gland', words after it; its solid shows no hex, hex socket or cross a tool fits
 - `nyloc_two_bodies_plate`: noun 'nyloc', words after it; its solid shows no hex, hex socket or cross a tool fits
 - `nyloc_two_bodies_dome`: noun 'nyloc', words after it; its solid shows no hex, hex socket or cross a tool fits
-- and 11 more (the JSON lists every one)
+- and 12 more (the JSON lists every one)

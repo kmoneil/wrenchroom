@@ -20,7 +20,7 @@ over a home kit stretched to 24 mm):
   to 3/4 in, 1/4" drive sockets 3/16 to 9/16 in and 3/8" drive 5/16 to 3/4 in, and
   the same drivers.
 - ``full``: every size the tables describe, metric and inch (keys to 19 mm and 3/4
-  in, spanners and sockets to 36 mm and 1-1/2 in). The rest of M6 adds the tools only
+  in, spanners and sockets to 50 mm and 1-1/2 in). The rest of M6 adds the tools only
   this kit carries (ball-end and Torx keys, nut drivers).
 
 A measured across-flats that is no tool's size (a 22.5 mm gland) stays not covered,

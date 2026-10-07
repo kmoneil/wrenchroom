@@ -44,10 +44,10 @@ SLOTS = len(CELLS) + 1
 #: inch_pair, torx_wall, ball_tilt and nut_tube; and since M6's open end,
 #: glands_close's two turn; 47 since issue #27's hex_band, 48 with #26's nut_gap,
 #: 49 with #30's vented, 50 with #31's low_head, 52 with #29's rubber, 54 with
-#: #28's one_part_lock.
+#: #28's one_part_lock, 55 with #33's big_gland.
 FINAL_COUNTS = {
-    "fasteners": 54,
-    "turns": 42,
+    "fasteners": 55,
+    "turns": 43,
     "held": 3,
     "blocked": 8,
     "stuck": 1,
