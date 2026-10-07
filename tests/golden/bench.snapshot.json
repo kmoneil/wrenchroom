@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 107,
-  "turns": 83,
+  "fasteners": 110,
+  "turns": 86,
   "held": 5,
   "blocked": 18,
   "stuck": 1,
@@ -1934,6 +1934,36 @@
    "notes": []
   },
   {
+   "name": "pan_t40_torx_screw",
+   "kind": "screw",
+   "head": "torx",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1000.0,
+    13000.0,
+    4.8
+   ],
+   "source": "sidecar",
+   "tool": "torx-key-T40",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "phillips_open_screw",
    "kind": "screw",
    "head": "phillips",
@@ -3084,8 +3114,8 @@
     1.0
    ],
    "seat": [
-    4900.0,
-    12000.0,
+    1900.0,
+    13000.0,
     6.0
    ],
    "source": "sidecar",
@@ -3116,8 +3146,8 @@
     1.0
    ],
    "seat": [
-    5100.0,
-    12000.0,
+    2100.0,
+    13000.0,
     6.0
    ],
    "source": "sidecar",
@@ -3227,6 +3257,38 @@
    "notes": []
   },
   {
+   "name": "w10642_screw",
+   "kind": "screw",
+   "head": "flat",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    13000.0,
+    0.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-2.5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "socket drawn loose: 2.60 across flats, 0.02 past the most the standards allow a 2.5 key's (2.58); taken as size 2.5"
+   ]
+  },
+  {
    "name": "w4032_nut",
    "kind": "nut",
    "head": null,
@@ -3274,6 +3336,36 @@
    ],
    "source": "sidecar",
    "tool": "hex-key-4",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "w7380_screw",
+   "kind": "screw",
+   "head": "button",
+   "size": "M5",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    5000.0,
+    12000.0,
+    2.75
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-3",
    "verdict": "turns",
    "how": "driver straight in",
    "swing_deg": 360.0,

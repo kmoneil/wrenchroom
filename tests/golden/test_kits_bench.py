@@ -57,6 +57,8 @@ PAST_HOME = {
     ),
     "small_torx_screw": "needs torx-key-T6, which kit metric-home does not hold (full has it)",
     "small_phillips_screw": "needs driver-ph0, which kit metric-home does not hold (full has it)",
+    # Issue #82: a T40 recess on an M8, by its across_flats.
+    "pan_t40_torx_screw": "needs torx-key-T40, which kit metric-home does not hold (full has it)",
 }
 
 #: Cells metric-home holds a tool for but can't turn without full's: the ball end.

@@ -603,6 +603,93 @@ def in_hex_band(measured: float, af: float) -> bool:
     return minimum is not None and minimum - 1e-6 <= measured <= af + 1e-6
 
 
+#: The most a hexagon socket may be across flats, by the key that goes into it, mm
+#: (issue #82). A key goes into a socket, so a socket is never smaller than its key
+#: and the standards draw it a little larger: ISO 4762:2004's s max, which ISO
+#: 7380-1 and ISO 10642 share (1.5 to 10 from its own Table 1, 12 to 19 from Fuller
+#: Fasteners' copy, read 2026-10-07; the 1.3, ISO 10642's M2, from Westfield's);
+#: ISO 7379's, tighter from 5 mm up, sit inside these. Inch: ASME B18.3's J max
+#: (amesweb, Engineers Edge's gauge table agreeing). A model drawn at the most, as
+#: bd_warehouse draws every socket, takes the key.
+RECESS_AF_MAX: dict[float, float] = {
+    1.3: 1.36,
+    1.5: 1.58,
+    2.0: 2.08,
+    2.5: 2.58,
+    3.0: 3.08,
+    4.0: 4.095,
+    5.0: 5.14,
+    6.0: 6.14,
+    8.0: 8.175,
+    10.0: 10.175,
+    12.0: 12.212,
+    14.0: 14.212,
+    17.0: 17.23,
+    19.0: 19.275,
+    **{
+        inch_mm(key): most * _MM_PER_INCH
+        for key, most in {
+            "0.035": 0.0355,
+            "0.050": 0.0510,
+            "1/16": 0.0635,
+            "5/64": 0.0791,
+            "3/32": 0.0952,
+            "7/64": 0.1111,
+            "1/8": 0.1270,
+            "9/64": 0.1426,
+            "5/32": 0.1587,
+            "3/16": 0.1900,
+            "7/32": 0.2217,
+            "1/4": 0.2530,
+            "5/16": 0.3160,
+            "3/8": 0.3790,
+            "7/16": 0.4420,
+            "1/2": 0.5050,
+            "9/16": 0.5680,
+            "5/8": 0.6310,
+            "3/4": 0.7570,
+        }.items()
+    },
+}
+
+#: How far past its standards' most a socket may be drawn and still take its key,
+#: mm: a model drawn loosely (issue #82), which the result's notes say. bd_warehouse's
+#: ISO 10642 M4, 2.60 (DIN 7991's most), is 0.02 past ISO 10642's 2.58.
+RECESS_LOOSE_MM = 0.15
+
+
+def in_recess_band(measured: float, key: float) -> bool:
+    """Whether a measured socket is one the key ``key`` goes into, by the standards."""
+    return key - 1e-6 <= measured <= RECESS_AF_MAX.get(key, key) + 1e-6
+
+
+def loosely_fits(measured: float, key: float) -> bool:
+    """Whether a socket the key goes into is drawn past the standards, but within reason."""
+    top = RECESS_AF_MAX.get(key, key)
+    return top + 1e-6 < measured <= top + RECESS_LOOSE_MM + 1e-6
+
+
+#: A Torx recess's point to point, A, by size: from the GO gauge's least to the NO GO
+#: gauge's most, mm. ISO 10664:2014 sets no tolerance on the recess itself, only the
+#: gauges that must and mustn't go in (its Tables 3 and 4, read 2026-10-07; the 2005
+#: edition agrees, and gives T45's GO): a recess between them takes the size (issue
+#: #82). The nominal A of every size sits inside its own band.
+TORX_RECESS_A: dict[str, tuple[float, float]] = {
+    "T6": (1.695, 1.785),
+    "T8": (2.335, 2.425),
+    "T10": (2.761, 2.852),
+    "T15": (3.295, 3.385),
+    "T20": (3.879, 3.970),
+    "T25": (4.451, 4.566),
+    "T27": (5.009, 5.126),
+    "T30": (5.543, 5.659),
+    "T40": (6.673, 6.814),
+    "T45": (7.841, 7.983),
+    "T50": (8.857, 8.999),
+    "T55": (11.245, 11.412),
+}
+
+
 def standard_hex_afs(size: Size) -> set[float]:
     """Every across flats a standard gives this thread's hex: its nut, DIN nut and head."""
     found = {spanner_af(size), spanner_af(size, head=True), DIN_HEX_AF.get(size.designation)}

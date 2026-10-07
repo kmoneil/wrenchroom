@@ -55,10 +55,11 @@ SLOTS = len(CELLS) + 1
 #: #63's corner_touch (drawn_in's two clashes are the edges sidecar's alone), 94
 #: with #81's chamfers, dome_tip, sunk_tip, named_head, w4762 and w4032, 99 with
 #: #84's run_in, tee_hold's screw and T-nut, and badge's screw and boss insert (its
-#: logo insert is passed over), 107 with #83's small, eight fasteners below M3 and at #0.
+#: logo insert is passed over), 107 with #83's small, eight fasteners below M3 and at
+#: #0, 110 with #82's w7380, w10642 and pan_t40.
 FINAL_COUNTS = {
-    "fasteners": 107,
-    "turns": 83,
+    "fasteners": 110,
+    "turns": 86,
     "held": 5,
     "blocked": 18,
     "stuck": 1,

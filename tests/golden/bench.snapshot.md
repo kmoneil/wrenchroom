@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**107 fasteners: 83 turn, 5 held, 18 blocked, 1 stuck, 0 not covered**
+**110 fasteners: 86 turn, 5 held, 18 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -28,11 +28,11 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 9 parts 
 | M24 nut | `spanner-36` | 1 | 1 of 1 fail |
 | M3 button screw | `hex-key-2` | 1 | all pass (driver straight in) |
 | M4 button screw | `hex-key-2.5` | 6 | 2 of 6 fail |
-| M4 flat screw | `hex-key-2.5` | 1 | all pass (driver straight in) |
+| M4 flat screw | `hex-key-2.5` | 2 | all pass (driver straight in) |
 | M4 insert | - | 2 | all pass (holds itself) |
 | M4 phillips screw | `driver-ph2` | 2 | 1 of 2 fail |
 | M4 socket screw | `hex-key-3` | 2 | all pass (driver straight in) |
-| M5 button screw | `hex-key-3` | 1 | all pass (driver straight in) |
+| M5 button screw | `hex-key-3` | 2 | all pass (driver straight in) |
 | M5 nut | `spanner-8` | 1 | all pass (ring, full length) |
 | M5 socket screw | `hex-key-4` | 1 | all pass (driver straight in) |
 | M6 button screw | `hex-key-4` | 4 | 1 of 4 fail |
@@ -49,6 +49,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 9 parts 
 | M8 hex screw | `spanner-13` | 8 | 1 of 8 fail |
 | M8 nut | `spanner-13` | 14 | 4 of 14 fail |
 | M8 socket screw | `stubby-key-6` | 1 | all pass (short leg in) |
+| M8 torx screw | `torx-key-T40` | 1 | all pass (driver straight in) |
 
 #### Failures
 
@@ -80,6 +81,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 9 parts 
 - `ball_tilt_screw`: only a ball end turns it (ball end, 25 deg off the axis): a ball end takes much less torque than a straight key, so tightening it to its torque, or breaking it loose, may need a straight key, which can't get in
 - `sunk_cap_cap_nut`, `wide_dome_gland`: no ring, socket or nut driver gets on: past its hex the part is 20.00 across, wider than their bore round the hex; only an open end grips it, from the side
 - `undersize_nut`: hex drawn undersize: 12.60 across flats, 0.13 under the least its M8 standard allows (12.73); taken as size 13
+- `w10642_screw`: socket drawn loose: 2.60 across flats, 0.02 past the most the standards allow a 2.5 key's (2.58); taken as size 2.5
 
 #### Marginal
 

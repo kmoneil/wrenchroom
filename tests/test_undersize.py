@@ -31,7 +31,15 @@ from wrenchroom.checker import UNDERSIZE_MM, NotCovered, _resolve_af, _sized_by_
 from wrenchroom.config import Config
 from wrenchroom.detect.geometry import read_shape
 from wrenchroom.detect.sidecar import sidecar_text
-from wrenchroom.fasteners import HEX_AF_MIN, Fastener, Kind, Size, standard_hex_afs
+from wrenchroom.fasteners import (
+    HEX_AF_MIN,
+    RECESS_AF_MAX,
+    RECESS_LOOSE_MM,
+    Fastener,
+    Kind,
+    Size,
+    standard_hex_afs,
+)
 from wrenchroom.report import PASSED_OVER_SHOWN, FastenerResult, Report, Verdict
 from wrenchroom.tools.hex_keys import HEX_KEYS
 from wrenchroom.tools.sizes import FLATS, inch_mm, is_inch, size_mm, size_name
@@ -503,7 +511,7 @@ def test_every_hint_names_a_tool_that_fits_and_the_thread_s_own_first(family, si
 @pytest.mark.parametrize("thread", [t for t in THREADS if t])
 def test_every_tool_taken_keeps_to_the_thread_s_system_or_says_why(family, sizes, bands, thread):
     size = Size.parse(thread)
-    taken = undersized = crossed = 0
+    taken = undersized = crossed = loosened = 0
     for af in sweep(sizes):
         (tool, note), _ = resolve(af, thread, sizes, family, bands)
         if tool is None:
@@ -518,6 +526,10 @@ def test_every_tool_taken_keeps_to_the_thread_s_system_or_says_why(family, sizes
                 f"taken as size {size_name(tool)}"
             )
             assert abs(tool - af) <= 0.05  # only an exact size crosses
+        elif note is not None and note.startswith("socket drawn loose"):
+            loosened += 1  # a socket drawn a little past its standard's most (issue #82)
+            assert not bands
+            assert tool < af <= RECESS_AF_MAX.get(tool, tool) + RECESS_LOOSE_MM + 1e-9
         elif note is not None:
             assert note.startswith("hex drawn undersize")
             undersized += 1
@@ -528,6 +540,7 @@ def test_every_tool_taken_keeps_to_the_thread_s_system_or_says_why(family, sizes
     assert taken > 20
     assert crossed > 0
     assert undersized > 0 or not bands or not standard_hex_afs(size)
+    assert loosened > 0 or bands  # a vacuity guard: the sweep meets loose sockets
 
 
 # ---------------------------------------------------------------------------

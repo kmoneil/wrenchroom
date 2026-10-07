@@ -36,7 +36,15 @@ from typing import TYPE_CHECKING
 
 from wrenchroom.detect.geometry import ShapeReading, read_shape
 from wrenchroom.detect.names import NameHint, ends_in_part_noun, read_name
-from wrenchroom.fasteners import Fastener, Head, Kind, PassedOver, in_hex_band
+from wrenchroom.fasteners import (
+    Fastener,
+    Head,
+    Kind,
+    PassedOver,
+    in_hex_band,
+    in_recess_band,
+    loosely_fits,
+)
 from wrenchroom.tools.hex_keys import HEX_KEYS
 from wrenchroom.tools.sizes import FLATS, snap
 
@@ -141,7 +149,10 @@ def shows_drive(reading: ShapeReading) -> bool:
         return False
     if reading.head in (None, Head.HEX):
         return snap(af, FLATS) is not None or any(in_hex_band(af, size) for size in FLATS)
-    return snap(af, tuple(HEX_KEYS)) is not None
+    keys = tuple(HEX_KEYS)  # a socket drawn at its standard's most, or loosely (issue #82)
+    return snap(af, keys) is not None or any(
+        in_recess_band(af, key) or loosely_fits(af, key) for key in keys
+    )
 
 
 def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) -> Fastener:
@@ -168,6 +179,8 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
     guessed = size is not None and hint.size is None and (reading.size_from_band or bored)
     if guessed and bored:
         used.append(f"{size.designation} by its bore alone")
+    elif guessed and reading.head not in (None, Head.HEX):
+        used.append(f"{size.designation} by its socket alone, drawn past its standard's most")
     elif guessed:
         used.append(f"{size.designation} by its hex's tolerance band alone")
     elif size is not None and (reading.size_from_drive or hint.size is None):
