@@ -127,6 +127,12 @@ def test_a_socket_a_nut_driver_and_a_driver_default_to_the_built_in_ones():
         ({**STUBBY, "long": True}, "long must be a positive number"),
         ({**STUBBY, "long": float("inf")}, "long must be finite"),
         ({**STUBBY, "across_corners": 4.9}, "is less than across_flats"),
+        # Arms swapped, the short eight times the long (issue #75).
+        ({**STUBBY, "long": 10, "short": 80}, "short (80) is longer than long (10): swapped?"),
+        (
+            {"name": "t", "type": "torx-key", "size": "T30", "long": 10, "short": 80},
+            "short (80) is longer than long (10): swapped?",
+        ),
         (
             {"name": "t", "type": "torx-key", "size": "30", "long": 9, "short": 9},
             "a Torx size",

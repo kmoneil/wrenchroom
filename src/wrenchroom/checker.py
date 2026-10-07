@@ -245,7 +245,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         unmatched_rules=tuple(rule.parts for rule in matches.unmatched_rules),
         unmatched_ignores=matches.unmatched_ignores,
         warnings=tuple(only_warnings + pair_warnings + space.warnings),
-        notes=tuple(space.notes),
+        notes=(*space.notes, *_unused_tools(fasteners, tools)),
         passed_over=passed_over,
         default_state=default_state,
         hand_room=tools.hand_room,
@@ -1842,6 +1842,37 @@ def _tool_drive(name: str, tools: _Tools) -> _Drive | None:
         return None  # not a size: the forced tool is reported unknown
     tables = {"hex-key": HEX_KEYS, "nut-driver": NUT_DRIVERS}.get(family, FLATS)
     return (kind, af, called) if af in tables else None  # else the table says so
+
+
+def _unused_tools(fasteners: list[Fastener], tools: _Tools) -> list[str]:
+    """The sidecar's own tools no fastener here takes and no rule names (issue #75).
+
+    Not one that was never tried: the kit's own tool goes first, and a custom one
+    of the same size waits behind it. One of a kind and size no fastener takes is
+    one written wrong, most often its size, and a run that never says so would
+    leave it looking used. Noted, not failed: one sidecar may serve several models.
+    """
+    named = {fastener.tool for fastener in fasteners if fastener.tool}
+    drives = [drive for f in fasteners if (drive := _fastener_drive(f, tools)) is not None]
+    unused = []
+    for custom in tools.custom.tools:
+        kind, size, called = _custom_drive(custom)
+        taken = any(
+            k == kind and (size is None or s is None or _same_size(size, s)) for k, s, _ in drives
+        )
+        if custom.name not in named and not taken:
+            unused.append(f"tool {custom.name}: no fastener here takes {_sized(called, size)}")
+    return unused
+
+
+def _sized(called: str, size: float | str | None) -> str:
+    """A tool as a sentence names it with its size: ``a 7 mm hex key``, ``a T30 Torx key``."""
+    if size is None:
+        return called
+    noun = called.removeprefix("a ")
+    if isinstance(size, float):
+        return f"a {size_name(size)}{'' if is_inch(size) else ' mm'} {noun}"
+    return f"a {str(size).upper()} {noun}"
 
 
 def _tip_drive(tip: str) -> _Drive:

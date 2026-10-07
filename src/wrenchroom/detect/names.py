@@ -397,6 +397,46 @@ def _mcmaster_in(text: str) -> tuple[str, tuple[Kind, Head | None]] | None:
     return None
 
 
+#: Words that name a part that isn't a fastener. A name ending in one says what the
+#: part is (nut_plate, gland_plate, box_wall), so a fastener noun before it makes
+#: no candidate worth a note when its solid shows no drive (issue #75).
+PART_NOUNS = frozenset(
+    {
+        "plate",
+        "bracket",
+        "wall",
+        "cover",
+        "boss",
+        "block",
+        "panel",
+        "housing",
+        "base",
+        "frame",
+        "mount",
+        "rail",
+        "beam",
+        "bar",
+        "sheet",
+        "lid",
+        "case",
+        "enclosure",
+        "shelf",
+        "chassis",
+        "ceiling",
+        "floor",
+        "rib",
+        "slab",
+        "deck",
+    }
+)
+
+
+def ends_in_part_noun(name: str) -> bool:
+    """Whether a part name's last word names a part that isn't a fastener."""
+    words = _words(_clean(name))
+    return bool(words) and words[-1] in PART_NOUNS
+
+
 def _words(text: str) -> list[str]:
     """Lower-case words, split at punctuation and camelCase; sizes left out."""
     stripped = _IMPERIAL.sub(" ", _METRIC.sub(" ", text))

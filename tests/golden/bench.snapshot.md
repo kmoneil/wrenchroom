@@ -4,7 +4,7 @@
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
-Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 26 parts named like a fastener, with no drive in the solid (passed over); parts the model doesn't have.
+Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 8 parts named like a fastener, with no drive in the solid (passed over); parts the model doesn't have.
 
 | Fasteners | Tool | Count | Outcome |
 | --- | --- | ---: | --- |
@@ -63,9 +63,8 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 26 parts
 
 - `ball_shoulder_screw`: only a ball end turns it (ball end, 20 deg off the axis): a ball end takes much less torque than a straight key, so tightening it to its torque, or breaking it loose, may need a straight key, which can't get in
 - `ball_tilt_screw`: only a ball end turns it (ball end, 25 deg off the axis): a ball end takes much less torque than a straight key, so tightening it to its torque, or breaking it loose, may need a straight key, which can't get in
-- `sunk_cap_cap_nut`: no ring, socket or nut driver gets on: past its hex the part is 20.00 across, wider than their bore round the hex; only an open end grips it, from the side
+- `sunk_cap_cap_nut`, `wide_dome_gland`: no ring, socket or nut driver gets on: past its hex the part is 20.00 across, wider than their bore round the hex; only an open end grips it, from the side
 - `undersize_nut`: hex drawn undersize: 12.60 across flats, 0.13 under the least its M8 standard allows (12.73); taken as size 13
-- `wide_dome_gland`: no ring, socket or nut driver gets on: past its hex the part is 20.00 across, wider than their bore round the hex; only an open end grips it, from the side
 
 #### Marginal
 
@@ -74,14 +73,11 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 26 parts
 
 #### Passed over
 
-- `nut_stubby_box_floor`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
 - `nut_stubby_box_box`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
-- `nut_deep_well_plate`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
-- `nut_deep_well_block`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
-- `glands_close_plate`: noun 'glands', words after it; its solid shows no hex, hex socket or cross a tool fits
-- `glands_apart_plate`: noun 'glands', words after it; its solid shows no hex, hex socket or cross a tool fits
-- `gland_rib_plate`: noun 'gland', words after it; its solid shows no hex, hex socket or cross a tool fits
-- `gland_rib_rib`: noun 'gland', words after it; its solid shows no hex, hex socket or cross a tool fits
-- `nyloc_two_bodies_plate`: noun 'nyloc', words after it; its solid shows no hex, hex socket or cross a tool fits
 - `nyloc_two_bodies_dome`: noun 'nyloc', words after it; its solid shows no hex, hex socket or cross a tool fits
-- and 16 more (the JSON lists every one)
+- `pair_nut_held_upper`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `pair_nut_held_lower`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `pair_nut_held_pocket`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `nut_tube_tube`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `nut_gap_stud`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `flange_nut_stud`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits

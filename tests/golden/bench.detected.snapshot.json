@@ -17,49 +17,9 @@
  "hand_room": false,
  "passed_over": [
   {
-   "name": "nut_stubby_box_floor",
-   "kind": "nut",
-   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
    "name": "nut_stubby_box_box",
    "kind": "nut",
    "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "nut_deep_well_plate",
-   "kind": "nut",
-   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "nut_deep_well_block",
-   "kind": "nut",
-   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "glands_close_plate",
-   "kind": "nut",
-   "reason": "noun 'glands', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "glands_apart_plate",
-   "kind": "nut",
-   "reason": "noun 'glands', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "gland_rib_plate",
-   "kind": "nut",
-   "reason": "noun 'gland', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "gland_rib_rib",
-   "kind": "nut",
-   "reason": "noun 'gland', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "nyloc_two_bodies_plate",
-   "kind": "nut",
-   "reason": "noun 'nyloc', words after it; its solid shows no hex, hex socket or cross a tool fits"
   },
   {
    "name": "nyloc_two_bodies_dome",
@@ -82,37 +42,7 @@
    "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
   },
   {
-   "name": "stuck_screw_plate",
-   "kind": "screw",
-   "reason": "noun 'screw', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "stuck_screw_ceiling",
-   "kind": "screw",
-   "reason": "noun 'screw', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "free_screw_plate",
-   "kind": "screw",
-   "reason": "noun 'screw', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "free_screw_ceiling",
-   "kind": "screw",
-   "reason": "noun 'screw', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "nut_tube_plate",
-   "kind": "nut",
-   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
    "name": "nut_tube_tube",
-   "kind": "nut",
-   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "nut_gap_plate",
    "kind": "nut",
    "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
   },
@@ -122,29 +52,9 @@
    "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
   },
   {
-   "name": "big_gland_plate",
-   "kind": "nut",
-   "reason": "noun 'gland', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "flange_nut_plate",
-   "kind": "nut",
-   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
    "name": "flange_nut_stud",
    "kind": "nut",
    "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "ball_shoulder_plate",
-   "kind": "screw",
-   "reason": "noun 'shoulder', words after it; its solid shows no hex, hex socket or cross a tool fits"
-  },
-  {
-   "name": "ball_shoulder_ceiling",
-   "kind": "screw",
-   "reason": "noun 'shoulder', words after it; its solid shows no hex, hex socket or cross a tool fits"
   }
  ],
  "fasteners": [

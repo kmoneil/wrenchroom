@@ -346,6 +346,24 @@ def test_a_nut_its_corners_cannot_turn_says_so_once(bench_report, bench_json):
     assert fail == f"FAIL corner_touch_nut  spanner-13  blocked  {entry['reason']}"
 
 
+def test_a_custom_tool_nothing_takes_is_noted(edges_report):
+    """Issue #75: the edges sidecar's 7 mm key, which no bench fastener takes and no
+    rule names, is noted; its 23 mm spanner, named by wrong_tool's rule, isn't."""
+    assert edges_report.notes == ("tool unused-key-7: no fastener here takes a 7 mm hex key",)
+    assert f"NOTE {edges_report.notes[0]}" in edges_report.terminal_lines()
+
+
+def test_a_note_two_fasteners_share_is_said_once(bench_report):
+    """Issue #75: wide_dome_gland and sunk_cap_cap_nut have the same note, a dome
+    20.00 across: one line names both."""
+    dome = [line for line in bench_report.terminal_lines() if "20.00 across" in line]
+    assert dome == [
+        "NOTE sunk_cap_cap_nut, wide_dome_gland: no ring, socket or nut driver gets on: "
+        "past its hex the part is 20.00 across, wider than their bore round the hex; "
+        "only an open end grips it, from the side"
+    ]
+
+
 def test_the_undersize_nut_is_noted_in_every_format(bench_report, bench_json):
     """Issue #50: the one note on the described bench, as each report gives it."""
     note = (

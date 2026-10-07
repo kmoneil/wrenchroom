@@ -308,8 +308,8 @@ class Report:
         if len(marginal) > PASSED_OVER_SHOWN:
             more = len(marginal) - PASSED_OVER_SHOWN
             lines.append(f"NOTE and {more} more marginal (the JSON lists every one)")
-        noted = self.noted()
-        lines.extend(f"NOTE {name}: {note}" for name, note in noted[:PASSED_OVER_SHOWN])
+        noted = self.noted_together()
+        lines.extend(f"NOTE {listed(names)}: {note}" for names, note in noted[:PASSED_OVER_SHOWN])
         if len(noted) > PASSED_OVER_SHOWN:
             more = len(noted) - PASSED_OVER_SHOWN
             lines.append(f"NOTE and {more} more (the JSON lists every note)")
@@ -319,6 +319,17 @@ class Report:
     def noted(self) -> tuple[tuple[str, str], ...]:
         """Every result's caveats, as (fastener, note), in result order."""
         return tuple((r.fastener.name, note) for r in self.results for note in r.notes)
+
+    def noted_together(self) -> tuple[tuple[tuple[str, ...], str], ...]:
+        """The caveats, each said once with every fastener it is about (issue #75).
+
+        Twenty nuts drawn undersize alike say so in one line, not twenty, and
+        leave room for the notes that differ. In the order each note is first met.
+        """
+        together: dict[str, list[str]] = {}
+        for name, note in self.noted():
+            together.setdefault(note, []).append(name)
+        return tuple((tuple(names), note) for note, names in together.items())
 
     def marginal(self) -> tuple[FastenerResult, ...]:
         """The results whose deciding tool only grazed something: a verdict on a graze."""
@@ -403,10 +414,7 @@ class Report:
             "Notes",
             [
                 *(md_text(note) for note in self.notes),
-                *(
-                    f"{md_code(name, in_table=False)}: {md_text(note)}"
-                    for name, note in self.noted()
-                ),
+                *(f"{_md_names(names)}: {md_text(note)}" for names, note in self.noted_together()),
             ],
         )
         lines += _md_list(
@@ -543,6 +551,12 @@ def bounded(bounds: tuple[str, ...], attempts: tuple[Attempt, ...] = ()) -> str:
     if len(bounds) == 2:  # noqa: PLR2004  (one each side)
         return f"between {bounds[0]} and {bounds[1]}"
     return f"bounded by {listed(bounds, attempts)}"
+
+
+def _md_names(names: tuple[str, ...]) -> str:
+    """A few names as code spans, then how many more: ``a``, ``b`` and 3 more."""
+    shown, more = shortlist(names)
+    return ", ".join(md_code(name, in_table=False) for name in shown) + md_text(_more(more))
 
 
 def _more(count: int) -> str:

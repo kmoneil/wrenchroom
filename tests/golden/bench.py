@@ -212,7 +212,9 @@ def edges_sidecar():
         # wrong_tool's custom_nut names it; no bench fastener takes a 23 mm spanner,
         # so it changes nothing else in the edges run.
         "tools": [
-            {"name": "shop-spanner-23", "type": "spanner", "across_flats": 23, "length": 200}
+            {"name": "shop-spanner-23", "type": "spanner", "across_flats": 23, "length": 200},
+            # No bench fastener takes a 7 mm key, nor does a rule name it: noted (#75).
+            {"name": "unused-key-7", "type": "hex-key", "across_flats": 7, "long": 80, "short": 20},
         ],
     }
 

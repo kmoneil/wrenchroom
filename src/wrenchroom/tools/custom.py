@@ -314,7 +314,7 @@ def _hex_key(name: str, entry: dict, where: str) -> CustomKey:
     if section < af:
         msg = f"{where}: across_corners ({section:g}) is less than across_flats ({af:g})"
         raise ValueError(msg)
-    long, short = _mm(entry, "long", where), _mm(entry, "short", where)
+    long, short = _arms(entry, where)
     return CustomKey(name, "hex-key", f"{af:g}", af, long, short, section)
 
 
@@ -329,8 +329,17 @@ def _torx_key(name: str, entry: dict, where: str) -> CustomKey:
         raise ValueError(msg)
     default = table.point_to_point if table is not None else None
     section = _mm(entry, "point_to_point", where, default)
-    long, short = _mm(entry, "long", where), _mm(entry, "short", where)
+    long, short = _arms(entry, where)
     return CustomKey(name, "torx-key", size, 0.0, long, short, section)
+
+
+def _arms(entry: dict, where: str) -> tuple[float, float]:
+    """An L-key's long and short arms; a short one longer than the long is a typo (#75)."""
+    long, short = _mm(entry, "long", where), _mm(entry, "short", where)
+    if short > long:
+        msg = f"{where}: short ({short:g}) is longer than long ({long:g}): swapped?"
+        raise ValueError(msg)
+    return long, short
 
 
 def _spanner(name: str, entry: dict, where: str) -> CustomSpanner:
