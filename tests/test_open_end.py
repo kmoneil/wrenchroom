@@ -149,4 +149,4 @@ def test_hand_room_rests_the_hand_on_the_open_end_s_handle():
     assert run(assembly).verdict is Verdict.TURNS
     result = run(assembly, hand_room=True)
     assert result.verdict is Verdict.BLOCKED
-    assert result.reason == "no room for a hand (ceiling in the way)"
+    assert result.reason == "no room for a hand: the hand hits ceiling on its best arc"

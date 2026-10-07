@@ -200,7 +200,7 @@ def test_a_nut_a_spanner_reaches_and_a_hand_cannot(engine):
     assert (off.tool, off.how) == ("spanner-10", "ring, full length")
     (on,) = run(under_a_block(), NUT, engine=engine, hand_room=True).results
     assert on.verdict is Verdict.BLOCKED
-    assert on.reason == "no room for a hand (block in the way)"
+    assert on.reason == "no room for a hand: the hand hits block on its best arc"
     assert "block" in on.blockers
     ring = on.attempts[0]
     assert attempt_text(ring) == (
@@ -247,7 +247,7 @@ def test_a_driver_in_a_tube_is_blocked_for_its_fist():
     assert off.verdict is Verdict.TURNS
     (on,) = run(screw, rule, hand_room=True).results
     assert on.verdict is Verdict.BLOCKED
-    assert on.reason == "no room for a hand (tube in the way)"
+    assert on.reason == "no room for a hand: the hand hits tube"
 
 
 def test_the_report_says_whether_the_hand_was_checked():
@@ -287,7 +287,10 @@ def test_check_and_explain_take_hand_room(step):
     assert CliRunner().invoke(main, ["check", str(step)]).exit_code == 0
     checked = CliRunner().invoke(main, ["check", str(step), "--hand-room"])
     assert checked.exit_code == 1
-    assert "FAIL nut  spanner-10  blocked  no room for a hand (block in the way)" in checked.output
+    assert (
+        "FAIL nut  spanner-10  blocked  no room for a hand: the hand hits block on its best arc"
+        in checked.output
+    )
     explained = CliRunner().invoke(main, ["explain", str(step), "nut", "--hand-room"])
     assert "blocked (no room for a hand); the hand hit block" in explained.output
 
@@ -306,6 +309,6 @@ def test_the_pytest_setting(pytester, step):
     )
     result = pytester.runpytest()
     result.assert_outcomes(failed=1)
-    result.stdout.fnmatch_lines(["*no room for a hand (block in the way)*"])
+    result.stdout.fnmatch_lines(["*no room for a hand: the hand hits block on its best arc*"])
     pytester.makeini(f"[pytest]\nwrenchroom_model = {step}\n")
     pytester.runpytest().assert_outcomes(passed=1)  # unset: the sidecar's, which is off

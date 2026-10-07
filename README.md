@@ -39,8 +39,11 @@ to M5):
   with every blocker named, led by the ones that decided it: where a tool swings
   some of the arc it needs, the parts at each end of its best arc (`explain` says
   `holds, best 15 of 30 deg, between post_a and post_b`), and with hand room what
-  stopped the hand along that arc; the terminal and Markdown name those, and how
-  many more the JSON lists (`blocked_by`, and `deciding`). Terminal table, JSON
+  stopped the hand along that arc. A failure's line names each part once and three
+  at most, the one hit at the most positions first, then how many more (`only holds,
+  and it has no nut; best arc between post_a and post_b`; `no room for a hand: the
+  hand hits deck_plate, deck_guard, rail and 18 more on its best arc`); the JSON
+  (`blocked_by`, `deciding`), `explain` and the HTML view list them all. Terminal table, JSON
   (`--json FILE`), Markdown for a CI job summary or a PR comment (`--md FILE`), exit
   codes for CI (0 pass, 1 a fastener fails, 2 not covered or config error). A FILE of
   `-` writes that report to stdout instead and moves the table to stderr, so it can be

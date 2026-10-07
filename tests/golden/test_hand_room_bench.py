@@ -26,7 +26,7 @@ from bench import check_bench
 
 #: The passes hand room takes on the bench, and the reason each gives.
 CHANGES = {
-    "hand_tight_nut": "no room for a hand (hand_tight_block in the way)",
+    "hand_tight_nut": "no room for a hand: the hand hits hand_tight_block on its best arc",
 }
 
 #: The passes hand room moves to another tool: (tool, how) with the hand.
@@ -38,7 +38,7 @@ MOVES = {
 CLEARED = ("pair_nut_held_nut", "pair_both_hold_bolt", "pair_both_hold_nut")
 
 #: Fasteners blocked either way whose reason hand room changes.
-REASONS = {"post_ring_nut": "no room for a hand (post_ring_roof in the way)"}
+REASONS = {"post_ring_nut": "no room for a hand: the hand hits post_ring_roof on its best arc"}
 
 
 @pytest.fixture(scope="session")

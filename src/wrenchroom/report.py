@@ -15,6 +15,7 @@ from __future__ import annotations
 import enum
 import json
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -123,7 +124,7 @@ def attempt_text(attempt: Attempt) -> str:
         if attempt.bounds and set(attempt.bounds) != set(attempt.hand_blockers):
             line += f", the hand stopped by {', '.join(attempt.bounds)} on its best arc"
     elif attempt.bounds:
-        line += f", {_bounded(attempt.bounds)}"
+        line += f", {bounded(attempt.bounds)}"
     if attempt.blockers:
         line += f"; hit {', '.join(attempt.blockers)}"
     if attempt.hand_blockers:
@@ -283,9 +284,7 @@ class Report:
         )
         for result in self.failures():
             names, reason = _why(result)
-            what = reason or ", ".join(names) or NO_TOOL
-            if reason and result.deciding:
-                what += f"; best arc {_bounded(result.deciding)}"
+            what = reason or listed(names, result.attempts) or NO_TOOL
             tool = result.tool or "-"
             lines.append(f"FAIL {result.fastener.name}  {tool}  {result.verdict}  {what}")
         for glob in self.unmatched_rules:
@@ -369,14 +368,13 @@ class Report:
             ]
             for result in failures:
                 names, reason = _why(result)
+                shown, more = shortlist(names, result.attempts)
                 what = (
                     md_code(reason)
                     if reason
-                    else ", ".join(md_code(name) for name in names) or NO_TOOL
+                    else ", ".join(md_code(name) for name in shown) + md_text(_more(more))
+                    or NO_TOOL
                 )
-                if reason and result.deciding:
-                    ends = tuple(md_code(name) for name in result.deciding)
-                    what += f"; best arc {_bounded(ends)}"
                 lines.append(
                     f"| {md_code(result.fastener.name)} | {_md_tool(result.tool)} "
                     f"| {result.verdict} | {what} |"
@@ -504,11 +502,39 @@ def _summary_text(counts: dict[str, int]) -> str:
     )
 
 
-def _bounded(bounds: tuple[str, ...]) -> str:
+#: How many parts a FAIL line or a reason names before "and N more": the JSON's
+#: blocked_by and deciding, explain and the HTML view have every one (issue #64).
+NAMES_SHOWN = 3
+
+
+def shortlist(
+    names: tuple[str, ...], attempts: tuple[Attempt, ...] = ()
+) -> tuple[tuple[str, ...], int]:
+    """At most :data:`NAMES_SHOWN` of ``names``, and how many more there are.
+
+    The part hit at the most probed positions comes first, then first-seen
+    order: the part most in the way, not the first one any probe touched.
+    """
+    hits = Counter(name for attempt in attempts for probe in attempt.probes for name in probe.hits)
+    ordered = sorted(names, key=lambda name: -hits[name])
+    return tuple(ordered[:NAMES_SHOWN]), max(0, len(ordered) - NAMES_SHOWN)
+
+
+def listed(names: tuple[str, ...], attempts: tuple[Attempt, ...] = ()) -> str:
+    """``a, b, c and 4 more``: :func:`shortlist`'s, as a line says it."""
+    shown, more = shortlist(names, attempts)
+    return ", ".join(shown) + _more(more)
+
+
+def bounded(bounds: tuple[str, ...], attempts: tuple[Attempt, ...] = ()) -> str:
     """``between a and b``, or ``bounded by a`` (one part both sides), or by several."""
     if len(bounds) == 2:  # noqa: PLR2004  (one each side)
         return f"between {bounds[0]} and {bounds[1]}"
-    return f"bounded by {', '.join(bounds)}"
+    return f"bounded by {listed(bounds, attempts)}"
+
+
+def _more(count: int) -> str:
+    return f" and {count} more" if count else ""
 
 
 def _why(result: FastenerResult) -> tuple[tuple[str, ...], str | None]:
