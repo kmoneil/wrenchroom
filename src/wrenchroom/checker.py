@@ -173,7 +173,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         except NotCovered as exc:
             failures[fastener.name] = str(exc)
     pairs, pair_warnings = _find_pairs(fasteners, frames, config)
-    fasteners, size_notes = _sized_by_partners(fasteners, pairs)
+    fasteners = _sized_by_partners(fasteners, pairs)
     reported = {f.name for f in chosen}
     checked = reported | {pairs[name] for name in reported if name in pairs}
 
@@ -188,7 +188,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
             _check_fastener(fastener, frames[fastener.name], space, config, default_state, tools)
         )
     results = [
-        replace(r, notes=(*size_notes.get(r.fastener.name, ()), *_drive_notes(r.fastener)))
+        replace(r, notes=(*r.fastener.notes, *_drive_notes(r.fastener)))
         for r in _resolve_joints(candidates, pairs)
         if r.fastener.name in reported
     ]
@@ -372,9 +372,7 @@ def _find_pairs(
     return pairs, warnings
 
 
-def _sized_by_partners(
-    fasteners: list[Fastener], pairs: dict[str, str]
-) -> tuple[list[Fastener], dict[str, tuple[str, ...]]]:
+def _sized_by_partners(fasteners: list[Fastener], pairs: dict[str, str]) -> list[Fastener]:
     """A nut whose own reading gave no size, or guessed one, takes its bolt's.
 
     A nut on an M8 bolt is M8. Its bore drawn at the minor diameter, or not at
@@ -385,7 +383,6 @@ def _sized_by_partners(
     """
     by_name = {f.name: f for f in fasteners}
     sized = []
-    notes: dict[str, tuple[str, ...]] = {}
     for fastener in fasteners:
         partner = by_name.get(pairs.get(fastener.name, ""))
         if (
@@ -401,11 +398,13 @@ def _sized_by_partners(
             if fastener.size is not None:
                 note += f" (its hex alone said {fastener.size.designation})"
             basis = f"{fastener.basis}; {note}" if fastener.basis else note
-            sized.append(replace(fastener, size=partner.size, basis=basis, size_guessed=False))
-            notes[fastener.name] = (note,)
+            notes = (*fastener.notes, note)
+            sized.append(
+                replace(fastener, size=partner.size, basis=basis, size_guessed=False, notes=notes)
+            )
         else:
             sized.append(fastener)
-    return sized, notes
+    return sized
 
 
 def _coaxial_offset(screw: _Frame, nut: _Frame) -> float | None:

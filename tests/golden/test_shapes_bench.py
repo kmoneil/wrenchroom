@@ -6,7 +6,9 @@ size (or, for hex_band's nut alone, inside its standard's band below that size),
 and the size the rule's; low_head's screw, drawn with no drive, is held to the
 standard head its outline fits instead. guessed's nut, drawn a little under its
 band on a bore of no standard size, can't say its size alone: its band guesses
-another, and only its bolt gives the rule's (issue #50). And the reading from
+another, and only its bolt gives the rule's (issue #50). plain_pin's and
+stepped_pin's shoulder screws are ISO 7379's by their outlines (issue #48);
+odd_head's fits no standard head, and is the one guess. And the reading from
 STEP must equal the reading from the shape as built: the round trip changes
 nothing a tool depends on.
 
@@ -54,7 +56,7 @@ def bench_parts(bench_dir):
 
 
 def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
-    wrong, banded, outlined, guessed = [], [], [], []
+    wrong, banded, outlined, guessed, unmatched = [], [], [], [], []
     for name, rule in _described(bench_parts):
         kind = Kind(rule.get("kind", "screw"))
         size = Size.parse(rule["size"]) if "size" in rule else None  # a gland may give none
@@ -74,7 +76,11 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
         elif reading.head is None and reading.drive_af is None and reading.head_guess:
             outlined.append(name)  # no drive drawn: the outline's head, held to a standard
             got = (reading.head_guess, reading.head_standard, reading.size)
-            want = (head, "ISO 7380-1" if head is Head.BUTTON else "ISO 4762", size)
+            standard = _STANDARD.get(head, "ISO 4762")
+            if reading.head_unmatched:
+                unmatched.append(name)  # no standard's: a guess by its proportions
+                standard = None
+            want = (head, standard, size)
         elif got != want and expected_af and in_hex_band(reading.drive_af, expected_af):
             banded.append(name)  # drawn inside its standard's band below the size
             got = (got[0], want[1], got[2])
@@ -92,7 +98,14 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
     assert guessed == ["guessed_nut", "named_size_m8_nut"]
     # Button heads drawn flat (issue #31), and #25's graze cells' M4 screws.
     graze_screws = [f"{c}_screw" for c in ("torus_graze", "torus_deep", "flat_graze", "flat_deep")]
-    assert outlined == ["low_head_screw", "rubber_screw", *graze_screws]
+    # And issue #48's shoulder screws drawn plainly, and its odd head.
+    pins = ["plain_pin_bolt", "stepped_pin_bolt", "minor_pin_bolt"]
+    odd = ["odd_head_screw", "odd_head_button_screw"]
+    assert outlined == ["low_head_screw", "rubber_screw", *graze_screws, *pins, *odd]
+    assert unmatched == odd
+
+
+_STANDARD = {Head.BUTTON: "ISO 7380-1", Head.SHOULDER: "ISO 7379"}
 
 
 def test_the_step_round_trip_changes_no_reading(bench_parts):

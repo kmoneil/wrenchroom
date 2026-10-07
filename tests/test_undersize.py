@@ -251,8 +251,8 @@ def nut(size=None, *, guessed=False, socket_allowed=True, basis=""):
 
 def sized(*fasteners):
     pairs = {"bolt": "nut", "nut": "bolt"}
-    after, notes = _sized_by_partners(list(fasteners), pairs)
-    return {f.name: f for f in after}, notes
+    after = _sized_by_partners(list(fasteners), pairs)
+    return {f.name: f for f in after}, {f.name: f.notes for f in after if f.notes}
 
 
 @pytest.mark.parametrize(
@@ -284,8 +284,8 @@ def test_a_nut_paired_with_a_nut_takes_nothing():
 
 
 def test_an_unpaired_nut_takes_nothing():
-    after, notes = _sized_by_partners([bolt(), nut()], {})
-    assert (after[1].size, notes) == (None, {})
+    after = _sized_by_partners([bolt(), nut()], {})
+    assert (after[1].size, after[1].notes) == (None, ())
 
 
 def test_the_basis_says_where_the_size_came_from():

@@ -162,4 +162,30 @@ def test_a_nut_drawn_small_says_so_and_where_its_size_came_from(detected):
     assert notes["named_size_m8_nut"] == (small,)
     assert notes["band_agrees_nut"] == ()
     noted = {name for name, said in notes.items() if said}
-    assert noted == {"undersize_nut", "guessed_nut", "named_size_m8_nut"}
+    assert noted == {"undersize_nut", "guessed_nut", "named_size_m8_nut", "odd_head_screw"}
+
+
+def test_shoulder_screws_drawn_plainly_and_a_head_that_fits_nothing(detected):
+    """Issue #48: the shoulder screws are ISO 7379's by their outlines, M6 by their
+    shoulder, with ISO 7379's 4 mm key; the odd head is a guess, and says so."""
+    by_name = {result.fastener.name: result for result in detected.results}
+    for name in ("plain_pin_bolt", "stepped_pin_bolt", "minor_pin_bolt"):
+        result = by_name[name]
+        assert (result.fastener.head.value, result.fastener.size.designation) == (
+            "shoulder",
+            "M6",
+        )
+        assert (result.tool, result.notes) == ("hex-key-4", ())
+    odd = by_name["odd_head_screw"]
+    assert (odd.fastener.head.value, odd.fastener.confidence, odd.tool) == (
+        "button",
+        "low",
+        "hex-key-4",
+    )
+    assert odd.notes == (
+        "its head is a guess: drawn 12.00 across and 3.00 high, it fits no standard "
+        "head, so button by its proportions; set head: in the sidecar",
+    )
+    # Its name says button: no guess (medium, as its size rests on its shank).
+    named = by_name["odd_head_button_screw"]
+    assert (named.tool, named.notes, named.fastener.confidence) == ("hex-key-4", (), "medium")
