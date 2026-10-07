@@ -65,6 +65,7 @@ def test_isolation_matches_the_full_bench(bench_json, bench_dir, bench_engine):
                 "ignore": list(cell.ignore),
                 "states": bench_sidecar["states"],
                 "checks": bench_sidecar["checks"],
+                "tools": bench_sidecar.get("tools", []),
             }
         )
         report = check(

@@ -44,6 +44,9 @@ class Cell:
     #: grazing at every angle, every position of which the exact engine decides),
     #: which the perf script times apart: the budget is for ordinary geometry.
     timed: bool = True
+    #: The sidecar's own tools the cell needs (spec 5.3): the bench's sidecar holds
+    #: each once, and like any custom tool it joins the kit for every cell.
+    tools: tuple = ()
 
 
 M6_SOCKET = {"kind": "screw", "head": "socket", "size": "M6"}
@@ -51,9 +54,11 @@ M6_SOCKET = {"kind": "screw", "head": "socket", "size": "M6"}
 CELLS = []
 
 
-def cell(name, rules=(), truth=None, ignore=(), timed=True):
+def cell(name, rules=(), truth=None, ignore=(), timed=True, tools=()):
     def register(build):
-        CELLS.append(Cell(name, build, tuple(rules), truth or {}, tuple(ignore), timed))
+        CELLS.append(
+            Cell(name, build, tuple(rules), truth or {}, tuple(ignore), timed, tuple(tools))
+        )
         return build
 
     return register
@@ -1387,4 +1392,66 @@ def post_ring():
         ("nut", hex_nut(8, 13, 6.8)),
         ("roof", Pos(0, 0, 42) * Box(200, 200, 4)),
         *((name, at * Cylinder(8, 20)) for name, at in posts),
+    ]
+
+
+#: A short-arm 6 mm key: no other cell needs a 6 mm key, so it changes none of them
+#: (a sidecar's own tool joins the kit for every fastener).
+_STUBBY_KEY = {
+    "name": "stubby-key-6",
+    "type": "hex-key",
+    "across_flats": 6,
+    "long": 60,
+    "short": 20,
+}
+
+
+@cell(
+    "short_key",
+    [{"parts": "screw", "kind": "screw", "head": "socket", "size": "M8", "tool": "stubby-key-6"}],
+    {"screw": {"verdict": "turns", "tool": "stubby-key-6", "how": "short leg in"}},
+    tools=[_STUBBY_KEY],
+)
+def short_key():
+    """An M8 socket head under a slab 30 over it. ISO 2936's 6 mm key (short leg 38,
+    long 96; 41.7 to swing short leg in) meets the slab whichever way, and so does the
+    ball end; the sidecar's own short-arm key (spec 5.3: a 20 mm short leg, 60 long)
+    turns it, short leg in, its long arm swinging 0.3 + 20 + 3.4 = 23.7 over the head.
+    The rule names the key, as a rule may; with no rule (the detected run) the key is
+    tried after the kit's own.
+    """
+    screw = socket_screw(d=8, length=20, dk=13, k=8, s=6, t=4)
+    return [("plate", plate(holes=[(0, 0, 4.5)])), ("screw", screw), ("slab", slab(8 + 30))]
+
+
+#: A short ring spanner of a size no other cell needs (18 mm).
+_SHORT_RING = {
+    "name": "short-ring-18",
+    "type": "spanner",
+    "across_flats": 18,
+    "length": 100,
+    "ends": ["ring"],
+}
+
+
+@cell(
+    "shop_spanner",
+    [{"parts": "nut", "kind": "nut", "size": "M12", "tool": "short-ring-18"}],
+    {"nut": {"verdict": "turns", "tool": "short-ring-18", "how": "ring, full length"}},
+    tools=[_SHORT_RING],
+)
+def shop_spanner():
+    """An M12 nut on a stud inside a round wall 100 from its axis and 400 tall. The
+    kit's 18 mm spanner (269.3 long, reach 229) and its stubby (133.4, reach 113) meet
+    the wall at every angle; every socket, whatever its extension, stands inside it,
+    the ratchet's handle meeting it; the sidecar's own 100 mm ring spanner (spec 5.3,
+    reach 85) turns it. The rule names it, which keeps the timed bench from sweeping
+    every kit tool round the wall first; the detected run, with no rules, tries them
+    all and then it.
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 6.5)])),
+        ("stud", Pos(0, 0, 2.5) * Cylinder(6, 25)),
+        ("nut", hex_nut(12, 18, 10.8)),
+        ("wall", Pos(0, 0, 200) * (Cylinder(110, 400) - Cylinder(100, 401))),
     ]

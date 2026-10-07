@@ -51,6 +51,13 @@ class Socket:
     af: float
     outer_radius: float
     length: float
+    #: A custom socket's own name (tools.custom); else ``socket-<size>``.
+    name: str | None = None
+
+    @property
+    def label(self) -> str:
+        """The tool's name in a report: ``socket-13``, or a custom one's own."""
+        return self.name or f"socket-{size_name(self.af)}"
 
 
 def socket_for(af: float) -> Socket:
@@ -110,7 +117,7 @@ def socket_attempts(
     then the extension, then the ratchet head whose handle needs only
     :data:`RATCHET_72_SWING_DEG` of free arc.
     """
-    tool = f"socket-{size_name(socket.af)}"
+    tool = socket.label
     inner = hex_af / sqrt(3) + RING_CLEARANCE
     mouth = (
         corner_sweep(hex_af, hex_band)

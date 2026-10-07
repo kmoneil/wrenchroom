@@ -49,6 +49,16 @@ from wrenchroom.fasteners import (
 )
 from wrenchroom.report import FastenerResult, Report, StateModel, Verdict
 from wrenchroom.tools.ball_end import BALL_END_KEYS, BallEndKey, ball_end_attempts
+from wrenchroom.tools.custom import (
+    ENDS,
+    CustomDriver,
+    CustomKey,
+    CustomNutDriver,
+    CustomSocket,
+    CustomSpanner,
+    CustomTool,
+    CustomTools,
+)
 from wrenchroom.tools.drivers import SHAFT_RADIUS, driver_attempt
 from wrenchroom.tools.hex_keys import HEX_KEYS, HexKey, hex_key_attempts
 from wrenchroom.tools.kits import DEFAULT_KIT, Kit, kit_named, missing
@@ -75,6 +85,11 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from build123d import Axis, Face
+
+    from wrenchroom.tools.nut_drivers import NutDriver
+    from wrenchroom.tools.sockets import Socket
+    from wrenchroom.tools.spanners import Spanner
+    from wrenchroom.tools.torx_keys import TorxKey
 
 #: How parallel a face normal must be to the axis to count as an end face.
 _AXIAL = 0.99
@@ -143,7 +158,8 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
             model problem).
     """
     config = config or Config()
-    tools = _Tools(kit_named(kit), step_deg, config.hand_room if hand_room is None else hand_room)
+    hand = config.hand_room if hand_room is None else hand_room
+    tools = _Tools(kit_named(kit), step_deg, hand, config.tools)
     if engine not in ENGINES:
         msg = f"unknown engine {engine!r}; available: {', '.join(ENGINES)}"
         raise ValueError(msg)
@@ -1040,15 +1056,17 @@ class _Tools:
     kit: Kit
     step_deg: float
     hand_room: bool = False
+    #: The sidecar's own tools (spec 5.3): they join whatever kit is used.
+    custom: CustomTools = field(default_factory=CustomTools)
 
     def need(self, *wanted: str) -> tuple[str, ...]:
-        """Those of ``wanted`` the kit holds, in order; not covered when it holds none.
+        """Those of ``wanted`` the kit or the sidecar holds, in order; not covered when none.
 
         Raises:
             NotCovered: When the kit holds none of them, naming them and the kit
                 that does.
         """
-        held = tuple(tool for tool in wanted if self.kit.holds(tool))
+        held = tuple(tool for tool in wanted if self.kit.holds(tool) or tool in self.custom)
         if not held:
             raise NotCovered(missing(wanted, self.kit))
         return held
@@ -1072,16 +1090,43 @@ def _attempts_for(
         number = PHILLIPS_NUMBER.get(size.designation)
         if number is None:
             raise NotCovered(f"no Phillips number for {size.designation}")
-        (tool,) = tools.need(f"driver-ph{number}")
-        radius = SHAFT_RADIUS[f"ph{number}"]
-        return iter([driver_attempt(mount, scene, radius, tool, tools.hand_room)])
+        return _drivers(f"ph{number}", mount, scene, tools)
     if fastener.head is Head.SLOTTED:
-        (tool,) = tools.need("driver-slotted")
-        radius = SHAFT_RADIUS["slotted"]
-        return iter([driver_attempt(mount, scene, radius, tool, tools.hand_room)])
+        return _drivers("slotted", mount, scene, tools)
     if fastener.head is Head.TORX:
         return _torx_attempts(fastener, mount, scene, tools)
     raise NotCovered("head unknown: name it in the sidecar")
+
+
+def _drivers(tip: str, mount: Mount, scene: Scene, tools: _Tools) -> Iterator[Attempt]:
+    """The kit's driver for a tip, then the sidecar's own, each straight in.
+
+    Which the kit and sidecar hold is decided here, before the lazy attempts
+    are handed back (see :func:`_hex_flats_attempts`).
+    """
+    customs = tools.custom.drivers(tip)
+    held = tools.need(f"driver-{tip}", *(custom.name for custom in customs))
+    return _drivers_held(held, tip, customs, mount, scene, tools)
+
+
+def _drivers_held(
+    held: tuple[str, ...],
+    tip: str,
+    customs: tuple[CustomDriver, ...],
+    mount: Mount,
+    scene: Scene,
+    tools: _Tools,
+) -> Iterator[Attempt]:
+    if f"driver-{tip}" in held:
+        yield driver_attempt(mount, scene, SHAFT_RADIUS[tip], f"driver-{tip}", tools.hand_room)
+    for custom in customs:
+        if custom.name in held:
+            yield _custom_driver(custom, mount, scene, tools)
+
+
+def _custom_driver(custom: CustomDriver, mount: Mount, scene: Scene, tools: _Tools) -> Attempt:
+    radius, length = custom.shaft_radius, custom.shaft_length
+    return driver_attempt(mount, scene, radius, custom.name, tools.hand_room, length)
 
 
 def _known_size(fastener: Fastener) -> Size:
@@ -1226,34 +1271,40 @@ def _drive_notes(fastener: Fastener) -> tuple[str, ...]:
 def _keyed_attempts(
     fastener: Fastener, mount: Mount, scene: Scene, tools: _Tools
 ) -> Iterator[Attempt]:
-    af = _given_af(fastener, tuple(HEX_KEYS), "hex-key")
+    af = _given_af(fastener, (*HEX_KEYS, *tools.custom.key_sizes()), "hex-key")
     if af is None:
         if fastener.head is None or fastener.size is None:
             raise NotCovered("head or size unknown: name them in the sidecar")
         size = _known_size(fastener)
         af = hex_key_af(fastener.head, size)
-        if af is None or af not in HEX_KEYS:
+        if af is None or (af not in HEX_KEYS and not tools.custom.hex_keys(af)):
             head = fastener.head.value
             raise NotCovered(f"no standard key for a {size.designation} {head} head")
-    key = HEX_KEYS[af]
-    ball = BALL_END_KEYS.get(af) if fastener.head in _BALL_END_HEADS else None
-    held = tools.need(key.name, *([ball.name] if ball else []))
-    return _keys(held, key, ball, mount, scene, tools)
+    key = HEX_KEYS.get(af)
+    ball = BALL_END_KEYS.get(af) if key and fastener.head in _BALL_END_HEADS else None
+    customs = tools.custom.hex_keys(af)
+    wanted = [k.name for k in (key, ball) if k is not None] + [c.name for c in customs]
+    held = tools.need(*wanted)
+    return _keys(held, key, ball, customs, mount, scene, tools)
 
 
 def _keys(
     held: tuple[str, ...],
-    key: HexKey,
+    key: HexKey | None,
     ball: BallEndKey | None,
+    customs: tuple[CustomKey, ...],
     mount: Mount,
     scene: Scene,
     tools: _Tools,
 ) -> Iterator[Attempt]:
-    """The plain key's three ways, then (full kit) the ball end leant off the axis."""
-    if key.name in held:
+    """The plain key's ways, the ball end's (full kit), then the sidecar's own keys."""
+    if key is not None and key.name in held:
         yield from hex_key_attempts(mount, key, scene, tools.step_deg, tools.hand_room)
     if ball is not None and ball.name in held:
         yield from ball_end_attempts(mount, ball, scene, tools.step_deg)
+    for custom in customs:
+        if custom.name in held:
+            yield from hex_key_attempts(mount, custom, scene, tools.step_deg, tools.hand_room)
 
 
 def _torx_attempts(
@@ -1265,10 +1316,24 @@ def _torx_attempts(
     if torx is None:
         raise NotCovered(f"no Torx size for a {size.designation} head")
     key = ISO_10664.get(torx)
-    if key is None:
+    customs = tools.custom.torx_keys(torx)
+    if key is None and not customs:
         raise NotCovered(missing((f"torx-key-{torx}",), tools.kit))
-    tools.need(key.name)
-    return hex_key_attempts(mount, key, scene, tools.step_deg, tools.hand_room)
+    held = tools.need(*([key.name] if key else []), *(custom.name for custom in customs))
+    return _torx_keys(held, (*([key] if key else []), *customs), mount, scene, tools)
+
+
+def _torx_keys(
+    held: tuple[str, ...],
+    keys: tuple[TorxKey | CustomKey, ...],
+    mount: Mount,
+    scene: Scene,
+    tools: _Tools,
+) -> Iterator[Attempt]:
+    """The kit's Torx key, then the sidecar's own of the size, each swept as an L-key."""
+    for key in keys:
+        if key.name in held:
+            yield from hex_key_attempts(mount, key, scene, tools.step_deg, tools.hand_room)
 
 
 def _hex_flats_attempts(
@@ -1285,7 +1350,7 @@ def _hex_flats_attempts(
     the code that turns it into a verdict (an M3.5 nut, which has no ISO 4032
     row, used to crash the whole check that way).
     """
-    af = _given_af(fastener, FLATS, "spanner", bands=True)
+    af = _given_af(fastener, (*FLATS, *tools.custom.flat_sizes()), "spanner", bands=True)
     if af is None:
         size = _known_size(fastener)
         af = spanner_af(size, head=fastener.kind is Kind.SCREW)
@@ -1298,8 +1363,16 @@ def _hex_flats_attempts(
         wanted.append(f"socket-{size_name(af)}")
         if af in NUT_DRIVERS:
             wanted.append(NUT_DRIVERS[af].name)
+    wanted += [custom.name for custom in _custom_flats(af, fastener.socket_allowed, tools)]
     held = tools.need(*wanted)
     return _hex_flats_tools(held, mount, af, geometry, scene, tools)
+
+
+def _custom_flats(af: float, socket_allowed: bool, tools: _Tools) -> list[CustomTool]:
+    """The sidecar's own spanners, sockets and nut drivers of a size, in its order."""
+    covering = tools.custom.sockets(af) + tools.custom.nut_drivers(af) if socket_allowed else ()
+    of_size = set(tools.custom.spanners(af)) | set(covering)
+    return [tool for tool in tools.custom.tools if tool in of_size]
 
 
 def _hex_flats_tools(
@@ -1310,29 +1383,69 @@ def _hex_flats_tools(
     scene: Scene,
     tools: _Tools,
 ) -> Iterator[Attempt]:
-    """Each tool the kit holds, in turn; a ring, socket or nut driver only if it gets on."""
-    step, hand = tools.step_deg, tools.hand_room
-    band = (geometry.band_top, geometry.band_bottom)
-    over = _gets_over(geometry, af)
-    spanner = f"spanner-{size_name(af)}"
-    if spanner in held:
-        if over:
-            yield from ring_attempts(mount, spanner_for(af), af, band, scene, step, hand)
-        else:
-            yield from _cannot_get_on(mount, af, geometry, spanner, _RING_WAYS)
-        yield from open_end_attempts(mount, spanner_for(af), af, band, scene, step, hand)
-    socket = f"socket-{size_name(af)}"
-    if socket in held:
-        if over:
-            yield from socket_attempts(mount, socket_for(af), af, band, scene, step, hand)
-        else:
-            yield from _cannot_get_on(mount, af, geometry, socket, (_SOCKET_WAY,))
+    """Each tool held, the kit's then the sidecar's own; a ring, socket or driver if on."""
+    spanner = spanner_for(af)
+    if spanner.label in held:
+        yield from _spanner_ends(spanner, ENDS, mount, af, geometry, scene, tools)
+    socket = socket_for(af)
+    if socket.label in held:
+        yield from _socket_on(socket, mount, af, geometry, scene, tools)
     driver = NUT_DRIVERS.get(af)
     if driver is not None and driver.name in held:
-        if over:
-            yield nut_driver_attempt(mount, driver, af, band, scene, hand)
-        else:
-            yield from _cannot_get_on(mount, af, geometry, driver.name, (_DRIVER_WAY,))
+        yield from _nut_driver_on(driver, mount, af, geometry, scene, tools)
+    for custom in tools.custom.tools:
+        if custom.name not in held:
+            continue
+        if isinstance(custom, CustomSpanner):
+            yield from _spanner_ends(custom.spanner, custom.ends, mount, af, geometry, scene, tools)
+        elif isinstance(custom, CustomSocket):
+            yield from _socket_on(custom.socket, mount, af, geometry, scene, tools)
+        elif isinstance(custom, CustomNutDriver):
+            yield from _nut_driver_on(custom.driver, mount, af, geometry, scene, tools)
+
+
+def _spanner_ends(
+    spanner: Spanner,
+    ends: tuple[str, ...],
+    mount: Mount,
+    af: float,
+    geometry: _Geometry,
+    scene: Scene,
+    tools: _Tools,
+) -> Iterator[Attempt]:
+    """A combination spanner's ring, if it gets on, then its open end."""
+    step, hand = tools.step_deg, tools.hand_room
+    band = (geometry.band_top, geometry.band_bottom)
+    if "ring" in ends:
+        if _gets_over(geometry, af):
+            yield from ring_attempts(mount, spanner, af, band, scene, step, hand)
+        else:  # the ways a ring would try: no stubby where none is made (issue #49)
+            ways = _RING_WAYS if spanner.stubby_length is not None else _RING_WAYS[:1]
+            yield from _cannot_get_on(mount, af, geometry, spanner.label, ways)
+    if "open" in ends:
+        yield from open_end_attempts(mount, spanner, af, band, scene, step, hand)
+
+
+def _socket_on(
+    socket: Socket, mount: Mount, af: float, geometry: _Geometry, scene: Scene, tools: _Tools
+) -> Iterator[Attempt]:
+    """A socket on the ratchet and its extensions, if it gets on."""
+    if not _gets_over(geometry, af):
+        yield from _cannot_get_on(mount, af, geometry, socket.label, (_SOCKET_WAY,))
+        return
+    band = (geometry.band_top, geometry.band_bottom)
+    yield from socket_attempts(mount, socket, af, band, scene, tools.step_deg, tools.hand_room)
+
+
+def _nut_driver_on(
+    driver: NutDriver, mount: Mount, af: float, geometry: _Geometry, scene: Scene, tools: _Tools
+) -> Iterator[Attempt]:
+    """A nut driver straight in, if it gets on."""
+    if not _gets_over(geometry, af):
+        yield from _cannot_get_on(mount, af, geometry, driver.name, (_DRIVER_WAY,))
+        return
+    band = (geometry.band_top, geometry.band_bottom)
+    yield nut_driver_attempt(mount, driver, af, band, scene, tools.hand_room)
 
 
 #: The ways each covering tool tries, as their sweeps name them.
@@ -1380,11 +1493,33 @@ def _forced_attempts(
     kit says which tools there are.
     """
     name = fastener.tool or ""
+    custom = tools.custom.by_name.get(name)
+    if custom is not None:
+        return _forced_custom(custom, mount, geometry, scene, tools)
     for family_attempts in (_forced_key, _forced_flats, _forced_driver):
         attempts = family_attempts(name, mount, geometry, scene, tools)
         if attempts is not None:
             return attempts
     raise NotCovered(f"unknown tool {name!r}")
+
+
+def _forced_custom(
+    custom: CustomTool, mount: Mount, geometry: _Geometry, scene: Scene, tools: _Tools
+) -> Iterator[Attempt]:
+    """A sidecar's own tool, named by a rule's ``tool:``: swept as its kind is."""
+    if isinstance(custom, CustomKey):
+        return hex_key_attempts(mount, custom, scene, tools.step_deg, tools.hand_room)
+    if isinstance(custom, CustomDriver):
+        return iter([_custom_driver(custom, mount, scene, tools)])
+    if geometry.band_height <= _MIN_BAND:
+        raise NotCovered("could not measure the hex's height")
+    if isinstance(custom, CustomSpanner):
+        af = custom.spanner.af
+    elif isinstance(custom, CustomSocket):
+        af = custom.socket.af
+    else:
+        af = custom.driver.af
+    return _hex_flats_tools((custom.name,), mount, af, geometry, scene, tools)
 
 
 def _forced_key(

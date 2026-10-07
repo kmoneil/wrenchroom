@@ -50,10 +50,11 @@ SLOTS = len(CELLS) + 1
 #: undersize, guessed, band_agrees and named_size, 70 with minor_bore, 73 with
 #: #48's plain_pin, stepped_pin, minor_pin and odd_head (two), 77 with #47's
 #: snug_dome, wide_dome, dome_rib, sunk_cap and flange_nut, 82 with #49's reach_13
-#: and big_tube, 84 with #51's ball_button and ball_shoulder, 85 with #52's post_ring.
+#: and big_tube, 84 with #51's ball_button and ball_shoulder, 85 with #52's post_ring,
+#: 87 with short_key and shop_spanner (a sidecar's own tools, spec 5.3).
 FINAL_COUNTS = {
-    "fasteners": 85,
-    "turns": 65,
+    "fasteners": 87,
+    "turns": 67,
     "held": 3,
     "blocked": 16,
     "stuck": 1,
@@ -123,8 +124,15 @@ def sidecar_and_truth(copies=1, which="all"):
             "lever-up": {"model": "bench_lever-up.step"},
         },
         "checks": {"try_states": ["lever-up"]},
+        "tools": _bench_tools(which),
     }
     return sidecar, truth
+
+
+def _bench_tools(which):
+    """The chosen cells' own tools (spec 5.3), each once, however many copies."""
+    tools = {tool["name"]: tool for cell in CELLS if _chosen(cell, which) for tool in cell.tools}
+    return list(tools.values())
 
 
 def _named_truth(expected, name):

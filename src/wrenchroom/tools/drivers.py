@@ -41,28 +41,33 @@ SHAFT_RADIUS: dict[str, float] = {
 }
 
 
-def driver_solid(shaft_radius: float) -> ToolSolid:
+def driver_solid(shaft_radius: float, shaft_length: float = SHAFT_LENGTH) -> ToolSolid:
     """The local-frame driver: shaft then handle, starting off the seat."""
-    shaft = axial_cylinder(shaft_radius, CONTACT_OFFSET, CONTACT_OFFSET + SHAFT_LENGTH)
-    handle_from = CONTACT_OFFSET + SHAFT_LENGTH
+    shaft = axial_cylinder(shaft_radius, CONTACT_OFFSET, CONTACT_OFFSET + shaft_length)
+    handle_from = CONTACT_OFFSET + shaft_length
     handle = axial_cylinder(HANDLE_RADIUS, handle_from, handle_from + HANDLE_LENGTH)
     return shaft + handle
 
 
-def driver_hand() -> ToolSolid:
+def driver_hand(shaft_length: float = SHAFT_LENGTH) -> ToolSolid:
     """The fist round the handle's last HAND_LENGTH mm, in the local frame."""
-    handle_to = CONTACT_OFFSET + SHAFT_LENGTH + HANDLE_LENGTH
+    handle_to = CONTACT_OFFSET + shaft_length + HANDLE_LENGTH
     return axial_cylinder(HAND_RADIUS, handle_to - HAND_LENGTH, handle_to)
 
 
 def driver_attempt(
-    mount: Mount, scene: Scene, shaft_radius: float, tool: str, hand_room: bool = False
+    mount: Mount,
+    scene: Scene,
+    shaft_radius: float,
+    tool: str,
+    hand_room: bool = False,
+    shaft_length: float = SHAFT_LENGTH,
 ) -> Attempt:
     """One straight-in clearance test for a driver of the given shaft (and its hand)."""
     return straight_attempt(
         tool=tool,
         way="driver straight in",
         scene=scene,
-        solid=mount.place(driver_solid(shaft_radius)),
-        hand=mount.place(driver_hand()) if hand_room else None,
+        solid=mount.place(driver_solid(shaft_radius, shaft_length)),
+        hand=mount.place(driver_hand(shaft_length)) if hand_room else None,
     )
