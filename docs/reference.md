@@ -117,6 +117,15 @@ a gland's dome), and a ring, socket or nut driver has to get on over whatever th
 part has past its hex: a dome wider than their bore leaves only the open end, and the
 report says so.
 
+A rule's `tool:` picks the one tool tried, and it must fit (issue #72): of the kind
+the drive takes (a spanner, socket or nut driver on a hex; a hex key in a hex socket;
+a Torx key in a Torx recess; the driver of the right tip), at a size the fastener
+takes, either the one the unforced check would choose (a given hex, else the thread's
+standard one) or the hex the solid shows. One that doesn't fit is not covered, and
+says so (`its tool: spanner-10 is 10 across flats, but the nut (M8) takes 13`); where
+the model's hex really is another size, `across_flats:` in the rule says so. A tool
+the tables don't hold says that instead.
+
 A fastener nothing turns, or whose free face can't be told, is measured against the
 parts that stopped it: drawn into one, it is a clash in the model, not covered, with
 the shared volume (`drawn into lid (96.1 mm^3): fix the model`). Only its hex and its

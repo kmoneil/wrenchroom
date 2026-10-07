@@ -9,7 +9,7 @@ words after its fastener noun is only a candidate, for its solid to decide
 
 import fnmatch
 
-from bench import FINAL_COUNTS, edges_sidecar, sidecar_and_truth
+from bench import FINAL_COUNTS, WRONG_TOOL, edges_sidecar, sidecar_and_truth
 from cells import CELLS
 
 from wrenchroom.detect.names import read_name
@@ -55,6 +55,7 @@ def test_the_bench_names_read_as_its_sidecar_says():
     # solid's hex settles it (test_inserts.py, and the detected bench).
     assert by_word == ["nut_deep_well_nut"]
     # The sidecar's fasteners (FINAL_COUNTS less the torx screw only detection finds),
-    # the edges file's torx screw, and drawn_in's six nuts, two screws and bolt,
-    # which the sidecar ignores.
-    assert found_count == FINAL_COUNTS["fasteners"] + 9
+    # the edges file's torx screw, and drawn_in's six nuts, two screws and bolt, and
+    # wrong_tool's nine, which the sidecar ignores.
+    assert found_count == FINAL_COUNTS["fasteners"] + 9 + len(WRONG_TOOL)
+    assert len(WRONG_TOOL) == 9

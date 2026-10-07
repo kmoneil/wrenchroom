@@ -100,7 +100,7 @@ def test_an_inch_torx_head_has_no_size():
 @pytest.mark.parametrize(
     ("tool", "verdict", "reason"),
     [
-        ("torx-key-T25", Verdict.TURNS, None),
+        ("torx-key-T30", Verdict.TURNS, None),
         ("torx-key-T99", Verdict.NOT_COVERED, "no Torx key T99: the tables hold T10 to T40"),
     ],
 )
@@ -113,5 +113,5 @@ def test_a_forced_torx_key(tool, verdict, reason):
 
 
 def test_a_forced_torx_key_must_be_in_the_kit():
-    result = run({"head": "torx", "size": "M6", "tool": "torx-key-T25"}, kit="metric-home")
-    assert result.reason == "needs torx-key-T25, which kit metric-home does not hold (full has it)"
+    result = run({"head": "torx", "size": "M6", "tool": "torx-key-T30"}, kit="metric-home")
+    assert result.reason == "needs torx-key-T30, which kit metric-home does not hold (full has it)"

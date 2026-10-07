@@ -59,11 +59,18 @@ def test_a_nut_resolves_its_free_face_and_takes_the_ring(engine):
     assert result.seat[2] == pytest.approx(5.0)
 
 
-def test_a_forced_tool_is_used(engine):
-    report = run(engine, screw_facing_wall(50), {**M6_SOCKET, "tool": "hex-key-4"})
+def test_a_forced_tool_is_used_and_must_fit(engine):
+    report = run(engine, screw_facing_wall(50), {**M6_SOCKET, "tool": "hex-key-5"})
     (result,) = report.results
-    assert result.tool == "hex-key-4"
-    assert result.verdict is Verdict.TURNS
+    assert (result.tool, result.verdict) == ("hex-key-5", Verdict.TURNS)
+    # Issue #72: an M6 socket head takes a 5 mm key, so a 4 was swept into it and
+    # passed. It is refused now, saying why and how to mean it.
+    (wrong,) = run(engine, screw_facing_wall(50), {**M6_SOCKET, "tool": "hex-key-4"}).results
+    assert wrong.verdict is Verdict.NOT_COVERED
+    assert wrong.reason == (
+        "its tool: hex-key-4 is 4 across flats, but the socket head (M6) takes 5; "
+        "give its rule across_flats: 4 if its hex really is 4"
+    )
 
 
 def test_a_carriage_bolt_holds_itself(engine):

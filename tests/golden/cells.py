@@ -1542,3 +1542,37 @@ def drawn_in():
         ("pair_nut", Pos(0, -60, 0) * hex_nut(_M8_MINOR, 13, 6.8)),
         ("pair_lid", Pos(0, -60, 6.8 + 5) * lid),
     ]
+
+
+@cell("wrong_tool", ignore=["*wrong_tool_*"], timed=False)
+def wrong_tool():
+    """Fasteners whose rules name a tool that can't drive them (issue #72), and two
+    whose tool fits only as the rule or the solid says. Each misfit is not covered,
+    saying why, and nothing is swept. Not covered fails a run, so the bench's own runs
+    ignore the cell and the edges sidecar describes it, as for drawn_in.
+
+    The M8 nuts (13 across flats): size_nut's spanner-10, the wrong size; kind_nut's
+    hex-key-5, the wrong kind; custom_nut's shop-spanner-23, the sidecar's own tool at
+    the wrong size; unknown_nut's spanner-99, which no table holds, and says so.
+    drawn_nut is named M10 (16 by ISO 4032) and drawn 15: its spanner-15 fits the
+    solid, so it is swept. The M6 screws: button_screw's spanner-10 on a button head,
+    slot_screw's slotted driver in a socket head, torx_screw's T99, which no table
+    holds; and the M4 phillips_screw's PH1, where it takes PH2.
+    """
+    nuts = {"size": -120, "kind": -60, "custom": 0, "unknown": 60, "drawn": 120}
+    screws = {"button": -120, "slot": -60, "torx": 0, "phillips": 60}
+    holes = [(x, -40, 5.0) for x in nuts.values()] + [(x, 40, 3.3) for x in screws.values()]
+    parts = [("plate", plate(w=320, d=160, holes=holes))]
+    for name, x in nuts.items():
+        nut = hex_nut(8, 13, 6.8) if name != "drawn" else hex_prism(15, 8) - Cylinder(5, 40)
+        parts += [
+            (f"{name}_stud", Pos(x, -40, 2.5) * Cylinder(4, 25)),
+            (f"{name}_nut", Pos(x, -40, 0) * nut),
+        ]
+    parts += [
+        ("button_screw", Pos(screws["button"], 40, 0) * button_screw()),
+        ("slot_screw", Pos(screws["slot"], 40, 0) * socket_screw()),
+        ("torx_screw", Pos(screws["torx"], 40, 0) * socket_screw()),
+        ("phillips_screw", Pos(screws["phillips"], 40, 0) * pan_phillips()),
+    ]
+    return parts
