@@ -63,7 +63,15 @@ from wrenchroom.fasteners import (
     spanner_af,
     standard_hex_afs,
 )
-from wrenchroom.report import FastenerResult, Report, StateModel, Verdict, bounded, listed
+from wrenchroom.report import (
+    EngineNote,
+    FastenerResult,
+    Report,
+    StateModel,
+    Verdict,
+    bounded,
+    listed,
+)
 from wrenchroom.tools.ball_end import BALL_END_KEYS, BallEndKey, ball_end_attempts
 from wrenchroom.tools.custom import (
     ENDS,
@@ -252,6 +260,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         unmatched_ignores=matches.unmatched_ignores,
         warnings=tuple(only_warnings + pair_warnings + space.warnings),
         notes=(*space.notes, *_unused_tools(fasteners, tools)),
+        engine_notes=_engine_notes(space.engine),
         passed_over=passed_over,
         default_state=default_state,
         hand_room=tools.hand_room,
@@ -726,6 +735,21 @@ class _StateSpace:
             f"({self._config.source}, states.{owner.name}.model; looked in {where})"
         )
         raise ConfigError(msg)
+
+
+def _engine_notes(engine: Engine) -> tuple[EngineNote, ...]:
+    """What the engine found of the parts it looked at closely, each said once.
+
+    Which wouldn't mesh, and which are invalid B-reps (issue #85).
+    """
+    notes = []
+    unmeshed = tuple(dict.fromkeys(engine.fallbacks))
+    if unmeshed:
+        notes.append(EngineNote("unmeshed", unmeshed))
+    invalid = tuple(dict.fromkeys(engine.invalid))
+    if invalid:
+        notes.append(EngineNote("invalid", invalid))
+    return tuple(notes)
 
 
 def _count(names: tuple[str, ...], noun: str) -> str:

@@ -13,7 +13,7 @@ from build123d import Box, Pos
 
 from wrenchroom.assembly import Part
 from wrenchroom.engine import make_engine
-from wrenchroom.engine.mesh import MeshEngine, MeshQuery, _Measure
+from wrenchroom.engine.mesh import MeshEngine, MeshQuery, Strays, _Measure
 from wrenchroom.engine.scene import Contact
 from wrenchroom.tools.sweep import axial_annulus, axial_cylinder
 
@@ -68,7 +68,8 @@ def test_the_sure_hit_bound_counts_every_piece_s_surface(monkeypatch):
     # referee decides. Counting only the second piece's surface would have said
     # 0.1, a sure hit, without it.
     measures = iter([_Measure(None, 0.04, 4.0), _Measure(None, 0.1, 2.0)])
-    monkeypatch.setattr(MeshEngine, "part_strays", lambda self, part: (0.0, 0.0))
+    none = Strays.uniform(0.0, 0.0)
+    monkeypatch.setattr(MeshEngine, "part_strays", lambda self, part: none)
     monkeypatch.setattr(MeshQuery, "_measure", lambda self, index, mesh, part: next(measures))
     engine = make_engine("mesh")
     two_pieces = axial_cylinder(2.0, 4, 8) + axial_annulus(2.5, 4, 4, 1)

@@ -25,6 +25,10 @@ import numpy as np
 from build123d import Shape
 from OCP.Bnd import Bnd_Box
 from OCP.BRepBndLib import BRepBndLib
+from OCP.BRepCheck import BRepCheck_Analyzer
+from OCP.BRepClass3d import BRepClass3d_SolidClassifier
+from OCP.gp import gp_Pnt
+from OCP.TopAbs import TopAbs_IN
 
 from wrenchroom.solids import Bounds, ToolSolid
 
@@ -88,6 +92,14 @@ class Engine(ABC):
     def __init__(self) -> None:
         self._bounds: dict[int, tuple[Part, Bounds]] = {}
         self._box_arrays: dict[int, tuple[Part, np.ndarray]] = {}
+        self._valid: dict[int, tuple[Part, bool]] = {}
+        self._classifiers: dict[int, tuple[Part, BRepClass3d_SolidClassifier]] = {}
+        #: Parts that would not mesh into a closed solid: none but a mesh engine's.
+        self.fallbacks: list[str] = []
+        #: Parts found invalid B-reps (BRepCheck), by name, in the order met: read
+        #: only where the engine leans on the B-rep itself, a boolean or a repaired
+        #: or missing mesh, so collisions with them are approximate (issue #85).
+        self.invalid: list[str] = []
 
     def scene(self, parts: Iterable[Part]) -> Scene:
         """The obstacles for one fastener's check, queried through this engine."""
@@ -109,6 +121,32 @@ class Engine(ABC):
             cached = (part, np.array(self.part_bounds(part), dtype=float))
             self._box_arrays[id(part)] = cached
         return cached[1]
+
+    def share_validity(self, other: Engine) -> None:
+        """Read and note validity in ``other``'s lists: a referee and its engine, one run."""
+        self._valid = other._valid
+        self.invalid = other.invalid
+
+    def part_valid(self, part: Part) -> bool:
+        """Whether the part is a valid B-rep, checked once per part; an invalid one is noted."""
+        cached = self._valid.get(id(part))
+        if cached is None:
+            topo = part.shape.wrapped
+            cached = (part, topo is not None and BRepCheck_Analyzer(topo).IsValid())
+            self._valid[id(part)] = cached
+            if not cached[1]:
+                self.invalid.append(part.name)
+        return cached[1]
+
+    def inside(self, part: Part, point: np.ndarray) -> bool:
+        """Whether a point lies inside the part, by OCP's classifier, built once per part."""
+        cached = self._classifiers.get(id(part))
+        if cached is None:
+            cached = (part, BRepClass3d_SolidClassifier(part.shape.wrapped))
+            self._classifiers[id(part)] = cached
+        classifier = cached[1]
+        classifier.Perform(gp_Pnt(*(float(c) for c in point)), 1e-6)
+        return classifier.State() == TopAbs_IN
 
     @abstractmethod
     def query(self, tool: Tool) -> Query:

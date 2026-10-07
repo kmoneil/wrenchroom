@@ -23,7 +23,7 @@ from wrenchroom.assembly import Assembly, Part
 from wrenchroom.checker import check
 from wrenchroom.config import Config
 from wrenchroom.engine import make_engine
-from wrenchroom.engine.mesh import mesh_strays, solid_mesh
+from wrenchroom.engine.mesh import Strays, mesh_strays, solid_mesh
 from wrenchroom.engine.scene import GRAZE_MIN_VOLUME, HIT_MIN_VOLUME, Contact, contact_of
 from wrenchroom.report import PASSED_OVER_SHOWN, FastenerResult, Report, Verdict, attempt_text
 from wrenchroom.tools.hex_keys import ISO_2936
@@ -243,7 +243,8 @@ def test_a_key_that_grazes_but_cannot_swing_far_enough_carries_no_grazes(engine)
 def _with_strays(monkeypatch, outward, inward):
     from wrenchroom.engine.mesh import MeshEngine  # noqa: PLC0415
 
-    monkeypatch.setattr(MeshEngine, "part_strays", lambda self, part: (outward, inward))
+    strays = Strays.uniform(outward, inward)
+    monkeypatch.setattr(MeshEngine, "part_strays", lambda self, part: strays)
     return make_engine("mesh")
 
 

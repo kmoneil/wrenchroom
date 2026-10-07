@@ -74,9 +74,14 @@ class ExactQuery:
         low, high = self.bounds
         return np.array([low], dtype=float), np.array([high], dtype=float)
 
-    def _overlap(self, index: int, part: Part) -> float:
-        """One piece's overlap volume with the part, kept for the next tool that has it."""
+    def overlap(self, index: int, part: Part) -> float:
+        """One piece's overlap volume with the part, kept for the next tool that has it.
+
+        A boolean is only as good as the B-rep: the part's validity is read the
+        first time one is run on it, and an invalid part noted (issue #85).
+        """
         tool = self._tool
+        self._engine.part_valid(part)
         if not isinstance(tool, ToolSolid):
             return exact_overlap(part.shape, self._piece(index))
         key = (tool.primitives[index], tool.seat, tool.axis, id(part))
@@ -102,7 +107,7 @@ class ExactQuery:
         """The pieces' summed overlap with the part, as a contact; stops at a hit."""
         total = 0.0
         for index in pieces_near(*self._boxes, self._engine.part_box(part)):
-            total += self._overlap(int(index), part)
+            total += self.overlap(int(index), part)
             if total > HIT_MIN_VOLUME:
                 return Contact.HIT
         return contact_of(total)
