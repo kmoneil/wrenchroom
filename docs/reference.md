@@ -333,7 +333,18 @@ only beyond doubt (a hit whose overlap stays over the floor with the mesh's poss
 error taken off, a clear wider than a part's mesh can stray) and asks the exact
 engine, OCP boolean intersections on the B-rep, about the rest, so the two agree, a
 key grazing a face included. `--exact` uses the exact engine throughout, slower. Both
-engines give the golden bench the same report, field for field.
+engines give the golden bench the same report, field for field. A mesh's possible
+error is each face's own: one face the tessellator met its tolerance poorly on leaves
+the rest of the part sure.
+
+Real CAD doesn't always tessellate into a closed solid. A part that won't is mended
+first: a face OCP won't mesh (a maker's countersink, its seam at an odd parameter) is
+split, and a hole up to 2 mm across, where neighbouring faces' edges didn't meet, is
+filled. One that still won't close (an open shell, a broken export) is left to the
+exact engine, but only a tool at its surface costs a boolean; the rest is wholly
+inside it or out, which one point tells. Every report says which parts that was, and
+which parts are invalid B-reps as exported, whose collisions are approximate (`NOTE 1
+part didn't mesh into a closed solid ...`, and `engine_notes` in the JSON).
 
 The golden bench scaled to over 500 fasteners is read and checked with the full kit
 in under 10 s on a laptop, the target. Its graze cells, deliberate worst cases in

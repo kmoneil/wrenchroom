@@ -15,6 +15,7 @@ keeps the plain names, so one copy is exactly the bench; copy k puts `r<k>_` in
 front of every name, and its rules, mates, removals and truth follow.
 """
 
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -261,9 +262,11 @@ def canonical(document):
     Drops tool_version, sorts fasteners by name, rounds millimetres to 0.01 and
     degrees to 0.1, so the diff a PR shows is a change of behaviour, never noise.
     Drops the engine's name too: one snapshot holds for both engines, which is
-    the strongest statement that they agree.
+    the strongest statement that they agree. And what the engine found of parts
+    it looked at closely (issue #85), which only the engine decides.
     """
-    out = {k: v for k, v in document.items() if k not in ("tool_version", "engine")}
+    dropped = ("tool_version", "engine", "engine_notes")
+    out = {k: v for k, v in document.items() if k not in dropped}
     out["fasteners"] = sorted(
         (_canonical_fastener(f) for f in document["fasteners"]), key=lambda f: f["name"]
     )
@@ -271,9 +274,12 @@ def canonical(document):
 
 
 def canonical_markdown(report):
-    """The Markdown report with its engine and version, which vary, as placeholders."""
+    """The Markdown report with its engine and version, which vary, as placeholders.
+
+    What the engine found of the parts (issue #85) goes: it is the engine's own.
+    """
     provenance = f", {report.engine} engine, wrenchroom {md_text(__version__)}."
-    text = report.markdown()
+    text = re.sub(r"The engine: [^\n]*\n\n", "", report.markdown())
     assert text.count(provenance) == 1, "the provenance line moved"
     return text.replace(provenance, ", ENGINE engine, wrenchroom VERSION.")
 

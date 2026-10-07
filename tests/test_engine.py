@@ -191,13 +191,15 @@ def test_the_same_name_in_another_model_is_another_part():
 
 
 def test_a_part_that_will_not_mesh_is_tested_exactly(monkeypatch):
+    # Its triangles never come, and mending can't make them (issue #85).
     refuse = {"wall"}
-    real = mesh_module.solid_mesh
+    real = mesh_module.shape_triangles
 
     def flaky(shape, tolerance=MESH_TOLERANCE):
         return None if shape.label in refuse else real(shape, tolerance)
 
-    monkeypatch.setattr(mesh_module, "solid_mesh", flaky)
+    monkeypatch.setattr(mesh_module, "shape_triangles", flaky)
+    monkeypatch.setattr(mesh_module, "_split_closed", lambda shape: shape)
     wall = Box(10, 40, 40)
     wall.label = "wall"
     engine = MeshEngine()

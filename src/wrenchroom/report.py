@@ -148,6 +148,33 @@ class StateModel:
 
 
 @dataclass(frozen=True)
+class EngineNote:
+    """What the collision engine found of some parts themselves (issue #85).
+
+    ``unmeshed``: parts that wouldn't mesh into a closed solid even mended, so a
+    tool near one is checked exactly, more slowly. ``invalid``: parts whose B-rep
+    is invalid as exported, which a boolean, or a mesh mended from it, can only
+    approximate. Which parts an engine looks at that closely depends on the
+    engine, so these are the run's, and not compared across engines.
+    """
+
+    kind: str
+    parts: tuple[str, ...]
+
+    @property
+    def text(self) -> str:
+        """What the note says of its parts, before their names."""
+        count = f"{len(self.parts)} part" + ("" if len(self.parts) == 1 else "s")
+        if self.kind == "unmeshed":
+            return (
+                f"{count} didn't mesh into a closed solid, even mended, so a tool near one "
+                "is checked exactly, more slowly"
+            )
+        verb = "is" if len(self.parts) == 1 else "are"
+        return f"{count} {verb} invalid as exported, so a collision with one is approximate"
+
+
+@dataclass(frozen=True)
 class Report:
     """A whole run: results plus the sidecar's unmatched globs."""
 
@@ -181,6 +208,9 @@ class Report:
     #: fastener: a state's model whose part names differ from the main model's
     #: (issue #74). Said, and the run doesn't fail for them.
     notes: tuple[str, ...] = ()
+    #: What the collision engine found of the parts themselves: which wouldn't mesh,
+    #: which are invalid B-reps (issue #85). Said, and the run doesn't fail for them.
+    engine_notes: tuple[EngineNote, ...] = ()
 
     @property
     def not_checked(self) -> str:
@@ -258,6 +288,10 @@ class Report:
             "unmatched_ignores": list(self.unmatched_ignores),
             "warnings": list(self.warnings),
             "notes": list(self.notes),
+            "engine_notes": [
+                {"kind": note.kind, "note": note.text, "parts": list(note.parts)}
+                for note in self.engine_notes
+            ],
             "hand_room": self.hand_room,
             "passed_over": [
                 {"name": part.name, "kind": part.kind.value, "reason": part.reason}
@@ -299,6 +333,7 @@ class Report:
             lines.append(f"WARN ignore matched nothing: {glob!r}")
         lines.extend(f"WARN {warning}" for warning in self.warnings)
         lines.extend(f"NOTE {note}" for note in self.notes)
+        lines.extend(f"NOTE {note.text}: {listed(note.parts)}" for note in self.engine_notes)
         shown = self.passed_over[:PASSED_OVER_SHOWN]
         lines.extend(f"NOTE passed over {part.name}: {part.reason}" for part in shown)
         if len(self.passed_over) > len(shown):
@@ -358,6 +393,10 @@ class Report:
             f"Kit {md_code(self.kit, in_table=False)}, {md_text(self.engine)} engine, "
             f"wrenchroom {md_text(__version__)}.",
             "",
+            *(
+                f"The engine: {md_text(note.text)}: {_md_names(note.parts)}.\n"
+                for note in self.engine_notes
+            ),
             "Not checked: "
             + (
                 ""
