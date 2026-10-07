@@ -173,6 +173,8 @@ ban-relative-imports = "parents"
 # absolute path with a list argv and no shell, which is the checked-for property rather
 # than the flagged one. Docstrings and annotations are NOT exempt here.
 "scripts/**" = ["T20", "S603"]
+# examples/ is what a reader runs: saying what it wrote is the program's output.
+"examples/**" = ["T20"]
 
 # ---------------------------------------------------------------------------
 # ty, the type gate, scoped to shipped code

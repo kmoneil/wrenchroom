@@ -136,8 +136,9 @@ FULL = Kit(
     name="full",
     summary=(
         "every size the tables hold: hex keys 1.5 to 19 mm and 0.050 to 3/4 in, ball-end "
-        "keys 3 to 10 mm, Torx keys T10 to T40, spanners and sockets 5.5 to 36 mm and 5/32 "
-        "to 1-1/2 in, nut drivers 5.5 to 13 mm, every driver"
+        "keys 3 to 10 mm, Torx keys T10 to T40, spanners and sockets 5.5 to 36 mm, 41, 46 "
+        "and 50 mm (large cable glands), and 5/32 to 1-1/2 in, nut drivers 5.5 to 13 mm, "
+        "every driver"
     ),
     hex_keys=_names(tuple(ISO_2936)) + _names(tuple(ASME_B18_3)),
     spanners=_names(METRIC_FLATS) + _inch(INCH_FLATS),
