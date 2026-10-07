@@ -83,7 +83,7 @@ _ROOM_DEPTHS = (2.0, 5.0, 10.0, 25.0, 50.0)
 _PAIR_MAX_ANGLE_DEG = 0.5
 _PAIR_MAX_OFFSET_MM = 0.3
 
-_KEYED_HEADS = (Head.SOCKET, Head.BUTTON, Head.FLAT)
+_KEYED_HEADS = (Head.SOCKET, Head.BUTTON, Head.FLAT, Head.SHOULDER)
 
 Vec = tuple[float, float, float]
 

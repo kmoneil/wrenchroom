@@ -41,6 +41,8 @@ from wrenchroom.fasteners import (
     HEX_AF,
     IMPERIAL_SIZES,
     METRIC_SIZES,
+    SHOULDER_KEY_AF,
+    SHOULDER_THREAD,
     SOCKET_KEY_AF,
     Head,
     Kind,
@@ -78,6 +80,7 @@ _KEY_TABLES: dict[Head, dict[str, float]] = {
     Head.SOCKET: SOCKET_KEY_AF,
     Head.BUTTON: BUTTON_KEY_AF,
     Head.FLAT: FLAT_KEY_AF,
+    Head.SHOULDER: SHOULDER_KEY_AF,
 }
 
 #: A head this much shallower than it is wide is a button, when no standard's
@@ -131,8 +134,14 @@ class _Flat:
     outward: bool  # normal points away from the axis
 
 
-def read_shape(shape: Shape, kind: Kind) -> ShapeReading:
-    """Measure a fastener's solid; ``kind`` comes from its name."""
+def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeReading:
+    """Measure a fastener's solid; ``kind`` comes from its name.
+
+    ``named`` is the head the name says, for the one head only a name can tell:
+    a shoulder screw's (ISO 7379), whose socket head looks like any other. Its
+    pocket then settles the size through ISO 7379's keys, and a shank drawn as
+    the shoulder alone is sized by the shoulder (issue #40).
+    """
     axis = _main_axis(shape)
     if axis is None:
         return ShapeReading()
@@ -150,6 +159,9 @@ def read_shape(shape: Shape, kind: Kind) -> ShapeReading:
         size, settled = _settle(bore, None, hex_outer)
         return ShapeReading(direction, None, None, hex_outer, size, settled)
     shank = _snap([r for r, convex in rounds if convex])  # the thinnest
+    shoulder = named is Head.SHOULDER
+    if shoulder:
+        shank = _shoulder_thread([r for r, convex in rounds if convex]) or shank
     pocket = _regular(inner, 6)
     outline = _Outline(None)
     if hex_outer is not None and (pocket is None or hex_outer > pocket):
@@ -157,7 +169,8 @@ def read_shape(shape: Shape, kind: Kind) -> ShapeReading:
     elif _regular(outer, 4) is not None:
         head = Head.CARRIAGE  # a square neck: it holds itself
     elif pocket is not None:
-        outline = _keyed_head(faces, origin, direction, shank)
+        keyed = _keyed_head(faces, origin, direction, shank)
+        outline = _Outline(Head.SHOULDER) if shoulder else keyed
         head, drive_af = outline.head, pocket
     elif _is_cross(inner):
         head = Head.PHILLIPS
@@ -228,6 +241,22 @@ def _snap(radii: list[float]) -> Size | None:
     if abs(nominal - diameter) > SIZE_SNAP_MM:
         return None
     return Size(designation, nominal)
+
+
+def _shoulder_thread(radii: list[float]) -> Size | None:
+    """A shoulder screw drawn as its head and one shank: the shank is the shoulder.
+
+    With the thread drawn too, the thinnest round is the thread and stands; with
+    the shoulder alone (head and one diameter), its ISO 7379 thread is the size.
+    """
+    distinct = sorted({round(r, 3) for r in radii})
+    if len(distinct) != 2:  # noqa: PLR2004  (the head, and the shoulder alone)
+        return None
+    diameter = 2 * distinct[0]
+    for shoulder, thread in SHOULDER_THREAD.items():
+        if abs(shoulder - diameter) <= SIZE_SNAP_MM:
+            return Size.parse(thread)
+    return None
 
 
 def _settle(

@@ -98,7 +98,10 @@ to M5):
   bolt's square neck) and the size that drive or the shank gives. A head drawn as a
   plain cylinder is held to the standards' outlines for its size (an M5 head 9.5 across
   and 2.75 high is ISO 7380-1's button head, not ISO 4762's socket head), and where
-  none fits, the basis says its head is a guess. A head word counts
+  none fits, the basis says its head is a guess. A shoulder screw (`head: shoulder`,
+  ISO 7379) takes the key its thread sets, smaller than a cap screw's (an M6 on an
+  8 mm shoulder takes 4 mm); `shoulder` in a name says so, and a shoulder drawn
+  without its thread is sized by ISO 7379's table. A head word counts
   where it touches the noun (`lid_button_screw`), as elsewhere it may describe
   something else (`button_panel_screw`); a drive word (`torx`, `hexalobular`,
   `phillips`, `pozidriv`) can describe nothing else and counts anywhere
@@ -111,7 +114,7 @@ to M5):
   is only a candidate: it is taken when its solid shows a drive a tool fits (a hex, a
   hex socket, a cross), and otherwise passed over, which every report lists, so a
   fastener is never missed without a word. With every fastener rule removed, the
-  golden bench's 58 are all found with the right kind and size, each screw with its
+  golden bench's 59 are all found with the right kind and size, each screw with its
   rule's head, and its 21 plates, blocks and studs named for their cells are passed over.
 - `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
   correct and keep: one rule per fastener, and above each a comment with how sure
@@ -123,7 +126,7 @@ to M5):
   file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  550 fasteners is read and checked with the full kit in about 9.8 s on an Apple M5
+  504 fasteners is read and checked with the full kit in about 8.9 s on an Apple M5
   Max laptop (the target is 10 s). Its four graze cells, deliberate worst cases in
   which the exact engine decides every position of a key grazing all the way round,
   are kept out of that figure and timed apart (about 0.7 s for the four). The bench is dense with fasteners that fail, and

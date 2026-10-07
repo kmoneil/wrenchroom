@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 59,
-  "turns": 43,
+  "fasteners": 60,
+  "turns": 44,
   "held": 3,
   "blocked": 11,
   "stuck": 1,
@@ -1291,6 +1291,34 @@
    "grazes": []
   },
   {
+   "name": "pivot_shoulder_screw",
+   "kind": "screw",
+   "head": "shoulder",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    5000.0,
+    6000.0,
+    25.5
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-4",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": []
+  },
+  {
    "name": "rubber_screw",
    "kind": "screw",
    "head": "button",
@@ -1705,8 +1733,8 @@
     1.0
    ],
    "seat": [
-    4900.0,
-    6000.0,
+    -100.0,
+    7000.0,
     6.0
    ],
    "source": "name+geometry",
@@ -1735,8 +1763,8 @@
     1.0
    ],
    "seat": [
-    5100.0,
-    6000.0,
+    100.0,
+    7000.0,
     6.0
    ],
    "source": "name+geometry",

@@ -34,7 +34,9 @@ class Head(enum.StrEnum):
     """How the turned end is shaped, which decides the tools worth trying.
 
     ``CARRIAGE`` is the self-holding one: a square neck in a square hole. It is never
-    turned and never extracted; its nut does all the work.
+    turned and never extracted; its nut does all the work. ``SHOULDER`` is a socket
+    head shoulder screw (ISO 7379): a hex socket, but a smaller key than a socket
+    head cap screw of its thread takes, and a shoulder wider than the thread.
     """
 
     SOCKET = "socket"
@@ -45,6 +47,7 @@ class Head(enum.StrEnum):
     PHILLIPS = "phillips"
     SLOTTED = "slotted"
     CARRIAGE = "carriage"
+    SHOULDER = "shoulder"
 
 
 #: Metric thread designations accepted, with the nominal diameter in mm. The coarse
@@ -230,6 +233,31 @@ BUTTON_KEY_AF: dict[str, float] = {
     "M10": 6.0,
     "M12": 8.0,
     "M16": 10.0,  # catalogue
+}
+
+#: ISO 7379 hexagon socket head shoulder screws: thread -> socket across flats, and
+#: shoulder diameter -> thread, mm, as fasten.it's ISO 7379 table gives them (read
+#: 2026-10-06; Ganter's sheet confirms 6.5 on M5, 13 on M10, 25 on M20). An M6
+#: shoulder screw takes a 4 mm key on an 8 mm shoulder, where ISO 4762's M6 takes 5
+#: and an 8 mm shank would say M8 (issue #40). Makers sell other shoulders on these
+#: threads; only the standard's are read here, and the sidecar says the rest.
+SHOULDER_KEY_AF: dict[str, float] = {
+    "M5": 3.0,
+    "M6": 4.0,
+    "M8": 5.0,
+    "M10": 6.0,
+    "M12": 8.0,
+    "M16": 10.0,
+    "M20": 12.0,
+}
+SHOULDER_THREAD: dict[float, str] = {
+    6.5: "M5",
+    8.0: "M6",
+    10.0: "M8",
+    13.0: "M10",
+    16.0: "M12",
+    20.0: "M16",
+    25.0: "M20",
 }
 
 #: ISO 10642 countersunk (flat) head screws: thread -> socket across-flats, mm.
@@ -514,6 +542,7 @@ _KEY_TABLES: dict[Head, dict[str, float]] = {
     Head.SOCKET: SOCKET_KEY_AF,
     Head.BUTTON: BUTTON_KEY_AF,
     Head.FLAT: FLAT_KEY_AF,
+    Head.SHOULDER: SHOULDER_KEY_AF,
 }
 
 

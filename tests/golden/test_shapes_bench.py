@@ -45,9 +45,11 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
     wrong, banded, outlined = [], [], []
     for name, rule in _described(bench_parts):
         kind = Kind(rule.get("kind", "screw"))
-        reading = read_shape(bench_parts[name].shape, kind)
         size = Size.parse(rule["size"]) if "size" in rule else None  # a gland may give none
         head = Head(rule["head"]) if "head" in rule else None
+        # A shoulder screw's head is the one only its name can tell (issue #40).
+        named = head if head is Head.SHOULDER else None
+        reading = read_shape(bench_parts[name].shape, kind, named)
         expected_af = rule.get("across_flats")
         if expected_af is None and size is not None and (kind is Kind.NUT or head is Head.HEX):
             expected_af = spanner_af(size)
