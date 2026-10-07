@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**80 fasteners: 63 turn, 3 held, 13 blocked, 1 stuck, 0 not covered**
+**82 fasteners: 64 turn, 3 held, 14 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -16,6 +16,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 24 parts
 | M10 nut | `socket-16` | 2 | all pass (socket, 50 mm extension) |
 | M10 nut | `spanner-16` | 2 | 2 of 2 fail |
 | M16 nut | `spanner-24` | 6 | 1 of 6 fail |
+| M24 nut | `spanner-36` | 1 | 1 of 1 fail |
 | M4 button screw | `hex-key-2.5` | 5 | 2 of 5 fail |
 | M4 insert | - | 1 | all pass (holds itself) |
 | M4 phillips screw | `driver-ph2` | 2 | 1 of 2 fail |
@@ -30,12 +31,13 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 24 parts
 | M6 socket screw | `hex-key-5` | 12 | 4 of 12 fail |
 | M6 torx screw | `torx-key-T30` | 1 | all pass (short leg in) |
 | M8 hex screw | `spanner-13` | 8 | 1 of 8 fail |
-| M8 nut | `spanner-13` | 11 | 2 of 11 fail |
+| M8 nut | `spanner-13` | 12 | 2 of 12 fail |
 
 #### Failures
 
 | Fastener | Tool | Verdict | In the way, or why |
 | --- | --- | --- | --- |
+| `big_tube_gland` | `spanner-36` | blocked | `big_tube_wall` |
 | `channel_nut` | `spanner-13` | blocked | `channel_left`, `channel_right` |
 | `dome_rib_gland` | `spanner-15` | blocked | `only holds, and it has no nut` |
 | `flat_deep_screw` | `hex-key-2.5` | blocked | `flat_deep_lid`, `flat_deep_under` |

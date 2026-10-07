@@ -52,8 +52,8 @@ class Kit:
         name: What ``--kit`` takes.
         summary: One line saying what is in it, for ``tools`` and errors.
         hex_keys: L-key sizes, each an ISO 2936 or ASME B18.3 row.
-        spanners: Combination spanner sizes (ring end, and the same
-            spanner's stubby).
+        spanners: Combination spanner sizes (ring end and open end, full length,
+            and the stubby where one is sold).
         sockets: Socket sizes, on the drive set's ratchet and extensions.
         drivers: Screwdriver tips, by the names :data:`SHAFT_RADIUS` uses.
         torx_keys: Torx L-key sizes (``T30``); the full kit's alone.
@@ -221,16 +221,18 @@ def _hex_keys(kit: Kit) -> list[str]:
 
 def _spanners(kit: Kit) -> list[str]:
     head = (
-        "combination spanners, ring and open end, full and stubby "
-        "(approximate until DIN 3113 is read out; mm):"
+        "combination spanners, ring and open end, full and stubby where stubbies are "
+        "sold (makers' lengths, heads approximate; mm):"
     )
     rows = []
     for size in kit.spanners:
         spanner = spanner_for(size_mm(size))
+        stubby = spanner.stubby_length
         rows.append(
             f"  spanner-{size:<9} length {spanner.length:<6.4g} "
             f"ring outer r {spanner.ring_outer_radius:<5.3g} "
-            f"open end {spanner.open_width:.3g} wide, stubby {spanner.stubby_length:.4g}"
+            f"open end {spanner.open_width:.3g} wide, "
+            + (f"stubby {stubby:.4g}" if stubby is not None else "no stubby")
         )
     return [head, *rows] if rows else []
 

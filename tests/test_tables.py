@@ -154,6 +154,8 @@ def test_spanner_and_socket_approximations_behave():
     small, large = spanner_for(8.0), spanner_for(19.0)
     assert small.length < large.length
     assert small.stubby_length < small.length
-    assert spanner_for(10.0).length == 135.0  # the prototype's formula, pinned
+    assert spanner_for(10.0).length == 166.2  # GearWrench's (issue #49); the formula said 135
+    assert spanner_for(10.5).length == 9 * 10.5 + 45  # no maker's: the formula, no stubby
+    assert spanner_for(10.5).stubby_length is None
     assert socket_for(10.0).outer_radius == pytest.approx(7.2)
     assert socket_for(5.5).length == 25.0  # the floor

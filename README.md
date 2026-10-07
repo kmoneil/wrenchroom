@@ -27,8 +27,10 @@ to M5):
   nominal diameter is in a nut bored at the thread's minor; or, drawn off its seat with
   its washer left out, from the end with the more room), and tries real tools against the real
   parts: metric hex keys (driver straight in, short leg, long leg), combination
-  spanners (the ring, then the open end from the side, each full and stubby), sockets
-  on a ratchet with stock extensions, Phillips and slotted drivers. A tool on a hex's
+  spanners (the ring, then the open end from the side, each at full length and then
+  stubby, in the sizes stubbies are sold: 6 to 32 mm and 1/4 to 1-1/4 in; the
+  lengths are makers', the longest of a few makers' standard series at each size),
+  sockets on a ratchet with stock extensions, Phillips and slotted drivers. A tool on a hex's
   flats needs the room the hex's own corners sweep as it turns, and a socket the
   room for its wall round the hex. A tool grips the hex where its flats are, not the
   part's widest region (a flange, or a gland's dome), and a ring, socket or nut
@@ -132,7 +134,7 @@ to M5):
   is only a candidate: it is taken when its solid shows a drive a tool fits (a hex, a
   hex socket, a cross), and otherwise passed over, which every report lists, so a
   fastener is never missed without a word. With every fastener rule removed, the
-  golden bench's 79 are all found with the right kind and size, each screw with its
+  golden bench's 81 are all found with the right kind and size, each screw with its
   rule's head, and its 24 plates, blocks and studs named for their cells are passed over.
 - `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
   correct and keep: one rule per fastener, and above each a comment with how sure
@@ -144,7 +146,7 @@ to M5):
   file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  532 fasteners is read and checked with the full kit in about 8.2 s on an Apple M5
+  546 fasteners is read and checked with the full kit in about 8.8 s on an Apple M5
   Max laptop (the target is 10 s). Its four graze cells, deliberate worst cases in
   which the exact engine decides every position of a key grazing all the way round,
   are kept out of that figure and timed apart (about 0.7 s for the four). The bench is dense with fasteners that fail, and

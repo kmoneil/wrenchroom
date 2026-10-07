@@ -145,9 +145,10 @@ def hex_side_wall():
     },
 )
 def nut_stubby_box():
-    """Inside 180 x 180 walls the full handle (reach 114.8 > half-width 90) never
-    turns; the stubby (reach 63.1, corner 63.3) swings all round. A real stubby
-    10 (100..115 long) also fits near the diagonals, so a table fix keeps this."""
+    """Inside 180 x 180 walls the full handle (166.2 long, reach 141.3 > half-width
+    90) never turns; the stubby (Tekton's 101.6, reach 86.4, corner 86.6) swings all
+    round. Before issue #49 both were the prototype's formula (reach 114.8 and 63.1),
+    and this cell was drawn so that a maker's table would keep it."""
     box = Pos(0, 0, 20) * Box(200, 200, 40) - Pos(0, 0, 20) * Box(180, 180, 41)
     return [
         ("floor", plate(holes=[(0, 0, 3)])),
@@ -592,11 +593,12 @@ def hand_tight():
     Hand room off (the bench's way): the ring (z 0.35..4.85, outer r 10) and its
     handle pass under the block, so the nut turns, ring, full length; the bolt turns
     from below. Hand room on (test_hand_room_bench.py): the hand rests on the handle
-    (underside z 2.6, r 35) over the handle's last 90 mm, from r 24.75 on the full
-    spanner and from the axis on the stubby, so it meets the block at every angle,
-    4.75 past the bore at the least; the socket's ratchet handle (z 36.5) hits the
-    block whatever the extension, the tool itself blocked. The ring alone would turn,
-    so the nut is blocked for want of a hand. The bolt below is in open air.
+    (underside z 2.6, r 35) over the handle's last 90 mm, from r 51.3 on the full
+    spanner (reach 141.3) and from the axis on the stubby (86.4), so it meets the
+    block at every angle, 31.3 past the bore at the least; the socket's ratchet
+    handle (z 36.5) hits the block whatever the extension, the tool itself blocked.
+    The ring alone would turn, so the nut is blocked for want of a hand. The bolt
+    below is in open air.
     """
     block = Pos(0, 0, 12 + 150) * Box(300, 300, 300) - Pos(0, 0, 12 + 150) * Cylinder(20, 301)
     return [
@@ -1234,6 +1236,47 @@ def sunk_cap():
         ("plate", plate() - Pos(0, 0, -1.75) * Cylinder(12, 3.5)),
         ("cap_nut", nut),
     ]
+
+
+def _tube(inner, height=30.0):
+    """A round wall round the cell's axis, ``inner`` to ``inner`` + 10, on the plate."""
+    return Pos(0, 0, height / 2) * (Cylinder(inner + 10, height) - Cylinder(inner, height + 1))
+
+
+@cell(
+    "reach_13",
+    [{"parts": "nut", "kind": "nut", "size": "M8"}],
+    {"nut": {"verdict": "turns", "tool": "spanner-13", "how": "ring, stubby"}},
+)
+def reach_13():
+    """An M8 nut on a stud inside a round wall 155 from its axis (issue #49). A real
+    13 mm spanner (GearWrench's, 206.1 long) reaches 175.2 with its handle, and
+    meets the wall at every angle; its stubby (Tekton's 111.8) reaches 95.0 and turns
+    it. The prototype's formula made the spanner 162 long, reaching 137.7, which
+    swung clear and was credited.
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 4.5)])),
+        ("stud", Pos(0, 0, 2.5) * Cylinder(4, 25)),
+        ("nut", hex_nut(8, 13, 6.8)),
+        ("wall", _tube(155)),
+    ]
+
+
+@cell(
+    "big_tube",
+    [{"parts": "gland", "kind": "nut", "size": "M24", "socket": False, "across_flats": 36.0}],
+    {"gland": {"verdict": "blocked", "tool": "spanner-36", "blocked_by": ["wall"]}},
+)
+def big_tube():
+    """A 36 mm gland inside a round wall 420 from its axis (issue #49). A real 36 mm
+    spanner (Tekton's, 510.5 long) reaches 434 and meets the wall at every angle,
+    ring and open end; no stubby is made past 32 mm, so nothing turns it. The
+    formula's 369 (reach 314) used to swing clear, and so would Gedore's 1 B (460,
+    reach 391): the longest maker's is the one held to.
+    """
+    gland = hex_prism(36, 10) + Pos(0, 0, 15) * Cylinder(17, 10)
+    return [("plate", plate()), ("gland", gland), ("wall", _tube(420, 60))]
 
 
 @cell(
