@@ -1,10 +1,10 @@
 ### wrenchroom: `bench.step`
 
-**94 fasteners: 73 turn, 3 held, 17 blocked, 1 stuck, 0 not covered**
+**99 fasteners: 75 turn, 5 held, 18 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
-Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 8 parts named like a fastener, with no drive in the solid (passed over); parts the model doesn't have.
+Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 9 parts named like a fastener, with no drive or bore in the solid (passed over); parts the model doesn't have.
 
 | Fasteners | Tool | Count | Outcome |
 | --- | --- | ---: | --- |
@@ -21,21 +21,22 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 8 parts 
 | M3 button screw | `hex-key-2` | 1 | all pass (driver straight in) |
 | M4 button screw | `hex-key-2.5` | 6 | 2 of 6 fail |
 | M4 flat screw | `hex-key-2.5` | 1 | all pass (driver straight in) |
-| M4 insert | - | 1 | all pass (holds itself) |
+| M4 insert | - | 2 | all pass (holds itself) |
 | M4 phillips screw | `driver-ph2` | 2 | 1 of 2 fail |
-| M4 socket screw | `hex-key-3` | 1 | all pass (driver straight in) |
+| M4 socket screw | `hex-key-3` | 2 | all pass (driver straight in) |
 | M5 button screw | `hex-key-3` | 1 | all pass (driver straight in) |
 | M5 nut | `spanner-8` | 1 | all pass (ring, full length) |
 | M5 socket screw | `hex-key-4` | 1 | all pass (driver straight in) |
 | M6 button screw | `hex-key-4` | 4 | 1 of 4 fail |
 | M6 carriage screw | - | 1 | all pass (holds itself) |
 | M6 hex screw | `spanner-10` | 5 | all pass (ring, full length) |
+| M6 insert | - | 1 | all pass (holds itself) |
 | M6 nut | `nut-driver-10` | 1 | all pass (nut driver straight in) |
-| M6 nut | `spanner-10` | 5 | all pass (ring, full length) |
+| M6 nut | `spanner-10` | 6 | all pass (ring, full length) |
 | M6 shoulder screw | `ball-end-key-4` | 1 | all pass (ball end, 20 deg off the axis) |
 | M6 shoulder screw | `hex-key-4` | 4 | all pass (driver straight in) |
 | M6 socket screw | `ball-end-key-5` | 1 | all pass (ball end, 25 deg off the axis) |
-| M6 socket screw | `hex-key-5` | 12 | 4 of 12 fail |
+| M6 socket screw | `hex-key-5` | 13 | 5 of 13 fail |
 | M6 torx screw | `torx-key-T30` | 1 | all pass (short leg in) |
 | M8 hex screw | `spanner-13` | 8 | 1 of 8 fail |
 | M8 nut | `spanner-13` | 14 | 4 of 14 fail |
@@ -60,6 +61,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 8 parts 
 | `sunk_cap_cap_nut` | `spanner-16` | blocked | `sunk_cap_plate`, `sunk_cap_cap_nut` |
 | `tail_too_long_nut` | `spanner-16` | blocked | `tail_too_long_collar`, `tail_too_long_bolt` |
 | `tapped_hold_screw` | `hex-key-5` | blocked | `only holds, and it has no nut; best arc bounded by tapped_hold_slot` |
+| `tee_hold_screw` | `hex-key-5` | blocked | `only holds, and it screws into a fixed thread (tee_hold_tnut), so it must turn; best arc bounded by tee_hold_slot` |
 | `torus_deep_screw` | `hex-key-2.5` | blocked | `torus_deep_under`, `torus_deep_lid` |
 | `twins_a_screw` | `hex-key-5` | blocked | `twins_wall` |
 | `stuck_screw_screw` | `hex-key-5` | stuck | `stuck_screw_ceiling` |
@@ -86,3 +88,4 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 8 parts 
 - `nut_tube_tube`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
 - `nut_gap_stud`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
 - `flange_nut_stud`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
+- `badge_insert`: noun 'insert'; named only as an insert, with no thread size or word such as threaded, and its solid shows no bore: an inlay, not a fixed thread

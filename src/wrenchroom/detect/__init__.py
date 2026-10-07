@@ -68,6 +68,12 @@ NO_SQUARE_NECK = (
 #: Why a candidate name's part was passed over.
 NO_DRIVE = "its solid shows no hex, hex socket or cross a tool fits"
 
+#: Why a part named only as an insert, with no thread size, was passed over (issue #84).
+NO_THREAD = (
+    "named only as an insert, with no thread size or word such as threaded, and "
+    "its solid shows no bore: an inlay, not a fixed thread"
+)
+
 #: Why a nut whose solid is round isn't given its thread's spanner (issue #29).
 NO_HEX = (
     "named as a nut, but its solid shows no hex for a spanner to grip; a fixed "
@@ -96,11 +102,24 @@ def find(parts: Iterable[Part]) -> Found:
         if hint is None:
             continue
         reading = read_shape(part.shape, hint.kind, hint.head)
-        if not hint.needs_drive or shows_drive(reading):
+        missing = _missing(hint, reading)
+        if missing is None:
             fasteners.append(describe(part, hint, reading))
         elif not ends_in_part_noun(part.name):  # a nut_plate is a plate (issue #75)
-            passed.append(PassedOver(part.name, hint.kind, f"{hint.basis}; {NO_DRIVE}"))
+            passed.append(PassedOver(part.name, hint.kind, f"{hint.basis}; {missing}"))
     return Found(tuple(fasteners), tuple(passed))
+
+
+def _missing(hint: NameHint, reading: ShapeReading) -> str | None:
+    """What a name that needs its solid to say more found missing there; None if nothing.
+
+    A candidate name needs a drive (issue #30); a bare insert, a bore (issue #84).
+    """
+    if hint.needs_drive and not shows_drive(reading):
+        return NO_DRIVE
+    if hint.needs_bore and reading.bore_mm is None:
+        return NO_THREAD
+    return None
 
 
 def find_fasteners(parts: Iterable[Part]) -> Iterator[Fastener]:
@@ -143,8 +162,13 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
     if reading.drive_af is not None:
         used.append(f"{reading.drive_af:g} across flats")
     notes = (_head_guess(reading, head),) if _head_guessed(hint, reading) else ()
-    guessed = size is not None and reading.size_from_band and hint.size is None
-    if guessed:
+    # A fixed thread's bore is a guess too: drawn at the tap drill, or the minor, it
+    # can sit on another size (an M3 T-nut's 2.8 on #4's 2.845). Its screw outranks it.
+    bored = hint.kind is Kind.INSERT and not reading.size_from_drive
+    guessed = size is not None and hint.size is None and (reading.size_from_band or bored)
+    if guessed and bored:
+        used.append(f"{size.designation} by its bore alone")
+    elif guessed:
         used.append(f"{size.designation} by its hex's tolerance band alone")
     elif size is not None and (reading.size_from_drive or hint.size is None):
         used.append(f"{size.designation} measured")

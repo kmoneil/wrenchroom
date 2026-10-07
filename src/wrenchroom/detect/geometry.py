@@ -148,6 +148,8 @@ class ShapeReading:
         outline_head: The head a countersink or a standard's outline shows,
             where the name gives another keyed head, which stands: a person
             should settle which is right (issue #81).
+        bore_mm: A nut's or an insert's bore, the thinnest round facing its
+            axis, as drawn, mm; None when it has none (issue #84).
     """
 
     axis: Vec | None = None
@@ -161,6 +163,7 @@ class ShapeReading:
     size_from_band: bool = False
     head_drawn: tuple[float, float] | None = None
     outline_head: Head | None = None
+    bore_mm: float | None = None
 
 
 @dataclass(frozen=True)
@@ -196,9 +199,18 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
     head: Head | None = None
     drive_af: float | None = None
     if kind is not Kind.SCREW:  # a nut or an insert: its bore gives the size
-        bore = _snap([r for r, convex in rounds if not convex])
-        size, settled, banded = _settle(bore, None, hex_outer)
-        return ShapeReading(direction, None, None, hex_outer, size, settled, size_from_band=banded)
+        bores = [r for r, convex in rounds if not convex]
+        size, settled, banded = _settle(_snap(bores), None, hex_outer)
+        return ShapeReading(
+            direction,
+            None,
+            None,
+            hex_outer,
+            size,
+            settled,
+            size_from_band=banded,
+            bore_mm=2 * min(bores) if bores else None,
+        )
     convex = [r for r, outside in rounds if outside]
     shank = _snap(convex)  # the thinnest
     shoulder = named is Head.SHOULDER

@@ -56,7 +56,7 @@ def bench_parts(bench_dir):
 
 
 def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
-    wrong, banded, outlined, guessed, unmatched = [], [], [], [], []
+    wrong, banded, outlined, guessed, unmatched, bored = [], [], [], [], [], []
     for name, rule in _described(bench_parts):
         kind = Kind(rule.get("kind", "screw"))
         size = Size.parse(rule["size"]) if "size" in rule else None  # a gland may give none
@@ -65,11 +65,7 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
         # named_head's outline is a socket head's, the name's button standing (#81).
         named = head if head is Head.SHOULDER or name in _BY_NAME else None
         reading = read_shape(bench_parts[name].shape, kind, named)
-        expected_af = rule.get("across_flats")
-        if expected_af is None and size is not None and (kind is Kind.NUT or head is Head.HEX):
-            expected_af = spanner_af(size)
-        elif expected_af is None and size is not None and head is not None:
-            expected_af = hex_key_af(head, size)
+        expected_af = _expected_af(rule, kind, size, head)
         got = (reading.head, reading.drive_af and round(reading.drive_af, 6), reading.size)
         want = (head, expected_af and round(expected_af, 6), size)  # inch sizes in mm
         if head is Head.TORX:
@@ -85,6 +81,9 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
         elif got != want and expected_af and in_hex_band(reading.drive_af, expected_af):
             banded.append(name)  # drawn inside its standard's band below the size
             got = (got[0], want[1], got[2])
+        elif kind is Kind.INSERT and reading.size != size:
+            bored.append(name)  # a fixed thread's bore at its tap drill: its screw says (#84)
+            got = (got[0], got[1], size)
         elif reading.size_from_band and size is not None and reading.size != size:
             guessed.append(name)  # its band alone says another size; its bolt says the rule's
             least = HEX_AF_MIN[expected_af]
@@ -104,9 +103,20 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
     odd = ["odd_head_screw", "odd_head_button_screw"]
     assert outlined == ["low_head_screw", "rubber_screw", *graze_screws, *pins, *odd]
     assert unmatched == odd
+    assert bored == ["badge_boss_insert", "tee_hold_tnut"]
 
 
 _STANDARD = {Head.BUTTON: "ISO 7380-1", Head.SHOULDER: "ISO 7379"}
+
+
+def _expected_af(rule, kind, size, head):
+    """The drive the rule implies: its across_flats, else its size's hex or key."""
+    if rule.get("across_flats") is not None or size is None:
+        return rule.get("across_flats")
+    if kind is Kind.NUT or head is Head.HEX:
+        return spanner_af(size)
+    return hex_key_af(head, size) if head is not None else None
+
 
 #: Screws whose head only their name gives, with the head their outline shows instead.
 _BY_NAME = {"named_head_bhcs": Head.SOCKET}

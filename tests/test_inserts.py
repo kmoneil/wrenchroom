@@ -188,7 +188,10 @@ def test_a_screw_that_only_holds_cannot_lean_on_the_insert(engine, boxed, bolt_v
     assert by_name["bolt"].verdict is bolt_verdict
     assert (by_name["nut"].verdict, by_name["nut"].tool) == (Verdict.HELD, None)
     if boxed:
-        assert by_name["bolt"].reason.startswith("only holds, and its partner nut does not turn")
+        # It must turn, as into a tapped hole, and is told so (issue #84).
+        assert by_name["bolt"].reason.startswith(
+            "only holds, and it screws into a fixed thread (nut), so it must turn"
+        )
 
 
 def test_named_only_as_a_nut_its_round_solid_gets_no_spanner():

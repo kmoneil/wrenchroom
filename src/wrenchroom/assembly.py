@@ -59,6 +59,11 @@ if TYPE_CHECKING:
 #: ``#2`` treatment, so several anonymous solids stay distinguishable.
 UNNAMED = "unnamed"
 
+#: The names OCCT makes up for what has none, reading a STEP file or writing one
+#: (which FreeCAD, CadQuery and build123d files then carry): a reference's target
+#: entry, and a shape's type. None says what the part is.
+_PLACEHOLDER = re.compile(r"=>\[[0-9:]+\]|SOLID|COMPSOLID|COMPOUND|ASSEMBLY")
+
 
 @dataclass(frozen=True)
 class Part:
@@ -311,7 +316,16 @@ def _walk_label(
 
 
 def _label_name(label: TDF_Label) -> str:
+    """A label's name, or "" for none: a name OCCT made up for a nameless one counts as none.
+
+    A reference with no name of its own is named by its target's entry,
+    ``=>[0:1:1:32]``, and the shape it refers to by its type, ``SOLID`` or
+    ``ASSEMBLY`` (issue #84): no name a person gave. The part then takes its
+    assembly's name, as any nameless leaf does: a subassembly's own body is
+    called after the subassembly.
+    """
     attribute = TDataStd_Name()
     if label.FindAttribute(TDataStd_Name.GetID_s(), attribute):
-        return TCollection_AsciiString(attribute.Get()).ToCString()
+        name = TCollection_AsciiString(attribute.Get()).ToCString()
+        return "" if _PLACEHOLDER.fullmatch(name) else name
     return ""

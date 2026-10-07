@@ -273,7 +273,7 @@ def _fasteners(
 
     A rule that matches a part describes it outright: detection only ever sees
     parts no rule covers, and never an ignored one. What detection passed over
-    (named like a fastener, no drive in the solid) comes back with them.
+    (named like a fastener, no drive or bore in the solid) comes back with them.
     """
     found = list(described)
     passed: tuple[PassedOver, ...] = ()
@@ -499,20 +499,21 @@ def _find_pairs(
 
 
 def _sized_by_partners(fasteners: list[Fastener], pairs: dict[str, str]) -> list[Fastener]:
-    """A nut whose own reading gave no size, or guessed one, takes its bolt's.
+    """A nut or fixed thread whose own reading gave no size, or guessed one, takes its screw's.
 
     A nut on an M8 bolt is M8. Its bore drawn at the minor diameter, or not at
     all, says nothing, and a hex drawn a little small sits in another size's
     band (an M8 at 12.6 in a 5/16's); the thread it runs on does say, and with
-    it the system its spanner comes from (issue #50). A gland keeps none: its
-    thread is not its hex's.
+    it the system its spanner comes from (issue #50). So with a fixed thread,
+    whose bore alone may sit on another size: an M3 T-nut bored 2.8 is #4's
+    (issue #84). A gland keeps none: its thread is not its hex's.
     """
     by_name = {f.name: f for f in fasteners}
     sized = []
     for fastener in fasteners:
         partner = by_name.get(pairs.get(fastener.name, ""))
         if (
-            fastener.kind is Kind.NUT
+            fastener.kind in (Kind.NUT, Kind.INSERT)
             and (fastener.size is None or fastener.size_guessed)
             and fastener.socket_allowed
             and partner is not None
@@ -520,9 +521,12 @@ def _sized_by_partners(fasteners: list[Fastener], pairs: dict[str, str]) -> list
             and partner.size is not None
             and partner.size != fastener.size
         ):
-            note = f"size {partner.size.designation} from its bolt, {partner.name}"
+            nut = fastener.kind is Kind.NUT
+            note = f"size {partner.size.designation} from its {'bolt' if nut else 'screw'}, "
+            note += partner.name
             if fastener.size is not None:
-                note += f" (its hex alone said {fastener.size.designation})"
+                alone = "hex" if nut else "bore"
+                note += f" (its {alone} alone said {fastener.size.designation})"
             basis = f"{fastener.basis}; {note}" if fastener.basis else note
             notes = (*fastener.notes, note)
             sized.append(
@@ -1072,6 +1076,22 @@ def _partner_turns(partner: _Candidate | None) -> bool:
     return partner is not None and partner.turns and not partner.stuck
 
 
+def _alone(partner_name: str | None, partner: _Candidate | None) -> str:
+    """Why a fastener that only holds has nothing to turn against it.
+
+    A fixed thread or a carriage bolt never turns, by design: the fastener on it
+    is the one that must (issue #84), which is said as such, not as a partner
+    that failed.
+    """
+    if partner_name is None:
+        return "it has no nut"
+    if partner is not None and partner.fastener.kind is Kind.INSERT:
+        return f"it screws into a fixed thread ({partner_name}), so it must turn"
+    if partner is not None and partner.fastener.head is Head.CARRIAGE:
+        return f"its bolt ({partner_name}) holds itself, so it must turn"
+    return f"its partner {partner_name} does not turn"
+
+
 def _finish(
     candidate: _Candidate, partner_name: str | None, partner: _Candidate | None
 ) -> FastenerResult:
@@ -1096,9 +1116,7 @@ def _finish(
             verdict = Verdict.HELD
     elif candidate.hold is not None:
         how = None
-        reason = "only holds, and " + (
-            f"its partner {partner_name} does not turn" if partner_name else "it has no nut"
-        )
+        reason = "only holds, and " + _alone(partner_name, partner)
         if candidate.deciding:  # what kept its best arc short (issues #52, #64)
             reason += f"; best arc {bounded(candidate.deciding, candidate.attempts)}"
     else:

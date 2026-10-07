@@ -25,14 +25,16 @@ rules and the figures behind them are written down.
 `wrenchroom check model.step` reads a STEP assembly with its part names kept, and
 repeats made unique. A part drawn as several solids, a nut and its washer, is one
 part to a rule and to detection: its largest solid keeps the name and the rest go
-with it. From Python, `Assembly.from_shapes([(name, shape), ...])` takes build123d
+with it. A part with no name of its own takes its assembly's: the names OCCT makes
+up for one (`=>[0:1:1:32]`, `SOLID`, `ASSEMBLY`) say nothing of what it is. From Python, `Assembly.from_shapes([(name, shape), ...])` takes build123d
 shapes as they are, each pair one part.
 
 ## Finding fasteners
 
 No sidecar is needed for named parts. Fasteners are found from their part names (ISO
 and DIN designations, McMaster-Carr numbers, descriptions such as `M6x20 SHCS` or
-`hex nut M8`, code-CAD names such as `lift_link_bolt`) and completed from their
+`hex nut M8`, `M3 Hexnut` with the words run together, code-CAD names such as
+`lift_link_bolt`) and completed from their
 solids: the drive the model shows (a hex, a hex socket, a cross, a slot, a carriage
 bolt's square neck) and the size that drive or the shank gives.
 
@@ -191,10 +193,16 @@ and `grazes` in the JSON).
 
 `kind: insert`: a well nut, rivnut, threaded insert, cage, T-, press or weld nut holds
 itself, like a carriage bolt. It is never given a tool and is reported as held, and
-the screw into it is the one that must turn. Detection knows them by name (`rivnut`,
-`threaded_insert`, `base_well_nut`; a word before "nut" counts only if the solid shows
-no hex, so a nut deep in a well stays a nut), and a nut whose solid shows no hex is not
-covered rather than given a spanner that couldn't grip it.
+the screw into it is the one that must turn, and is told so when it can't
+(`only holds, and it screws into a fixed thread (MB T-Nut:1), so it must turn`).
+Detection knows them by name (`rivnut`, `threaded_insert`, `base_well_nut`; a word
+before "nut" counts only if the solid shows no hex, so a nut deep in a well stays a
+nut), and a nut whose solid shows no hex is not covered rather than given a spanner
+that couldn't grip it. "Insert" alone may be a logo's inlay: with no thread size in
+the name, no word such as threaded or heat-set, and no bore in the solid, it is
+passed over, and the report says so. A fixed thread's size from its bore alone is a
+guess (an M3 T-nut bored 2.8 is #4's size), and the screw into it outranks it, as a
+nut's bolt does.
 
 ## Kits
 

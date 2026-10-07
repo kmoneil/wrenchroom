@@ -96,6 +96,6 @@ def test_everything_else_is_the_same_report(hand_report, bench_json):
 def test_the_note_stops_listing_hand_room(hand_report, bench_report):
     assert hand_report.terminal_lines()[-1] == (
         f"NOTE not checked: {len(hand_report.passed_over)} parts named like a fastener, "
-        "with no drive in the solid (passed over); parts the model doesn't have"
+        "with no drive or bore in the solid (passed over); parts the model doesn't have"
     )
     assert "room for a hand" in bench_report.terminal_lines()[-1]
