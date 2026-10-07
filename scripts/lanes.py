@@ -71,6 +71,11 @@ LANES: tuple[Lane, ...] = (
         steps=(("python", "scripts/perf.py", "--budget", "0"),),
     ),
     Lane(
+        name="release-check",
+        summary="build the sdist and wheel, check them, and run the wheel on the example",
+        steps=(("python", "scripts/release.py"),),
+    ),
+    Lane(
         name="vendor-check",
         summary="the embedded three.js is exactly what its pinned sources build (Node, network)",
         steps=(("python", "scripts/vendor_three.py", "--check"),),

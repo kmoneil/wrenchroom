@@ -1,0 +1,94 @@
+# Release: build, prove and publish wrenchroom when a version tag is pushed.
+#
+# Publishing is PyPI's Trusted Publishing. PyPI trusts this workflow, by its file
+# name (release.yml), in this repository, running in the `pypi` environment, through
+# a short-lived OIDC token: no API token is stored anywhere. Renaming this file or
+# the environment breaks publishing until the publisher on PyPI is changed to match.
+#
+# The `pypi` environment deploys only from `v*` tags and waits for a maintainer's
+# approval. That approval is the one step that can't be undone: PyPI never takes the
+# same version twice, so a bad release is yanked and followed, never replaced.
+#
+# Run by hand (workflow_dispatch), only the build job runs: a dry run of everything
+# but the upload. docs/releasing.md has the steps.
+#
+# Actions are pinned to a commit SHA with the tag in a trailing comment, as in ci.yml.
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # The tag names the version; the sdist and wheel are built, checked, and the wheel
+  # run on the README's example in a clean environment (scripts/release.py).
+  build:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - run: uv python install
+      - run: uv sync --frozen
+      - run: uv run --frozen python scripts/lanes.py release-check
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
+  # The upload, after a maintainer approves the `pypi` deployment. The token PyPI
+  # trusts exists only in this job, and the action attaches the files' provenance
+  # (PEP 740 attestations) as it uploads.
+  publish:
+    if: github.ref_type == 'tag'
+    needs: build
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/wrenchroom/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+
+  # The GitHub release for the tag, once PyPI has the files: the same files, and
+  # notes made from the pull requests merged since the last release.
+  github-release:
+    if: github.ref_type == 'tag'
+    needs: publish
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          pre=""
+          if [[ "$TAG" =~ (a|b|rc)[0-9]+$ ]]; then pre="--prerelease"; fi
+          gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "wrenchroom ${TAG#v}" --generate-notes $pre
