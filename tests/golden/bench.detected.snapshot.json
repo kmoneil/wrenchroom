@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 70,
-  "turns": 53,
+  "fasteners": 75,
+  "turns": 58,
   "held": 3,
   "blocked": 12,
   "stuck": 1,
@@ -1048,6 +1048,35 @@
    "notes": []
   },
   {
+   "name": "minor_pin_bolt",
+   "kind": "screw",
+   "head": "shoulder",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    8000.0,
+    5.5
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-4",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "named_size_m8_nut",
    "kind": "nut",
    "head": null,
@@ -1332,6 +1361,66 @@
    "notes": []
   },
   {
+   "name": "odd_head_button_screw",
+   "kind": "screw",
+   "head": "button",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3100.0,
+    8000.0,
+    3.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-4",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "odd_head_screw",
+   "kind": "screw",
+   "head": "button",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    8000.0,
+    3.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-4",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "its head is a guess: drawn 12.00 across and 3.00 high, it fits no standard head, so button by its proportions; set head: in the sidecar"
+   ]
+  },
+  {
    "name": "one_part_lock_bolt",
    "kind": "screw",
    "head": "hex",
@@ -1601,6 +1690,35 @@
    "notes": []
   },
   {
+   "name": "plain_pin_bolt",
+   "kind": "screw",
+   "head": "shoulder",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    8000.0,
+    5.5
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-4",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "rubber_screw",
    "kind": "screw",
    "head": "button",
@@ -1709,6 +1827,35 @@
    "blocked_by": [
     "state_lid_lid"
    ],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "stepped_pin_bolt",
+   "kind": "screw",
+   "head": "shoulder",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1000.0,
+    8000.0,
+    5.5
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-4",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2029,7 +2176,7 @@
     1.0
    ],
    "seat": [
-    -100.0,
+    3900.0,
     8000.0,
     6.0
    ],
@@ -2060,7 +2207,7 @@
     1.0
    ],
    "seat": [
-    100.0,
+    4100.0,
     8000.0,
     6.0
    ],

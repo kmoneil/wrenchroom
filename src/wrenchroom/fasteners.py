@@ -156,10 +156,14 @@ class Fastener:
             the solid), ``medium`` (something rests on a head's outline or a
             measured shank, the name and the solid's drive disagree on the
             head, or the name has words after its fastener noun), ``low``
-            (something is missing). Empty from a sidecar.
+            (something is missing, or a head is guessed from its proportions
+            alone, fitting no standard's outline). Empty from a sidecar.
         size_guessed: True when detection had the size from a hex's tolerance
             band alone, which can't tell an M8 nut drawn small from a 5/16 one:
             the bolt a nut runs on outranks it (issue #50).
+        notes: What a person should know of how this description was reached,
+            which a check's result repeats: a head guessed (issue #48), a size
+            taken from the bolt (issue #50).
     """
 
     name: str
@@ -178,6 +182,7 @@ class Fastener:
     not_covered: str | None = None
     confidence: str = ""
     size_guessed: bool = False
+    notes: tuple[str, ...] = ()
 
     @property
     def self_holding(self) -> bool:
@@ -461,11 +466,28 @@ HEAD_OUTLINE: dict[Head, dict[str, tuple[float, float]]] = {
     },
 }
 
+#: ISO 7379 shoulder screws' heads, shoulder diameter -> (head diameter, head
+#: height), mm, the maxima, as fasten.it's ISO 7379 table gives them (read
+#: 2026-10-07; McMaster's ISO 7379 listing agrees but for the 8 mm shoulder's
+#: height, 6, inside the fit). A shoulder screw's head goes with its shoulder, the
+#: widest round under it, not with its thread: a plain head 13 across and 5.5
+#: high over an 8 mm shoulder is an M6 shoulder screw's (issue #48).
+SHOULDER_OUTLINE: dict[float, tuple[float, float]] = {
+    6.5: (10.0, 4.5),
+    8.0: (13.0, 5.5),
+    10.0: (16.0, 7.0),
+    13.0: (18.0, 9.0),
+    16.0: (24.0, 11.0),
+    20.0: (30.0, 14.0),
+    25.0: (36.0, 16.0),
+}
+
 #: The standards the outlines above come from, for a basis to name.
 HEAD_STANDARD: dict[tuple[Head, bool], str] = {
     (Head.SOCKET, True): "ISO 4762",
     (Head.SOCKET, False): "ASME B18.3",
     (Head.BUTTON, True): "ISO 7380-1",
+    (Head.SHOULDER, True): "ISO 7379",
 }
 
 

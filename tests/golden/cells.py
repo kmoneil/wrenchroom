@@ -1083,3 +1083,65 @@ def minor_bore():
         ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(8, 20, 13, 5.3)),
         ("nut", hex_nut(6.647, 13, 6.8)),
     ]
+
+
+def _shoulder_screw(thread=None):
+    """ISO 7379's M6 drawn plainly: a head 13 by 5.5 on z 0..5.5, no socket in it,
+    the 8 mm shoulder 25 below it, and the thread 11 below that when drawn."""
+    shape = Pos(0, 0, 2.75) * Cylinder(6.5, 5.5) + Pos(0, 0, -12.5) * Cylinder(4, 25)
+    if thread is not None:
+        shape = shape + Pos(0, 0, -30.5) * Cylinder(thread / 2, 11)
+    return shape
+
+
+_SHOULDER_RULE = {"parts": "bolt", "kind": "screw", "head": "shoulder", "size": "M6"}
+_KEY_4_TURNS = {"verdict": "turns", "tool": "hex-key-4", "how": "driver straight in"}
+
+
+@cell("plain_pin", [_SHOULDER_RULE], {"bolt": _KEY_4_TURNS})
+def plain_pin():
+    """A shoulder screw drawn as its head and shoulder alone, with no socket and a
+    name that doesn't say shoulder (issue #48). With no rule, its head, 13 by 5.5,
+    is ISO 7379's for the 8 mm shoulder under it, whose thread is M6: a 4 mm key.
+    It used to be "button by its outline, fitting no standard head", M8 by its
+    shank, and a 5 mm key.
+    """
+    return [("plate", plate(holes=[(0, 0, 4.1)])), ("bolt", _shoulder_screw())]
+
+
+@cell("stepped_pin", [_SHOULDER_RULE], {"bolt": _KEY_4_TURNS})
+def stepped_pin():
+    """plain_pin's screw stepped down to its M6 thread: the same head, the same key.
+    It used to be a button head too, right by luck (an M6 button takes 4 mm).
+    """
+    return [("plate", plate(holes=[(0, 0, 4.1)])), ("bolt", _shoulder_screw(thread=6.0))]
+
+
+@cell("minor_pin", [_SHOULDER_RULE], {"bolt": _KEY_4_TURNS})
+def minor_pin():
+    """stepped_pin's screw with its thread drawn at M6's minor diameter, 4.917,
+    which is no size: the shoulder under its ISO 7379 head says M6.
+    """
+    return [("plate", plate(holes=[(0, 0, 4.1)])), ("bolt", _shoulder_screw(thread=4.917))]
+
+
+_ODD_RULE = {"kind": "screw", "head": "button", "size": "M6"}
+
+
+@cell(
+    "odd_head",
+    [{"parts": "screw", **_ODD_RULE}, {"parts": "button_screw", **_ODD_RULE}],
+    {"screw": _KEY_4_TURNS, "button_screw": _KEY_4_TURNS},
+)
+def odd_head():
+    """Two M6 screws whose plain heads, 12 by 3, fit no standard's (issue #48). With
+    no rule, the first's proportions make it a button head, a guess: detection's
+    confidence is low, and the check's result says so, where only detect's comment
+    used to. The second's name says button: no guess, nothing to say.
+    """
+    screw = Pos(0, 0, 1.5) * Cylinder(6, 3) + Pos(0, 0, -10) * Cylinder(3, 20)
+    return [
+        ("plate", plate(holes=[(0, 0, 3.1), (100, 0, 3.1)])),
+        ("screw", screw),
+        ("button_screw", Pos(100, 0, 0) * screw),
+    ]

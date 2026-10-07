@@ -115,14 +115,18 @@ def test_shoulder_says_the_head(name, size):
 # ---------------------------------------------------------------------------
 
 
-def test_without_the_name_its_head_reads_as_another():
-    # Its head (13 by 5.5) fits neither ISO 4762's M6 nor ISO 7380-1's, and by its
-    # proportions reads as a button head, a guess. ISO 7380's button keys happen to
-    # be ISO 7379's for M5 to M16, so the size comes out M6 all the same: only the
-    # head is wrong, which the name puts right.
+def test_without_the_name_its_head_is_iso_7379_s_by_its_outline():
+    # Its head (13 by 5.5) fits neither ISO 4762's M6 nor ISO 7380-1's, but ISO
+    # 7379's for the 8 mm shoulder under it (issue #48): it used to read as a
+    # button head, a guess, right in size only because ISO 7380's button keys
+    # happen to be ISO 7379's for M5 to M16.
     reading = read_shape(shoulder_screw(), Kind.SCREW)
-    assert (reading.head, reading.head_unmatched) == (Head.BUTTON, True)
-    assert reading.size.designation == "M6"
+    assert (reading.head, reading.head_standard, reading.head_unmatched) == (
+        Head.SHOULDER,
+        "ISO 7379",
+        False,
+    )
+    assert (reading.size.designation, reading.size_from_drive) == ("M6", True)
 
 
 @pytest.mark.parametrize(

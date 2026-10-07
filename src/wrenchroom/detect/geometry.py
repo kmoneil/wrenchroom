@@ -42,6 +42,7 @@ from wrenchroom.fasteners import (
     IMPERIAL_SIZES,
     METRIC_SIZES,
     SHOULDER_KEY_AF,
+    SHOULDER_OUTLINE,
     SHOULDER_THREAD,
     SOCKET_KEY_AF,
     Head,
@@ -116,6 +117,8 @@ class ShapeReading:
             outline fits (``ISO 7380-1``), when one alone does.
         head_unmatched: True when a flat-topped keyed head of a known size
             fits no standard's outline: its head is a guess from proportions.
+        head_drawn: The head's diameter and height as drawn, mm, when its
+            outline was read.
     """
 
     axis: Vec | None = None
@@ -127,6 +130,7 @@ class ShapeReading:
     head_standard: str | None = None
     head_unmatched: bool = False
     size_from_band: bool = False
+    head_drawn: tuple[float, float] | None = None
 
 
 @dataclass(frozen=True)
@@ -162,10 +166,9 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
         bore = _snap([r for r, convex in rounds if not convex])
         size, settled, banded = _settle(bore, None, hex_outer)
         return ShapeReading(direction, None, None, hex_outer, size, settled, size_from_band=banded)
-    shank = _snap([r for r, convex in rounds if convex])  # the thinnest
+    convex = [r for r, outside in rounds if outside]
+    shank = _snap(convex)  # the thinnest
     shoulder = named is Head.SHOULDER
-    if shoulder:
-        shank = _shoulder_thread([r for r, convex in rounds if convex]) or shank
     pocket = _regular(inner, 6)
     outline = _Outline(None)
     if hex_outer is not None and (pocket is None or hex_outer > pocket):
@@ -173,7 +176,7 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
     elif _regular(outer, 4) is not None:
         head = Head.CARRIAGE  # a square neck: it holds itself
     elif pocket is not None:
-        keyed = _keyed_head(faces, origin, direction, shank)
+        keyed = _keyed_head(faces, origin, direction, shank, convex)
         outline = _Outline(Head.SHOULDER) if shoulder else keyed
         head, drive_af = outline.head, pocket
     elif _is_cross(inner):
@@ -181,7 +184,9 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
     elif _is_slot(inner):
         head = Head.SLOTTED
     if head is None:
-        outline = _keyed_head(faces, origin, direction, shank)
+        outline = _keyed_head(faces, origin, direction, shank, convex)
+    if shoulder or outline.head is Head.SHOULDER:  # by its name, or by its outline
+        shank = _shoulder_shank(convex, shank, outline.shoulder)
     guess = None if head is not None else outline.head
     size, settled, banded = _settle(shank, head, drive_af)
     return ShapeReading(
@@ -194,6 +199,7 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
         outline.standard,
         outline.unmatched,
         size_from_band=banded,
+        head_drawn=outline.drawn,
     )
 
 
@@ -253,6 +259,19 @@ def _snap(radii: list[float]) -> Size | None:
     if abs(nominal - diameter) > SIZE_SNAP_MM:
         return None
     return Size(designation, nominal)
+
+
+def _shoulder_shank(convex: list[float], shank: Size | None, shoulder: float | None) -> Size | None:
+    """A shoulder screw's thread size, from its shank.
+
+    The thinnest round, when the thread is drawn at a size; the shoulder's own
+    ISO 7379 thread when the shoulder alone is drawn (issue #40), or when the
+    thread is drawn at no size and the outline gave the shoulder (issue #48).
+    """
+    thread = _shoulder_thread(convex) or shank
+    if thread is None and shoulder is not None:
+        return Size.parse(SHOULDER_THREAD[shoulder])
+    return thread
 
 
 def _shoulder_thread(radii: list[float]) -> Size | None:
@@ -399,34 +418,57 @@ class _Outline:
     head: Head | None
     standard: str | None = None
     unmatched: bool = False
+    drawn: tuple[float, float] | None = None
+    shoulder: float | None = None
 
 
-def _keyed_head(faces: list[Face], origin: Vec, direction: Vec, shank: Size | None) -> _Outline:
+def _keyed_head(
+    faces: list[Face], origin: Vec, direction: Vec, shank: Size | None, convex: list[float]
+) -> _Outline:
     """Countersunk if the head is a cone; else the standard head its outline fits.
 
     A flat-topped cylinder is compared with each standard's head for the
     shank's size: a button head drawn flat, 9.5 across and 2.75 high for M5, is
-    ISO 7380-1's, not ISO 4762's 8.5 by 5 (issue #31). Failing that, and for a
-    rounded top (whose cylinder is only the head's rim), the proportions decide:
-    a head much shallower than it is wide is a button.
+    ISO 7380-1's, not ISO 4762's 8.5 by 5 (issue #31). A shoulder screw's head
+    goes with its shoulder, the widest round under the head, not its thread:
+    13 by 5.5 over an 8 mm shoulder is ISO 7379's (issue #48). Failing that, and
+    for a rounded top (whose cylinder is only the head's rim), the proportions
+    decide: a head much shallower than it is wide is a button.
     """
     kinds = {face.geom_type for face in faces}
     if GeomType.CONE in kinds:
         return _Outline(Head.FLAT)
     rounded = bool(kinds & {GeomType.TORUS, GeomType.SPHERE, GeomType.BSPLINE})
     radius, height = _head_size(faces, origin, direction)
-    compared = not rounded and shank is not None and radius > 0
-    if compared and shank is not None:
+    drawn = (2 * radius, height)
+    shoulder = _shoulder_under(convex, radius)
+    flat = not rounded and radius > 0
+    compared = flat and (shank is not None or shoulder is not None)
+    if flat:
         fits = [
             head
             for head, table in HEAD_OUTLINE.items()
-            if (drawn := table.get(shank.designation)) and _fits((2 * radius, height), drawn)
+            if shank is not None
+            and (standard := table.get(shank.designation))
+            and _fits(drawn, standard)
         ]
+        if shoulder is not None and _fits(drawn, SHOULDER_OUTLINE[shoulder]):
+            fits.append(Head.SHOULDER)
         if len(fits) == 1:
-            metric = shank.designation.startswith("M")
-            return _Outline(fits[0], HEAD_STANDARD[fits[0], metric])
+            metric = fits[0] is Head.SHOULDER or (shank is not None and shank.is_metric)
+            under = shoulder if fits[0] is Head.SHOULDER else None
+            return _Outline(fits[0], HEAD_STANDARD[fits[0], metric], drawn=drawn, shoulder=under)
     low = radius > 0 and height / (2 * radius) < _BUTTON_RATIO
-    return _Outline(Head.BUTTON if low else Head.SOCKET, unmatched=compared)
+    return _Outline(Head.BUTTON if low else Head.SOCKET, unmatched=compared, drawn=drawn)
+
+
+def _shoulder_under(convex: list[float], head_radius: float) -> float | None:
+    """The widest round under a head, as an ISO 7379 shoulder's diameter; else None."""
+    under = [r for r in convex if r < head_radius - SIZE_SNAP_MM]
+    if not under:
+        return None
+    diameter = 2 * max(under)
+    return next((s for s in SHOULDER_OUTLINE if abs(s - diameter) <= SIZE_SNAP_MM), None)
 
 
 def _fits(measured: tuple[float, float], drawn: tuple[float, float]) -> bool:

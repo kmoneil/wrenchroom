@@ -139,6 +139,7 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
         used.append("a hex, so a nut")
     if reading.drive_af is not None:
         used.append(f"{reading.drive_af:g} across flats")
+    notes = (_head_guess(reading, head),) if _head_guessed(hint, reading) else ()
     guessed = size is not None and reading.size_from_band and hint.size is None
     if guessed:
         used.append(f"{size.designation} by its hex's tolerance band alone")
@@ -158,6 +159,28 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
         not_covered=not_covered,
         confidence=_confidence(hint, reading, head, size, not_covered),
         size_guessed=guessed,
+        notes=notes,
+    )
+
+
+def _head_guessed(hint: NameHint, reading: ShapeReading) -> bool:
+    """A screw's head from its proportions alone: no name, drive or standard says it."""
+    return (
+        hint.kind is Kind.SCREW
+        and hint.head is None
+        and reading.head is None
+        and reading.head_guess is not None
+        and reading.head_unmatched
+    )
+
+
+def _head_guess(reading: ShapeReading, head: Head | None) -> str:
+    """The note a guessed head carries into the check's result (issue #48)."""
+    across, high = reading.head_drawn or (0.0, 0.0)
+    what = head.value if head is not None else "unknown"
+    return (
+        f"its head is a guess: drawn {across:.2f} across and {high:.2f} high, it fits no "
+        f"standard head, so {what} by its proportions; set head: in the sidecar"
     )
 
 
@@ -171,6 +194,8 @@ def _confidence(
     """high, medium or low: see Fastener.confidence."""
     has_size = size is not None or reading.drive_af is not None
     if not_covered or not has_size or (hint.kind is Kind.SCREW and head is None):
+        return "low"
+    if _head_guessed(hint, reading):
         return "low"
     guessed_head = hint.kind is Kind.SCREW and reading.head is None and hint.head is None
     shank_only = size is not None and hint.size is None and not reading.size_from_drive

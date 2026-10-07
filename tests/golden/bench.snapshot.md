@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**70 fasteners: 55 turn, 3 held, 11 blocked, 1 stuck, 0 not covered**
+**75 fasteners: 60 turn, 3 held, 11 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -19,12 +19,12 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 22 parts
 | M4 insert | - | 1 | all pass (holds itself) |
 | M4 phillips screw | `driver-ph2` | 2 | 1 of 2 fail |
 | M5 button screw | `hex-key-3` | 1 | all pass (driver straight in) |
-| M6 button screw | `hex-key-4` | 1 | all pass (long leg in) |
+| M6 button screw | `hex-key-4` | 3 | all pass (driver straight in) |
 | M6 carriage screw | - | 1 | all pass (holds itself) |
 | M6 hex screw | `spanner-10` | 5 | all pass (ring, full length) |
 | M6 nut | `nut-driver-10` | 1 | all pass (nut driver straight in) |
 | M6 nut | `spanner-10` | 5 | all pass (ring, full length) |
-| M6 shoulder screw | `hex-key-4` | 1 | all pass (driver straight in) |
+| M6 shoulder screw | `hex-key-4` | 4 | all pass (driver straight in) |
 | M6 socket screw | `ball-end-key-5` | 1 | all pass (ball end, 25 deg off the axis) |
 | M6 socket screw | `hex-key-5` | 12 | 4 of 12 fail |
 | M6 torx screw | `torx-key-T30` | 1 | all pass (short leg in) |
