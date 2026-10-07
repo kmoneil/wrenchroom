@@ -32,7 +32,7 @@ from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 from wrenchroom.detect.geometry import ShapeReading, read_shape
-from wrenchroom.detect.names import NameHint, read_name
+from wrenchroom.detect.names import NameHint, ends_in_part_noun, read_name
 from wrenchroom.fasteners import Fastener, Head, Kind, PassedOver, in_hex_band
 from wrenchroom.tools.hex_keys import HEX_KEYS
 from wrenchroom.tools.sizes import FLATS, snap
@@ -93,10 +93,10 @@ def find(parts: Iterable[Part]) -> Found:
         if hint is None:
             continue
         reading = read_shape(part.shape, hint.kind, hint.head)
-        if hint.needs_drive and not shows_drive(reading):
-            passed.append(PassedOver(part.name, hint.kind, f"{hint.basis}; {NO_DRIVE}"))
-        else:
+        if not hint.needs_drive or shows_drive(reading):
             fasteners.append(describe(part, hint, reading))
+        elif not ends_in_part_noun(part.name):  # a nut_plate is a plate (issue #75)
+            passed.append(PassedOver(part.name, hint.kind, f"{hint.basis}; {NO_DRIVE}"))
     return Found(tuple(fasteners), tuple(passed))
 
 

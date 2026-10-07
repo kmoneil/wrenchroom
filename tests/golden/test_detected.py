@@ -29,6 +29,7 @@ import pytest
 from bench import canonical, check_detected, sidecar_and_truth
 
 from wrenchroom.detect import read_name
+from wrenchroom.detect.names import ends_in_part_noun
 
 SNAPSHOT = Path(__file__).parent / "bench.detected.snapshot.json"
 
@@ -125,7 +126,9 @@ def test_detected_tools_match_the_truth_but_where_the_sidecar_is_needed(detected
 def test_every_candidate_name_is_taken_on_its_solid_or_passed_over(detected):
     """Issue #30: a fastener noun with words after it. On the bench the one whose
     solid shows a drive is vented's gland; every other is a plate, block, stud,
-    tube or dome, and is passed over by name, none dropped and none taken."""
+    tube or dome, and none is taken. Those passed over are listed by name, but not
+    a name ending in a part's noun (gland_rib_plate, nut_gap_plate): it says what
+    the part is, and a note would be noise (issue #75)."""
     names = detected.models[None].assembly.names
     candidates = {
         name
@@ -133,7 +136,11 @@ def test_every_candidate_name_is_taken_on_its_solid_or_passed_over(detected):
         if name not in detected.ignored and (hint := read_name(name)) and hint.needs_drive
     }
     assert len(candidates) > 15  # a vacuity guard: the bench is full of such names
-    assert {part.name for part in detected.passed_over} == candidates - {"vented_gland_vent"}
+    said = {name for name in candidates if not ends_in_part_noun(name)}
+    assert len(candidates - said) > 5  # and of plates and blocks
+    assert {part.name for part in detected.passed_over} == said - {"vented_gland_vent"}
+    taken = {r.fastener.name for r in detected.results}
+    assert candidates & taken == {"vented_gland_vent"}
     (gland,) = [r for r in detected.results if r.fastener.name == "vented_gland_vent"]
     assert (gland.tool, gland.fastener.confidence) == ("spanner-24", "medium")
 

@@ -52,7 +52,10 @@ describe something else (`button_panel_screw`); a drive word (`torx`, `hexalobul
 (`torx_lid_screw`). A name with ordinary words after its fastener noun
 (`box_gland_vent`, `bolt_hole_cover`) is only a candidate: it is taken when its solid
 shows a drive a tool fits (a hex, a hex socket, a cross), and otherwise passed over,
-which every report lists, so a fastener is never missed without a word.
+which every report lists, so a fastener is never missed without a word. Not a name
+whose last word is a part's own noun (`nut_plate`, `gland_plate`, `screw_boss`,
+`box_wall`): it says what the part is, so it isn't listed, though a solid showing a
+drive is still taken (issue #75).
 
 A hex drawn inside its nut standard's tolerance takes that spanner (an M8 nut at
 12.8: ISO 4032 allows 12.73 to 13), the thread's own standard first where an inch and
@@ -140,6 +143,10 @@ Verdicts per fastener with every blocker named, led by the ones that decided it:
 where a tool swings some of the arc it needs, the parts at each end of its best arc
 (`explain` says `holds, best 15 of 30 deg, between post_a and post_b`), and with hand
 room what stopped the hand along that arc.
+
+A note many fasteners share (twenty nuts drawn undersize alike) is one line, naming
+a few of them and how many more, as a failure's line does; the JSON keeps each
+fastener's own (issue #75).
 
 A failure's line names each part once and three at most, the one hit at the most
 positions first, then how many more (`only holds, and it has no nut; best arc between
@@ -242,7 +249,11 @@ tool's for the size):
 | `nut-driver` | across_flats (outer_radius, handle_radius, handle_length) |
 | `driver` | tip (shaft_radius, shaft_length) |
 
-Anything else in an entry is an error, as elsewhere in the sidecar.
+Anything else in an entry is an error, as elsewhere in the sidecar, and so is a key
+whose short arm is longer than its long one (swapped, most likely). A tool of a kind
+and size no fastener in the model takes, and no rule names, is noted (`tool
+unused-key: no fastener here takes a 7 mm hex key`): written with the wrong size,
+most often. One the kit's own tool beat to it is taken, and not noted.
 
 ## Room for a hand
 
