@@ -11,6 +11,28 @@ No API token is stored anywhere. Renaming the file or the environment breaks
 publishing until the publisher on PyPI is changed to match, which
 `tests/test_release.py` guards.
 
+## The `pypi` environment
+
+Settings, Environments, `pypi`, set up once. Both of its rules carry weight:
+
+- **Required reviewers**: a maintainer approves each deployment. It is the gate
+  before the upload.
+- **Deployment branches and tags**: one rule, pattern `v*`, of ref type **Tag**. A
+  release is a tag, so a rule of type Branch refuses every release (`Tag "v0.1.0" is
+  not allowed to deploy to pypi due to environment protection rules`, as 0.1.0's
+  first run found), and would let a branch named `v...` deploy instead.
+
+To see them:
+
+```console
+$ gh api repos/kmoneil/wrenchroom/environments/pypi --jq '[.protection_rules[].type]'
+$ gh api repos/kmoneil/wrenchroom/environments/pypi/deployment-branch-policies
+```
+
+The second should list one policy, `"name": "v*"` with `"type": "tag"`. If a run was
+refused at the environment, fix the rule, then re-run the failed jobs of the same run
+(Actions, the run, **Re-run failed jobs**): the build is kept, nothing is retagged.
+
 ## Before: a dry run
 
 Actions, **release**, **Run workflow** on `main`. Only the build job runs: the sdist
