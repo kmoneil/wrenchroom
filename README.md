@@ -88,16 +88,16 @@ reach checked in their test suite.
 
 ## Install
 
-wrenchroom needs Python 3.13 or later. It isn't on PyPI yet, so install it from
-GitHub, as a command-line tool with [uv](https://docs.astral.sh/uv/):
+wrenchroom needs Python 3.13 or later. Install it as a command-line tool with
+[uv](https://docs.astral.sh/uv/):
 
 ```console
-$ uv tool install git+https://github.com/kmoneil/wrenchroom
+$ uv tool install wrenchroom
 ```
 
-or into an environment with `pip install git+https://github.com/kmoneil/wrenchroom`.
-It brings build123d (OpenCascade, to read STEP) and manifold3d (the collision
-checks), both as prebuilt wheels.
+or into an environment with `pip install wrenchroom`. It brings build123d
+(OpenCascade, to read STEP) and manifold3d (the collision checks), both as prebuilt
+wheels.
 
 ## Quick start
 
@@ -386,7 +386,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10
-      - run: uv tool install git+https://github.com/kmoneil/wrenchroom
+      - run: uv tool install wrenchroom==0.1.0   # pinned: an Alpha's verdicts may move
       - run: wrenchroom check cad/robot.step --html reach.html --md - >> "$GITHUB_STEP_SUMMARY"
       - if: always()
         uses: actions/upload-artifact@v7
