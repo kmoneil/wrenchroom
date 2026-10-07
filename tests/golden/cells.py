@@ -1455,3 +1455,90 @@ def shop_spanner():
         ("nut", hex_nut(12, 18, 10.8)),
         ("wall", Pos(0, 0, 200) * (Cylinder(110, 400) - Cylinder(100, 401))),
     ]
+
+
+#: An M8 nut's corner circle: 13 across flats, 13 / sqrt(3) from the axis.
+_M8_CORNER = 13 / math.sqrt(3)
+
+
+@cell(
+    "corner_touch",
+    [{"parts": "nut", "kind": "nut", "size": "M8"}],
+    {"nut": {"verdict": "blocked", "tool": "spanner-13", "blocked_by": ["block"]}},
+)
+def corner_touch():
+    """An M8 nut on a stud, a block's face on its corner circle (r 7.51), a corner
+    against it (issue #63). The block is a bar 3 tall at the nut's middle (z 1.9 to
+    4.9), so the corners' sweep must span the hex's height to meet it. Nothing
+    reaches the block; the nut's own corners, turning, do, and whatever grips it
+    can't turn it. The report says that once, rather than each spanner, socket and
+    nut driver blocked by the block.
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 4.5)])),
+        ("stud", Pos(0, 0, 2.5) * Cylinder(4, 25)),
+        ("nut", hex_nut(8, 13, 6.8)),
+        ("block", Pos(_M8_CORNER + 5, 0, 3.4) * Box(10, 30, 3)),
+    ]
+
+
+#: ISO 261 minor diameters, as a tapped hole or a nut's bore is often drawn.
+_M6_MINOR, _M8_MINOR = 4.917, 6.647
+
+
+@cell("drawn_in", ignore=["*drawn_in_*"], timed=False)
+def drawn_in():
+    """Fasteners drawn into parts: clashes in the model, and threads that aren't
+    (issue #63). A clash is not-covered, and the bench's own runs (described and
+    detected) keep none, so they ignore the cell; the edges sidecar, which keeps no
+    ignores, describes every fastener here. It checks no fastener the main run
+    checks, so it stays out of the timed bench.
+
+    Clashes: side_block, 3 tall, reaches 1 mm in at the side_nut's middle, past a
+    corner; top_block sits 1 mm down over the top_nut's whole top; head_block 0.5 mm
+    down over the head_screw's, so no key gets in; fat_stud, r 4.5, runs through
+    the fat_nut's bore drawn at the minor (r 3.32), past a thread's reach (1.25
+    bores, r 4.15); tapped_block holds the tapped_screw's shank in a hole drawn at
+    the minor and is drawn 0.5 into its head, top and side, which alone is told.
+    flange_block reaches 1 mm into a corner of the flange_nut's hex, down to the
+    plate, past its flange (r 11, wider than the hex by more than a third): hex and
+    flange are both told. None is a reach problem: the model is wrong. side_chip,
+    wholly inside the side_nut, stops nothing, and isn't asked.
+
+    No clash: the thread_stud, at M8's nominal r 4 in the thread_nut's minor bore,
+    is its thread; the pair_bolt, its shank r 4.5 in the pair_nut's, is its
+    partner. Both nuts are lidded, a lid on each top: their free face can't be told.
+    """
+    lid = Box(30, 30, 10)
+    tapped = Pos(0, 0, 15) * Box(40, 40, 30) - Pos(0, 0, 22.75) * Cylinder(4.5, 5.5)
+    tapped = tapped - Pos(0, 0, 10) * Cylinder(_M6_MINOR / 2, 20)
+    pair_bolt = hex_prism(13, 5.2) + Pos(0, 0, 13) * Cylinder(4.5, 16)
+    lidded = [(-50, -60), (50, -60), (0, -60)]
+    flange_nut = hex_prism(13, 6.5, 1.5) + Pos(0, 0, 0.75) * Cylinder(11, 1.5) - Cylinder(4, 30)
+    holes = [(-50, 0, 4.5), (50, 0, 4.5), (0, 60, 3.2), (-50, 60, 4.5)]
+    return [
+        ("plate", plate(holes=holes + [(x, y, 4.6) for x, y in lidded])),
+        ("flange_stud", Pos(-50, 60, 2.5) * Cylinder(4, 25)),
+        ("flange_nut", Pos(-50, 60, 0) * flange_nut),
+        ("flange_block", Pos(-50 + _M8_CORNER - 1 + 5, 60, 3) * Box(10, 30, 6)),
+        ("head_screw", Pos(0, 60, 0) * socket_screw()),
+        ("head_block", Pos(0, 60, 6 - 0.5 + 5) * lid),
+        ("side_stud", Pos(-50, 0, 2.5) * Cylinder(4, 25)),
+        ("side_nut", Pos(-50, 0, 0) * hex_nut(8, 13, 6.8)),
+        ("side_block", Pos(-50 + _M8_CORNER - 1 + 5, 0, 3.4) * Box(10, 30, 3)),
+        ("side_chip", Pos(-50 - 5.5, 0, 3.4) * Box(0.8, 0.8, 0.8)),
+        ("top_stud", Pos(50, 0, -2.1) * Cylinder(4, 15.8)),
+        ("top_nut", Pos(50, 0, 0) * hex_nut(8, 13, 6.8)),
+        ("top_block", Pos(50, 0, 6.8 - 1 + 5) * lid),
+        ("tapped_block", Pos(50, 60, 0) * tapped),
+        ("tapped_screw", Pos(50, 60, 20) * socket_screw()),
+        ("thread_stud", Pos(-50, -60, -1.6) * Cylinder(4, 16.8)),
+        ("thread_nut", Pos(-50, -60, 0) * hex_nut(_M8_MINOR, 13, 6.8)),
+        ("thread_lid", Pos(-50, -60, 6.8 + 5) * lid),
+        ("fat_stud", Pos(50, -60, -1.6) * Cylinder(4.5, 16.8)),
+        ("fat_nut", Pos(50, -60, 0) * hex_nut(_M8_MINOR, 13, 6.8)),
+        ("fat_lid", Pos(50, -60, 6.8 + 5) * lid),
+        ("pair_bolt", Pos(0, -60, -15.2) * pair_bolt),
+        ("pair_nut", Pos(0, -60, 0) * hex_nut(_M8_MINOR, 13, 6.8)),
+        ("pair_lid", Pos(0, -60, 6.8 + 5) * lid),
+    ]

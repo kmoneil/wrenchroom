@@ -32,7 +32,16 @@ to M5):
   lengths are makers', the longest of a few makers' standard series at each size),
   sockets on a ratchet with stock extensions, Phillips and slotted drivers. A tool on a hex's
   flats needs the room the hex's own corners sweep as it turns, and a socket the
-  room for its wall round the hex. A tool grips the hex where its flats are, not the
+  room for its wall round the hex. A part in that first room stops the hex whatever
+  grips it, which is said once, before any tool is tried (`the nut's corners hit
+  block as it turns`). A fastener nothing turns, or whose free face can't be told,
+  is measured against the parts that stopped it: drawn into one, it is a clash
+  in the model, not covered, with the shared volume (`drawn into lid (96.1 mm^3):
+  fix the model`). Only its hex and its widest region are measured, a nut's body
+  and flange, a head, a gland's hex and dome: a shank or stub in a tapped hole, or
+  a bolt drawn at its nominal diameter in a nut bored at its minor, is a thread,
+  and its own bolt no clash. A clash that stops nothing changes no verdict, and
+  isn't looked for. A tool grips the hex where its flats are, not the
   part's widest region (a flange, or a gland's dome), and a ring, socket or nut
   driver has to get on over whatever the part has past its hex: a dome wider than
   their bore leaves only the open end, and the report says so. Verdicts per fastener

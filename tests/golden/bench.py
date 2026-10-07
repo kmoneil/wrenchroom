@@ -51,12 +51,13 @@ SLOTS = len(CELLS) + 1
 #: #48's plain_pin, stepped_pin, minor_pin and odd_head (two), 77 with #47's
 #: snug_dome, wide_dome, dome_rib, sunk_cap and flange_nut, 82 with #49's reach_13
 #: and big_tube, 84 with #51's ball_button and ball_shoulder, 85 with #52's post_ring,
-#: 87 with short_key and shop_spanner (a sidecar's own tools, spec 5.3).
+#: 87 with short_key and shop_spanner (a sidecar's own tools, spec 5.3), 88 with
+#: #63's corner_touch (drawn_in's two clashes are the edges sidecar's alone).
 FINAL_COUNTS = {
-    "fasteners": 87,
+    "fasteners": 88,
     "turns": 67,
     "held": 3,
-    "blocked": 16,
+    "blocked": 17,
     "stuck": 1,
     "not_covered": 0,
 }
@@ -199,6 +200,11 @@ def edges_sidecar():
                 "size": "M6",
                 "mates": ["gone_washer_*"],
             },
+            # drawn_in's nuts and screw, which the bench's own sidecar ignores: each is
+            # drawn into a block, a clash (issue #63), and a clash is not-covered.
+            {"parts": "drawn_in_*_nut", "kind": "nut", "size": "M8"},
+            {"parts": "drawn_in_*_screw", "kind": "screw", "head": "socket", "size": "M6"},
+            {"parts": "drawn_in_pair_bolt", "kind": "screw", "head": "hex", "size": "M8"},
         ],
         "ignore": ["*_hose"],
     }

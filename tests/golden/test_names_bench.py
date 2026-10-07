@@ -54,6 +54,7 @@ def test_the_bench_names_read_as_its_sidecar_says():
     # Issue #29: a nut deep in a well reads as a well nut by its name alone; its
     # solid's hex settles it (test_inserts.py, and the detected bench).
     assert by_word == ["nut_deep_well_nut"]
-    # The sidecar's fasteners (FINAL_COUNTS less the torx screw only detection finds)
-    # and the edges file's torx screw.
-    assert found_count == FINAL_COUNTS["fasteners"]
+    # The sidecar's fasteners (FINAL_COUNTS less the torx screw only detection finds),
+    # the edges file's torx screw, and drawn_in's six nuts, two screws and bolt,
+    # which the sidecar ignores.
+    assert found_count == FINAL_COUNTS["fasteners"] + 9

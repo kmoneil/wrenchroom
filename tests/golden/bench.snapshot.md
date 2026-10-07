@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**87 fasteners: 67 turn, 3 held, 16 blocked, 1 stuck, 0 not covered**
+**88 fasteners: 67 turn, 3 held, 17 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -33,7 +33,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 26 parts
 | M6 socket screw | `hex-key-5` | 12 | 4 of 12 fail |
 | M6 torx screw | `torx-key-T30` | 1 | all pass (short leg in) |
 | M8 hex screw | `spanner-13` | 8 | 1 of 8 fail |
-| M8 nut | `spanner-13` | 13 | 3 of 13 fail |
+| M8 nut | `spanner-13` | 14 | 4 of 14 fail |
 | M8 socket screw | `stubby-key-6` | 1 | all pass (short leg in) |
 
 #### Failures
@@ -43,6 +43,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 26 parts
 | `ball_button_screw` | `hex-key-4` | blocked | `ball_button_ceiling` |
 | `big_tube_gland` | `spanner-36` | blocked | `big_tube_wall` |
 | `channel_nut` | `spanner-13` | blocked | `channel_left`, `channel_right` |
+| `corner_touch_nut` | `spanner-13` | blocked | `the nut's corners hit corner_touch_block as it turns` |
 | `dome_rib_gland` | `spanner-15` | blocked | `only holds, and it has no nut; best arc bounded by dome_rib_rib` |
 | `flat_deep_screw` | `hex-key-2.5` | blocked | `flat_deep_under`, `flat_deep_lid` |
 | `gland_rib_gland` | `spanner-24` | blocked | `only holds, and it has no nut; best arc bounded by gland_rib_rib` |

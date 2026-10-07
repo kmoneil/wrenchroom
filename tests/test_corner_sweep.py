@@ -87,13 +87,18 @@ def test_a_low_lip_against_a_flat_stops_the_hex_whatever_grips_it(engine):
     # A short lip 0.5 off a flat (y 7.0 to 7.6, x -1.5 to 1.5), 0.6 tall: at most
     # 7.75 from the axis, inside every tool's bore (7.8) and under the ring, which
     # sits on the hex's middle, but inside the corners' 7.5 too. The hex can't turn
-    # past it, so no tool turns it: every attempt meets it, by the corner sweep alone.
+    # past it, so no tool turns it, which the corner sweep, tried alone first, says
+    # once (issue #63), rather than every tool blocked.
     lip = Pos(0, 7.3, 0.3) * Box(3.0, 0.6, 0.6)
     result = run(beside(lip), engine=engine)
     assert result.verdict is Verdict.BLOCKED
-    tools = {a.tool for a in result.attempts}
-    assert tools == {"spanner-13", "socket-13", "nut-driver-13"}
-    assert all(a.blockers == ("side",) for a in result.attempts)
+    assert result.reason == "the nut's corners hit side as it turns"
+    (attempt,) = result.attempts
+    assert (attempt.tool, attempt.way, attempt.blockers) == (
+        "spanner-13",
+        "its corners, turning",
+        ("side",),
+    )
 
 
 def test_a_lip_past_the_corners_lets_the_hex_turn():
@@ -119,6 +124,12 @@ def test_a_lip_past_the_corners_lets_the_hex_turn():
 )
 def test_a_rib_no_taller_than_the_nut_and_the_socket_s_wall(engine, face_x, socket_turns):
     result = run(beside(rib(face_x, 4.0)), engine=engine)
+    if face_x < CORNER:  # inside the corners: no tool is tried (issue #63)
+        assert (result.verdict, result.reason) == (
+            Verdict.BLOCKED,
+            "the nut's corners hit side as it turns",
+        )
+        return
     socket = [a for a in result.attempts if a.tool == "socket-13"]
     assert socket
     assert any(a.turns for a in socket) is socket_turns

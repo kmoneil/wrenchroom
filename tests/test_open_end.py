@@ -120,13 +120,17 @@ def test_beside_a_neighbour_the_open_end_turns_where_the_ring_cannot(engine):
 
 def test_a_neighbour_inside_the_corners_sweep_stops_the_hex_turning_at_all(engine):
     # 15 apart: the neighbour's corner is 7.5 from the axis, inside the space the
-    # hex's corners sweep (to 7.8): nothing can turn it, and the open end says so
-    # at once, before any position.
+    # hex's corners sweep (to 7.8): nothing can turn it, which the corner sweep,
+    # tried alone before any tool, says once (issue #63).
     result = run(nut_pair(15.0), engine=engine)
     assert result.verdict is Verdict.BLOCKED
-    open_ends = [a for a in result.attempts if a.way.startswith("open end")]
-    assert [len(a.probes) for a in open_ends] == [1, 1]  # the corners' sweep alone
-    assert all(a.blockers == ("b_nut",) for a in open_ends)
+    assert result.reason == "the nut's corners hit b_nut as it turns"
+    (attempt,) = result.attempts
+    assert (attempt.way, len(attempt.probes), attempt.blockers) == (
+        "its corners, turning",
+        1,
+        ("b_nut",),
+    )
 
 
 def test_with_room_all_round_the_ring_turns_and_the_open_end_is_never_tried():
