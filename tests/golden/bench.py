@@ -205,9 +205,36 @@ def edges_sidecar():
             {"parts": "drawn_in_*_nut", "kind": "nut", "size": "M8"},
             {"parts": "drawn_in_*_screw", "kind": "screw", "head": "socket", "size": "M6"},
             {"parts": "drawn_in_pair_bolt", "kind": "screw", "head": "hex", "size": "M8"},
+            # wrong_tool's fasteners, each with a tool its rule names (issue #72).
+            *(_wrong_tool(role, rule) for role, rule in WRONG_TOOL.items()),
         ],
         "ignore": ["*_hose"],
+        # wrong_tool's custom_nut names it; no bench fastener takes a 23 mm spanner,
+        # so it changes nothing else in the edges run.
+        "tools": [
+            {"name": "shop-spanner-23", "type": "spanner", "across_flats": 23, "length": 200}
+        ],
     }
+
+
+#: wrong_tool's fasteners: each rule, and the tool it names.
+_M8_NUT = {"kind": "nut", "size": "M8"}
+_M6_SCREW = {"kind": "screw", "size": "M6"}
+WRONG_TOOL = {
+    "size_nut": {**_M8_NUT, "tool": "spanner-10"},
+    "kind_nut": {**_M8_NUT, "tool": "hex-key-5"},
+    "custom_nut": {**_M8_NUT, "tool": "shop-spanner-23"},
+    "unknown_nut": {**_M8_NUT, "tool": "spanner-99"},
+    "drawn_nut": {"kind": "nut", "size": "M10", "tool": "spanner-15"},
+    "button_screw": {**_M6_SCREW, "head": "button", "tool": "spanner-10"},
+    "slot_screw": {**_M6_SCREW, "head": "socket", "tool": "driver-slotted"},
+    "torx_screw": {**_M6_SCREW, "head": "torx", "tool": "torx-key-T99"},
+    "phillips_screw": {"kind": "screw", "head": "phillips", "size": "M4", "tool": "driver-ph1"},
+}
+
+
+def _wrong_tool(role, rule):
+    return {"parts": f"wrong_tool_{role}", **rule}
 
 
 def write(directory, copies=1, which="all"):

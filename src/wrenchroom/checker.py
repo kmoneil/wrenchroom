@@ -32,6 +32,7 @@ from build123d import GeomType, Plane, Solid
 from wrenchroom.assembly import Assembly, Part
 from wrenchroom.config import Config, ConfigError, is_mate
 from wrenchroom.detect import find
+from wrenchroom.detect.geometry import read_shape
 from wrenchroom.engine import (
     DEFAULT_ENGINE,
     ENGINES,
@@ -92,7 +93,7 @@ from wrenchroom.tools.sweep import (
 from wrenchroom.tools.torx_keys import ISO_10664
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
 
     from build123d import Axis, Face, Shape
 
@@ -1072,6 +1073,9 @@ class _Geometry:
     cap_radius: float = 0.0
     #: The part's own name, for an attempt its own body stops.
     part_name: str = ""
+    #: The drive's across-flats as the solid shows it (a hex, a hex socket), read only
+    #: where a rule names a tool, which may fit it (issue #72); None elsewhere.
+    drawn_af: float | None = None
 
     @property
     def band_height(self) -> float:
@@ -1097,8 +1101,21 @@ def _orient(frame: _Frame, fastener: Fastener, scene: Scene) -> tuple[Mount, _Ge
             bore_radius=frame.bore,
             cap_radius=max(past, default=0.0),
             part_name=frame.part.name,
+            drawn_af=_drawn_af(frame, fastener),
         ),
     )
+
+
+def _drawn_af(frame: _Frame, fastener: Fastener) -> float | None:
+    """The drive the solid shows, for a rule's forced tool to be held to (issue #72).
+
+    Read only for a fastener whose rule names a tool, since a rule otherwise says
+    what its part is outright: reading every solid again would cost a check of a
+    model with many described fasteners for nothing.
+    """
+    if fastener.tool is None or fastener.drive_af is not None:
+        return None
+    return read_shape(frame.part.shape, fastener.kind, fastener.head).drive_af
 
 
 def _is_flipped(frame: _Frame, fastener: Fastener, scene: Scene) -> bool:
@@ -1393,6 +1410,17 @@ def _drive_notes(fastener: Fastener) -> tuple[str, ...]:
 def _keyed_attempts(
     fastener: Fastener, mount: Mount, scene: Scene, tools: _Tools
 ) -> Iterator[Attempt]:
+    af = _key_af(fastener, tools)
+    key = HEX_KEYS.get(af)
+    ball = BALL_END_KEYS.get(af) if key and fastener.head in _BALL_END_HEADS else None
+    customs = tools.custom.hex_keys(af)
+    wanted = [k.name for k in (key, ball) if k is not None] + [c.name for c in customs]
+    held = tools.need(*wanted)
+    return _keys(held, key, ball, customs, mount, scene, tools)
+
+
+def _key_af(fastener: Fastener, tools: _Tools) -> float:
+    """A hex socket's across-flats as a key size: given or measured, else its head's."""
     af = _given_af(fastener, (*HEX_KEYS, *tools.custom.key_sizes()), "hex-key")
     if af is None:
         if fastener.head is None or fastener.size is None:
@@ -1402,12 +1430,7 @@ def _keyed_attempts(
         if af is None or (af not in HEX_KEYS and not tools.custom.hex_keys(af)):
             head = fastener.head.value
             raise NotCovered(f"no standard key for a {size.designation} {head} head")
-    key = HEX_KEYS.get(af)
-    ball = BALL_END_KEYS.get(af) if key and fastener.head in _BALL_END_HEADS else None
-    customs = tools.custom.hex_keys(af)
-    wanted = [k.name for k in (key, ball) if k is not None] + [c.name for c in customs]
-    held = tools.need(*wanted)
-    return _keys(held, key, ball, customs, mount, scene, tools)
+    return af
 
 
 def _keys(
@@ -1472,12 +1495,7 @@ def _hex_flats_attempts(
     the code that turns it into a verdict (an M3.5 nut, which has no ISO 4032
     row, used to crash the whole check that way).
     """
-    af = _given_af(fastener, (*FLATS, *tools.custom.flat_sizes()), "spanner", bands=True)
-    if af is None:
-        size = _known_size(fastener)
-        af = spanner_af(size, head=fastener.kind is Kind.SCREW)
-        if af is None:
-            raise NotCovered(f"no across-flats for {size.designation}")
+    af = _flats_af(fastener, tools)
     if geometry.band_height <= _MIN_BAND:
         raise NotCovered("could not measure the hex's height")
     wanted = [f"spanner-{size_name(af)}"]
@@ -1488,6 +1506,17 @@ def _hex_flats_attempts(
     wanted += [custom.name for custom in _custom_flats(af, fastener.socket_allowed, tools)]
     held = tools.need(*wanted)
     return _hex_flats_tools(held, mount, af, geometry, scene, tools)
+
+
+def _flats_af(fastener: Fastener, tools: _Tools) -> float:
+    """The hex's across-flats as a spanner size: given or measured, else its thread's."""
+    af = _given_af(fastener, (*FLATS, *tools.custom.flat_sizes()), "spanner", bands=True)
+    if af is None:
+        size = _known_size(fastener)
+        af = spanner_af(size, head=fastener.kind is Kind.SCREW)
+        if af is None:
+            raise NotCovered(f"no across-flats for {size.designation}")
+    return af
 
 
 def _custom_flats(af: float, socket_allowed: bool, tools: _Tools) -> list[CustomTool]:
@@ -1628,6 +1657,9 @@ def _forced_attempts(
     kit says which tools there are.
     """
     name = fastener.tool or ""
+    misfit = _forced_misfit(fastener, name, tools, geometry.drawn_af)
+    if misfit is not None:
+        raise NotCovered(misfit)
     custom = tools.custom.by_name.get(name)
     if custom is not None:
         return _forced_custom(custom, mount, geometry, scene, tools)
@@ -1636,6 +1668,162 @@ def _forced_attempts(
         if attempts is not None:
             return attempts
     raise NotCovered(f"unknown tool {name!r}")
+
+
+#: A head's drive (flats, key, torx, phillips, slotted) and what it's called in a reason.
+_HEAD_DRIVES = {
+    Head.HEX: ("flats", "hex head"),
+    Head.SOCKET: ("key", "socket head"),
+    Head.BUTTON: ("key", "button head"),
+    Head.FLAT: ("key", "countersunk head"),
+    Head.SHOULDER: ("key", "shoulder screw's head"),
+    Head.TORX: ("torx", "Torx head"),
+    Head.PHILLIPS: ("phillips", "Phillips head"),
+    Head.SLOTTED: ("slotted", "slotted head"),
+}
+
+#: The tool families a rule's ``tool:`` names, by the drive each fits: a hex's flats,
+#: a hex socket, a Torx recess; and what each is called in a reason.
+_TOOL_FAMILIES = {
+    "spanner": ("flats", "a spanner"),
+    "socket": ("flats", "a socket"),
+    "nut-driver": ("flats", "a nut driver"),
+    "hex-key": ("key", "a hex key"),
+    "torx-key": ("torx", "a Torx key"),
+}
+
+#: A drive, or what a tool fits: its kind (flats, key, torx, phillips, slotted), its
+#: size (across flats in mm, a Torx or Phillips size; None when not known), its words.
+_Drive = tuple[str, float | str | None, str]
+
+
+def _forced_misfit(
+    fastener: Fastener, name: str, tools: _Tools, drawn_af: float | None
+) -> str | None:
+    """Why a rule's ``tool:`` can't drive its fastener, if it can't (issue #72).
+
+    The sidecar picks which tool, but it must be one the fastener takes: the kind
+    its drive takes, at a size it takes, either the one the unforced check would
+    choose (a given hex, else the thread's standard one) or the hex the solid shows.
+    Unchecked, a typo passed (spanner-10 on a 13 mm hex) and a key was swept into a
+    nut's bore. A tool the tables don't hold is left to say so itself, and where no
+    size is known only the kind is held to.
+    """
+    tool, drive = _tool_drive(name, tools), _fastener_drive(fastener, tools)
+    if tool is None or drive is None:
+        return None
+    (tool_kind, tool_size, called), (kind, size, what) = tool, drive
+    if tool_kind != kind:
+        return f"its tool: {name} is {called}, which doesn't fit {what}"
+    drawn = _drawn_size(kind, fastener, tools, drawn_af)
+    takes = [s for s in (size, drawn) if s is not None]
+    if tool_size is None or not takes or any(_same_size(tool_size, s) for s in takes):
+        return None
+    if isinstance(tool_size, float):
+        mine, theirs = size_name(tool_size), size_name(float(takes[0]))
+        also = f", its hex drawn {size_name(drawn)}" if isinstance(drawn, float) and size else ""
+        return (
+            f"its tool: {name} is {mine} across flats, but {what} takes {theirs}{also}; "
+            f"give its rule across_flats: {mine} if its hex really is {mine}"
+        )
+    return f"its tool: {name} is {str(tool_size).upper()}, but {what} takes {str(takes[0]).upper()}"
+
+
+def _drawn_size(
+    kind: str, fastener: Fastener, tools: _Tools, drawn_af: float | None
+) -> float | None:
+    """The tool size the solid's own hex resolves to, as an unforced check would take it."""
+    if drawn_af is None or kind not in {"flats", "key"}:
+        return None
+    drawn = replace(fastener, drive_af=drawn_af)
+    size = _quietly(_flats_af if kind == "flats" else _key_af, drawn, tools)
+    return None if size is None or size == _drive_size(kind, fastener, tools) else size
+
+
+def _same_size(a: float | str, b: float | str) -> bool:
+    if isinstance(a, float) and isinstance(b, float):
+        return math.isclose(a, b, abs_tol=0.01)
+    return str(a).lower() == str(b).lower()
+
+
+def _tool_drive(name: str, tools: _Tools) -> _Drive | None:
+    """What a tool fits, by its name or the sidecar's own; None for no tool known."""
+    custom = tools.custom.by_name.get(name)
+    if custom is not None:
+        return _custom_drive(custom)
+    family, _, size_text = name.rpartition("-")
+    if family == "driver":
+        return _tip_drive(size_text) if size_text in SHAFT_RADIUS else None
+    if family not in _TOOL_FAMILIES:
+        return None
+    kind, called = _TOOL_FAMILIES[family]
+    if kind == "torx":
+        return (kind, size_text, called) if size_text in ISO_10664 else None
+    try:
+        af = size_mm(size_text)
+    except ValueError:
+        return None  # not a size: the forced tool is reported unknown
+    tables = {"hex-key": HEX_KEYS, "nut-driver": NUT_DRIVERS}.get(family, FLATS)
+    return (kind, af, called) if af in tables else None  # else the table says so
+
+
+def _tip_drive(tip: str) -> _Drive:
+    """What a driver of a tip fits: a slot, or a Phillips recess of its number."""
+    if tip == "slotted":
+        return "slotted", None, "a slotted driver"
+    return "phillips", tip, "a Phillips driver"
+
+
+def _custom_drive(custom: CustomTool) -> _Drive:
+    """What a sidecar's own tool fits."""
+    if isinstance(custom, CustomKey):
+        torx = custom.kind == "torx-key"
+        return ("torx", custom.size, "a Torx key") if torx else ("key", custom.af, "a hex key")
+    if isinstance(custom, CustomSpanner):
+        return "flats", custom.spanner.af, "a spanner"
+    if isinstance(custom, CustomSocket):
+        return "flats", custom.socket.af, "a socket"
+    if isinstance(custom, CustomDriver):
+        return _tip_drive(custom.tip)
+    return "flats", custom.driver.af, "a nut driver"
+
+
+def _fastener_drive(fastener: Fastener, tools: _Tools) -> _Drive | None:
+    """What drives a fastener, and at what size if known; None when its head isn't."""
+    if fastener.kind is Kind.NUT:
+        kind, what = "flats", "nut"
+    elif fastener.head in _HEAD_DRIVES:
+        kind, what = _HEAD_DRIVES[fastener.head]
+    else:
+        return None
+    return kind, _drive_size(kind, fastener, tools), _called(f"the {what}", fastener.size)
+
+
+def _drive_size(kind: str, fastener: Fastener, tools: _Tools) -> float | str | None:
+    """The size the unforced check would choose for a drive; None where it couldn't."""
+    known = fastener.size.designation if fastener.size is not None else ""
+    if kind == "flats":
+        return _quietly(_flats_af, fastener, tools)
+    if kind == "key":
+        return _quietly(_key_af, fastener, tools)
+    if kind == "torx":
+        return TORX_SIZE.get(known)
+    number = PHILLIPS_NUMBER.get(known) if kind == "phillips" else None
+    return None if number is None else f"ph{number}"
+
+
+def _called(what: str, size: Size | None) -> str:
+    return what if size is None else f"{what} ({size.designation})"
+
+
+def _quietly(
+    size_of: Callable[[Fastener, _Tools], float], fastener: Fastener, tools: _Tools
+) -> float | None:
+    """A drive's size, or None where the unforced check couldn't say one."""
+    try:
+        return size_of(fastener, tools)
+    except NotCovered:
+        return None
 
 
 def _forced_custom(

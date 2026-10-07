@@ -294,7 +294,7 @@ fasteners:
     kind: screw
     head: hex
     size: M8
-    tool: spanner-13             # try only this tool
+    tool: spanner-13             # try only this tool, which must fit it
     axis: -z                     # the way the tool comes from: +x ... -z, or [x, y, z]
   - parts: "frame_nut_*"
     kind: nut

@@ -211,6 +211,39 @@ def test_a_nut_drawn_into_a_part_is_a_clash(edges_report):
     assert by_name["corner_touch_nut"].verdict.value == "blocked"
 
 
+def test_a_rule_s_tool_that_can_t_drive_its_fastener_is_not_covered(edges_report):
+    """Issue #72: wrong_tool's fasteners, which only the edges sidecar keeps. Each
+    misfit is not covered and nothing is swept; a tool no table holds says so; the
+    nut drawn 15 under an M10 rule takes the spanner-15 its rule names."""
+    by_name = {r.fastener.name: r for r in edges_report.results}
+    hint = "; give its rule across_flats: {0} if its hex really is {0}"
+    misfits = {
+        "size_nut": "its tool: spanner-10 is 10 across flats, but the nut (M8) takes 13"
+        + hint.format(10),
+        "kind_nut": "its tool: hex-key-5 is a hex key, which doesn't fit the nut (M8)",
+        "custom_nut": "its tool: shop-spanner-23 is 23 across flats, but the nut (M8) takes 13"
+        + hint.format(23),
+        "unknown_nut": "needs spanner-99, which kit full does not hold; no kit has it",
+        "button_screw": (
+            "its tool: spanner-10 is a spanner, which doesn't fit the button head (M6)"
+        ),
+        "slot_screw": (
+            "its tool: driver-slotted is a slotted driver, which doesn't fit the socket head (M6)"
+        ),
+        "torx_screw": "no Torx key T99: the tables hold T10 to T40",
+        "phillips_screw": "its tool: driver-ph1 is PH1, but the Phillips head (M4) takes PH2",
+    }
+    for role, reason in misfits.items():
+        result = by_name[f"wrong_tool_{role}"]
+        assert (result.verdict.value, result.attempts, result.reason) == (
+            "not-covered",
+            (),
+            reason,
+        ), role
+    drawn = by_name["wrong_tool_drawn_nut"]
+    assert (drawn.verdict.value, drawn.tool) == ("turns", "spanner-15")
+
+
 def test_a_nut_its_corners_cannot_turn_says_so_once(bench_report, bench_json):
     """Issue #63: corner_touch's nut, stopped by its own corners, not by a tool. One
     attempt, the corners' sweep, and one reason; not every tool blocked by the block.

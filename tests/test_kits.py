@@ -170,8 +170,9 @@ def test_a_key_past_the_home_kit_is_not_covered():
 
 
 def test_a_forced_tool_must_be_in_the_kit():
-    rule = {"parts": "bolt", **M6_SOCKET, "tool": "hex-key-12"}
-    (result,) = run(screw_facing_wall(40.0), rule).results
+    # The M14's own key, past metric-home's 10 (a key that doesn't fit is #72's).
+    rule = {"parts": "bolt", "kind": "screw", "head": "socket", "size": "M14"}
+    (result,) = run(_m14_socket_screw(), {**rule, "tool": "hex-key-12"}).results
     assert result.verdict is Verdict.NOT_COVERED
     assert result.reason == "needs hex-key-12, which kit metric-home does not hold (full has it)"
     forced_in_kit = {"parts": "bolt", **M6_SOCKET, "tool": "hex-key-5"}
@@ -184,7 +185,10 @@ def test_a_forced_tool_must_be_in_the_kit():
     [("spanner-10", True), ("socket-10", True), ("spanner-24", False), ("socket-24", False)],
 )
 def test_every_forced_family_asks_the_kit(tool, allowed):
-    rule = {"parts": "nut", "kind": "nut", "size": "M6", "tool": tool}
+    # across_flats: says the hex is the tool's size, so the tool fits (issue #72)
+    # and only the kit is in question.
+    af = float(tool.rpartition("-")[2])
+    rule = {"parts": "nut", "kind": "nut", "size": "M6", "across_flats": af, "tool": tool}
     (result,) = run(nut_on_plate(), rule).results
     if allowed:
         assert result.verdict is Verdict.TURNS
