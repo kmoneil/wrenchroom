@@ -199,9 +199,10 @@ def test_where_two_bands_hold_it_and_nothing_decides_it_is_not_covered_saying_so
     )
 
 
-def test_a_hex_in_one_band_takes_it_whatever_its_thread():
-    # 12.6 is under M8's band, and inside 1/2 in's (12.42 to 12.70): that spanner fits.
-    rule = {"parts": "nut", "kind": "nut", "size": "M8", "across_flats": 12.6}
+def test_a_hex_in_one_band_takes_it_when_nothing_gives_its_thread():
+    # 12.6 is under M8's band, and inside 1/2 in's (12.42 to 12.70): that spanner
+    # fits. With a thread, its own system's spanner comes first (test_undersize.py).
+    rule = {"parts": "nut", "kind": "nut", "across_flats": 12.6}
     assert run(nut_on_plate(12.6), rule).tool == "spanner-1/2in"
 
 
@@ -209,18 +210,18 @@ def test_a_hex_in_one_band_takes_it_whatever_its_thread():
     ("af", "reason"),
     [
         (
-            12.4,  # under 1/2 in's band, which starts at 12.42
-            "12.40 mm across flats is no tool's size: the nearest, spanner-1/2in, is 0.30 "
-            "larger; set across_flats: or tool: in the sidecar",
+            12.4,  # 0.33 under M8's band: further under than a model drawn small
+            "12.40 mm across flats is no tool's size: the smallest that fits, spanner-13, "
+            "is 0.60 larger; set across_flats: or tool: in the sidecar",
         ),
         (
             13.3,  # over 13: no band reaches above its size
-            "13.30 mm across flats is no tool's size: the nearest, spanner-13, is 0.30 "
-            "smaller; set across_flats: or tool: in the sidecar",
+            "13.30 mm across flats is no tool's size: the smallest that fits, spanner-14, "
+            "is 0.70 larger; set across_flats: or tool: in the sidecar",
         ),
     ],
 )
-def test_outside_every_band_the_reason_names_the_nearest(af, reason):
+def test_outside_every_band_the_reason_names_the_smallest_that_fits(af, reason):
     rule = {"parts": "nut", "kind": "nut", "size": "M8", "across_flats": af}
     result = run(nut_on_plate(af), rule)
     assert result.verdict is Verdict.NOT_COVERED
@@ -240,7 +241,7 @@ def test_outside_every_band_the_reason_names_the_nearest(af, reason):
         (7.94, "M5", "spanner-8"),
         (12.73, None, "spanner-1/2in"),
         (12.73, "M8", "spanner-13"),
-        (19.05, "M12", "spanner-3/4in"),  # over DIN's 19 for M12, so not in its band
+        (19.05, "M12", "spanner-3/4in"),  # over DIN's 19, no metric size: exactly 3/4 in
     ],
 )
 def test_the_thread_s_own_size_first_then_an_exact_size(af, size, tool):
@@ -264,8 +265,8 @@ def test_a_hex_key_has_no_band():
     result = run(assembly, rule)
     assert result.verdict is Verdict.NOT_COVERED
     assert result.reason == (
-        "7.85 mm across flats is no tool's size: the nearest, hex-key-5/16in, is 0.09 "
-        "larger; set across_flats: or tool: in the sidecar"
+        "7.85 mm across flats is no tool's size: the largest that fits, hex-key-6, is 1.85 "
+        "smaller; set across_flats: or tool: in the sidecar"
     )
 
 
@@ -274,12 +275,14 @@ def test_a_hex_key_has_no_band():
 # ---------------------------------------------------------------------------
 
 
-def test_a_hex_in_its_band_settles_the_size_when_the_bore_cannot():
-    # The bore drawn at 6.8, near M8's minor diameter, is no standard size.
+def test_a_hex_in_its_band_guesses_the_size_when_the_bore_cannot():
+    # The bore drawn at 6.8, near M8's minor diameter, is no standard size. The
+    # band alone says M8: a guess, which a name or the nut's bolt outranks (#50).
     nut = hex_prism(12.8, 6.8) - Cylinder(3.4, 30)
     reading = read_shape(nut, Kind.NUT)
     assert reading.drive_af == pytest.approx(12.8)
-    assert (reading.size.designation, reading.size_from_drive) == ("M8", True)
+    assert reading.size.designation == "M8"
+    assert (reading.size_from_drive, reading.size_from_band) == (False, True)
 
 
 def test_a_key_pocket_has_no_band_in_detection_either():

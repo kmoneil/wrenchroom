@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 61,
-  "turns": 46,
+  "fasteners": 68,
+  "turns": 53,
   "held": 3,
   "blocked": 11,
   "stuck": 1,
@@ -153,7 +153,66 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "band_agrees_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    3000.0,
+    7000.0,
+    -15.3
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "band_agrees_nut",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "band_agrees_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    7000.0,
+    6.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "band_agrees_bolt",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "big_gland_gland",
@@ -181,7 +240,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "carriage_boxed_bolt",
@@ -209,7 +269,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "carriage_boxed_nut",
@@ -237,7 +298,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "channel_nut",
@@ -268,7 +330,8 @@
    ],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "flat_deep_screw",
@@ -299,7 +362,8 @@
    ],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "flat_graze_screw",
@@ -329,7 +393,8 @@
    "reason": null,
    "grazes": [
     "flat_graze_under"
-   ]
+   ],
+   "notes": []
   },
   {
    "name": "free_screw_screw",
@@ -357,7 +422,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "gland_rib_gland",
@@ -387,7 +453,8 @@
    ],
    "stuck_on": [],
    "reason": "only holds, and it has no nut",
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "glands_apart_a_gland",
@@ -417,7 +484,8 @@
    ],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "glands_apart_b_gland",
@@ -445,7 +513,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "glands_close_a_gland",
@@ -475,7 +544,8 @@
    ],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "glands_close_b_gland",
@@ -503,7 +573,66 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "guessed_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    2000.0,
+    7000.0,
+    -15.3
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "guessed_nut",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "guessed_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    7000.0,
+    6.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "guessed_bolt",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "hand_tight_bolt",
@@ -531,7 +660,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "hand_tight_nut",
@@ -559,7 +689,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "hex_band_bolt",
@@ -587,7 +718,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "hex_band_nut",
@@ -615,7 +747,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "hex_side_wall_bolt",
@@ -645,7 +778,8 @@
    ],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "inch_pair_nut",
@@ -673,7 +807,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "inch_pair_screw",
@@ -701,7 +836,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "key_long_leg_screw",
@@ -729,7 +865,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "key_open_screw",
@@ -757,7 +894,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "key_wall_far_screw",
@@ -785,7 +923,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "key_wall_near_screw",
@@ -815,7 +954,8 @@
    ],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "low_head_screw",
@@ -843,7 +983,37 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "named_size_m8_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4000.0,
+    7000.0,
+    6.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "nut_deep_well_bolt",
@@ -871,7 +1041,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "nut_deep_well_nut",
@@ -899,7 +1070,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "nut_gap_nut",
@@ -927,7 +1099,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "nut_stubby_box_bolt",
@@ -955,7 +1128,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "nut_stubby_box_nut",
@@ -983,7 +1157,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "nut_tube_bolt",
@@ -1011,7 +1186,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "nut_tube_nut",
@@ -1039,7 +1215,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "nyloc_two_bodies_bolt",
@@ -1067,7 +1244,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "nyloc_two_bodies_nut",
@@ -1095,7 +1273,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "one_part_lock_bolt",
@@ -1123,7 +1302,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "one_part_lock_nut",
@@ -1151,7 +1331,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "pair_both_hold_bolt",
@@ -1181,7 +1362,8 @@
    ],
    "stuck_on": [],
    "reason": "only holds, and its partner pair_both_hold_nut does not turn",
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "pair_both_hold_nut",
@@ -1211,7 +1393,8 @@
    ],
    "stuck_on": [],
    "reason": "only holds, and its partner pair_both_hold_bolt does not turn",
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "pair_nut_held_bolt",
@@ -1239,7 +1422,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "pair_nut_held_nut",
@@ -1269,7 +1453,8 @@
    ],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "phillips_open_screw",
@@ -1297,7 +1482,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "phillips_shelf_screw",
@@ -1327,7 +1513,8 @@
    ],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "pivot_shoulder_screw",
@@ -1355,7 +1542,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "rubber_screw",
@@ -1383,7 +1571,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "rubber_well_nut",
@@ -1407,7 +1596,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "state_lever_screw",
@@ -1435,7 +1625,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "state_lid_screw",
@@ -1463,7 +1654,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "stuck_screw_screw",
@@ -1493,7 +1685,8 @@
     "stuck_screw_ceiling"
    ],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "tail_in_socket_bolt",
@@ -1521,7 +1714,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "tail_in_socket_nut",
@@ -1549,7 +1743,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "tail_too_long_bolt",
@@ -1577,7 +1772,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "tail_too_long_nut",
@@ -1608,7 +1804,8 @@
    ],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "tapped_hold_screw",
@@ -1639,7 +1836,8 @@
    ],
    "stuck_on": [],
    "reason": "only holds, and it has no nut",
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "torus_deep_screw",
@@ -1670,7 +1868,8 @@
    ],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "torus_graze_screw",
@@ -1700,7 +1899,8 @@
    "reason": null,
    "grazes": [
     "torus_graze_under"
-   ]
+   ],
+   "notes": []
   },
   {
    "name": "torx_open_screw",
@@ -1728,7 +1928,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "torx_wall_screw",
@@ -1756,7 +1957,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "twins_a_screw",
@@ -1770,7 +1972,7 @@
     1.0
    ],
    "seat": [
-    900.0,
+    4900.0,
     7000.0,
     6.0
    ],
@@ -1786,7 +1988,8 @@
    ],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "twins_b_screw",
@@ -1800,7 +2003,7 @@
     1.0
    ],
    "seat": [
-    1100.0,
+    5100.0,
     7000.0,
     6.0
    ],
@@ -1814,7 +2017,68 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "undersize_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    1000.0,
+    7000.0,
+    -15.3
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "undersize_nut",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "undersize_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1000.0,
+    7000.0,
+    6.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "undersize_bolt",
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "hex drawn undersize: 12.60 across flats, 0.13 under the least its M8 standard allows (12.73); taken as size 13"
+   ]
   },
   {
    "name": "vented_gland_vent",
@@ -1842,7 +2106,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "wire_across_screw",
@@ -1870,7 +2135,8 @@
    "blocked_by": [],
    "stuck_on": [],
    "reason": null,
-   "grazes": []
+   "grazes": [],
+   "notes": []
   }
  ]
 }

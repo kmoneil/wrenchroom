@@ -145,3 +145,21 @@ def test_the_detected_report_matches_its_snapshot(detected):
         "the detected report moved; if the change is meant, run "
         "`uv run python scripts/golden.py --update` and review the diff"
     )
+
+
+def test_a_nut_drawn_small_says_so_and_where_its_size_came_from(detected):
+    """Issue #50: the bore says M8 (undersize), or the bolt does (guessed), or the
+    name does (named_size); where the band's guess is the bolt's size (band_agrees)
+    there is nothing to say."""
+    notes = {result.fastener.name: result.notes for result in detected.results}
+    small = (
+        "hex drawn undersize: 12.60 across flats, 0.13 under the least its M8 standard "
+        "allows (12.73); taken as size 13"
+    )
+    assert notes["undersize_nut"] == (small,)
+    bolt = "size M8 from its bolt, guessed_bolt (its hex alone said 5/16)"
+    assert notes["guessed_nut"] == (bolt, small)
+    assert notes["named_size_m8_nut"] == (small,)
+    assert notes["band_agrees_nut"] == ()
+    noted = {name for name, said in notes.items() if said}
+    assert noted == {"undersize_nut", "guessed_nut", "named_size_m8_nut"}

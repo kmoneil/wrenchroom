@@ -4,8 +4,11 @@ Every part the sidecar describes is read from the written bench.step: the head
 must be the rule's, the drive's across-flats the standard tables' for the rule's
 size (or, for hex_band's nut alone, inside its standard's band below that size),
 and the size the rule's; low_head's screw, drawn with no drive, is held to the
-standard head its outline fits instead. And the reading from STEP must equal the reading
-from the shape as built: the round trip changes nothing a tool depends on.
+standard head its outline fits instead. guessed's nut, drawn a little under its
+band on a bore of no standard size, can't say its size alone: its band guesses
+another, and only its bolt gives the rule's (issue #50). And the reading from
+STEP must equal the reading from the shape as built: the round trip changes
+nothing a tool depends on.
 
 A Torx head is the one exception: the solid reading knows hex, cross, slot and
 square drives, not a hexalobular recess, so a Torx screw is Torx by its rule or
@@ -19,8 +22,17 @@ from bench import sidecar_and_truth
 from cells import CELLS
 
 from wrenchroom.assembly import Assembly
+from wrenchroom.checker import UNDERSIZE_MM
 from wrenchroom.detect.geometry import read_shape
-from wrenchroom.fasteners import Head, Kind, Size, hex_key_af, in_hex_band, spanner_af
+from wrenchroom.fasteners import (
+    HEX_AF_MIN,
+    Head,
+    Kind,
+    Size,
+    hex_key_af,
+    in_hex_band,
+    spanner_af,
+)
 
 
 def _rules():
@@ -42,7 +54,7 @@ def bench_parts(bench_dir):
 
 
 def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
-    wrong, banded, outlined = [], [], []
+    wrong, banded, outlined, guessed = [], [], [], []
     for name, rule in _described(bench_parts):
         kind = Kind(rule.get("kind", "screw"))
         size = Size.parse(rule["size"]) if "size" in rule else None  # a gland may give none
@@ -66,10 +78,18 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
         elif got != want and expected_af and in_hex_band(reading.drive_af, expected_af):
             banded.append(name)  # drawn inside its standard's band below the size
             got = (got[0], want[1], got[2])
+        elif reading.size_from_band and size is not None and reading.size != size:
+            guessed.append(name)  # its band alone says another size; its bolt says the rule's
+            least = HEX_AF_MIN[expected_af]
+            assert least - UNDERSIZE_MM <= reading.drive_af < least, name
+            got = (got[0], want[1], size)
         if got != want:
             wrong.append((name, got, want))
     assert not wrong
-    assert banded == ["hex_band_nut"]  # issue #27: 12.8, inside ISO 4032's band for 13
+    # Issue #27: 12.8, inside ISO 4032's band for 13 (band_agrees's on a bore of no size).
+    assert banded == ["hex_band_nut", "band_agrees_nut"]
+    # Issue #50: 12.6, a 5/16's by the band; its bolt, or its name, says M8.
+    assert guessed == ["guessed_nut", "named_size_m8_nut"]
     # Button heads drawn flat (issue #31), and #25's graze cells' M4 screws.
     graze_screws = [f"{c}_screw" for c in ("torus_graze", "torus_deep", "flat_graze", "flat_deep")]
     assert outlined == ["low_head_screw", "rubber_screw", *graze_screws]

@@ -132,3 +132,15 @@ def test_config_edges(bench_dir):
     home = check_bench(bench_dir, config_name="bench_edges.yaml", kit="metric-home")
     (torx,) = [r for r in home.results if r.fastener.name == "torx_open_screw"]
     assert torx.reason == "needs torx-key-T30, which kit metric-home does not hold (full has it)"
+
+
+def test_the_undersize_nut_is_noted_in_every_format(bench_report, bench_json):
+    """Issue #50: the one note on the described bench, as each report gives it."""
+    note = (
+        "hex drawn undersize: 12.60 across flats, 0.13 under the least its M8 standard "
+        "allows (12.73); taken as size 13"
+    )
+    lines = bench_report.terminal_lines()
+    assert [line for line in lines if "hex drawn" in line] == [f"NOTE undersize_nut: {note}"]
+    assert f"#### Notes\n\n- `undersize_nut`: {note}\n" in bench_report.markdown()
+    assert {name for name, entry in bench_json.items() if entry["notes"]} == {"undersize_nut"}

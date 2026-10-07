@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**61 fasteners: 46 turn, 3 held, 11 blocked, 1 stuck, 0 not covered**
+**68 fasteners: 53 turn, 3 held, 11 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -28,8 +28,8 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 22 parts
 | M6 socket screw | `ball-end-key-5` | 1 | all pass (ball end, 25 deg off the axis) |
 | M6 socket screw | `hex-key-5` | 12 | 4 of 12 fail |
 | M6 torx screw | `torx-key-T30` | 1 | all pass (short leg in) |
-| M8 hex screw | `spanner-13` | 4 | 1 of 4 fail |
-| M8 nut | `spanner-13` | 5 | 2 of 5 fail |
+| M8 hex screw | `spanner-13` | 7 | 1 of 7 fail |
+| M8 nut | `spanner-13` | 9 | 2 of 9 fail |
 
 #### Failures
 
@@ -47,6 +47,10 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 22 parts
 | `torus_deep_screw` | `hex-key-2.5` | blocked | `torus_deep_lid`, `torus_deep_under` |
 | `twins_a_screw` | `hex-key-5` | blocked | `twins_wall` |
 | `stuck_screw_screw` | `hex-key-5` | stuck | `stuck_screw_ceiling` |
+
+#### Notes
+
+- `undersize_nut`: hex drawn undersize: 12.60 across flats, 0.13 under the least its M8 standard allows (12.73); taken as size 13
 
 #### Marginal
 

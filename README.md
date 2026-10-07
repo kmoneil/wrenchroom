@@ -111,15 +111,22 @@ to M5):
   `phillips`, `pozidriv`) can describe nothing else and counts anywhere
   (`torx_lid_screw`). A hex drawn inside its nut standard's tolerance takes that
   spanner (an M8 nut at 12.8: ISO 4032 allows 12.73 to 13), the thread's own standard
-  first where an inch and a metric band overlap; outside every band the reason names
-  the nearest tool. A sidecar rule still describes a part outright, `across_flats:`
+  first where an inch and a metric band overlap. A known thread keeps to its own
+  system's tools: a hex drawn up to 0.3 mm under its standard's band (an M8 nut at
+  12.6) takes that size, and the report notes it (`NOTE nut: hex drawn undersize:
+  ...`, and `notes` in the JSON); only a hex exactly a size of the other system, and
+  no size of its own, takes that, noted too. A size from a band alone is a guess,
+  which the name's size outranks, and a nut takes the size of the bolt it runs on.
+  Where no tool takes a hex, the reason names the one that fits nearest: the
+  smallest spanner that goes over it, or the largest key that goes into it. A
+  sidecar rule still describes a part outright, `across_flats:`
   gives a hex its measured size, and `checks: {detect: false}` turns detection off.
   A name with ordinary words after its fastener noun (`box_gland_vent`, `bolt_hole_cover`)
   is only a candidate: it is taken when its solid shows a drive a tool fits (a hex, a
   hex socket, a cross), and otherwise passed over, which every report lists, so a
   fastener is never missed without a word. With every fastener rule removed, the
-  golden bench's 60 are all found with the right kind and size, each screw with its
-  rule's head, and its 21 plates, blocks and studs named for their cells are passed over.
+  golden bench's 67 are all found with the right kind and size, each screw with its
+  rule's head, and its 22 plates, blocks and studs named for their cells are passed over.
 - `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
   correct and keep: one rule per fastener, and above each a comment with how sure
   detection was, what found it, the axis it resolved and how the part fares now.
@@ -130,7 +137,7 @@ to M5):
   file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  513 fasteners is read and checked with the full kit in about 8.6 s on an Apple M5
+  512 fasteners is read and checked with the full kit in about 8.1 s on an Apple M5
   Max laptop (the target is 10 s). Its four graze cells, deliberate worst cases in
   which the exact engine decides every position of a key grazing all the way round,
   are kept out of that figure and timed apart (about 0.7 s for the four). The bench is dense with fasteners that fail, and

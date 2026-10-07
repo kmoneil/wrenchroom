@@ -115,6 +115,11 @@ def size_name(af: float) -> str:
     return f"{af:g}"
 
 
+def is_inch(af: float) -> bool:
+    """True for an inch tool size, in mm: 11.1125 (``7/16in``) is, 11 isn't."""
+    return size_name(af).endswith("in")
+
+
 def size_mm(name: str) -> float:
     """A size's name back to mm: ``7/16in`` is 11.1125, ``13`` is 13.
 

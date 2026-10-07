@@ -992,3 +992,79 @@ def channel():
         ("left", Pos(0, -13.5, 2) * Box(80, 10, 4)),
         ("right", Pos(0, 13.5, 2) * Box(80, 10, 4)),
     ]
+
+
+_M8_BOLT_RULE = {"parts": "bolt", "kind": "screw", "head": "hex", "size": "M8"}
+_M8_PAIR_TURNS = {
+    "bolt": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
+    "nut": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
+}
+
+
+@cell(
+    "undersize",
+    [_M8_BOLT_RULE, {"parts": "nut", "kind": "nut", "size": "M8", "across_flats": 12.6}],
+    {
+        **_M8_PAIR_TURNS,
+        "nut": {
+            **_M8_PAIR_TURNS["nut"],
+            "notes": [
+                "hex drawn undersize: 12.60 across flats, 0.13 under the least its M8 "
+                "standard allows (12.73); taken as size 13"
+            ],
+        },
+    },
+)
+def undersize():
+    """An M8 nut drawn 12.6 across flats, 0.13 under ISO 4032's band of 12.73 to 13
+    (issue #50), on an M8 bolt, room all round. The rule gives the size and the
+    hex; with no rule, detection reads M8 from the bore. Either way the nut is a
+    model drawn small: the 13 mm spanner turns it, the result says so. It used to
+    be read as a 5/16 nut, 12.6 being in the band below 1/2 in, and turned with a
+    1/2 in spanner (in metric-home, not at all); with the rule, it was "no tool's
+    size".
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 4.5)])),
+        ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(8, 20, 13, 5.3)),
+        ("nut", hex_nut(8, 12.6, 6.8)),
+    ]
+
+
+@cell("guessed", [_M8_BOLT_RULE, {"parts": "nut", "kind": "nut", "size": "M8"}], _M8_PAIR_TURNS)
+def guessed():
+    """The undersize nut with its bolt, both drawn at 6.8 (near M8's minor diameter),
+    which is no standard size. With no rule, the bolt's 13 mm head says M8, and the
+    nut's hex alone says 5/16, by the band below 1/2 in: a guess its bolt outranks.
+    The nut takes the bolt's M8 and the 13 mm spanner, the result saying both.
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 3.9)])),
+        ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(6.8, 20, 13, 5.3)),
+        ("nut", hex_nut(6.8, 12.6, 6.8)),
+    ]
+
+
+@cell("band_agrees", [_M8_BOLT_RULE, {"parts": "nut", "kind": "nut", "size": "M8"}], _M8_PAIR_TURNS)
+def band_agrees():
+    """guessed's pair with the nut drawn 12.8, inside M8's own band: the band's guess
+    is its bolt's size, so the bolt has nothing to add and the result says nothing.
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 3.9)])),
+        ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(6.8, 20, 13, 5.3)),
+        ("nut", hex_nut(6.8, 12.8, 6.8)),
+    ]
+
+
+@cell(
+    "named_size",
+    [{"parts": "m8_nut", "kind": "nut", "size": "M8"}],
+    {"m8_nut": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"}},
+)
+def named_size():
+    """guessed's nut alone on its plate, no bolt, its name saying M8: with no rule,
+    the name's size outranks the band's guess of 5/16, and the 13 mm spanner turns
+    it, the result saying it is drawn small.
+    """
+    return [("plate", plate()), ("m8_nut", hex_nut(6.8, 12.6, 6.8))]
