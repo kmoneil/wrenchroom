@@ -96,6 +96,10 @@ class Assembly:
         if repeated:
             msg = f"part names must be unique; repeated: {', '.join(repeated)}"
             raise ValueError(msg)
+        self._pieces: dict[str, tuple[str, ...]] = {}
+        for part in self.parts:
+            if part.piece_of is not None:
+                self._pieces[part.piece_of] = (*self._pieces.get(part.piece_of, ()), part.name)
 
     @classmethod
     def from_step(cls, path: str | Path) -> Assembly:
@@ -134,7 +138,7 @@ class Assembly:
 
     def pieces(self, name: str) -> tuple[str, ...]:
         """The other solids of the leaf part ``name`` is, in order: often none."""
-        return tuple(part.name for part in self.parts if part.piece_of == name)
+        return self._pieces.get(name, ())
 
     def __iter__(self) -> Iterator[Part]:
         return iter(self.parts)

@@ -65,6 +65,9 @@ class FastenerResult:
     seat: tuple[float, float, float] | None = None
     state: str | None = None
     pair: str | None = None
+    #: What the attempt that decided the verdict only grazed: overlapped by no
+    #: more than the hit floor, a tool rubbing along a face (issue #25).
+    grazes: tuple[str, ...] = ()
 
     @property
     def passed(self) -> bool:
@@ -91,6 +94,8 @@ class FastenerResult:
             header += f" (in state {self.state})"
         if self.pair:
             header += f"; paired with {self.pair}"
+        if self.grazes:
+            header += f"; grazing {', '.join(self.grazes)}"
         return header
 
 
@@ -106,6 +111,8 @@ def attempt_text(attempt: Attempt) -> str:
         line += f"; hit {', '.join(attempt.blockers)}"
     if attempt.hand_blockers:
         line += f"; the hand hit {', '.join(attempt.hand_blockers)}"
+    if attempt.grazes and (attempt.turns or attempt.holds):
+        line += f"; grazed {', '.join(attempt.grazes)}"
     return line
 
 
@@ -272,8 +279,17 @@ class Report:
         if len(self.passed_over) > len(shown):
             more = len(self.passed_over) - len(shown)
             lines.append(f"NOTE and {more} more passed over (the JSON lists every one)")
+        marginal = self.marginal()
+        lines.extend(f"NOTE marginal: {_marginal_text(r)}" for r in marginal[:PASSED_OVER_SHOWN])
+        if len(marginal) > PASSED_OVER_SHOWN:
+            more = len(marginal) - PASSED_OVER_SHOWN
+            lines.append(f"NOTE and {more} more marginal (the JSON lists every one)")
         lines.append(f"NOTE {self.not_checked}")
         return [printable(line) for line in lines]
+
+    def marginal(self) -> tuple[FastenerResult, ...]:
+        """The results whose deciding tool only grazed something: a verdict on a graze."""
+        return tuple(result for result in self.results if result.grazes)
 
     # -------------------------------------------------------------- Markdown
 
@@ -348,6 +364,18 @@ class Report:
         if warnings:
             lines += ["", "#### Warnings", ""]
             lines.extend(f"- {warning}" for warning in warnings)
+        marginal = self.marginal()
+        if marginal:
+            lines += ["", "#### Marginal", ""]
+            lines.extend(
+                f"- {md_code(r.fastener.name, in_table=False)}: {r.verdict} with "
+                f"{_md_tool(r.tool)}, grazing "
+                + ", ".join(md_code(name, in_table=False) for name in r.grazes)
+                for r in marginal[:PASSED_OVER_SHOWN]
+            )
+            if len(marginal) > PASSED_OVER_SHOWN:
+                more = len(marginal) - PASSED_OVER_SHOWN
+                lines.append(f"- and {more} more (the JSON lists every one)")
         if self.passed_over:
             shown = self.passed_over[:PASSED_OVER_SHOWN]
             lines += ["", "#### Passed over", ""]
@@ -402,6 +430,7 @@ def _result_json(result: FastenerResult) -> dict[str, object]:
         "blocked_by": list(result.blockers),
         "stuck_on": list(result.stuck_on),
         "reason": result.reason,
+        "grazes": list(result.grazes),
     }
 
 
@@ -410,6 +439,13 @@ NO_TOOL = "no tool found"
 
 #: How many passed-over parts the terminal and Markdown name; the JSON has all.
 PASSED_OVER_SHOWN = 10
+
+
+def _marginal_text(result: FastenerResult) -> str:
+    """A verdict decided by a graze, in a line: the tool only rubbing what it names."""
+    tool = f" with {result.tool}" if result.tool else ""
+    grazed = ", ".join(result.grazes)
+    return f"{result.fastener.name} {result.verdict}{tool}, the tool grazing {grazed}"
 
 
 def _passed_over_count(passed: tuple[PassedOver, ...]) -> str:

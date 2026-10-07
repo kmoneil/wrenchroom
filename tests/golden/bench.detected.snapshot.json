@@ -3,10 +3,10 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 55,
-  "turns": 41,
+  "fasteners": 59,
+  "turns": 43,
   "held": 3,
-  "blocked": 9,
+  "blocked": 11,
   "stuck": 1,
   "not_covered": 1
  },
@@ -152,7 +152,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "big_gland_gland",
@@ -179,7 +180,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "carriage_boxed_bolt",
@@ -206,7 +208,8 @@
    "pair": "carriage_boxed_nut",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "carriage_boxed_nut",
@@ -233,7 +236,69 @@
    "pair": "carriage_boxed_bolt",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
+  },
+  {
+   "name": "flat_deep_screw",
+   "kind": "screw",
+   "head": "button",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4000.0,
+    6000.0,
+    2.2
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2.5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "flat_deep_lid",
+    "flat_deep_under"
+   ],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": []
+  },
+  {
+   "name": "flat_graze_screw",
+   "kind": "screw",
+   "head": "button",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    6000.0,
+    2.2
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2.5",
+   "verdict": "turns",
+   "how": "short leg in",
+   "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [
+    "flat_graze_under"
+   ]
   },
   {
    "name": "free_screw_screw",
@@ -260,7 +325,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "gland_rib_gland",
@@ -289,7 +355,8 @@
     "gland_rib_rib"
    ],
    "stuck_on": [],
-   "reason": "only holds, and it has no nut"
+   "reason": "only holds, and it has no nut",
+   "grazes": []
   },
   {
    "name": "glands_apart_a_gland",
@@ -318,7 +385,8 @@
     "glands_apart_b_gland"
    ],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "glands_apart_b_gland",
@@ -345,7 +413,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "glands_close_a_gland",
@@ -374,7 +443,8 @@
     "glands_close_b_gland"
    ],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "glands_close_b_gland",
@@ -401,7 +471,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "hand_tight_bolt",
@@ -428,7 +499,8 @@
    "pair": "hand_tight_nut",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "hand_tight_nut",
@@ -455,7 +527,8 @@
    "pair": "hand_tight_bolt",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "hex_band_bolt",
@@ -482,7 +555,8 @@
    "pair": "hex_band_nut",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "hex_band_nut",
@@ -509,7 +583,8 @@
    "pair": "hex_band_bolt",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "hex_side_wall_bolt",
@@ -538,7 +613,8 @@
     "hex_side_wall_wall"
    ],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "inch_pair_nut",
@@ -565,7 +641,8 @@
    "pair": "inch_pair_screw",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "inch_pair_screw",
@@ -592,7 +669,8 @@
    "pair": "inch_pair_nut",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "key_long_leg_screw",
@@ -619,7 +697,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "key_open_screw",
@@ -646,7 +725,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "key_wall_far_screw",
@@ -673,7 +753,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "key_wall_near_screw",
@@ -702,7 +783,8 @@
     "key_wall_near_wall"
    ],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "low_head_screw",
@@ -729,7 +811,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "nut_deep_well_bolt",
@@ -756,7 +839,8 @@
    "pair": "nut_deep_well_nut",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "nut_deep_well_nut",
@@ -783,7 +867,8 @@
    "pair": "nut_deep_well_bolt",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "nut_gap_nut",
@@ -810,7 +895,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "nut_stubby_box_bolt",
@@ -837,7 +923,8 @@
    "pair": "nut_stubby_box_nut",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "nut_stubby_box_nut",
@@ -864,7 +951,8 @@
    "pair": "nut_stubby_box_bolt",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "nut_tube_bolt",
@@ -891,7 +979,8 @@
    "pair": "nut_tube_nut",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "nut_tube_nut",
@@ -918,7 +1007,8 @@
    "pair": "nut_tube_bolt",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "nyloc_two_bodies_bolt",
@@ -945,7 +1035,8 @@
    "pair": "nyloc_two_bodies_nut",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "nyloc_two_bodies_nut",
@@ -964,7 +1055,8 @@
    "pair": "nyloc_two_bodies_bolt",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": "cannot tell the nut's free face: both ends are covered"
+   "reason": "cannot tell the nut's free face: both ends are covered",
+   "grazes": []
   },
   {
    "name": "one_part_lock_bolt",
@@ -991,7 +1083,8 @@
    "pair": "one_part_lock_nut",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "one_part_lock_nut",
@@ -1018,7 +1111,8 @@
    "pair": "one_part_lock_bolt",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "pair_both_hold_bolt",
@@ -1047,7 +1141,8 @@
     "pair_both_hold_pocket_high"
    ],
    "stuck_on": [],
-   "reason": "only holds, and its partner pair_both_hold_nut does not turn"
+   "reason": "only holds, and its partner pair_both_hold_nut does not turn",
+   "grazes": []
   },
   {
    "name": "pair_both_hold_nut",
@@ -1076,7 +1171,8 @@
     "pair_both_hold_pocket_low"
    ],
    "stuck_on": [],
-   "reason": "only holds, and its partner pair_both_hold_bolt does not turn"
+   "reason": "only holds, and its partner pair_both_hold_bolt does not turn",
+   "grazes": []
   },
   {
    "name": "pair_nut_held_bolt",
@@ -1103,7 +1199,8 @@
    "pair": "pair_nut_held_nut",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "pair_nut_held_nut",
@@ -1132,7 +1229,8 @@
     "pair_nut_held_pocket"
    ],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "phillips_open_screw",
@@ -1159,7 +1257,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "phillips_shelf_screw",
@@ -1188,7 +1287,8 @@
     "phillips_shelf_shelf"
    ],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "rubber_screw",
@@ -1215,7 +1315,8 @@
    "pair": "rubber_well_nut",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "rubber_well_nut",
@@ -1238,7 +1339,8 @@
    "pair": "rubber_screw",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "state_lever_screw",
@@ -1265,7 +1367,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "state_lid_screw",
@@ -1294,7 +1397,8 @@
     "state_lid_lid"
    ],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "stuck_screw_screw",
@@ -1323,7 +1427,8 @@
    "stuck_on": [
     "stuck_screw_ceiling"
    ],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "tail_in_socket_bolt",
@@ -1350,7 +1455,8 @@
    "pair": "tail_in_socket_nut",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "tail_in_socket_nut",
@@ -1377,7 +1483,8 @@
    "pair": "tail_in_socket_bolt",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "tail_too_long_bolt",
@@ -1404,7 +1511,8 @@
    "pair": "tail_too_long_nut",
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "tail_too_long_nut",
@@ -1434,7 +1542,8 @@
     "tail_too_long_bolt"
    ],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "tapped_hold_screw",
@@ -1464,7 +1573,69 @@
     "tapped_hold_slot"
    ],
    "stuck_on": [],
-   "reason": "only holds, and it has no nut"
+   "reason": "only holds, and it has no nut",
+   "grazes": []
+  },
+  {
+   "name": "torus_deep_screw",
+   "kind": "screw",
+   "head": "button",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    6000.0,
+    2.2
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2.5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "torus_deep_lid",
+    "torus_deep_under"
+   ],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": []
+  },
+  {
+   "name": "torus_graze_screw",
+   "kind": "screw",
+   "head": "button",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1000.0,
+    6000.0,
+    2.2
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2.5",
+   "verdict": "turns",
+   "how": "short leg in",
+   "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [
+    "torus_graze_under"
+   ]
   },
   {
    "name": "torx_open_screw",
@@ -1491,7 +1662,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "torx_wall_screw",
@@ -1518,7 +1690,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "twins_a_screw",
@@ -1532,7 +1705,7 @@
     1.0
    ],
    "seat": [
-    900.0,
+    4900.0,
     6000.0,
     6.0
    ],
@@ -1547,7 +1720,8 @@
     "twins_wall"
    ],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "twins_b_screw",
@@ -1561,7 +1735,7 @@
     1.0
    ],
    "seat": [
-    1100.0,
+    5100.0,
     6000.0,
     6.0
    ],
@@ -1574,7 +1748,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "vented_gland_vent",
@@ -1601,7 +1776,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   },
   {
    "name": "wire_across_screw",
@@ -1628,7 +1804,8 @@
    "pair": null,
    "blocked_by": [],
    "stuck_on": [],
-   "reason": null
+   "reason": null,
+   "grazes": []
   }
  ]
 }

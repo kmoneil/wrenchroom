@@ -15,7 +15,7 @@ cannot change the answer.
 import math
 from dataclasses import dataclass, field
 
-from build123d import Box, Compound, Cylinder, Pos, Rot
+from build123d import Box, Compound, Cylinder, Pos, Rot, Torus
 from parts import (
     button_screw,
     carriage_bolt,
@@ -39,6 +39,10 @@ class Cell:
     rules: tuple = ()
     truth: dict = field(default_factory=dict)
     ignore: tuple = ()
+    #: In the perf bench's timed copies. False for a deliberate worst case (a key
+    #: grazing at every angle, every position of which the exact engine decides),
+    #: which the perf script times apart: the budget is for ordinary geometry.
+    timed: bool = True
 
 
 M6_SOCKET = {"kind": "screw", "head": "socket", "size": "M6"}
@@ -46,9 +50,9 @@ M6_SOCKET = {"kind": "screw", "head": "socket", "size": "M6"}
 CELLS = []
 
 
-def cell(name, rules=(), truth=None, ignore=()):
+def cell(name, rules=(), truth=None, ignore=(), timed=True):
     def register(build):
-        CELLS.append(Cell(name, build, tuple(rules), truth or {}, tuple(ignore)))
+        CELLS.append(Cell(name, build, tuple(rules), truth or {}, tuple(ignore), timed))
         return build
 
     return register
@@ -880,3 +884,66 @@ def big_gland():
         ("gland", gland(af=41, h=10, dome_r=17, dome_h=20, stub_r=16, stub_h=14, bore=7.5)),
         ("cable", Pos(0, 0, 80) * Cylinder(7, 300)),
     ]
+
+
+# Issue #25's grazes: an M4 button head (k 2.2) whose 2.5 mm key's short leg goes
+# in (the driver and the long leg stop at a lid 53 up). The long arm (r 1.41) lies
+# with its underside at 2.2 + 0.3 + 20.5 - 1.41 = 21.59, and a part round the
+# screw rises `depth` into it at every angle, so the overlap alone decides: the
+# exact overlap at one position, measured, against the 0.05 mm^3 floor. The mesh
+# engine used to differ from --exact on both: passing the torus at 0.08 (its
+# tessellation lies inside the curved face), blocking the flat at 0.004 (the
+# key's polygon stands outside its circle). It now refers both to its referee.
+_ARM_BOTTOM = 2.2 + 0.3 + 20.5 - 1.41
+_GRAZE_RULE = {"parts": "screw", "kind": "screw", "head": "button", "size": "M4", "axis": "+z"}
+
+
+def _graze(under):
+    return [
+        ("base", Pos(0, 0, -3) * (Box(200, 200, 6) - Cylinder(2.2, 6))),
+        ("screw", Pos(0, 0, -6) * Cylinder(2, 12) + Pos(0, 0, 1.1) * Cylinder(3.8, 2.2)),
+        ("under", under),
+        ("lid", Pos(0, 0, 55) * Box(200, 200, 4)),
+    ]
+
+
+def _torus(depth):
+    return Pos(0, 0, _ARM_BOTTOM + depth - 10) * Torus(40, 10)
+
+
+def _flat(depth):
+    top = _ARM_BOTTOM + depth
+    return Pos(0, 0, top - 2) * (Cylinder(70, 4) - Cylinder(12, 4))
+
+
+_GRAZED = {"verdict": "turns", "tool": "hex-key-2.5", "how": "short leg in", "grazes": ["under"]}
+_RUN_INTO = {"verdict": "blocked", "tool": "hex-key-2.5", "blocked_by": ["lid", "under"]}
+
+
+@cell("torus_graze", [_GRAZE_RULE], {"screw": _GRAZED}, timed=False)
+def torus_graze():
+    """A torus (R 40, r 10) 0.02 into the arm: 0.0047 mm^3, a graze: it turns, and
+    the report says the key grazes the torus. The torus's mesh lies inside its
+    curve there and shows no overlap at all: only the gap check, refusing to call
+    a part clear within what its mesh may leave out, finds the graze."""
+    return _graze(_torus(0.02))
+
+
+@cell("torus_deep", [_GRAZE_RULE], {"screw": _RUN_INTO}, timed=False)
+def torus_deep():
+    """The same torus 0.08 in: 0.075 mm^3, a hit at every angle: blocked. The mesh
+    engine used to pass it."""
+    return _graze(_torus(0.08))
+
+
+@cell("flat_graze", [_GRAZE_RULE], {"screw": _GRAZED}, timed=False)
+def flat_graze():
+    """A flat ring (r 12 to 70) 0.004 into the arm: 0.026 mm^3, a graze: it turns.
+    The mesh engine used to block it."""
+    return _graze(_flat(0.004))
+
+
+@cell("flat_deep", [_GRAZE_RULE], {"screw": _RUN_INTO}, timed=False)
+def flat_deep():
+    """The flat ring 0.008 in: 0.074 mm^3, a hit at every angle: blocked."""
+    return _graze(_flat(0.008))

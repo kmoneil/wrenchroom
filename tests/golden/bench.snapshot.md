@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**55 fasteners: 43 turn, 3 held, 8 blocked, 1 stuck, 0 not covered**
+**59 fasteners: 45 turn, 3 held, 10 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -15,7 +15,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 22 parts
 | M10 nut | `socket-16` | 2 | all pass (socket, 50 mm extension) |
 | M10 nut | `spanner-16` | 1 | 1 of 1 fail |
 | M16 nut | `spanner-24` | 6 | 1 of 6 fail |
-| M4 button screw | `hex-key-2.5` | 1 | all pass (driver straight in) |
+| M4 button screw | `hex-key-2.5` | 5 | 2 of 5 fail |
 | M4 insert | - | 1 | all pass (holds itself) |
 | M4 phillips screw | `driver-ph2` | 2 | 1 of 2 fail |
 | M5 button screw | `hex-key-3` | 1 | all pass (driver straight in) |
@@ -34,6 +34,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 22 parts
 
 | Fastener | Tool | Verdict | In the way, or why |
 | --- | --- | --- | --- |
+| `flat_deep_screw` | `hex-key-2.5` | blocked | `flat_deep_lid`, `flat_deep_under` |
 | `gland_rib_gland` | `spanner-24` | blocked | `only holds, and it has no nut` |
 | `key_wall_near_screw` | `hex-key-5` | blocked | `key_wall_near_wall` |
 | `pair_both_hold_bolt` | `spanner-13` | blocked | `only holds, and its partner pair_both_hold_nut does not turn` |
@@ -41,8 +42,14 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 22 parts
 | `phillips_shelf_screw` | `driver-ph2` | blocked | `phillips_shelf_shelf` |
 | `tail_too_long_nut` | `spanner-16` | blocked | `tail_too_long_collar`, `tail_too_long_bolt` |
 | `tapped_hold_screw` | `hex-key-5` | blocked | `only holds, and it has no nut` |
+| `torus_deep_screw` | `hex-key-2.5` | blocked | `torus_deep_lid`, `torus_deep_under` |
 | `twins_a_screw` | `hex-key-5` | blocked | `twins_wall` |
 | `stuck_screw_screw` | `hex-key-5` | stuck | `stuck_screw_ceiling` |
+
+#### Marginal
+
+- `flat_graze_screw`: turns with `hex-key-2.5`, grazing `flat_graze_under`
+- `torus_graze_screw`: turns with `hex-key-2.5`, grazing `torus_graze_under`
 
 #### Passed over
 

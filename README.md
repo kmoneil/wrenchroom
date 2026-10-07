@@ -111,7 +111,7 @@ to M5):
   is only a candidate: it is taken when its solid shows a drive a tool fits (a hex, a
   hex socket, a cross), and otherwise passed over, which every report lists, so a
   fastener is never missed without a word. With every fastener rule removed, the
-  golden bench's 54 are all found with the right kind and size, each screw with its
+  golden bench's 58 are all found with the right kind and size, each screw with its
   rule's head, and its 21 plates, blocks and studs named for their cells are passed over.
 - `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
   correct and keep: one rule per fastener, and above each a comment with how sure
@@ -123,12 +123,19 @@ to M5):
   file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  550 fasteners is read and checked with the full kit in about 9.3 s on an Apple M5
-  Max laptop (the target is 10 s). The bench is dense with fasteners that fail, and
+  550 fasteners is read and checked with the full kit in about 9.8 s on an Apple M5
+  Max laptop (the target is 10 s). Its four graze cells, deliberate worst cases in
+  which the exact engine decides every position of a key grazing all the way round,
+  are kept out of that figure and timed apart (about 0.7 s for the four). The bench is dense with fasteners that fail, and
   a failing one tries every tool it has: open ends, and ball-end keys leant every way
   round, cost most of that. `--exact` swaps in OCP boolean intersections on the
-  B-rep, slower, and the referee for anything within the mesh's 0.2 mm of a curved
-  face. Both engines give the bench the same report, field for field.
+  B-rep, slower. The mesh engine decides alone only beyond doubt (a hit whose
+  overlap stays over the floor with the mesh's possible error taken off, a clear
+  wider than a part's mesh can stray) and asks the exact engine about the rest, so
+  the two agree, a key grazing a face included. An overlap above noise but under
+  the 0.05 mm^3 floor is a graze: not a hit, but when one decides a verdict the
+  report says so (`NOTE marginal: ... the tool grazing ...`, and `grazes` in the
+  JSON). Both engines give the bench the same report, field for field.
 - A golden bench of generated cells with hand-worked truth gates every change, on both
   engines; its whole-report snapshot is byte-identical across Linux and macOS, 3.13
   and 3.14.

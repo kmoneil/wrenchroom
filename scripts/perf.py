@@ -10,9 +10,14 @@ The bench is repeated along the grid until it has at least N fasteners and
 written as STEP (that part is not timed). Then it times what a user waits for
 with ``wrenchroom check``: reading the model, and checking it, which includes
 reading the alternate lever-up model when the first fastener is retried there.
-The verdict counts must come out as exactly that many copies of the bench's, so
-a fast engine that is wrong cannot pass. Exits 1 when read plus check is over
-the budget or a count is off.
+The verdict counts must come out as exactly the truth's, so a fast engine that
+is wrong cannot pass. Exits 1 when read plus check is over the budget or a count
+is off.
+
+The bench's deliberate worst cases (cells with ``timed=False``: a key grazing at
+every angle, every position of which the exact engine decides, issue #25) are
+kept out of the timed copies, since the budget is for ordinary geometry, and
+timed apart, once, so what they cost is always on show.
 
 Under GitHub Actions the table also goes to the job summary, so the CI job
 reports a number on every run before it is trusted to gate.
@@ -42,33 +47,14 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     sys.path.insert(0, str(GOLDEN))
-    from bench import FINAL_COUNTS, KIT, write  # noqa: PLC0415  (path set just above)
+    from bench import sidecar_and_truth  # noqa: PLC0415  (path set just above)
 
-    from wrenchroom.assembly import Assembly  # noqa: PLC0415  (heavy; after argparse)
-    from wrenchroom.checker import check  # noqa: PLC0415
-    from wrenchroom.config import Config  # noqa: PLC0415
-
-    copies = math.ceil(args.fasteners / FINAL_COUNTS["fasteners"])
+    per_copy = len(sidecar_and_truth(1, "timed")[1])
+    copies = math.ceil(args.fasteners / per_copy)
     engine = "exact" if args.exact else "mesh"
-    with tempfile.TemporaryDirectory() as scratch:
-        directory = Path(scratch)
-        started = time.perf_counter()
-        write(directory, copies=copies)
-        built = time.perf_counter() - started
-
-        started = time.perf_counter()
-        assembly = Assembly.from_step(directory / "bench.step")
-        read = time.perf_counter() - started
-
-        config = Config.load(directory / "wrenchroom.yaml")
-        started = time.perf_counter()
-        report = check(
-            assembly, config, kit=KIT, model="bench.step", model_dir=directory, engine=engine
-        )
-        checked = time.perf_counter() - started
-
-    want = {key: count * copies for key, count in FINAL_COUNTS.items()}
-    counts_ok = report.summary == want
+    report, built, read, checked, assembly, want = _timed(copies, "timed", engine)
+    worst = _timed(1, "untimed", engine)
+    counts_ok = report.summary == want and worst[0].summary == worst[5]
     total = read + checked
     in_budget = args.budget <= 0 or total <= args.budget
     fasteners = report.summary["fasteners"]
@@ -84,6 +70,11 @@ def main(argv: list[str]) -> int:
         ("read model", f"{read:.2f} s"),
         ("check", f"{checked:.2f} s ({1000 * checked / max(1, fasteners):.1f} ms a fastener)"),
         ("read + check", f"{total:.2f} s, budget {args.budget:g} s: {verdict}"),
+        (
+            "worst cases",
+            f"{worst[0].summary['fasteners']} fasteners, every position refereed exactly, "
+            f"timed apart: {worst[2] + worst[3]:.2f} s",
+        ),
         ("counts", "as expected" if counts_ok else f"WRONG: {report.summary} != {want}"),
     ]
     width = max(len(name) for name, _ in rows)
@@ -95,6 +86,33 @@ def main(argv: list[str]) -> int:
             summary.write("### wrenchroom perf\n\n| | |\n|---|---|\n")
             summary.writelines(f"| {name} | {value} |\n" for name, value in rows)
     return 0 if counts_ok and in_budget else 1
+
+
+def _timed(copies: int, which: str, engine: str):  # noqa: ANN202  (a private tuple)
+    """Write ``copies`` of the chosen cells, then time reading and checking them."""
+    from bench import KIT, summary_of, write  # noqa: PLC0415  (path set by main)
+
+    from wrenchroom.assembly import Assembly  # noqa: PLC0415  (heavy; after argparse)
+    from wrenchroom.checker import check  # noqa: PLC0415
+    from wrenchroom.config import Config  # noqa: PLC0415
+
+    with tempfile.TemporaryDirectory() as scratch:
+        directory = Path(scratch)
+        started = time.perf_counter()
+        truth = write(directory, copies=copies, which=which)
+        built = time.perf_counter() - started
+
+        started = time.perf_counter()
+        assembly = Assembly.from_step(directory / "bench.step")
+        read = time.perf_counter() - started
+
+        config = Config.load(directory / "wrenchroom.yaml")
+        started = time.perf_counter()
+        report = check(
+            assembly, config, kit=KIT, model="bench.step", model_dir=directory, engine=engine
+        )
+        checked = time.perf_counter() - started
+    return report, built, read, checked, assembly, summary_of(truth)
 
 
 if __name__ == "__main__":

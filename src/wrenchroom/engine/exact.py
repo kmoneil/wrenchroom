@@ -11,22 +11,27 @@ four-piece open-end spanner cost more than the tests themselves.
 
 from __future__ import annotations
 
-from functools import cached_property
+from functools import cached_property, lru_cache
 from typing import TYPE_CHECKING, ClassVar
+
+import numpy as np
 
 from wrenchroom.engine.scene import (
     HIT_MIN_VOLUME,
+    Contact,
     Engine,
     Tool,
-    boxes_overlap,
+    contact_of,
+    pieces_near,
     shape_bounds,
 )
-from wrenchroom.solids import Bounds, ToolSolid, frame_location, transform_bounds
+from wrenchroom.solids import Bounds, ToolSolid, frame_location
 
 if TYPE_CHECKING:
     from build123d import Shape
 
     from wrenchroom.assembly import Part
+    from wrenchroom.solids import Primitive
 
 
 class ExactEngine(Engine):
@@ -55,17 +60,18 @@ class ExactQuery:
         return shape_bounds(self._tool)
 
     @cached_property
-    def _boxes(self) -> list[Bounds]:
+    def _boxes(self) -> tuple[np.ndarray, np.ndarray]:
+        """Each piece's box, as (n, 3) arrays of low and high corners."""
         if isinstance(self._tool, ToolSolid):
-            matrix = self._tool.matrix()
-            return [transform_bounds(p.local_bounds(), matrix) for p in self._tool.primitives]
-        return [self.bounds]
+            return self._tool.piece_boxes()
+        low, high = self.bounds
+        return np.array([low], dtype=float), np.array([high], dtype=float)
 
     def _piece(self, index: int) -> Shape:
         if index not in self._pieces:
             tool = self._tool
             if isinstance(tool, ToolSolid):
-                shape = tool.primitives[index].shape()
+                shape = _unit_shape(tool.primitives[index])
                 if tool.seat is not None and tool.axis is not None:
                     shape = frame_location(tool.seat, tool.axis) * shape
                 self._pieces[index] = shape
@@ -73,17 +79,24 @@ class ExactQuery:
                 self._pieces[index] = tool
         return self._pieces[index]
 
+    def contact(self, part: Part) -> Contact:
+        """The pieces' summed overlap with the part, as a contact; stops at a hit."""
+        total = 0.0
+        for index in pieces_near(*self._boxes, self._engine.part_box(part)):
+            total += exact_overlap(part.shape, self._piece(int(index)))
+            if total > HIT_MIN_VOLUME:
+                return Contact.HIT
+        return contact_of(total)
+
     def hits(self, part: Part) -> bool:
         """True when the pieces' summed overlap with the part passes the hit floor."""
-        part_box = self._engine.part_bounds(part)
-        total = 0.0
-        for index, box in enumerate(self._boxes):
-            if not boxes_overlap(box, part_box):
-                continue
-            total += exact_overlap(part.shape, self._piece(index))
-            if total > HIT_MIN_VOLUME:
-                return True
-        return False
+        return self.contact(part) is Contact.HIT
+
+
+@lru_cache(maxsize=4096)
+def _unit_shape(primitive: Primitive) -> Shape:
+    """A primitive's OCP solid in its local frame, built once however often it is placed."""
+    return primitive.shape()
 
 
 def exact_overlap(a: Shape, b: Shape) -> float:
