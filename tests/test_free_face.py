@@ -94,3 +94,67 @@ def test_the_furthest_probe_decides_against_the_frame_s_own_direction():
     result = run(lifted(60.0, ceiling=30.0, bolt_len=100.0))
     assert result.axis == pytest.approx((0, 0, -1))
     assert result.seat[2] == pytest.approx(60.0)
+
+
+# ---------------------------------------------------------------------------
+# A nut bored at its thread's minor diameter, on a bolt drawn at the nominal.
+# ---------------------------------------------------------------------------
+
+M8_MINOR = 6.647  # ISO 965-1's D1 for M8x1.25: a nut's bore as many models draw it
+
+
+def minor_bored(*, flip=False):
+    """An M8 nut (af 13, 6.8 tall) bored at M8's minor diameter, on a plate, and an
+    M8 bolt drawn at 8 up through both: the bolt is 0.68 into the nut all round
+    its bore, as a vendor's nut and bolt are."""
+    parts = {
+        "plate": Pos(0, 0, -5) * Box(200, 200, 10) - Cylinder(4.5, 11),
+        "bolt": Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(8, 25, 13, 5.3),
+        "nut": hex_nut_shape(M8_MINOR, 13, 6.8),
+    }
+    turn = Rot(180, 0, 0) if flip else Rot(0, 0, 0)
+    return Assembly([Part(name, turn * shape) for name, shape in parts.items()])
+
+
+def test_the_bolt_is_drawn_into_the_nut():
+    # A vacuity guard: the case is the overlap.
+    parts = {part.name: part.shape for part in minor_bored()}
+    assert (parts["bolt"] & parts["nut"]).volume > 50
+
+
+@pytest.mark.parametrize("flip", [False, True])
+def test_a_nut_bored_at_its_minor_diameter_is_turned_from_its_free_end(engine, flip):
+    # It used to be "cannot tell the nut's free face: both ends are covered".
+    config = Config.from_dict(
+        {"fasteners": [{"parts": "nut", "kind": "nut", "size": "M8"}], "checks": {"detect": False}}
+    )
+    (result,) = check(minor_bored(flip=flip), config, engine=engine).results
+    assert (result.verdict, result.tool) == (Verdict.TURNS, "spanner-13")
+    up = -1.0 if flip else 1.0
+    assert result.axis == pytest.approx((0, 0, up))
+    assert result.seat[2] == pytest.approx(up * 6.8)
+
+
+def test_detected_the_same():
+    # No rules: its hex says M8, and its bolt is found and paired.
+    results = {r.fastener.name: r for r in check(minor_bored(), Config()).results}
+    nut = results["nut"]
+    assert (nut.fastener.size.designation, nut.verdict, nut.tool) == (
+        "M8",
+        Verdict.TURNS,
+        "spanner-13",
+    )
+    assert nut.pair == "bolt"
+
+
+def test_with_no_size_only_the_bore_says_where_the_thread_is():
+    # Nothing tells the thread's radius: the bolt reads as covering both ends.
+    config = Config.from_dict(
+        {
+            "fasteners": [{"parts": "nut", "kind": "nut", "across_flats": 13}],
+            "checks": {"detect": False},
+        }
+    )
+    (result,) = check(minor_bored(), config).results
+    assert result.verdict is Verdict.NOT_COVERED
+    assert result.reason == "cannot tell the nut's free face: both ends are covered"

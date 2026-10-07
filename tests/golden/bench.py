@@ -47,10 +47,10 @@ SLOTS = len(CELLS) + 1
 #: 49 with #30's vented, 50 with #31's low_head, 52 with #29's rubber, 54 with
 #: #28's one_part_lock, 55 with #33's big_gland, 59 with #25's grazes, 60 with
 #: #40's pivot, 61 with the channel (a socket's wall round the hex), 68 with #50's
-#: undersize, guessed, band_agrees and named_size.
+#: undersize, guessed, band_agrees and named_size, 70 with minor_bore.
 FINAL_COUNTS = {
-    "fasteners": 68,
-    "turns": 53,
+    "fasteners": 70,
+    "turns": 55,
     "held": 3,
     "blocked": 11,
     "stuck": 1,

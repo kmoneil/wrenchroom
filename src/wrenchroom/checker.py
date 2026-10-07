@@ -787,7 +787,8 @@ def _is_flipped(frame: _Frame, fastener: Fastener, scene: Scene) -> bool:
     """Does the axis point into the joint instead of out of it?"""
     if fastener.kind is Kind.SCREW:
         return _head_is_at_bottom(frame.part, frame.direction)
-    return _free_face_is_at_bottom(frame, scene)
+    thread = fastener.size.diameter_mm / 2 if fastener.size is not None else 0.0
+    return _free_face_is_at_bottom(frame, scene, thread)
 
 
 def _head_is_at_bottom(part: Part, direction: Vec) -> bool:
@@ -806,13 +807,16 @@ def _head_is_at_bottom(part: Part, direction: Vec) -> bool:
     return bottom.area > top.area
 
 
-def _free_face_is_at_bottom(frame: _Frame, scene: Scene) -> bool:
+def _free_face_is_at_bottom(frame: _Frame, scene: Scene, thread_radius: float = 0.0) -> bool:
     """A nut's free face is the end no other part sits against.
 
     Two lessons are built in (bugs A and B in the bench handoff). The probe is an
     annulus, not a disc: the nut's own bolt sticks out of the free side, and a
     disc would read it as covered; the annulus starts just outside the bore,
-    which anything threaded through the nut must fit inside. And the probes sit
+    which anything threaded through the nut must fit inside, and outside the
+    thread's nominal radius too: a nut is often drawn bored at its thread's minor
+    diameter and its bolt at the nominal, overlapping, and the bolt read as
+    covering both ends. And the probes sit
     at the ends of the widest region (the hex), not of the whole part: a gland's
     thread stub and dome extend past its hex on both sides, so the part's own
     extremes read as free air.
@@ -824,7 +828,7 @@ def _free_face_is_at_bottom(frame: _Frame, scene: Scene) -> bool:
     the frame's own direction stands; the same room on both is not covered.
     """
     outer = max(frame.radials) * 0.95
-    inner = frame.bore + 0.5
+    inner = max(frame.bore, thread_radius) + 0.5
     if inner >= outer:
         raise NotCovered("the bore leaves no face to probe for the free end")
     band_lo, band_hi = _band(frame.projections, frame.radials)

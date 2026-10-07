@@ -1068,3 +1068,18 @@ def named_size():
     it, the result saying it is drawn small.
     """
     return [("plate", plate()), ("m8_nut", hex_nut(6.8, 12.6, 6.8))]
+
+
+@cell("minor_bore", [_M8_BOLT_RULE, {"parts": "nut", "kind": "nut", "size": "M8"}], _M8_PAIR_TURNS)
+def minor_bore():
+    """An M8 nut bored at its thread's minor diameter (6.647), on an M8 bolt drawn
+    at the nominal 8, as many a vendor's models are: the bolt is 0.68 into the nut
+    all round. The free-face probe starts outside the thread's nominal radius, so
+    the bolt no longer reads as covering both ends of the nut, which used to make
+    it "cannot tell the nut's free face: both ends are covered".
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 4.5)])),
+        ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(8, 20, 13, 5.3)),
+        ("nut", hex_nut(6.647, 13, 6.8)),
+    ]
