@@ -54,6 +54,7 @@ from wrenchroom.fasteners import (
     Size,
     hex_key_af,
     in_hex_band,
+    no_such_head,
     spanner_af,
     standard_hex_afs,
 )
@@ -1324,7 +1325,9 @@ def _attempts_for(
         size = _known_size(fastener)
         number = PHILLIPS_NUMBER.get(size.designation)
         if number is None:
-            raise NotCovered(f"no Phillips number for {size.designation}")
+            raise NotCovered(
+                f"ISO 7045 and ASME B18.6.3 give no Phillips number for {size.designation}"
+            )
         return _drivers(f"ph{number}", mount, scene, tools)
     if fastener.head is Head.SLOTTED:
         return _drivers("slotted", mount, scene, tools)
@@ -1524,8 +1527,7 @@ def _key_af(fastener: Fastener, tools: _Tools) -> float:
         size = _known_size(fastener)
         af = hex_key_af(fastener.head, size)
         if af is None or (af not in HEX_KEYS and not tools.custom.hex_keys(af)):
-            head = fastener.head.value
-            raise NotCovered(f"no standard key for a {size.designation} {head} head")
+            raise NotCovered(no_such_head(fastener.head, size))
     return af
 
 
@@ -1555,7 +1557,7 @@ def _torx_attempts(
     size = _known_size(fastener)
     torx = TORX_SIZE.get(size.designation)
     if torx is None:
-        raise NotCovered(f"no Torx size for a {size.designation} head")
+        raise NotCovered(no_such_head(Head.TORX, size))
     key = ISO_10664.get(torx)
     customs = tools.custom.torx_keys(torx)
     if key is None and not customs:

@@ -42,10 +42,12 @@ FLATS = set(METRIC_FLATS) | {inch_mm(size) for size in INCH_FLATS}
 
 
 def test_every_band_lies_just_below_a_spanner_size():
-    assert len(HEX_AF_MIN) == 39  # a vacuity guard: 22 metric sizes, 17 inch
+    assert len(HEX_AF_MIN) == 42  # a vacuity guard: 25 metric sizes, 17 inch
     for af, minimum in HEX_AF_MIN.items():
         assert af in FLATS, af
-        assert 0 < af - minimum < 0.05 * af, af  # a tolerance, not another size
+        # A tolerance, not another size: within 5%, or 0.2 mm at the smallest, where
+        # ISO 4032's 0.18 is 5.6% of a 3.2 (issue #83).
+        assert 0 < af - minimum < max(0.05 * af, 0.2), af
 
 
 @pytest.mark.parametrize(
@@ -104,6 +106,7 @@ def test_where_metric_and_inch_bands_overlap_the_thread_decides():
         and max(HEX_AF_MIN[metric], HEX_AF_MIN[inch]) <= min(metric, inch)
     }
     assert overlaps == {
+        ("4", "5/32in"),  # an M2 nut's and a #0's, 3.82 to 3.97 (issue #83)
         ("8", "5/16in"),
         ("11", "7/16in"),
         ("16", "5/8in"),

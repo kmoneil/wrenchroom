@@ -21,7 +21,7 @@ name used to be passed over without a word).
 
 Whatever the name doesn't say stays None for geometry to fill in (spec 5.2: names,
 then geometry, then the sidecar, each overriding the one before). A name that is
-clearly a fastener the kit can't check (a set screw, an M2) comes back with
+clearly a fastener the kit can't check (a set screw, an M1) comes back with
 ``not_covered`` and the reason, never as nothing.
 """
 
@@ -597,7 +597,8 @@ def _metric(match: re.Match[str]) -> tuple[Size | None, float | None, str | None
     try:
         return Size.parse(designation), length, text, None
     except ValueError:
-        return None, length, text, f"{designation} is outside the sizes the kit covers (M3 to M24)"
+        reason = f"{designation} is outside the sizes the tables hold (M1.6 to M24)"
+        return None, length, text, reason
 
 
 def _is_pitch(value: float, diameter: float) -> bool:
@@ -611,7 +612,7 @@ def _imperial(match: re.Match[str]) -> tuple[Size | None, float | None, str | No
     try:
         return Size.parse(designation), length, text, None
     except ValueError:
-        return None, length, text, f"{designation} is outside the sizes the kit covers"
+        return None, length, text, f"{designation} is outside the sizes the tables hold (#0 to 3/4)"
 
 
 def _inches(text: str) -> float | None:

@@ -39,6 +39,24 @@ PAST_HOME = {
         "(imperial-home and full have it)"
     ),
     "torx_wall_screw": "needs torx-key-T30, which kit metric-home does not hold (full has it)",
+    # Issue #83: below M3, the 1.5 key alone is a home kit's.
+    "small_tiny_nut": (
+        "needs spanner-3.2 or socket-3.2, which kit metric-home does not hold (full has it)"
+    ),
+    "small_little_nut": (
+        "needs spanner-5 or socket-5 or nut-driver-5, which kit metric-home does not hold "
+        "(full has it)"
+    ),
+    "small_flat_screw": "needs hex-key-1.3, which kit metric-home does not hold (full has it)",
+    "small_inch_socket_screw": (
+        "needs hex-key-0.050in, which kit metric-home does not hold "
+        "(imperial-home and full have it)"
+    ),
+    "small_inch_button_screw": (
+        "needs hex-key-0.035in, which kit metric-home does not hold (full has it)"
+    ),
+    "small_torx_screw": "needs torx-key-T6, which kit metric-home does not hold (full has it)",
+    "small_phillips_screw": "needs driver-ph0, which kit metric-home does not hold (full has it)",
 }
 
 #: Cells metric-home holds a tool for but can't turn without full's: the ball end.
@@ -49,8 +67,15 @@ HOME_BLOCKED = {
     "nut_tube_nut": ["nut_tube_tube"],
 }
 
-#: The bench's inch fasteners: all imperial-home can turn.
-INCH = {"inch_pair_screw", "inch_pair_nut"}
+#: The bench's inch fasteners imperial-home can turn: all but the one past it.
+INCH = {"inch_pair_screw", "inch_pair_nut", "small_inch_socket_screw"}
+
+#: An inch fastener whose tool is past imperial-home's 13 keys (issue #83).
+INCH_PAST_HOME = {
+    "small_inch_button_screw": (
+        "needs hex-key-0.035in, which kit imperial-home does not hold (full has it)"
+    ),
+}
 
 
 def _by_name(report):
@@ -121,8 +146,13 @@ def test_imperial_home_covers_nothing_metric_but_drivers(inch_json, bench_json):
         if full["tool"] in CUSTOM:  # the sidecar's own: in this kit too
             assert entry == full, name
             continue
-        if full["tool"] is None or full["tool"].startswith("driver-"):
-            # Held by itself, or a driver's tip: no size for the kit to lack.
+        if name in INCH_PAST_HOME:
+            assert (entry["verdict"], entry["reason"]) == ("not-covered", INCH_PAST_HOME[name])
+            continue
+        if full["tool"] is None or (
+            full["tool"].startswith("driver-") and IMPERIAL_HOME.holds(full["tool"])
+        ):
+            # Held by itself, or a home driver's tip: no size for the kit to lack.
             assert entry == full, name
             unsized += 1
             continue

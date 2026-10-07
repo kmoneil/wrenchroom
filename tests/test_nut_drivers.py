@@ -45,6 +45,8 @@ def run(assembly, rule=RULE, kit="full", engine="exact", **kwargs):
 def test_the_drivers_are_the_larger_of_two_makers():
     # (Wera 395 socket OD, Wiha 341 socket OD, Wiha handle diameter, handle length)
     makers = {
+        4.0: (6.9, 6.9, 30, 111),  # issue #83
+        5.0: (8.1, 7.9, 30, 111),
         5.5: (8.1, 7.9, 30, 111),
         7.0: (11.0, 10.9, 36, 118),
         8.0: (12.1, 11.9, 36, 118),
@@ -76,7 +78,7 @@ def test_the_solid_is_mouth_blade_and_handle_end_to_end():
 
 
 def test_only_the_full_kit_holds_nut_drivers():
-    assert FULL.nut_drivers == ("5.5", "7", "8", "10", "13")
+    assert FULL.nut_drivers == ("4", "5", "5.5", "7", "8", "10", "13")
     assert METRIC_HOME.nut_drivers == IMPERIAL_HOME.nut_drivers == ()
 
 

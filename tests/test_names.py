@@ -123,9 +123,9 @@ def test_descriptions_and_nouns(name, kind, head):
         ("wing nut M6", "by hand"),
         ("thumb screw M4", "by hand"),
         ("knurled nut M3", "by hand"),
-        ("ISO 4762 M2x6", "M2 is outside"),
+        ("ISO 4762 M1.2x3", "M1.2 is outside the sizes the tables hold (M1.6 to M24)"),
         ("hex bolt M30x100", "M30 is outside"),
-        ("SHCS #0-80 x 1/8", "#0 is outside"),
+        ("SHCS #5-40 x 1/4", "#5 is outside the sizes the tables hold (#0 to 3/4)"),
     ],
 )
 def test_a_fastener_the_kit_cannot_check_says_why(name, reason):

@@ -25,7 +25,7 @@ def test_size_parses(text, designation, mm):
     assert size.diameter_mm == pytest.approx(mm, abs=0.001)
 
 
-@pytest.mark.parametrize("text", ["M7", "M99", "#3", "2/7", "", "6mm"])
+@pytest.mark.parametrize("text", ["M7", "M99", "M1.2", "#5", "2/7", "", "6mm"])
 def test_unknown_sizes_are_errors(text):
     with pytest.raises(ValueError, match="unknown fastener size"):
         Size.parse(text)

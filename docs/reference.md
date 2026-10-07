@@ -215,10 +215,15 @@ A kit says which tools exist, and only those are tried (`--kit`; `wrenchroom too
 - `imperial-home` is the same in inch sizes, as US home sets come: ASME B18.3 keys
   0.050 to 3/8 in, spanners 1/4 to 3/4 in, sockets 3/16 to 3/4 in.
 - `full` holds every size the tables describe, both systems, its spanners and
-  sockets reaching 50 mm for large cable glands (an M32 gland is commonly 41 across
-  flats). It also has Torx keys T10 to T40 (ISO 10664 sizes, swept like hex keys; a
-  Torx head takes the size ISO 14579 and its kin give its thread, M6 T30), ball-end
-  keys 3 to 10 mm, and nut drivers 5.5 to 13 mm.
+  sockets running from 3.2 mm (an M1.6 nut's) to 50 mm for large cable glands (an
+  M32 gland is commonly 41 across flats). It also has ISO 2936's 1.3 mm key and ASME
+  B18.3's 0.035 in, Torx keys T6 to T40 (ISO 10664 sizes, swept like hex keys; a
+  Torx head takes the size ISO 14579 and its kin give its thread, M6 T30), a PH0
+  driver, ball-end keys 3 to 10 mm, and nut drivers 4 to 13 mm.
+
+The tables run from M1.6 and #0: the screws, nuts and drives of printers, electronics
+and small mechanisms. Where a standard has no such head, the reason says so (`ISO
+7380-1 has no M2 button head`: button heads start at M3).
 
 A fastener that needs a tool the kit lacks is not covered, and the reason names the
 tool and the kits that have it (`needs spanner-24, which kit metric-home does not hold
@@ -331,8 +336,8 @@ way round, cost most of that.
 
 ## Standards
 
-Dimension tables cite their standards (ISO 2936, 4762, 7380-1, 10642, 4032, 7379,
-10664, 14579; ASME B18.3, B18.2.1, B18.2.2, B18.6.3) with the date checked;
+Dimension tables cite their standards (ISO 2936, 4762, 7380-1, 10642, 4032, 4017,
+7379, 7045, 10664, 14579; ASME B18.3, B18.2.1, B18.2.2, B18.6.3) with the date checked;
 approximations are labelled as such. `wrenchroom tools --kit NAME` prints each table
 with its citation.
 

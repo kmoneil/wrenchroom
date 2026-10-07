@@ -77,6 +77,10 @@ class Spanner:
 #: (fabory.com) is the longest there is. Extra-long series (Hazet 600LG) are left
 #: out: nobody's set is made of them.
 FULL_LENGTHS: dict[float, float] = {
+    3.2: 77.0,  # Facom 39 short and Gedore 7 (issue #83, read 2026-10-07)
+    4.0: 90.0,  # Facom 440, its own page (two sellers say 106)
+    4.5: 85.0,  # Stahlwille OPEN-BOX 16 and Gedore 7
+    5.0: 123.0,  # Elora 205
     5.5: 105.0,  # HZ
     6.0: 129.5,  # TK
     7.0: 138.3,  # GW, as to 22
@@ -204,6 +208,12 @@ STUBBY_LENGTHS: dict[float, float] = {
 }
 
 
+#: Open ends below the fit's range, their jaws' width, mm: the widest of Stahlwille's
+#: OPEN-BOX 16, Gedore's 7 and Elora's 205, read 2026-10-07 (issue #83). The fit runs
+#: up to 4 mm narrow here, and a narrower jaw asks for less room than a real one.
+SMALL_OPEN_WIDTHS: dict[float, float] = {3.2: 10.0, 4.0: 12.5, 4.5: 12.5, 5.0: 16.5}
+
+
 def spanner_for(af: float) -> Spanner:
     """The spanner for an across-flats size: makers' lengths, approximated heads.
 
@@ -216,7 +226,9 @@ def spanner_for(af: float) -> Spanner:
     ``2.09*af + 1.9`` and thickness ``0.27*af + 2.2`` are fits to two makers'
     published heads (Stahlwille OPEN-BOX and Hazet 600N, 8 to 24 mm, read
     2026-10-06; widths within 1.1 mm of the fit, thicknesses within 1.0), inside
-    ISO 3318:2016's maximum head width ``2.1*s + 7``.
+    ISO 3318:2016's maximum head width ``2.1*s + 7``; below 5.5 mm the makers' own
+    width where it is wider (:data:`SMALL_OPEN_WIDTHS`). The ring's ``0.8*af + 2``
+    stands there, 1.5 mm over the makers' rings in radius: more room, not less.
     """
     return Spanner(
         af=af,
@@ -224,7 +236,7 @@ def spanner_for(af: float) -> Spanner:
         head_thickness=0.3 * af + 1.5,
         ring_outer_radius=0.8 * af + 2,
         handle_width=0.9 * af + 2,
-        open_width=2.09 * af + 1.9,
+        open_width=max(2.09 * af + 1.9, SMALL_OPEN_WIDTHS.get(af, 0.0)),
         open_thickness=0.27 * af + 2.2,
         stubby_length=STUBBY_LENGTHS.get(af),
     )
