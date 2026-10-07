@@ -161,6 +161,11 @@ and `grazes` in the JSON).
   parts with the mechanism moved (`model:`), and may build on another (`base:`). A
   rule's `state:` says a fastener is reached in that state; `checks: {try_states:
   [...]}` retries failures in each state in turn, and says where a fastener passed.
+  A state's model is the same parts, moved, and matched by name (issue #74): a
+  fastener its model lacks isn't tried there, which fails the run (`state
+  'lever-up': its model bench_lever-up.step has no part state_lever_screw (renamed?),
+  so it wasn't tried there`), and a fastener whose own state it is is not covered,
+  naming the model. Any other part name only one of the two models has is noted.
 - **Narrowing.** `explain` and `check --only` narrow what is reported, not what is
   resolved: a fastener's pair is checked with it, so its verdict is the full run's.
 

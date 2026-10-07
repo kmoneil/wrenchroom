@@ -245,6 +245,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         unmatched_rules=tuple(rule.parts for rule in matches.unmatched_rules),
         unmatched_ignores=matches.unmatched_ignores,
         warnings=tuple(only_warnings + pair_warnings + space.warnings),
+        notes=tuple(space.notes),
         passed_over=passed_over,
         default_state=default_state,
         hand_room=tools.hand_room,
@@ -585,6 +586,8 @@ class _StateSpace:
         ] = {}
         self.engine = engine
         self.warnings: list[str] = []
+        #: What the state models differ in from the main model (issue #74).
+        self.notes: list[str] = []
         #: Every state resolved so far, as the check saw it: kept for the report,
         #: whose HTML view draws a fastener in the state it was reached in.
         self.models: dict[str, StateModel] = {}
@@ -632,6 +635,8 @@ class _StateSpace:
             return self._default, frozenset(), True
         model = self._config.state_model(state_name)
         assembly = self._default if model is None else self._load(model)
+        if model is not None and state_name not in self.models:
+            self._compare(state_name, model, assembly)
         removed: set[str] = set()
         for glob in self._config.state_removes(state_name):
             hits = {name for name in assembly.names if fnmatchcase(name, glob)}
@@ -644,6 +649,41 @@ class _StateSpace:
         self.models[state_name] = StateModel(assembly, frozenset(removed))
         return assembly, frozenset(removed), model is None
 
+    def model_of(self, state_name: str) -> str | None:
+        """The model file a state uses, its own or up its chain; None for the main model."""
+        return self._config.state_model(state_name)
+
+    def warn_absent(self, state_name: str, name: str) -> None:
+        """A fastener a state's model doesn't have: not tried there, and the run fails.
+
+        A renamed or dropped part in a state's export hid the fastener from that
+        state, and its verdict stood with the default state's cause (issue #74).
+        Each fastener is tried once in each state, so each is said once.
+        """
+        self.warnings.append(
+            f"state {state_name!r}: its model {self.model_of(state_name)} has no part {name} "
+            "(renamed?), so it wasn't tried there"
+        )
+
+    def _compare(self, state_name: str, model: str, assembly: Assembly) -> None:
+        """Note a state's model whose parts aren't the main model's by name.
+
+        A state's model is meant to be the same parts, moved: a name only one of
+        them has is a renamed or dropped part, more often than not. Said, not
+        failed for, since a state may also add or take away parts on purpose.
+        """
+        main = [name for name in self._default.names if not self._config.is_ignored(name)]
+        theirs = [name for name in assembly.names if not self._config.is_ignored(name)]
+        missing = tuple(name for name in main if name not in set(theirs))
+        new = tuple(name for name in theirs if name not in set(main))
+        said = []
+        if missing:
+            said.append(f"lacks {_count(missing, 'part')} of the main model's: {listed(missing)}")
+        if new:
+            said.append(f"has {_count(new, 'part')} the main model doesn't: {listed(new)}")
+        if said:
+            self.notes.append(f"state {state_name!r}: its model {model} {'; '.join(said)}")
+
     def _load(self, filename: str) -> Assembly:
         if filename not in self._models:
             if self._model_dir is None:
@@ -651,6 +691,11 @@ class _StateSpace:
                 raise ConfigError(msg)
             self._models[filename] = Assembly.from_step(self._model_dir / filename)
         return self._models[filename]
+
+
+def _count(names: tuple[str, ...], noun: str) -> str:
+    """``1 part``, ``3 parts``."""
+    return f"{len(names)} {noun}" + ("" if len(names) == 1 else "s")
 
 
 # ---------------------------------------------------------------------------
@@ -687,6 +732,8 @@ class _Candidate:
     deciding: tuple[str, ...] = ()
     #: What the result should say of how it was checked (issue #47).
     notes: tuple[str, ...] = ()
+    #: Its state's model has no part of its name (issue #74).
+    absent: bool = False
 
 
 def _check_fastener(
@@ -708,6 +755,8 @@ def _check_fastener(
     first: _Candidate | None = None
     for index, state_name in enumerate(order):
         candidate = _try_in_state(fastener, frame, state_name, space, tools, partner)
+        if candidate.absent and index > 0 and state_name is not None:
+            space.warn_absent(state_name, fastener.name)  # a retry it can't have (#74)
         if first is None:
             first = candidate
         if candidate.reason is not None and index == 0:
@@ -730,7 +779,10 @@ def _try_in_state(
 ) -> _Candidate:
     assembly, removed, same_model = space.resolve(state_name)
     if fastener.name not in assembly.names:
-        return _Candidate(fastener, reason=f"not present in state {state_name!r}", state=state_name)
+        model = space.model_of(state_name) if state_name is not None else None
+        whose = f", whose model {model} has no part of its name (renamed?)" if model else ""
+        reason = f"not in state {state_name!r}{whose}"
+        return _Candidate(fastener, reason=reason, state=state_name, absent=True)
     frame = default_frame
     if not same_model:  # parts may have moved: measure this model's own copy
         try:
