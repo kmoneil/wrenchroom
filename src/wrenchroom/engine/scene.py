@@ -123,12 +123,26 @@ class Scene:
     query it for every tool position.
     """
 
-    def __init__(self, parts: Iterable[Part], engine: Engine) -> None:
+    def __init__(
+        self,
+        parts: Iterable[Part],
+        engine: Engine,
+        boxes: tuple[np.ndarray, np.ndarray] | None = None,
+    ) -> None:
+        """``boxes``, when given, are the parts' (n, 3) low and high corners, in order.
+
+        A check builds a scene per fastener from the same parts less a few, so it
+        keeps the whole assembly's boxes once and masks them, rather than
+        gathering every part's box again for each.
+        """
         self.parts: tuple[Part, ...] = tuple(parts)
         self.engine = engine
-        boxes = [engine.part_bounds(part) for part in self.parts]
-        self._low = np.array([low for low, _ in boxes], dtype=float).reshape(-1, 3)
-        self._high = np.array([high for _, high in boxes], dtype=float).reshape(-1, 3)
+        if boxes is None:
+            found = [engine.part_bounds(part) for part in self.parts]
+            low = np.array([lo for lo, _ in found], dtype=float).reshape(-1, 3)
+            high = np.array([hi for _, hi in found], dtype=float).reshape(-1, 3)
+            boxes = (low, high)
+        self._low, self._high = boxes
 
     def hits(self, tool: Tool) -> tuple[str, ...]:
         """Every part the tool solid overlaps, by name, in assembly order."""
