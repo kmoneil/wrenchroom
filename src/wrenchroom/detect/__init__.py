@@ -92,7 +92,7 @@ def find(parts: Iterable[Part]) -> Found:
         hint = read_name(part.name)
         if hint is None:
             continue
-        reading = read_shape(part.shape, hint.kind)
+        reading = read_shape(part.shape, hint.kind, hint.head)
         if hint.needs_drive and not shows_drive(reading):
             passed.append(PassedOver(part.name, hint.kind, f"{hint.basis}; {NO_DRIVE}"))
         else:
@@ -124,7 +124,7 @@ def shows_drive(reading: ShapeReading) -> bool:
 
 def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) -> Fastener:
     """One named fastener, its name's hint completed and checked by its solid."""
-    reading = reading if reading is not None else read_shape(part.shape, hint.kind)
+    reading = reading if reading is not None else read_shape(part.shape, hint.kind, hint.head)
     if hint.unless_hex and reading.drive_af is not None:
         # "nut_deep_well_nut": a nut deep in a well, as its hex says (issue #29).
         hint = replace(hint, kind=Kind.NUT)

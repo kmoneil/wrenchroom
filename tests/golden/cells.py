@@ -22,6 +22,7 @@ from parts import (
     gland,
     hex_bolt,
     hex_nut,
+    hex_prism,
     pan_phillips,
     plate,
     slab,
@@ -947,3 +948,24 @@ def flat_graze():
 def flat_deep():
     """The flat ring 0.008 in: 0.074 mm^3, a hit at every angle: blocked."""
     return _graze(_flat(0.008))
+
+
+@cell(
+    "pivot",
+    [{"parts": "shoulder_screw", "kind": "screw", "head": "shoulder", "size": "M6"}],
+    {"shoulder_screw": {"verdict": "turns", "tool": "hex-key-4", "how": "driver straight in"}},
+)
+def pivot():
+    """An M6 shoulder screw (ISO 7379: head 13 by 5.5, 8 mm shoulder, 4 mm socket) as
+    a lever's pivot, its thread in the plate (issue #40). The 4 mm key turns it in
+    open air, where ISO 4762's M6 key would be 5. With no rule, "shoulder" in its
+    name says the head, and detection reads its socket through ISO 7379's keys.
+    """
+    head = Pos(0, 0, 20 + 2.75) * Cylinder(6.5, 5.5)
+    screw = head + Pos(0, 0, 10) * Cylinder(4, 20) + Pos(0, 0, -5) * Cylinder(3, 10)
+    screw = screw - Pos(0, 0, 20) * hex_prism(4.0, 3.31, 5.5 - 3.3)
+    return [
+        ("plate", plate(holes=[(0, 0, 3)])),
+        ("lever", Pos(0, 0, 10) * (Box(60, 30, 20) - Cylinder(4.1, 21))),
+        ("shoulder_screw", screw),
+    ]

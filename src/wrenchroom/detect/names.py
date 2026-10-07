@@ -176,7 +176,7 @@ MCMASTER: dict[str, tuple[Kind, Head | None]] = {
 
 #: Nouns a name can be about. Each maps to the kind, plus a fixed head or a
 #: not-covered reason where the noun settles it.
-_SCREW_NOUNS = {"screw", "screws", "bolt", "bolts", "capscrew", "shcs", "bhcs", "fhcs", "shoulder"}
+_SCREW_NOUNS = {"screw", "screws", "bolt", "bolts", "capscrew", "shcs", "bhcs", "fhcs"}
 _NUT_NOUNS = {"nut", "nuts", "locknut", "nyloc", "nylock", "nylok"}
 _GLAND_NOUNS = {"gland", "glands"}
 _HAND_TURNED = {"wingnut", "thumbscrew", "thumbnut"}
@@ -203,6 +203,7 @@ _NOUN_KIND: dict[str, Kind] = {
     **dict.fromkeys(_SCREW_NOUNS | _SET_SCREW_NOUNS | {"thumbscrew"}, Kind.SCREW),
     **dict.fromkeys(_NUT_NOUNS | _GLAND_NOUNS | {"wingnut", "thumbnut"}, Kind.NUT),
     **dict.fromkeys(_INSERT_NOUNS, Kind.INSERT),
+    "shoulder": Kind.SCREW,  # "M6x20 shoulder": the screw; "shoulder bolt": its head
 }
 
 #: Words that describe a fastener rather than name what the part is, and so are
@@ -229,6 +230,7 @@ _HEAD_WORDS: dict[str, Head | None] = {
     "torx": Head.TORX,
     "hexalobular": Head.TORX,
     "carriage": Head.CARRIAGE,
+    "shoulder": Head.SHOULDER,
     "coach": Head.CARRIAGE,
     "pan": None,
     "cheese": None,
@@ -253,6 +255,7 @@ _HEAD_WORDS: dict[str, Head | None] = {
 #: whatever else it says.
 _HEAD_RANK = (
     Head.CARRIAGE,
+    Head.SHOULDER,
     Head.TORX,
     Head.PHILLIPS,
     Head.SLOTTED,
@@ -270,7 +273,7 @@ _HEAD_RANK = (
 _DRIVE_WORDS = {"torx", "hexalobular", "phillips", "pozidriv", "pozi"}
 
 #: Describing words that are the noun when they end the name.
-_END_NOUNS = {"cap"}
+_END_NOUNS = {"cap", "shoulder"}
 
 #: Words that qualify where a part sits or what it is made of, never what it is.
 _QUALIFIERS = {
