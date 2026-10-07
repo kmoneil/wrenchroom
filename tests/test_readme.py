@@ -33,6 +33,7 @@ ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
 REFERENCE = ROOT / "docs" / "reference.md"
 DOCS = (README, REFERENCE)
+RELEASING = ROOT / "docs" / "releasing.md"
 EXAMPLE = ROOT / "examples" / "bracket.py"
 
 #: A fenced block, indented or not: its indent, its language, its body.
@@ -254,14 +255,38 @@ def _anchors(path):
     return {_slug(m.group(1)) for m in re.finditer(r"^#+ (.+)$", path.read_text(), re.MULTILINE)}
 
 
-@pytest.mark.parametrize("doc", DOCS, ids=lambda path: path.name)
-def test_every_relative_link_lands(doc):
-    links = re.findall(r"\]\(([^)\s]+)\)", doc.read_text())
-    local = [link for link in links if not link.startswith(("http://", "https://"))]
-    assert local
-    for link in local:
-        target, _, anchor = link.partition("#")
-        path = (doc.parent / target).resolve() if target else doc
+#: This repository's own files as the README links them: on GitHub, at main.
+REPO_URL = re.compile(
+    r"https://(?:github\.com/kmoneil/wrenchroom/blob|raw\.githubusercontent\.com/"
+    r"kmoneil/wrenchroom)/main/([^#]+)(?:#(.+))?"
+)
+
+
+def _links(doc):
+    return re.findall(r"\]\(([^)\s]+)\)", doc.read_text())
+
+
+@pytest.mark.parametrize("doc", [*DOCS, RELEASING], ids=lambda path: path.name)
+def test_every_link_into_the_repository_lands(doc):
+    checked = 0
+    for link in _links(doc):
+        if found := REPO_URL.fullmatch(link):
+            path, anchor = ROOT / found.group(1), found.group(2)
+        elif link.startswith(("http://", "https://")):
+            continue
+        else:
+            target, _, anchor = link.partition("#")
+            path = (doc.parent / target).resolve() if target else doc
         assert path.exists(), link
         if anchor:
             assert anchor in _anchors(path), link
+        checked += 1
+    assert checked
+
+
+def test_the_readme_links_nothing_pypi_cannot_follow():
+    # The README is the PyPI page too, where a relative link goes nowhere: its own
+    # files are linked on GitHub, which the test above holds to the checkout.
+    relative = [link for link in _links(README) if not link.startswith(("https://", "#"))]
+    assert not relative
+    assert sum(bool(REPO_URL.fullmatch(link)) for link in _links(README)) >= 5

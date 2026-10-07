@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/kmoneil/wrenchroom/actions/workflows/ci.yml/badge.svg)](https://github.com/kmoneil/wrenchroom/actions/workflows/ci.yml)
 ![Python 3.13 | 3.14](https://img.shields.io/badge/python-3.13%20%7C%203.14-blue)
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/kmoneil/wrenchroom/blob/main/LICENSE)
 
 **Can a real hand tool reach, turn and remove every fastener in your assembly?**
 wrenchroom finds out before the parts are made.
@@ -29,7 +29,7 @@ NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts
 The same check as a 3D view (`--html report.html`), opened on the rear screw: the
 5 mm key, straight in, meets the shelf (magenta) long before it reaches the screw.
 
-![The bracket in wrenchroom's 3D view: rear_screw selected, the hex key's position drawn in orange where it hits the shelf, the shelf in magenta, the other fasteners green where they turn and red where they fail](docs/images/bracket-view.png)
+![The bracket in wrenchroom's 3D view: rear_screw selected, the hex key's position drawn in orange where it hits the shelf, the shelf in magenta, the other fasteners green where they turn and red where they fail](https://raw.githubusercontent.com/kmoneil/wrenchroom/main/docs/images/bracket-view.png)
 
 No setup is needed when parts are named the way CAD models usually name them
 (`rear_screw`, `M6x20 SHCS`, `hex nut M8`): the names say what each part is, and
@@ -113,7 +113,7 @@ checks), both as prebuilt wheels.
 
 ## A worked example
 
-[`examples/bracket.py`](examples/bracket.py) builds a small bracket with build123d and
+[`examples/bracket.py`](https://github.com/kmoneil/wrenchroom/blob/main/examples/bracket.py) builds a small bracket with build123d and
 writes it as STEP. It has a base plate and five fasteners:
 
 - `front_screw` and `rear_screw`: M6 socket head cap screws, with a shelf 15 mm over
@@ -355,7 +355,7 @@ tools:
 ```
 
 `wrenchroom tools --config wrenchroom.yaml` lists them after the kit's own. The
-kinds and their numbers, all in mm, are in the [reference](docs/reference.md#your-own-tools).
+kinds and their numbers, all in mm, are in the [reference](https://github.com/kmoneil/wrenchroom/blob/main/docs/reference.md#your-own-tools).
 
 ## Tool kits
 
@@ -459,7 +459,7 @@ engines give the same report (`--exact` uses the exact one throughout). A
 generated bench of 500 fasteners is read and checked in under 10 seconds on a laptop.
 
 Every rule and figure, with the standards and the reasoning, is in
-**[docs/reference.md](docs/reference.md)**.
+**[docs/reference.md](https://github.com/kmoneil/wrenchroom/blob/main/docs/reference.md)**.
 
 ## What it doesn't check
 
@@ -484,7 +484,12 @@ $ uv run python scripts/lanes.py gates    # ruff lint, ruff format, ty
 $ uv run python scripts/lanes.py fast     # the unit suite, golden bench included
 $ uv run python scripts/lanes.py golden   # only the bench: truth, counts, snapshot
 $ uv run python scripts/lanes.py perf     # the bench at 500 fasteners, timed
+$ uv run python scripts/lanes.py release-check  # build the release files and prove them
 ```
+
+Releases are a version tag on `main`, published to PyPI by a workflow PyPI trusts;
+[docs/releasing.md](https://github.com/kmoneil/wrenchroom/blob/main/docs/releasing.md)
+has the steps.
 
 The golden bench (`tests/golden/`) is a generated assembly of small cells, one
 mechanism each, with every verdict worked out by hand. It runs on both collision
@@ -510,7 +515,7 @@ how this project runs its checks. `main` is protected: changes land by pull requ
 rebased, with `gates`, every `fast` row and both `perf` rows green, and no new
 high-severity CodeQL alert. The rule lives in `.github/rulesets/main.json`, exported
 from GitHub; change both together. Security reports go through
-[SECURITY.md](SECURITY.md).
+[SECURITY.md](https://github.com/kmoneil/wrenchroom/blob/main/SECURITY.md).
 
 ## Licence
 

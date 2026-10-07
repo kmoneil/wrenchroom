@@ -26,8 +26,9 @@ keywords = [
   "build123d",
 ]
 classifiers = [
-  # Pre-Alpha: the scaffold exists, no check works yet. Moves with the milestones.
-  "Development Status :: 2 - Pre-Alpha",
+  # Alpha: the checks work on real models, and their outputs may still change
+  # between releases. Moves with the milestones.
+  "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
   "Intended Audience :: Manufacturing",
   "Programming Language :: Python :: 3 :: Only",
@@ -60,6 +61,8 @@ dependencies = [
 Homepage = "https://github.com/kmoneil/wrenchroom"
 Source = "https://github.com/kmoneil/wrenchroom"
 Issues = "https://github.com/kmoneil/wrenchroom/issues"
+Documentation = "https://github.com/kmoneil/wrenchroom/blob/main/docs/reference.md"
+Changelog = "https://github.com/kmoneil/wrenchroom/releases"
 
 [project.scripts]
 wrenchroom = "wrenchroom.cli:main"
