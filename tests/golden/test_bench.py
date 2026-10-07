@@ -142,5 +142,8 @@ def test_the_undersize_nut_is_noted_in_every_format(bench_report, bench_json):
     )
     lines = bench_report.terminal_lines()
     assert [line for line in lines if "hex drawn" in line] == [f"NOTE undersize_nut: {note}"]
-    assert f"#### Notes\n\n- `undersize_nut`: {note}\n" in bench_report.markdown()
-    assert {name for name, entry in bench_json.items() if entry["notes"]} == {"undersize_nut"}
+    markdown = bench_report.markdown()
+    assert "\n#### Notes\n\n" in markdown
+    assert f"\n- `undersize_nut`: {note}\n" in markdown.split("#### Notes")[1]
+    noted = {name for name, entry in bench_json.items() if entry["notes"]}
+    assert noted == {"undersize_nut", "wide_dome_gland", "sunk_cap_cap_nut"}  # and #47's

@@ -53,7 +53,12 @@ from wrenchroom.tools.kits import DEFAULT_KIT, Kit, kit_named, missing
 from wrenchroom.tools.nut_drivers import NUT_DRIVERS, nut_driver_attempt
 from wrenchroom.tools.sizes import FLATS, is_inch, size_mm, size_name, snap
 from wrenchroom.tools.sockets import socket_attempts, socket_for
-from wrenchroom.tools.spanners import open_end_attempts, ring_attempts, spanner_for
+from wrenchroom.tools.spanners import (
+    RING_CLEARANCE,
+    open_end_attempts,
+    ring_attempts,
+    spanner_for,
+)
 from wrenchroom.tools.sweep import (
     DEFAULT_STEP_DEG,
     Attempt,
@@ -188,7 +193,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
             _check_fastener(fastener, frames[fastener.name], space, config, default_state, tools)
         )
     results = [
-        replace(r, notes=(*r.fastener.notes, *_drive_notes(r.fastener)))
+        replace(r, notes=(*r.fastener.notes, *_drive_notes(r.fastener), *r.notes))
         for r in _resolve_joints(candidates, pairs)
         if r.fastener.name in reported
     ]
@@ -261,6 +266,9 @@ class _Frame:
     radials: tuple[float, ...]
     bore: float
     oriented: bool  # True when the fastener gave an explicit axis
+    #: Which vertices lie on a flat parallel to the axis (a hex's): where the
+    #: band is, when the part has any (issue #47).
+    flats: tuple[bool, ...] = ()
 
     @property
     def extent(self) -> float:
@@ -283,7 +291,33 @@ def _frame(part: Part, fastener: Fastener) -> _Frame:
         radials=radials,
         bore=_bore_radius(part, direction),
         oriented=isinstance(fastener.axis, tuple),
+        flats=_on_flats(part, origin, direction, vertices),
     )
+
+
+def _on_flats(part: Part, origin: Vec, direction: Vec, vertices: list[Vec]) -> tuple[bool, ...]:
+    """Which vertices lie on a planar face parallel to the axis, facing out: a hex's flats.
+
+    None do unless at least three such faces stand round it (a hex, a square):
+    one flat ground on a round part says nothing about where a spanner grips.
+    A flat facing the axis is a key's pocket or a slot, which no spanner grips.
+    """
+    flats = []
+    for face in part.shape.faces().filter_by(GeomType.PLANE):
+        on: Vec = tuple(face.center())  # type: ignore[assignment]
+        normal: Vec = tuple(face.normal_at(face.center()))  # type: ignore[assignment]
+        out = _sub(on, origin)
+        radial = _sub(out, _scale(direction, _dot(out, direction)))
+        if abs(_dot(normal, direction)) < 1 - _AXIAL and _dot(normal, radial) > 0:
+            flats.append(face)
+    if len(flats) < 3:  # noqa: PLR2004  (a square has four, a hex six)
+        return ()
+    corners = {_vertex_key(tuple(v)) for face in flats for v in face.vertices()}
+    return tuple(_vertex_key(v) in corners for v in vertices)
+
+
+def _vertex_key(v: Vec) -> tuple[float, float, float]:
+    return (round(v[0], 6), round(v[1], 6), round(v[2], 6))
 
 
 def _largest_cylinder_axis(part: Part) -> Axis | None:
@@ -315,8 +349,19 @@ def _axis_frame(part: Part, direction: Vec) -> tuple[Vec, list[Vec]]:
     return origin, vertices  # type: ignore[return-value]
 
 
-def _band(projections: tuple[float, ...], radials: tuple[float, ...]) -> tuple[float, float]:
-    """The widest region's extent along the axis: where a spanner or ring grips."""
+def _band(
+    projections: tuple[float, ...], radials: tuple[float, ...], flats: tuple[bool, ...] = ()
+) -> tuple[float, float]:
+    """Where a spanner or ring grips, along the axis: the flats' extent, if any.
+
+    A part with no flats parallel to its axis falls back to its widest region.
+    The flats are the hex, where the widest region need not be: a gland's dome
+    or a flange nut's flange can be wider than the hex, and one about as wide
+    used to stretch the band over itself (issue #47).
+    """
+    if any(flats):
+        heights = [p for p, flat in zip(projections, flats, strict=True) if flat]
+        return (min(heights), max(heights))
     widest = max(radials, default=0.0)
     heights = [p for p, r in zip(projections, radials, strict=True) if r > 0.75 * widest]
     if not heights:
@@ -325,14 +370,21 @@ def _band(projections: tuple[float, ...], radials: tuple[float, ...]) -> tuple[f
 
 
 def _bore_radius(part: Part, direction: Vec) -> float:
-    """The smallest coaxial cylinder: a nut's bore, a gland's cable way; 0 if none."""
-    radii = [
-        radius
-        for face in part.shape.faces().filter_by(GeomType.CYLINDER)
-        if (axis := face.axis_of_rotation) is not None
-        and abs(_dot(tuple(axis.direction), direction)) > _AXIAL
-        and (radius := face.radius) is not None
-    ]
+    """The smallest coaxial cylinder facing the axis: a nut's bore, a gland's cable way.
+
+    0 if none. Only a face looking in is a bore: a gland's dome, outside, used to
+    be taken for one, and leave no face to probe (issue #47).
+    """
+    radii = []
+    for face in part.shape.faces().filter_by(GeomType.CYLINDER):
+        axis, radius = face.axis_of_rotation, face.radius
+        if axis is None or radius is None or abs(_dot(tuple(axis.direction), direction)) <= _AXIAL:
+            continue
+        on: Vec = tuple(face.center())  # type: ignore[assignment]
+        out = _sub(on, tuple(axis.position))  # type: ignore[arg-type]
+        radial = _sub(out, _scale(direction, _dot(out, direction)))
+        if _dot(tuple(face.normal_at(face.center())), radial) < 0:  # type: ignore[arg-type]
+            radii.append(radius)
     return min(radii, default=0.0)
 
 
@@ -417,7 +469,7 @@ def _coaxial_offset(screw: _Frame, nut: _Frame) -> float | None:
     offset = math.sqrt(max(0.0, _dot(between, between) - along * along))
     if offset > _PAIR_MAX_OFFSET_MM:
         return None
-    band_lo, band_hi = _band(nut.projections, nut.radials)
+    band_lo, band_hi = _band(nut.projections, nut.radials, nut.flats)
     nut_centre = _dot(_sub(nut.point_at((band_lo + band_hi) / 2), screw.origin), screw.direction)
     if not (min(screw.projections) - 1.0 <= nut_centre <= max(screw.projections) + 1.0):
         return None
@@ -525,6 +577,8 @@ class _Candidate:
     no_hand_room: tuple[str, ...] = ()
     #: What the turning attempt only grazed (issue #25).
     grazes: tuple[str, ...] = ()
+    #: What the result should say of how it was checked (issue #47).
+    notes: tuple[str, ...] = ()
 
 
 def _check_fastener(
@@ -594,6 +648,14 @@ def _try_in_state(
     except NotCovered as exc:  # also any a lazy attempt raises while running
         candidate.reason = str(exc)
         return candidate
+    # Only its own body puts the part's name among an attempt's blockers: the
+    # scene never holds the part itself.
+    if any(attempt.blockers == (fastener.name,) for attempt in candidate.attempts):
+        candidate.notes = (
+            f"no ring, socket or nut driver gets on: past its hex the part is "
+            f"{2 * geometry.cap_radius:.2f} across, wider than their bore round the hex; "
+            "only an open end grips it, from the side",
+        )
     if fastener.kind is Kind.SCREW and (candidate.turns or candidate.hold):
         candidate.way_out = _way_out(fastener, frame, geometry, mount, scene)
         candidate.extraction_blocked = candidate.way_out.hits if candidate.way_out else ()
@@ -733,6 +795,7 @@ def _finish(
         state=candidate.state,
         pair=partner_name,
         grazes=grazes if verdict in {Verdict.TURNS, Verdict.STUCK, Verdict.HELD} else (),
+        notes=candidate.notes,
     )
 
 
@@ -756,6 +819,11 @@ class _Geometry:
     band_bottom: float
     circumradius: float
     bore_radius: float
+    #: How far the part reaches from the axis past its band, toward the seat:
+    #: what a ring or socket must pass to get on (a gland's dome; issue #47).
+    cap_radius: float = 0.0
+    #: The part's own name, for an attempt its own body stops.
+    part_name: str = ""
 
     @property
     def band_height(self) -> float:
@@ -770,7 +838,8 @@ def _orient(frame: _Frame, fastener: Fastener, scene: Scene) -> tuple[Mount, _Ge
         projections = tuple(-p for p in projections)
     top = max(projections)
     seat = _add(frame.origin, _scale(direction, top))
-    band_lo, band_hi = _band(projections, frame.radials)
+    band_lo, band_hi = _band(projections, frame.radials, frame.flats)
+    past = [r for p, r in zip(projections, frame.radials, strict=True) if p > band_hi + _ON]
     return (
         Mount(seat=seat, axis=direction),
         _Geometry(
@@ -778,6 +847,8 @@ def _orient(frame: _Frame, fastener: Fastener, scene: Scene) -> tuple[Mount, _Ge
             band_bottom=band_lo - top,
             circumradius=max(frame.radials, default=0.0),
             bore_radius=frame.bore,
+            cap_radius=max(past, default=0.0),
+            part_name=frame.part.name,
         ),
     )
 
@@ -830,7 +901,7 @@ def _free_face_is_at_bottom(frame: _Frame, scene: Scene, thread_radius: float = 
     inner = max(frame.bore, thread_radius) + 0.5
     if inner >= outer:
         raise NotCovered("the bore leaves no face to probe for the free end")
-    band_lo, band_hi = _band(frame.projections, frame.radials)
+    band_lo, band_hi = _band(frame.projections, frame.radials, frame.flats)
     plane_top = Mount(seat=frame.point_at(band_hi), axis=frame.direction)
     plane_bottom = Mount(seat=frame.point_at(band_lo), axis=_neg(frame.direction))
     top_free = scene.clear(plane_top.place(axial_annulus(inner, outer, 0.1, 1.0)))
@@ -1116,42 +1187,78 @@ def _hex_flats_attempts(
             raise NotCovered(f"no across-flats for {size.designation}")
     if geometry.band_height <= _MIN_BAND:
         raise NotCovered("could not measure the hex's height")
-    band = (geometry.band_top, geometry.band_bottom)
     wanted = [f"spanner-{size_name(af)}"]
     if fastener.socket_allowed:  # a cable through it rules out anything that covers it
         wanted.append(f"socket-{size_name(af)}")
         if af in NUT_DRIVERS:
             wanted.append(NUT_DRIVERS[af].name)
     held = tools.need(*wanted)
-    return _hex_flats_tools(held, mount, af, band, scene, tools)
+    return _hex_flats_tools(held, mount, af, geometry, scene, tools)
 
 
 def _hex_flats_tools(
     held: tuple[str, ...],
     mount: Mount,
     af: float,
-    band: tuple[float, float],
+    geometry: _Geometry,
     scene: Scene,
     tools: _Tools,
 ) -> Iterator[Attempt]:
+    """Each tool the kit holds, in turn; a ring, socket or nut driver only if it gets on."""
     step, hand = tools.step_deg, tools.hand_room
-    if f"spanner-{size_name(af)}" in held:
-        yield from ring_attempts(mount, spanner_for(af), af, band, scene, step, hand)
+    band = (geometry.band_top, geometry.band_bottom)
+    over = _gets_over(geometry, af)
+    spanner = f"spanner-{size_name(af)}"
+    if spanner in held:
+        if over:
+            yield from ring_attempts(mount, spanner_for(af), af, band, scene, step, hand)
+        else:
+            yield from _cannot_get_on(mount, af, geometry, spanner, _RING_WAYS)
         yield from open_end_attempts(mount, spanner_for(af), af, band, scene, step, hand)
-    if f"socket-{size_name(af)}" in held:
-        yield from socket_attempts(mount, socket_for(af), af, band, scene, step, hand)
+    socket = f"socket-{size_name(af)}"
+    if socket in held:
+        if over:
+            yield from socket_attempts(mount, socket_for(af), af, band, scene, step, hand)
+        else:
+            yield from _cannot_get_on(mount, af, geometry, socket, (_SOCKET_WAY,))
     driver = NUT_DRIVERS.get(af)
     if driver is not None and driver.name in held:
-        yield nut_driver_attempt(mount, driver, af, band, scene, hand)
+        if over:
+            yield nut_driver_attempt(mount, driver, af, band, scene, hand)
+        else:
+            yield from _cannot_get_on(mount, af, geometry, driver.name, (_DRIVER_WAY,))
 
 
-def _spanner_ends(
-    mount: Mount, af: float, band: tuple[float, float], scene: Scene, tools: _Tools
+#: The ways each covering tool tries, as their sweeps name them.
+_RING_WAYS = ("ring, full length", "ring, stubby")
+_SOCKET_WAY = "socket on ratchet"
+_DRIVER_WAY = "nut driver straight in"
+
+#: Points this far past the band are past it, mm: not the band's own edge.
+_ON = 1e-6
+
+
+def _gets_over(geometry: _Geometry, af: float) -> bool:
+    """Whether a ring's or socket's bore, round the hex's corners, passes the part past it.
+
+    A ring or socket goes on along the axis, over whatever the part has between
+    its hex and its free end: a gland's dome wider than that bore keeps them off,
+    and only an open end, from the side, grips the hex (issue #47).
+    """
+    return geometry.cap_radius <= af / math.sqrt(3) + RING_CLEARANCE + _ON
+
+
+def _cannot_get_on(
+    mount: Mount, af: float, geometry: _Geometry, tool: str, ways: tuple[str, ...]
 ) -> Iterator[Attempt]:
-    """A combination spanner, both ends: the ring first, then the open end."""
-    spanner = spanner_for(af)
-    yield from ring_attempts(mount, spanner, af, band, scene, tools.step_deg, tools.hand_room)
-    yield from open_end_attempts(mount, spanner, af, band, scene, tools.step_deg, tools.hand_room)
+    """Each way a covering tool would try, failed on the part's own body past its hex."""
+    inner = af / math.sqrt(3) + RING_CLEARANCE
+    path = mount.place(
+        axial_annulus(inner, geometry.cap_radius, geometry.band_top, -geometry.band_top)
+    )
+    own = (geometry.part_name,)
+    for way in ways:
+        yield Attempt(tool, way, False, False, 0.0, own, (Probe(path, own),))
 
 
 def _forced_attempts(
@@ -1204,22 +1311,15 @@ def _forced_flats(
         return None
     if geometry.band_height <= _MIN_BAND:
         raise NotCovered("could not measure the hex's height")
-    band = (geometry.band_top, geometry.band_bottom)
-    if family == "spanner":
-        af = _tool_mm(size_text, name)
+    if family == "nut-driver":
+        nut_driver = NUT_DRIVERS.get(_tool_mm(size_text, name))
+        if nut_driver is None:
+            raise NotCovered(f"no nut driver sized {size_text}: the tables hold 5.5 to 13")
         tools.need(name)
-        return _spanner_ends(mount, af, band, scene, tools)
-    if family == "socket":
-        af = _tool_mm(size_text, name)
-        tools.need(name)
-        socket = socket_for(af)
-        return socket_attempts(mount, socket, af, band, scene, tools.step_deg, tools.hand_room)
-    nut_driver = NUT_DRIVERS.get(_tool_mm(size_text, name))
-    if nut_driver is None:
-        raise NotCovered(f"no nut driver sized {size_text}: the tables hold 5.5 to 13")
+        return _hex_flats_tools((name,), mount, nut_driver.af, geometry, scene, tools)
+    af = _tool_mm(size_text, name)
     tools.need(name)
-    af = nut_driver.af
-    return iter([nut_driver_attempt(mount, nut_driver, af, band, scene, tools.hand_room)])
+    return _hex_flats_tools((name,), mount, af, geometry, scene, tools)
 
 
 def _forced_driver(

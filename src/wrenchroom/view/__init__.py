@@ -304,6 +304,9 @@ class _Builder:
         failed = result.verdict in {Verdict.BLOCKED, Verdict.STUCK}
         in_way = result.stuck_on if result.verdict is Verdict.STUCK else result.blockers
         name = result.fastener.name
+        # A part its own body stops (a dome no ring gets over, issue #47) names
+        # itself in the way; it is drawn as the fastener, never as its own blocker.
+        others = tuple(n for n in in_way if n != name)
         way_out = result.way_out if result.way_out is not None and result.way_out.hits else None
         return {
             "name": name,
@@ -313,18 +316,18 @@ class _Builder:
             "headline": printable(result.headline),
             "reason": printable(result.reason) if result.reason else None,
             "in_way": [printable(n) for n in in_way] if failed else [],
-            "highlight": _indices(in_way, by_name) if failed else [],
+            "highlight": _indices(others, by_name) if failed else [],
             "view": view,
             "part": by_name.get(name),
-            "attempts": [self._attempt(attempt, by_name) for attempt in result.attempts],
+            "attempts": [self._attempt(attempt, by_name, name) for attempt in result.attempts],
             "way_out": None if way_out is None else self._probe(way_out, by_name),
         }
 
-    def _attempt(self, attempt: Attempt, by_name: dict[str, int]) -> dict[str, object]:
+    def _attempt(self, attempt: Attempt, by_name: dict[str, int], own: str) -> dict[str, object]:
         return {
             "text": printable(attempt_text(attempt)),
             "turns": attempt.turns,
-            "highlight": _indices(attempt.blockers, by_name),
+            "highlight": _indices(tuple(n for n in attempt.blockers if n != own), by_name),
             "probes": [self._probe(probe, by_name) for probe in attempt.probes],
         }
 

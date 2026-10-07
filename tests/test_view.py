@@ -80,6 +80,32 @@ def test_a_blocked_screw_is_red_and_highlights_its_wall(engine):
         assert _part_names(data, attempt["probes"][0]["hits"]) == ["wall"]
 
 
+def test_a_part_stopped_by_its_own_body_is_drawn_as_itself_not_its_blocker():
+    # A cap nut sunk in a counterbore, its dome wider than a ring's or socket's
+    # bore (issue #47): it names itself in the way, and is drawn red as the
+    # fastener, never magenta as its own blocker; the counterbore is.
+    from build123d import Cylinder  # noqa: PLC0415
+
+    from fastener_models import hex_prism  # noqa: PLC0415
+
+    plate = Pos(0, 0, -5) * Box(200, 200, 10) - Pos(0, 0, -1.75) * Cylinder(12, 3.5)
+    nut = hex_prism(16, 3, -3.5) + Pos(0, 0, 3) * Cylinder(10, 7)
+    report = check(
+        Assembly([Part("plate", plate), Part("cap_nut", nut)]),
+        Config.from_dict({"fasteners": [{"parts": "cap_nut", "kind": "nut", "size": "M10"}]}),
+        kit="full",
+    )
+    data = view_data(report)
+    cap = _fastener(data, "cap_nut")
+    assert cap["in_way"] == ["cap_nut", "plate"]
+    assert _part_names(data, cap["highlight"]) == ["plate"]
+    for attempt in cap["attempts"]:
+        assert "cap_nut" not in _part_names(data, attempt["highlight"])
+    ring = cap["attempts"][0]
+    assert ring["text"] == "spanner-16, ring, full length: blocked; hit cap_nut"
+    assert [p["hit"] for p in ring["probes"]] == [True]  # its path over the dome, drawn
+
+
 @pytest.mark.parametrize("engine", ENGINES)
 def test_a_screw_that_turns_is_green_and_highlights_nothing(engine):
     report = _checked(screw_facing_wall(40.0), {"fasteners": [{"parts": "bolt", **M6}]}, engine)
