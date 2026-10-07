@@ -162,7 +162,14 @@ def test_a_nut_drawn_small_says_so_and_where_its_size_came_from(detected):
     assert notes["named_size_m8_nut"] == (small,)
     assert notes["band_agrees_nut"] == ()
     noted = {name for name, said in notes.items() if said}
-    assert noted == {"undersize_nut", "guessed_nut", "named_size_m8_nut", "odd_head_screw"}
+    assert noted == {
+        "undersize_nut",
+        "guessed_nut",
+        "named_size_m8_nut",
+        "odd_head_screw",
+        "wide_dome_gland",
+        "sunk_cap_cap_nut",
+    }
 
 
 def test_shoulder_screws_drawn_plainly_and_a_head_that_fits_nothing(detected):

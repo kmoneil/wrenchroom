@@ -3,10 +3,10 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 75,
-  "turns": 60,
+  "fasteners": 80,
+  "turns": 63,
   "held": 3,
-  "blocked": 11,
+  "blocked": 13,
   "stuck": 1,
   "not_covered": 0
  },
@@ -124,6 +124,16 @@
    "name": "big_gland_plate",
    "kind": "nut",
    "reason": "noun 'gland', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "flange_nut_plate",
+   "kind": "nut",
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "flange_nut_stud",
+   "kind": "nut",
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
   }
  ],
  "fasteners": [
@@ -328,6 +338,66 @@
     "channel_left",
     "channel_right"
    ],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "dome_rib_gland",
+   "kind": "nut",
+   "head": null,
+   "size": null,
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    9000.0,
+    10.0
+   ],
+   "source": "sidecar",
+   "tool": "spanner-15",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "dome_rib_rib"
+   ],
+   "stuck_on": [],
+   "reason": "only holds, and it has no nut",
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "flange_nut_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    9000.0,
+    8.0
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1774,6 +1844,35 @@
    "notes": []
   },
   {
+   "name": "snug_dome_gland",
+   "kind": "nut",
+   "head": null,
+   "size": null,
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4000.0,
+    8000.0,
+    10.0
+   ],
+   "source": "sidecar",
+   "tool": "spanner-15",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "state_lever_screw",
    "kind": "screw",
    "head": "socket",
@@ -1890,6 +1989,40 @@
    "reason": null,
    "grazes": [],
    "notes": []
+  },
+  {
+   "name": "sunk_cap_cap_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M10",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1000.0,
+    9000.0,
+    6.5
+   ],
+   "source": "sidecar",
+   "tool": "spanner-16",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "sunk_cap_cap_nut",
+    "sunk_cap_plate"
+   ],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "no ring, socket or nut driver gets on: past its hex the part is 20.00 across, wider than their bore round the hex; only an open end grips it, from the side"
+   ]
   },
   {
    "name": "tail_in_socket_bolt",
@@ -2175,8 +2308,8 @@
     1.0
    ],
    "seat": [
-    3900.0,
-    8000.0,
+    2900.0,
+    9000.0,
     6.0
    ],
    "source": "sidecar",
@@ -2206,8 +2339,8 @@
     1.0
    ],
    "seat": [
-    4100.0,
-    8000.0,
+    3100.0,
+    9000.0,
     6.0
    ],
    "source": "sidecar",
@@ -2311,6 +2444,37 @@
    "reason": null,
    "grazes": [],
    "notes": []
+  },
+  {
+   "name": "wide_dome_gland",
+   "kind": "nut",
+   "head": null,
+   "size": null,
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    5000.0,
+    8000.0,
+    10.0
+   ],
+   "source": "sidecar",
+   "tool": "spanner-15",
+   "verdict": "turns",
+   "how": "open end, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "no ring, socket or nut driver gets on: past its hex the part is 20.00 across, wider than their bore round the hex; only an open end grips it, from the side"
+   ]
   },
   {
    "name": "wire_across_screw",

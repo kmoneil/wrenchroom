@@ -1145,3 +1145,111 @@ def odd_head():
         ("screw", screw),
         ("button_screw", Pos(100, 0, 0) * screw),
     ]
+
+
+def _domed_gland(dome):
+    """A 15 mm hex on z 0..3 with a plain dome of diameter ``dome`` on 3..10, unbored."""
+    return hex_prism(15, 3) + Pos(0, 0, 6.5) * Cylinder(dome / 2, 7)
+
+
+_DOMED_RULE = {"parts": "gland", "kind": "nut", "socket": False, "across_flats": 15.0}
+
+
+@cell(
+    "snug_dome",
+    [_DOMED_RULE],
+    {"gland": {"verdict": "turns", "tool": "spanner-15", "how": "ring, full length"}},
+)
+def snug_dome():
+    """A gland whose dome, 17.6 across, is wider than its hex's flats, and its
+    corners (17.32), and inside the ring's bore round them (17.92): the ring goes on
+    over it, and grips the hex below it (issue #47). It used to be "the bore leaves
+    no face to probe for the free end", the dome taken for a bore.
+    """
+    return [("wall", plate()), ("gland", _domed_gland(17.6))]
+
+
+@cell(
+    "wide_dome",
+    [_DOMED_RULE],
+    {
+        "gland": {
+            "verdict": "turns",
+            "tool": "spanner-15",
+            "how": "open end, full length",
+            "notes": [
+                "no ring, socket or nut driver gets on: past its hex the part is 20.00 "
+                "across, wider than their bore round the hex; only an open end grips it, "
+                "from the side"
+            ],
+        }
+    },
+)
+def wide_dome():
+    """snug_dome's gland with a dome 20 across, wider than a ring's bore: no ring
+    gets on over it, and the open end grips the hex from the side (issue #47).
+    """
+    return [("wall", plate()), ("gland", _domed_gland(20))]
+
+
+@cell(
+    "dome_rib",
+    [_DOMED_RULE],
+    {"gland": {"verdict": "blocked", "tool": "spanner-15", "blocked_by": ["rib"]}},
+)
+def dome_rib():
+    """snug_dome's gland with a rib 1.5 high beside its hex, its face 3.5 off a flat
+    (y = 11): inside the ring, which sits on the hex, 3 high, and meets it at
+    every angle; the open end's jaw meets it too. Before issue #47 the band ran
+    over the 17 dome (0 to 10), so the ring sat above the rib, and turned it.
+    """
+    return [
+        ("wall", plate()),
+        ("gland", _domed_gland(17)),
+        ("rib", Pos(0, 15, 0.75) * Box(60, 8, 1.5)),
+    ]
+
+
+@cell(
+    "sunk_cap",
+    [{"parts": "cap_nut", "kind": "nut", "size": "M10"}],
+    {
+        "cap_nut": {
+            "verdict": "blocked",
+            "tool": "spanner-16",
+            "blocked_by": ["cap_nut", "plate"],
+        }
+    },
+)
+def sunk_cap():
+    """An M10 cap nut (a 16 hex 3 high, a dome 20 across over it, unbored) sunk in a
+    counterbore 24 across and 3.5 deep. The open end's jaw can't get into the
+    counterbore; the socket's wall (r 10.8) could, but neither it nor the ring
+    gets on over the dome, wider than their bore round the hex (r 9.54): blocked,
+    by the plate and by its own dome (issue #47). It used to turn with the socket,
+    drawn round the dome as if the dome weren't there.
+    """
+    nut = hex_prism(16, 3, -3.5) + Pos(0, 0, 3) * Cylinder(10, 7)
+    return [
+        ("plate", plate() - Pos(0, 0, -1.75) * Cylinder(12, 3.5)),
+        ("cap_nut", nut),
+    ]
+
+
+@cell(
+    "flange_nut",
+    [{"parts": "nut", "kind": "nut", "size": "M8"}],
+    {"nut": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"}},
+)
+def flange_nut():
+    """An M8 flange nut (a 13 hex 6.5 high over a flange 20 across, 1.5 thick) on a
+    stud: the flange is its widest region, which used to be its band; the ring
+    grips its hex's flats now, and the flange, on the plate's side, is nothing a
+    ring passes on its way on (issue #47).
+    """
+    nut = Pos(0, 0, 0.75) * Cylinder(10, 1.5) + hex_prism(13, 6.5, 1.5) - Cylinder(4, 30)
+    return [
+        ("plate", plate(holes=[(0, 0, 4.5)])),
+        ("stud", Pos(0, 0, 2.5) * Cylinder(4, 25)),
+        ("nut", nut),
+    ]

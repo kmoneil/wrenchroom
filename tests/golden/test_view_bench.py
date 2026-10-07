@@ -40,9 +40,11 @@ def test_every_blocked_and_stuck_cell_is_red_with_its_blockers(bench_view, bench
         assert entry["colour"] == COLOURS["fails"], name
         key = "stuck_on" if truth["verdict"] == "stuck" else "blocked_by"
         highlighted = _names(bench_view, entry["highlight"])
-        assert sorted(highlighted) == sorted(bench_json[name][key]), name
+        # A part its own body stops names itself, and is drawn as itself (#47).
+        others = sorted(n for n in bench_json[name][key] if n != name)
+        assert sorted(highlighted) == others, name
         if key in truth:  # hand-worked: the blockers a person would name
-            assert sorted(highlighted) == sorted(truth[key]), name
+            assert sorted(highlighted) == sorted(n for n in truth[key] if n != name), name
         # Each highlighted part is drawn in the fastener's view...
         assert set(entry["highlight"]) <= set(bench_view["views"][entry["view"]]["parts"]), name
         # ...and a drawn tool position ran into it.
