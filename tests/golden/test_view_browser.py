@@ -116,6 +116,21 @@ def _node(page, arg):
     return json.loads(done.stdout)
 
 
+def test_the_harness_ends_a_script_as_a_browser_does(bench_page, tmp_path):
+    # A browser ends a script at "</script" in any case, whatever follows it up to
+    # ">" (CodeQL's js/bad-tag-filter). Written that way, the page reads the same.
+    # No "</script>" can sit inside a script's body: it would end it there too.
+    page, _ = bench_page
+    text = page.read_text(encoding="utf-8")
+    assert text.count("</script>") == 3  # three.js and viewer.js, and the data
+    variant = tmp_path / "variant.html"
+    variant.write_text(
+        text.replace("</script>", "</SCRIPT >", 1).replace("</script>", '</script x="y">'),
+        encoding="utf-8",
+    )
+    assert _node(variant, "") == _node(page, "")
+
+
 def test_every_failure_is_drawn_red_with_its_blockers_in_node(bench_page):
     page, view = bench_page
     failing = _failing(view)
