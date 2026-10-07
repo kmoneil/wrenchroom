@@ -3,10 +3,10 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 82,
-  "turns": 62,
+  "fasteners": 84,
+  "turns": 63,
   "held": 3,
-  "blocked": 15,
+  "blocked": 16,
   "stuck": 1,
   "not_covered": 1
  },
@@ -134,9 +134,81 @@
    "name": "flange_nut_stud",
    "kind": "nut",
    "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "ball_shoulder_plate",
+   "kind": "screw",
+   "reason": "noun 'shoulder', words after it; its solid shows no hex, hex socket or cross a tool fits"
+  },
+  {
+   "name": "ball_shoulder_ceiling",
+   "kind": "screw",
+   "reason": "noun 'shoulder', words after it; its solid shows no hex, hex socket or cross a tool fits"
   }
  ],
  "fasteners": [
+  {
+   "name": "ball_button_screw",
+   "kind": "screw",
+   "head": "button",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    5000.0,
+    9000.0,
+    3.3
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-4",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "ball_button_ceiling"
+   ],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "ball_shoulder_screw",
+   "kind": "screw",
+   "head": "shoulder",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    10000.0,
+    5.5
+   ],
+   "source": "name+geometry",
+   "tool": "ball-end-key-4",
+   "verdict": "turns",
+   "how": "ball end, 20 deg off the axis",
+   "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "only a ball end turns it (ball end, 20 deg off the axis): a ball end takes much less torque than a straight key, so tightening it to its torque, or breaking it loose, may need a straight key, which can't get in"
+   ]
+  },
   {
    "name": "ball_tilt_screw",
    "kind": "screw",
@@ -164,7 +236,9 @@
    "stuck_on": [],
    "reason": null,
    "grazes": [],
-   "notes": []
+   "notes": [
+    "only a ball end turns it (ball end, 25 deg off the axis): a ball end takes much less torque than a straight key, so tightening it to its torque, or breaking it loose, may need a straight key, which can't get in"
+   ]
   },
   {
    "name": "band_agrees_bolt",
@@ -2369,8 +2443,8 @@
     1.0
    ],
    "seat": [
-    4900.0,
-    9000.0,
+    900.0,
+    10000.0,
     6.0
    ],
    "source": "name+geometry",
@@ -2400,8 +2474,8 @@
     1.0
    ],
    "seat": [
-    5100.0,
-    9000.0,
+    1100.0,
+    10000.0,
     6.0
    ],
    "source": "name+geometry",

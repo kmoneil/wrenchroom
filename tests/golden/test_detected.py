@@ -169,6 +169,8 @@ def test_a_nut_drawn_small_says_so_and_where_its_size_came_from(detected):
         "odd_head_screw",
         "wide_dome_gland",
         "sunk_cap_cap_nut",
+        "ball_tilt_screw",
+        "ball_shoulder_screw",
     }
 
 

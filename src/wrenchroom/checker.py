@@ -91,6 +91,11 @@ _PAIR_MAX_OFFSET_MM = 0.3
 
 _KEYED_HEADS = (Head.SOCKET, Head.BUTTON, Head.FLAT, Head.SHOULDER)
 
+#: The keyed heads whose sockets are deep enough for a ball end: ISO 4762's and
+#: ISO 7379's. A button head's (ISO 7380) or a countersunk head's (ISO 10642) is
+#: about half as deep, barely deeper than the ball itself (issue #51).
+_BALL_END_HEADS = (Head.SOCKET, Head.SHOULDER)
+
 Vec = tuple[float, float, float]
 
 
@@ -648,14 +653,7 @@ def _try_in_state(
     except NotCovered as exc:  # also any a lazy attempt raises while running
         candidate.reason = str(exc)
         return candidate
-    # Only its own body puts the part's name among an attempt's blockers: the
-    # scene never holds the part itself.
-    if any(attempt.blockers == (fastener.name,) for attempt in candidate.attempts):
-        candidate.notes = (
-            f"no ring, socket or nut driver gets on: past its hex the part is "
-            f"{2 * geometry.cap_radius:.2f} across, wider than their bore round the hex; "
-            "only an open end grips it, from the side",
-        )
+    candidate.notes = _attempt_notes(fastener, candidate, geometry)
     if fastener.kind is Kind.SCREW and (candidate.turns or candidate.hold):
         candidate.way_out = _way_out(fastener, frame, geometry, mount, scene)
         candidate.extraction_blocked = candidate.way_out.hits if candidate.way_out else ()
@@ -663,6 +661,28 @@ def _try_in_state(
             candidate.stuck = True
             candidate.stuck_on = candidate.extraction_blocked
     return candidate
+
+
+def _attempt_notes(
+    fastener: Fastener, candidate: _Candidate, geometry: _Geometry
+) -> tuple[str, ...]:
+    """What the attempts leave a person to know: a body no ring gets over, a ball end only."""
+    notes = []
+    # Only its own body puts the part's name among an attempt's blockers: the
+    # scene never holds the part itself.
+    if any(attempt.blockers == (fastener.name,) for attempt in candidate.attempts):
+        notes.append(
+            f"no ring, socket or nut driver gets on: past its hex the part is "
+            f"{2 * geometry.cap_radius:.2f} across, wider than their bore round the hex; "
+            "only an open end grips it, from the side"
+        )
+    if candidate.turns and (candidate.tool or "").startswith("ball-end-key"):
+        notes.append(
+            f"only a ball end turns it ({candidate.how}): a ball end takes much less "
+            "torque than a straight key, so tightening it to its torque, or breaking it "
+            "loose, may need a straight key, which can't get in"
+        )
+    return tuple(notes)
 
 
 def _run_attempts(candidate: _Candidate, attempts_iter: Iterator[Attempt]) -> None:
@@ -1130,7 +1150,7 @@ def _keyed_attempts(
             head = fastener.head.value
             raise NotCovered(f"no standard key for a {size.designation} {head} head")
     key = HEX_KEYS[af]
-    ball = BALL_END_KEYS.get(af)
+    ball = BALL_END_KEYS.get(af) if fastener.head in _BALL_END_HEADS else None
     held = tools.need(key.name, *([ball.name] if ball else []))
     return _keys(held, key, ball, mount, scene, tools)
 

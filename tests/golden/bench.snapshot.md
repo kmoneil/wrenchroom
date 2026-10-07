@@ -1,10 +1,10 @@
 ### wrenchroom: `bench.step`
 
-**82 fasteners: 64 turn, 3 held, 14 blocked, 1 stuck, 0 not covered**
+**84 fasteners: 65 turn, 3 held, 15 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
-Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 24 parts named like a fastener, with no drive in the solid (passed over); parts the model doesn't have.
+Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 26 parts named like a fastener, with no drive in the solid (passed over); parts the model doesn't have.
 
 | Fasteners | Tool | Count | Outcome |
 | --- | --- | ---: | --- |
@@ -21,11 +21,12 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 24 parts
 | M4 insert | - | 1 | all pass (holds itself) |
 | M4 phillips screw | `driver-ph2` | 2 | 1 of 2 fail |
 | M5 button screw | `hex-key-3` | 1 | all pass (driver straight in) |
-| M6 button screw | `hex-key-4` | 3 | all pass (driver straight in) |
+| M6 button screw | `hex-key-4` | 4 | 1 of 4 fail |
 | M6 carriage screw | - | 1 | all pass (holds itself) |
 | M6 hex screw | `spanner-10` | 5 | all pass (ring, full length) |
 | M6 nut | `nut-driver-10` | 1 | all pass (nut driver straight in) |
 | M6 nut | `spanner-10` | 5 | all pass (ring, full length) |
+| M6 shoulder screw | `ball-end-key-4` | 1 | all pass (ball end, 20 deg off the axis) |
 | M6 shoulder screw | `hex-key-4` | 4 | all pass (driver straight in) |
 | M6 socket screw | `ball-end-key-5` | 1 | all pass (ball end, 25 deg off the axis) |
 | M6 socket screw | `hex-key-5` | 12 | 4 of 12 fail |
@@ -37,6 +38,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 24 parts
 
 | Fastener | Tool | Verdict | In the way, or why |
 | --- | --- | --- | --- |
+| `ball_button_screw` | `hex-key-4` | blocked | `ball_button_ceiling` |
 | `big_tube_gland` | `spanner-36` | blocked | `big_tube_wall` |
 | `channel_nut` | `spanner-13` | blocked | `channel_left`, `channel_right` |
 | `dome_rib_gland` | `spanner-15` | blocked | `only holds, and it has no nut` |
@@ -55,6 +57,8 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 24 parts
 
 #### Notes
 
+- `ball_shoulder_screw`: only a ball end turns it (ball end, 20 deg off the axis): a ball end takes much less torque than a straight key, so tightening it to its torque, or breaking it loose, may need a straight key, which can't get in
+- `ball_tilt_screw`: only a ball end turns it (ball end, 25 deg off the axis): a ball end takes much less torque than a straight key, so tightening it to its torque, or breaking it loose, may need a straight key, which can't get in
 - `sunk_cap_cap_nut`: no ring, socket or nut driver gets on: past its hex the part is 20.00 across, wider than their bore round the hex; only an open end grips it, from the side
 - `undersize_nut`: hex drawn undersize: 12.60 across flats, 0.13 under the least its M8 standard allows (12.73); taken as size 13
 - `wide_dome_gland`: no ring, socket or nut driver gets on: past its hex the part is 20.00 across, wider than their bore round the hex; only an open end grips it, from the side
@@ -76,4 +80,4 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 24 parts
 - `gland_rib_rib`: noun 'gland', words after it; its solid shows no hex, hex socket or cross a tool fits
 - `nyloc_two_bodies_plate`: noun 'nyloc', words after it; its solid shows no hex, hex socket or cross a tool fits
 - `nyloc_two_bodies_dome`: noun 'nyloc', words after it; its solid shows no hex, hex socket or cross a tool fits
-- and 14 more (the JSON lists every one)
+- and 16 more (the JSON lists every one)

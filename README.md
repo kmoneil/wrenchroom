@@ -58,6 +58,9 @@ to M5):
   like hex keys; a Torx head takes the size ISO 14579 and its kin give its thread,
   M6 T30), ball-end keys 3 to 10 mm, tried when no straight key gets in (the long leg
   leant up to 25 degrees off the axis, Bondhus' and Wiha's figure, every way round),
+  in socket heads and shoulder screws only (a button or countersunk head's socket is
+  barely deeper than the ball); a pass only a ball end reaches says so, as a ball end
+  takes much less torque than a straight key,
   and nut drivers 5.5 to 13 mm, tried last, straight in, where nothing that swings
   can get down to a nut. Inch tools carry their unit (`spanner-7/16in`), and inch
   fasteners (`#10`, `1/4`, `3/4`; UNC and UNF alike) take their ASME tools: socket,
@@ -134,7 +137,7 @@ to M5):
   is only a candidate: it is taken when its solid shows a drive a tool fits (a hex, a
   hex socket, a cross), and otherwise passed over, which every report lists, so a
   fastener is never missed without a word. With every fastener rule removed, the
-  golden bench's 81 are all found with the right kind and size, each screw with its
+  golden bench's 83 are all found with the right kind and size, each screw with its
   rule's head, and its 24 plates, blocks and studs named for their cells are passed over.
 - `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
   correct and keep: one rule per fastener, and above each a comment with how sure
@@ -146,7 +149,7 @@ to M5):
   file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  546 fasteners is read and checked with the full kit in about 8.8 s on an Apple M5
+  560 fasteners is read and checked with the full kit in about 9.0 s on an Apple M5
   Max laptop (the target is 10 s). Its four graze cells, deliberate worst cases in
   which the exact engine decides every position of a key grazing all the way round,
   are kept out of that figure and timed apart (about 0.7 s for the four). The bench is dense with fasteners that fail, and
