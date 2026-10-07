@@ -58,7 +58,9 @@ def test_every_key_size_a_head_needs_exists_as_a_key():
 
 def test_every_hex_a_nut_or_head_presents_is_a_spanner_size():
     flats = {size_name(af) for af in (*HEX_AF.values(), *HEX_HEAD_AF.values())}
-    sold = {f"{af:g}" for af in range(5, 37)} | {"5.5"} | {f"{s}in" for s in INCH_FLATS}
+    sold = (
+        {f"{af:g}" for af in range(4, 37)} | {"3.2", "4.5", "5.5"} | {f"{s}in" for s in INCH_FLATS}
+    )
     assert flats <= sold
 
 
@@ -82,7 +84,11 @@ def test_tables_grow_with_the_thread(sizes):
         values = _by_diameter(table, sizes)
         assert values == sorted(values)
     nuts = _by_diameter(HEX_AF, sizes)
-    assert len(set(nuts)) == len(nuts)  # strictly increasing
+    # Strictly increasing, but where ASME B18.6.3 gives two gauges one nut: #0 and #1
+    # take 5/32, #2 and #3 3/16 (issue #83).
+    shared = {"#1": "#0", "#3": "#2"}
+    assert {d: HEX_AF[s] for d, s in shared.items()} == {d: HEX_AF[d] for d in shared}
+    assert len(set(nuts)) == len(nuts) - (len(shared) if sizes is IMPERIAL_SIZES else 0)
 
 
 @pytest.mark.parametrize(
@@ -139,7 +145,9 @@ def test_iso_2936_keys_are_self_consistent():
         assert key.across_corners > key.af
         # e/af for a hexagon is 2/sqrt(3) = 1.1547 nominal, less manufacturing
         # undercut; the standard's rows sit between 1.12 (the 1.5 mm key) and 1.14.
-        assert 1.11 <= key.across_corners / key.af < 1.16
+        # The "1.3" key is 1.24 to 1.27 across flats (the 0.050 in key's size).
+        af = 1.27 if key.af == 1.3 else key.af
+        assert 1.11 <= key.across_corners / af < 1.16
         assert key.radius == key.across_corners / 2
 
 

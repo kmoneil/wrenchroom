@@ -32,8 +32,11 @@ SHAFT_LENGTH = 100.0
 HANDLE_RADIUS = 14.0
 HANDLE_LENGTH = 100.0
 
-#: Shaft radius, mm, by drive. Approximation: catalogue-typical shaft diameters.
+#: Shaft radius, mm, by drive. Approximation: catalogue-typical shaft diameters, the
+#: largest of Wera's, Wiha's and PB Swiss's (PH0, M1.6 and M2's, from their pages
+#: read 2026-10-07: PB Swiss's 4 mm, the others' 3; issue #83).
 SHAFT_RADIUS: dict[str, float] = {
+    "ph0": 2.0,
     "ph1": 2.5,
     "ph2": 3.0,
     "ph3": 4.0,

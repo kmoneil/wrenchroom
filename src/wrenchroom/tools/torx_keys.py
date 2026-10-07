@@ -1,4 +1,4 @@
-"""Torx (hexalobular) L-keys, T10 to T40: the full kit's (spec 5.3, 6.1).
+"""Torx (hexalobular) L-keys, T6 to T40: the full kit's (spec 5.3, 6.1).
 
 A Torx key is swept exactly as a hex key is (hex_keys.py): driver straight in, short
 leg in, long leg in, turning on 60 degrees of free swing (six lobes, the spec's
@@ -56,10 +56,13 @@ def _key(size: str, a: float, arms: tuple[tuple[float, float], ...]) -> TorxKey:
 
 
 #: Each maker's arms, (long, short) mm, in the order Wera 967 SPKL, Bondhus long,
-#: Eklind long (published in inches).
+#: Eklind long (published in inches). T6 and T8, M2's and M2.5's (issue #83), read
+#: 2026-10-07: Wera makes no long T6.
 ISO_10664: dict[str, TorxKey] = {
     key.size: key
     for key in (
+        _key("T6", 1.75, ((55, 16), (2.95 * MM_PER_INCH, 0.61 * MM_PER_INCH))),
+        _key("T8", 2.40, ((76, 16), (67, 16), (3.15 * MM_PER_INCH, 0.61 * MM_PER_INCH))),
         _key("T10", 2.80, ((85, 17), (80, 19), (3.38 * MM_PER_INCH, 0.66 * MM_PER_INCH))),
         _key("T15", 3.35, ((90, 18), (84, 20), (3.57 * MM_PER_INCH, 0.71 * MM_PER_INCH))),
         _key("T20", 3.95, ((96, 19), (91, 20), (3.79 * MM_PER_INCH, 0.75 * MM_PER_INCH))),

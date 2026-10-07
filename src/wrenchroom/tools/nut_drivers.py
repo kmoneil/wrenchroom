@@ -68,6 +68,8 @@ def _driver(
 NUT_DRIVERS: dict[float, NutDriver] = {
     driver.af: driver
     for driver in (
+        _driver(4.0, 6.9, 6.9, 30, 111),  # issue #83, read 2026-10-07
+        _driver(5.0, 8.1, 7.9, 30, 111),
         _driver(5.5, 8.1, 7.9, 30, 111),
         _driver(7.0, 11.0, 10.9, 36, 118),
         _driver(8.0, 12.1, 11.9, 36, 118),

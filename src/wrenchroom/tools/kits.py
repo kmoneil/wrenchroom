@@ -100,7 +100,7 @@ def _between(sizes: tuple[str, ...], low: str, high: str) -> tuple[str, ...]:
     return tuple(size for size in _inch(sizes) if lo - 1e-9 <= size_mm(size) <= hi + 1e-9)
 
 
-_METRIC_HOME_FLATS = _names(tuple(af for af in METRIC_FLATS if af <= 19))  # noqa: PLR2004
+_METRIC_HOME_FLATS = _names(tuple(af for af in METRIC_FLATS if 5.5 <= af <= 19))  # noqa: PLR2004
 
 METRIC_HOME = Kit(
     name="metric-home",
@@ -108,7 +108,7 @@ METRIC_HOME = Kit(
         "ISO 2936 hex keys 1.5 to 10 mm, combination spanners 5.5 to 19 mm with stubbies, "
         "1/4 and 3/8 in drive sockets 5.5 to 19 mm, Phillips 1 to 3 and slotted drivers"
     ),
-    hex_keys=_names(tuple(af for af in ISO_2936 if af <= 10)),  # noqa: PLR2004
+    hex_keys=_names(tuple(af for af in ISO_2936 if 1.5 <= af <= 10)),  # noqa: PLR2004
     spanners=_METRIC_HOME_FLATS,
     sockets=_METRIC_HOME_FLATS,
     drivers=_HOME_DRIVERS,
@@ -135,9 +135,9 @@ IMPERIAL_HOME = Kit(
 FULL = Kit(
     name="full",
     summary=(
-        "every size the tables hold: hex keys 1.5 to 19 mm and 0.050 to 3/4 in, ball-end "
-        "keys 3 to 10 mm, Torx keys T10 to T40, spanners and sockets 5.5 to 36 mm, 41, 46 "
-        "and 50 mm (large cable glands), and 5/32 to 1-1/2 in, nut drivers 5.5 to 13 mm, "
+        "every size the tables hold: hex keys 1.3 to 19 mm and 0.035 to 3/4 in, ball-end "
+        "keys 3 to 10 mm, Torx keys T6 to T40, spanners and sockets 3.2 to 36 mm, 41, 46 "
+        "and 50 mm (large cable glands), and 5/32 to 1-1/2 in, nut drivers 4 to 13 mm, "
         "every driver"
     ),
     hex_keys=_names(tuple(ISO_2936)) + _names(tuple(ASME_B18_3)),

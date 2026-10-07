@@ -1764,3 +1764,67 @@ def tee_hold():
         ("slot", slot_block(30, 48, 12, half_width)),
         ("ceiling", slab(51)),
     ]
+
+
+# ---------------------------------------------------------------- issue #83: below M3
+
+#: The small cell's fasteners: role -> (where, its rule, its truth). 160 apart, so the
+#: longest spanner here (the 5 mm's 123) swings clear of its neighbours.
+_SMALL = {
+    "socket_screw": ((-240, 100), {"head": "socket", "size": "M2"}, "hex-key-1.5"),
+    "tiny_nut": ((-80, 100), {"kind": "nut", "size": "M1.6"}, "spanner-3.2"),
+    "little_nut": ((80, 100), {"kind": "nut", "size": "M2.5"}, "spanner-5"),
+    "flat_screw": ((240, 100), {"head": "flat", "size": "M2"}, "hex-key-1.3"),
+    "inch_socket_screw": ((-240, -100), {"head": "socket", "size": "#0"}, "hex-key-0.050in"),
+    "inch_button_screw": ((-80, -100), {"head": "button", "size": "#0"}, "hex-key-0.035in"),
+    "torx_screw": ((80, -100), {"head": "torx", "size": "M2"}, "torx-key-T6"),
+    "phillips_screw": ((240, -100), {"head": "phillips", "size": "M2"}, "driver-ph0"),
+}
+
+
+def _small_how(tool):
+    return "ring, full length" if tool.startswith("spanner") else "driver straight in"
+
+
+@cell(
+    "small",
+    [{"parts": role, "kind": "screw", **rule} for role, (_, rule, _) in _SMALL.items()],
+    {
+        role: {"verdict": "turns", "tool": tool, "how": _small_how(tool)}
+        for role, (_, _, tool) in _SMALL.items()
+    },
+)
+def small():
+    """Eight fasteners below M3 and at #0, each open above and taking its new tool
+    (issue #83): ISO 4762's M2 (a 1.5 key, which metric-home holds), ISO 4032's M1.6
+    and M2.5 nuts on studs (3.2 and 5 mm spanners), ISO 10642's M2 flush in its
+    countersink (ISO 2936's 1.3 key), ASME B18.3's #0 socket and button heads (0.050
+    and 0.035 in keys), an M2 Torx (T6) and an M2 Phillips pan head (PH0). Each used
+    to be not covered: "M2 is outside the sizes the kit covers".
+    """
+    at = {role: where for role, (where, _, _) in _SMALL.items()}
+    holes = [(*at[role], r) for role, r in (("socket_screw", 1.2), ("tiny_nut", 1.0))]
+    holes += [(*at[role], r) for role, r in (("little_nut", 1.45), ("inch_socket_screw", 1.0))]
+    holes += [(*at[role], r) for role, r in (("inch_button_screw", 1.0), ("torx_screw", 1.2))]
+    holes += [(*at["phillips_screw"], 1.2)]
+    d, dk, _, _ = VENDOR_FLAT["M2"]
+    sunk = (dk - d) / 2 + 0.05 * dk  # the countersink and the rim band
+    countersink = Pos(*at["flat_screw"], 0) * (_countersunk_plate(d, dk) - plate())
+    board = plate(w=640, d=360, holes=holes) - countersink
+    head = Pos(0, 0, 1) * Cylinder(1.9, 2) - Pos(0, 0, 1.5) * Cylinder(0.875, 1.01)
+    pan = Pos(0, 0, 0.8) * Cylinder(2.0, 1.6)
+    cross = Pos(0, 0, 1.2) * (Box(2.2, 0.45, 0.81) + Box(0.45, 2.2, 0.81))
+    shank = Pos(0, 0, -3) * Cylinder(1.0, 6)
+    return [
+        ("plate", board),
+        ("socket_screw", Pos(*at["socket_screw"], 0) * vendor_socket_screw("M2", length=6.0)),
+        ("tiny_stud", Pos(*at["tiny_nut"], 2.5) * Cylinder(0.8, 15)),
+        ("tiny_nut", Pos(*at["tiny_nut"], 0) * hex_nut(1.6, 3.2, 1.3)),
+        ("little_stud", Pos(*at["little_nut"], 2.5) * Cylinder(1.25, 15)),
+        ("little_nut", Pos(*at["little_nut"], 0) * hex_nut(2.5, 5.0, 2.0)),
+        ("flat_screw", Pos(*at["flat_screw"], -sunk) * vendor_flat_screw("M2", length=6.0)),
+        ("inch_socket_screw", Pos(*at["inch_socket_screw"], 0) * vendor_socket_screw("#0", 6.0)),
+        ("inch_button_screw", Pos(*at["inch_button_screw"], 0) * vendor_button_screw("#0", 6.0)),
+        ("torx_screw", Pos(*at["torx_screw"], 0) * (head + shank)),
+        ("phillips_screw", Pos(*at["phillips_screw"], 0) * (pan - cross + shank)),
+    ]

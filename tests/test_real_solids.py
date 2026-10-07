@@ -58,8 +58,8 @@ def test_a_makers_socket_head_is_a_socket_head(size):
     reading = read_shape(vendor_socket_screw(size), S)
     assert (reading.head, reading.size.designation) == (Head.SOCKET, size)
     assert reading.drive_af == pytest.approx(SOCKET_KEY_AF[size])
-    # Its chamfers are part of its outline: drawn to ISO 4762's (dk, k), it fits it.
-    assert reading.head_standard == "ISO 4762"
+    # Its chamfers are part of its outline: drawn to its standard's (dk, k), it fits it.
+    assert reading.head_standard == ("ISO 4762" if size.startswith("M") else "ASME B18.3")
     assert reading.head_drawn == pytest.approx(VENDOR_SOCKET[size][1:3])
 
 

@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**99 fasteners: 75 turn, 5 held, 18 blocked, 1 stuck, 0 not covered**
+**107 fasteners: 83 turn, 5 held, 18 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -8,15 +8,23 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 9 parts 
 
 | Fasteners | Tool | Count | Outcome |
 | --- | --- | ---: | --- |
+| #0 button screw | `hex-key-0.035in` | 1 | all pass (driver straight in) |
+| #0 socket screw | `hex-key-0.050in` | 1 | all pass (driver straight in) |
 | 1/4 nut | `spanner-7/16in` | 1 | all pass (ring, full length) |
 | 1/4 socket screw | `hex-key-3/16in` | 1 | all pass (driver straight in) |
 | 15 AF gland | `spanner-15` | 3 | 1 of 3 fail |
 | 41 AF gland | `spanner-41` | 1 | all pass (ring, full length) |
+| M1.6 nut | `spanner-3.2` | 1 | all pass (ring, full length) |
 | M10 hex screw | `spanner-16` | 3 | all pass (ring, full length) |
 | M10 nut | `socket-16` | 2 | all pass (socket, 50 mm extension) |
 | M10 nut | `spanner-16` | 2 | 2 of 2 fail |
 | M12 nut | `short-ring-18` | 1 | all pass (ring, full length) |
 | M16 nut | `spanner-24` | 6 | 1 of 6 fail |
+| M2 flat screw | `hex-key-1.3` | 1 | all pass (driver straight in) |
+| M2 phillips screw | `driver-ph0` | 1 | all pass (driver straight in) |
+| M2 socket screw | `hex-key-1.5` | 1 | all pass (driver straight in) |
+| M2 torx screw | `torx-key-T6` | 1 | all pass (driver straight in) |
+| M2.5 nut | `spanner-5` | 1 | all pass (ring, full length) |
 | M24 nut | `spanner-36` | 1 | 1 of 1 fail |
 | M3 button screw | `hex-key-2` | 1 | all pass (driver straight in) |
 | M4 button screw | `hex-key-2.5` | 6 | 2 of 6 fail |

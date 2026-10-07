@@ -18,17 +18,29 @@ from wrenchroom.tools.torx_keys import ISO_10664
 IN = 25.4
 
 #: ISO 10664:2014 Table 1, A (point to point), mm.
-A = {"T10": 2.80, "T15": 3.35, "T20": 3.95, "T25": 4.50, "T27": 5.10, "T30": 5.60, "T40": 6.75}
+A = {
+    "T6": 1.75,  # M2's (issue #83)
+    "T8": 2.40,  # M2.5's
+    "T10": 2.80,
+    "T15": 3.35,
+    "T20": 3.95,
+    "T25": 4.50,
+    "T27": 5.10,
+    "T30": 5.60,
+    "T40": 6.75,
+}
 
 #: Each maker's (long, short) arms, mm: Wera 967 SPKL, Bondhus long, Eklind long (inches).
 ARMS = {
+    "T6": ((55, 16), (2.95 * IN, 0.61 * IN)),  # Wera makes no long T6
+    "T8": ((76, 16), (67, 16), (3.15 * IN, 0.61 * IN)),
     "T10": ((85, 17), (80, 19), (3.38 * IN, 0.66 * IN)),
     "T30": ((122, 24), (116, 26), (4.50 * IN, 0.94 * IN)),
     "T40": ((132, 27), (125, 28), (4.88 * IN, 1.03 * IN)),
 }
 
 
-def test_the_keys_are_iso_10664_t10_to_t40():
+def test_the_keys_are_iso_10664_t6_to_t40():
     assert list(ISO_10664) == list(A)
     for size, key in ISO_10664.items():
         assert key.point_to_point == A[size]
@@ -46,6 +58,8 @@ def test_each_arm_is_the_longest_any_maker_sells(size):
 
 def test_the_thread_takes_the_size_the_screw_standards_say():
     assert TORX_SIZE == {
+        "M2": "T6",
+        "M2.5": "T8",
         "M3": "T10",
         "M4": "T20",
         "M5": "T25",

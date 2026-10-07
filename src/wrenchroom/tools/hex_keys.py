@@ -62,10 +62,13 @@ class HexKey:
         return f"hex-key-{size_name(self.af)}"
 
 
-#: DIN ISO 2936:2016-10 standard series, af -> key. Checked 2026-10-06 (fasten.it).
+#: DIN ISO 2936:2016-10 standard series, af -> key. Checked 2026-10-06 (fasten.it);
+#: the 1.3 row, ISO 10642's M2 key, 2026-10-07 (issue #83). It is 1.24 to 1.27
+#: across flats, the same tool as ASME B18.3's 0.050 in key.
 ISO_2936: dict[float, HexKey] = {
     key.af: key
     for key in (
+        HexKey(af=1.3, across_corners=1.42, long_mm=41.0, short_mm=13.0),
         HexKey(af=1.5, across_corners=1.68, long_mm=46.5, short_mm=15.5),
         HexKey(af=2.0, across_corners=2.25, long_mm=52.0, short_mm=18.0),
         HexKey(af=2.5, across_corners=2.82, long_mm=58.5, short_mm=20.5),
@@ -105,10 +108,12 @@ def _inch_key(size: str, corners: float, short: float, long: float) -> HexKey:
 #: Edge gives a slightly larger Y (3/8: .4300 against .4285); the larger is used,
 #: which errs toward a fatter key. Maxima throughout, where ISO 2936 above gives
 #: the standard series' nominal lengths: a longer leg or arm only asks for more
-#: room, so the maxima err safe.
+#: room, so the maxima err safe. The 0.035 row (a #0 button or flat head's key; issue
+#: #83) from the American Fastener sheet, read 2026-10-07, amesweb agreeing.
 ASME_B18_3: dict[float, HexKey] = {
     key.af: key
     for key in (
+        _inch_key("0.035", 0.0393, 0.438, 1.312),
         _inch_key("0.050", 0.0560, 0.625, 1.750),
         _inch_key("1/16", 0.0701, 0.656, 1.844),
         _inch_key("5/64", 0.0880, 0.703, 1.969),

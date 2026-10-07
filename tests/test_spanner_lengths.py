@@ -29,12 +29,16 @@ from wrenchroom.tools.spanners import FULL_LENGTHS, STUBBY_LENGTHS, spanner_for
 
 def test_every_spanner_size_has_a_maker_s_length():
     assert set(FULL_LENGTHS) == set(FLATS)  # none left to the formula
-    assert len(FULL_LENGTHS) == 60  # a vacuity guard: 35 metric sizes, 25 inch
+    assert len(FULL_LENGTHS) == 64  # a vacuity guard: 39 metric sizes, 25 inch
 
 
 @pytest.mark.parametrize(
     ("af", "length"),
     [
+        (3.2, 77.0),  # Facom 39.3.2H, Gedore 7 (issue #83)
+        (4.0, 90.0),  # Facom 440.4H, its own page
+        (4.5, 85.0),  # Stahlwille OPEN-BOX 16, Gedore 7
+        (5.0, 123.0),  # Elora 205-5
         (13.0, 206.1),  # GearWrench 81670
         (19.0, 278.6),  # GearWrench 81676
         (23.0, 328.0),  # Hazet 600N-23
@@ -61,9 +65,11 @@ def test_no_length_is_shorter_than_gedore_s():
 
 
 def test_every_metric_length_is_longer_than_the_formula_was():
-    # The formula erred short at every metric size; the shortfall grew with size.
+    # The formula erred short at every metric size it was used for (5.5 up); the
+    # shortfall grew with size. Below, a 4.5's 85 is half a millimetre under it.
     for af in METRIC_FLATS:
-        assert spanner_for(af).length > 9 * af + 45, af
+        if af >= 5.5:
+            assert spanner_for(af).length > 9 * af + 45, af
     assert spanner_for(36.0).length - (9 * 36 + 45) > 100
 
 

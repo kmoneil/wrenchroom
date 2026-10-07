@@ -51,9 +51,14 @@ class Head(enum.StrEnum):
 
 
 #: Metric thread designations accepted, with the nominal diameter in mm. The coarse
-#: series M3..M24 the spec names, plus M3.5 which ISO 262 keeps in the first-choice
-#: list. A size outside this table is a config error, not a guess.
+#: series M3..M24 the spec names, M1.6 to M2.5 below it (issue #83: printers,
+#: electronics and small mechanisms are full of them; ISO 4762 and ISO 4032 start
+#: at M1.6), and M3.5, which ISO 262 keeps in the first-choice list. A size outside
+#: this table is a config error, not a guess.
 METRIC_SIZES: dict[str, float] = {
+    "M1.6": 1.6,
+    "M2": 2.0,
+    "M2.5": 2.5,
     "M3": 3.0,
     "M3.5": 3.5,
     "M4": 4.0,
@@ -73,7 +78,7 @@ METRIC_SIZES: dict[str, float] = {
 #: Imperial sizes: numbered gauges (ASME B18.6.3: major diameter 0.060 + 0.013 per
 #: gauge, in inches) and fractional designations. UNC/UNF pitch is ignored for tool
 #: choice, so "1/4" covers 1/4-20 and 1/4-28 alike.
-_GAUGES = (2, 4, 6, 8, 10, 12)
+_GAUGES = (0, 1, 2, 3, 4, 6, 8, 10, 12)
 _FRACTIONS = ("1/4", "5/16", "3/8", "7/16", "1/2", "9/16", "5/8", "3/4")
 _MM_PER_INCH = 25.4
 
@@ -214,8 +219,12 @@ class PassedOver:
 # ---------------------------------------------------------------------------
 
 #: ISO 4762 socket head cap screws: thread -> hexagon socket across-flats, mm.
-#: Checked 2026-10-06 against engineersedge.com's ISO 4762 table.
+#: Checked 2026-10-06 against engineersedge.com's ISO 4762 table; M1.6 to M2.5 read
+#: 2026-10-07 from ISO 4762:2004's own Table 1 (the iTeh preview).
 SOCKET_KEY_AF: dict[str, float] = {
+    "M1.6": 1.5,
+    "M2": 1.5,
+    "M2.5": 2.0,
     "M3": 2.5,
     "M4": 3.0,
     "M5": 4.0,
@@ -232,7 +241,9 @@ SOCKET_KEY_AF: dict[str, float] = {
 }
 
 #: ISO 7380-1 button head screws: thread -> socket across-flats, mm.
-#: Checked 2026-10-06 against trfastenings.com's ISO 7380 table (M3..M12).
+#: Checked 2026-10-06 against trfastenings.com's ISO 7380 table (M3..M12). Every
+#: edition starts at M3 (ISO 7380-1:2011 and 2022, read 2026-10-07): there is no M2
+#: or M2.5 button head.
 BUTTON_KEY_AF: dict[str, float] = {
     "M3": 2.0,
     "M4": 2.5,
@@ -271,8 +282,12 @@ SHOULDER_THREAD: dict[float, str] = {
 
 #: ISO 10642 countersunk (flat) head screws: thread -> socket across-flats, mm.
 #: Checked 2026-10-06 against accu-components.com product pages (M3..M12) and
-#: engineersedge.com's ISO 10642 note; the spec's own M8 -> 5 example agrees.
+#: engineersedge.com's ISO 10642 note; the spec's own M8 -> 5 example agrees. M2 and
+#: M2.5 came in with ISO 10642:2019 (its foreword, read 2026-10-07); their keys are
+#: from fasten.it's and Westfield's copies of its table: M2 takes ISO 2936's 1.3.
 FLAT_KEY_AF: dict[str, float] = {
+    "M2": 1.3,
+    "M2.5": 1.5,
     "M3": 2.0,
     "M4": 2.5,
     "M5": 3.0,
@@ -299,7 +314,10 @@ def _inch(rows: dict[str, str]) -> dict[str, float]:
 SOCKET_KEY_AF.update(
     _inch(
         {
+            "#0": "0.050",
+            "#1": "1/16",
             "#2": "5/64",
+            "#3": "5/64",
             "#4": "3/32",
             "#6": "7/64",
             "#8": "9/64",
@@ -318,7 +336,10 @@ SOCKET_KEY_AF.update(
 BUTTON_KEY_AF.update(
     _inch(
         {
+            "#0": "0.035",
+            "#1": "0.050",
             "#2": "0.050",
+            "#3": "1/16",
             "#4": "1/16",
             "#6": "5/64",
             "#8": "3/32",
@@ -334,7 +355,10 @@ BUTTON_KEY_AF.update(
 FLAT_KEY_AF.update(
     _inch(
         {
+            "#0": "0.035",
+            "#1": "0.050",
             "#2": "0.050",
+            "#3": "1/16",
             "#4": "1/16",
             "#6": "5/64",
             "#8": "3/32",
@@ -354,8 +378,13 @@ FLAT_KEY_AF.update(
 #: Checked 2026-10-06 against wermac.org's DIN/ISO nut table. Note the ISO/DIN
 #: split: DIN 934 gives M10 -> 17, M12 -> 19, M14 -> 22, M22 -> 32; these are the
 #: ISO values, and a DIN-dimensioned model will need the sidecar's `tool:` until
-#: detection learns to measure the hex instead of trusting the thread.
+#: detection learns to measure the hex instead of trusting the thread. M1.6 to M2.5
+#: read 2026-10-07 from ISO 4032:2012's and ISO 4017:2022's own tables (iTeh
+#: previews); ISO 4032:2023 keeps every nut below M5 in an informative annex.
 HEX_AF: dict[str, float] = {
+    "M1.6": 3.2,
+    "M2": 4.0,
+    "M2.5": 5.0,
     "M3": 5.5,
     "M4": 7.0,
     "M5": 8.0,
@@ -372,13 +401,17 @@ HEX_AF: dict[str, float] = {
 }
 
 # Inch nuts: ASME B18.2.2 hex nuts (1/4 and up) and ASME B18.6.3 machine screw nuts
-# (#4 to #10), basic width across flats. Checked 2026-10-06: Engineers Edge and
-# torqbolt agree for B18.2.2; Engineers Edge, torqbolt and Aspen Fasteners product
-# pages for B18.6.3 (Aspen's #8 maximum, 0.334, sits below its own basic size and is
-# taken for a typo).
+# (#0 to #10), basic width across flats. Checked 2026-10-06 (#0 to #3 2026-10-07):
+# Engineers Edge and torqbolt agree for B18.2.2; Engineers Edge, torqbolt and Aspen
+# Fasteners product pages for B18.6.3 (Aspen's #8 maximum, 0.334, sits below its own
+# basic size and is taken for a typo).
 HEX_AF.update(
     _inch(
         {
+            "#0": "5/32",
+            "#1": "5/32",
+            "#2": "3/16",
+            "#3": "3/16",
             "#4": "1/4",
             "#6": "5/16",
             "#8": "11/32",
@@ -421,11 +454,16 @@ HEX_HEAD_AF: dict[str, float] = {
 #: compared with, to tell a button head from a socket head with no drive in the
 #: model (issue #31). ISO 4762 socket heads and ISO 7380-1 button heads: fasten.it's
 #: tables, and Engineers Edge's ISO 7380 chart for the button heads' heights, read
-#: 2026-10-06. Inch socket heads, ASME B18.3: AFT Fasteners' table, the same day.
+#: 2026-10-06; M1.6 to M2.5 from ISO 4762:2004's own Table 1, 2026-10-07. Inch
+#: socket heads, ASME B18.3: AFT Fasteners' table, 2026-10-06; #0 to #3 from the
+#: Unbrako guide and fasten.it's table 1A, which agree, 2026-10-07.
 #: No inch button-head table was to be had that agreed with itself, so an inch head
 #: is held to the socket head's alone.
 HEAD_OUTLINE: dict[Head, dict[str, tuple[float, float]]] = {
     Head.SOCKET: {
+        "M1.6": (3.0, 1.6),
+        "M2": (3.8, 2.0),
+        "M2.5": (4.5, 2.5),
         "M3": (5.5, 3.0),
         "M4": (7.0, 4.0),
         "M5": (8.5, 5.0),
@@ -440,6 +478,10 @@ HEAD_OUTLINE: dict[Head, dict[str, tuple[float, float]]] = {
         **{
             size: (dk * _MM_PER_INCH, k * _MM_PER_INCH)
             for size, (dk, k) in {
+                "#0": (0.096, 0.060),
+                "#1": (0.118, 0.073),
+                "#2": (0.140, 0.086),
+                "#3": (0.161, 0.099),
                 "#4": (0.183, 0.112),
                 "#6": (0.226, 0.138),
                 "#8": (0.270, 0.164),
@@ -505,6 +547,9 @@ DIN_HEX_AF: dict[str, float] = {"M10": 17.0, "M12": 19.0, "M14": 22.0, "M22": 32
 #: and ASME B18.2.1 share the sizes, and their own minimums weren't to be had. A
 #: size with no row (a hex key, 13/16 in) has no band: only its own size fits.
 HEX_AF_MIN: dict[float, float] = {
+    3.2: 3.02,  # ISO 4032:2012, product grade A (issue #83)
+    4.0: 3.82,
+    5.0: 4.82,
     5.5: 5.32,
     6.0: 5.82,
     7.0: 6.78,
@@ -572,6 +617,35 @@ _KEY_TABLES: dict[Head, dict[str, float]] = {
 }
 
 
+#: The standard each keyed head's key table is read from, by head and metric or inch,
+#: and the Torx screws': what a size its table lacks is said to be missing from.
+KEY_STANDARD: dict[tuple[Head, bool], str] = {
+    (Head.SOCKET, True): "ISO 4762",
+    (Head.SOCKET, False): "ASME B18.3",
+    (Head.BUTTON, True): "ISO 7380-1",
+    (Head.BUTTON, False): "ASME B18.3",
+    (Head.FLAT, True): "ISO 10642",
+    (Head.FLAT, False): "ASME B18.3",
+    (Head.SHOULDER, True): "ISO 7379",
+    (Head.TORX, True): "ISO 14579",
+}
+
+
+def no_such_head(head: Head, size: Size) -> str:
+    """Why a head of this size has no key: its standard has none (issue #83).
+
+    ``ISO 7380-1 has no M2 button head``: the standard is the reason, not the kit.
+    Where no table of the head's system is held (an inch shoulder or Torx screw),
+    there is no standard to name, and it says so as it always has.
+    """
+    standard = KEY_STANDARD.get((head, size.is_metric))
+    if standard is not None:
+        return f"{standard} has no {size.designation} {head.value} head"
+    if head is Head.TORX:
+        return f"no Torx size for a {size.designation} head"
+    return f"no standard key for a {size.designation} {head.value} head"
+
+
 def hex_key_af(head: Head, size: Size) -> float | None:
     """The hex key a head takes, in across-flats mm, or None when there isn't one.
 
@@ -593,8 +667,11 @@ def spanner_af(size: Size, *, head: bool = False) -> float | None:
 #: Hexalobular (Torx) socket heads: thread -> Torx size. ISO 14579 (socket head cap),
 #: ISO 14580 (cheese), ISO 14581 (countersunk) and ISO 14583 (pan) agree, M12 being
 #: in ISO 14579 only; checked 2026-10-06 against fasteners.eu and fasten.it. Some
-#: suppliers sell M8 pan heads as T40; the standards say T45.
+#: suppliers sell M8 pan heads as T40; the standards say T45. All four start at M2
+#: (their own tables, read 2026-10-07): no M1.6 Torx screw is standard.
 TORX_SIZE: dict[str, str] = {
+    "M2": "T6",
+    "M2.5": "T8",
     "M3": "T10",
     "M4": "T20",
     "M5": "T25",
@@ -607,13 +684,19 @@ TORX_SIZE: dict[str, str] = {
 #: Phillips driver number by thread. Approximation (catalogue-typical pairings;
 #: no ISO or ASME table maps thread to recess number across head styles).
 PHILLIPS_NUMBER: dict[str, int] = {
+    "M1.6": 0,  # ISO 7045, 7046-1 and 7047 agree from M1.6 to M3 (issue #83)
+    "M2": 0,
+    "M2.5": 1,
     "M3": 1,
     "M3.5": 2,
     "M4": 2,
     "M5": 2,
     "M6": 3,
     "M8": 3,
+    "#0": 0,  # ASME B18.6.3, as the suppliers' copies give it (issue #83)
+    "#1": 0,
     "#2": 1,
+    "#3": 1,
     "#4": 1,
     "#6": 2,
     "#8": 2,
