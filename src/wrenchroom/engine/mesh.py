@@ -35,6 +35,7 @@ tested by the referee and named in :attr:`MeshEngine.fallbacks`.
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 from functools import cached_property, lru_cache
 from typing import TYPE_CHECKING, ClassVar
 
@@ -110,6 +111,11 @@ class MeshEngine(Engine):
         self.referee = ExactEngine()
         #: How many tool-part tests the referee decided, for perf reports and tests.
         self.referred = 0
+        #: Each placed piece's overlap with each part, measured once: the same
+        #: piece comes back attempt after attempt (a socket's mouth on every
+        #: extension, a ring's for the stubby). Keyed by the piece and its
+        #: placement, and the part's identity (its mesh is kept, so is the part).
+        self.measured: dict[tuple[object, ...], _Measure] = {}
 
     @property
     def meshed(self) -> tuple[str, ...]:
@@ -192,21 +198,37 @@ class MeshQuery:
             return self._refer(part)
         outward, inward = self._engine.part_strays(part)
         volume = area = 0.0
-        near: list[Manifold] = []
+        near: list[_Measure] = []
         for index in pieces_near(self._lows, self._highs, self._engine.part_box(part)):
-            piece = self._piece(int(index))
-            if piece is None:  # a plain OCP tool shape that would not mesh
+            measure = self._measure(int(index), mesh, part)
+            if measure is None:  # a plain OCP tool shape that would not mesh
                 return self._refer(part)
-            overlap = mesh ^ piece
-            volume += overlap.volume()
-            if volume > HIT_MIN_VOLUME:
-                area += overlap.surface_area()
-                if volume - (inward + TOOL_FACET) * area > HIT_MIN_VOLUME:
-                    return Contact.HIT
-            near.append(piece)
-        if volume <= 0 and (outward <= 0 or all(mesh.min_gap(p, outward) >= outward for p in near)):
+            volume += measure.volume
+            area += measure.area
+            if volume - (inward + TOOL_FACET) * area > HIT_MIN_VOLUME:
+                return Contact.HIT
+            near.append(measure)
+        if volume <= 0 and (outward <= 0 or all(m.gap(mesh, outward) >= outward for m in near)):
             return Contact.CLEAR
         return self._refer(part)
+
+    def _measure(self, index: int, mesh: Manifold, part: Part) -> _Measure | None:
+        """One piece's overlap with the part: volume and surface, kept for next time."""
+        key = None
+        if self._primitives and isinstance(self._tool, ToolSolid):
+            key = (self._primitives[index], self._tool.seat, self._tool.axis, id(part))
+            cached = self._engine.measured.get(key)
+            if cached is not None:
+                return cached
+        piece = self._piece(index)
+        if piece is None:
+            return None
+        overlap = mesh ^ piece
+        volume = overlap.volume()
+        measure = _Measure(piece, volume, overlap.surface_area() if volume > 0 else 0.0)
+        if key is not None:
+            self._engine.measured[key] = measure
+        return measure
 
     def hits(self, part: Part) -> bool:
         """True when the tool overlaps the part by more than HIT_MIN_VOLUME."""
@@ -226,6 +248,24 @@ class MeshQuery:
                 assert not isinstance(shape, ToolSolid)  # noqa: S101  (narrowing only)
                 self._built[index] = solid_mesh(shape, self._engine.tolerance)
         return self._built[index]
+
+
+@dataclass
+class _Measure:
+    """One placed piece against one part: what its mesh overlap came to."""
+
+    piece: Manifold
+    volume: float
+    area: float
+    _gaps: dict[float, float] | None = None
+
+    def gap(self, mesh: Manifold, reach: float) -> float:
+        """The gap to the part's mesh, looked for out to ``reach``; asked once a reach."""
+        if self._gaps is None:
+            self._gaps = {}
+        if reach not in self._gaps:
+            self._gaps[reach] = mesh.min_gap(self.piece, reach)
+        return self._gaps[reach]
 
 
 # ---------------------------------------------------------------------------

@@ -140,7 +140,8 @@ def test_a_deep_well_needs_an_extension(scene_of):
     assert socket.outer_radius < 14 < RATCHET_HEAD_RADIUS  # the well admits only the socket
     well = Pos(0, 0, 30) * Box(200, 200, 60) - Pos(0, 0, 30) * Cylinder(14, 61)
     scene = scene_of(well=well)
-    tried = run_until_turning(socket_attempts(ORIGIN_MOUNT, socket, 16.0, scene))
+    band = (0.0, -8.0)  # an M10 nut's height below the seat
+    tried = run_until_turning(socket_attempts(ORIGIN_MOUNT, socket, 16.0, band, scene))
     winner = tried[-1]
     assert winner.turns
     assert winner.way == "socket, 50 mm extension"

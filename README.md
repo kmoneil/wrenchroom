@@ -27,7 +27,9 @@ to M5):
   room), and tries real tools against the real
   parts: metric hex keys (driver straight in, short leg, long leg), combination
   spanners (the ring, then the open end from the side, each full and stubby), sockets
-  on a ratchet with stock extensions, Phillips and slotted drivers. Verdicts per fastener with every blocker named; terminal table, JSON
+  on a ratchet with stock extensions, Phillips and slotted drivers. A tool on a hex's
+  flats needs the room the hex's own corners sweep as it turns, and a socket the
+  room for its wall round the hex. Verdicts per fastener with every blocker named; terminal table, JSON
   (`--json FILE`), Markdown for a CI job summary or a PR comment (`--md FILE`), exit
   codes for CI (0 pass, 1 a fastener fails, 2 not covered or config error). A FILE of
   `-` writes that report to stdout instead and moves the table to stderr, so it can be
@@ -114,7 +116,7 @@ to M5):
   is only a candidate: it is taken when its solid shows a drive a tool fits (a hex, a
   hex socket, a cross), and otherwise passed over, which every report lists, so a
   fastener is never missed without a word. With every fastener rule removed, the
-  golden bench's 59 are all found with the right kind and size, each screw with its
+  golden bench's 60 are all found with the right kind and size, each screw with its
   rule's head, and its 21 plates, blocks and studs named for their cells are passed over.
 - `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
   correct and keep: one rule per fastener, and above each a comment with how sure
@@ -126,7 +128,7 @@ to M5):
   file reproduces every verdict.
 - Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
   from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  504 fasteners is read and checked with the full kit in about 8.9 s on an Apple M5
+  513 fasteners is read and checked with the full kit in about 8.6 s on an Apple M5
   Max laptop (the target is 10 s). Its four graze cells, deliberate worst cases in
   which the exact engine decides every position of a key grazing all the way round,
   are kept out of that figure and timed apart (about 0.7 s for the four). The bench is dense with fasteners that fail, and

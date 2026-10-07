@@ -107,6 +107,21 @@ RING_RESEAT_DEG = 30.0
 _MIN_GRIP = 0.4
 
 
+def corner_sweep(hex_af: float, hex_band: tuple[float, float]) -> ToolSolid:
+    """The ring of space the hex's own corners sweep as it turns, in the local frame.
+
+    From its flats out to its corners (plus the ring's clearance), over the
+    hex's height: anything in it stops the hex turning, whatever grips it. A
+    ring's bore and a socket's mouth stand outside the corners and hide that
+    space, so every tool on the flats tests it with its engagement; a part one
+    mm off a flat (two glands side by side, a rib beside a nut) is in it.
+    """
+    band_top, band_bottom = hex_band
+    return axial_annulus(
+        hex_af / 2, hex_af / sqrt(3) + RING_CLEARANCE, band_bottom, band_top - band_bottom
+    )
+
+
 def ring_attempts(
     mount: Mount,
     spanner: Spanner,
@@ -125,7 +140,8 @@ def ring_attempts(
     ``hex_band`` is ``(top, bottom)`` in the local frame (seat at 0, both <= 0):
     where the hex actually is, which on a cable gland is below a dome nothing
     grips (bug C in the bench handoff). For a plain nut or a hex head the band's
-    top is the seat and nothing changes.
+    top is the seat and nothing changes. The engagement tests the hex's own
+    :func:`corner_sweep` with the ring.
     """
     tool = f"spanner-{size_name(spanner.af)}"
     band_top, band_bottom = hex_band
@@ -133,6 +149,7 @@ def ring_attempts(
     thickness = min(spanner.head_thickness, (band_top - band_bottom) - _MIN_GRIP)
     mid_z = (band_top + band_bottom) / 2
     ring = axial_annulus(inner, spanner.ring_outer_radius, mid_z - thickness / 2, thickness)
+    engagement = ring + corner_sweep(hex_af, hex_band)
     for way, length in (
         ("ring, full length", spanner.length),
         ("ring, stubby", spanner.stubby_length),
@@ -141,7 +158,7 @@ def ring_attempts(
             tool=tool,
             way=way,
             scene=scene,
-            engagement=mount.place(ring),
+            engagement=mount.place(engagement),
             arm_at=lambda phi, reach=0.85 * length: mount.place(
                 radial_box(
                     spanner.handle_width,
@@ -221,20 +238,16 @@ def open_end_attempts(
     tested, not the slide on from the side, which stays inside the handle's own
     path. Same band and thickness rule as the ring.
 
-    One thing is tested first, at no angle in particular: the ring of space the
-    hex's own corners sweep as it turns, from its flats out to its corners (plus
-    the ring's clearance), over its height. A ring spanner's bore stands outside
-    the corners and hides that space; a jaw doesn't, and a neighbour 1 mm off the
-    flats (two glands side by side) stops the hex turning whatever holds it.
+    One thing is tested first, at no angle in particular: the hex's own
+    :func:`corner_sweep`, which a neighbour 1 mm off the flats (two glands side
+    by side) blocks whatever holds it.
     """
     tool = f"spanner-{size_name(spanner.af)}"
     band_top, band_bottom = hex_band
     thickness = min(spanner.open_thickness, (band_top - band_bottom) - _MIN_GRIP)
     mid_z = (band_top + band_bottom) / 2
     back = max(spanner.open_width / 2, hex_af / sqrt(3) + RING_CLEARANCE + 1.0)
-    corners = axial_annulus(
-        hex_af / 2, hex_af / sqrt(3) + RING_CLEARANCE, band_bottom, band_top - band_bottom
-    )
+    corners = corner_sweep(hex_af, hex_band)
     for way, length in (
         ("open end, full length", spanner.length),
         ("open end, stubby", spanner.stubby_length),
