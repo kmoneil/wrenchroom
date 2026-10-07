@@ -6,6 +6,8 @@ more. A fastener needing a tool outside the kit is not covered, naming the tool 
 the kit that has it; the sidecar's `tool:` can pick a tool but not add one.
 """
 
+import re
+
 import pytest
 from build123d import Compound, export_step
 from click.testing import CliRunner
@@ -33,7 +35,7 @@ from wrenchroom.tools.kits import (
     kit_named,
     missing,
 )
-from wrenchroom.tools.sizes import size_mm, size_name
+from wrenchroom.tools.sizes import METRIC_FLATS, size_mm, size_name
 
 M6_SOCKET = {"kind": "screw", "head": "socket", "size": "M6"}
 
@@ -261,3 +263,11 @@ def test_tools_and_detect_refuse_an_unknown_kit(tmp_path):
     ok = CliRunner().invoke(main, ["detect", str(tmp_path / "m.step"), "--kit", "full"])
     assert ok.exit_code == 0
     assert "parts: bolt" in ok.output
+
+
+def test_the_full_kit_s_summary_reaches_its_largest_tools():
+    # The summary once stopped at 36 mm while the kit held 41, 46 and 50: what
+    # `tools` and the README say of a kit must be what it holds.
+    for af in (36.0, *METRIC_FLATS[METRIC_FLATS.index(36.0) + 1 :]):
+        assert re.search(rf"\b{af:g}\b", kits.FULL.summary), af
+    assert max(METRIC_FLATS) == 50.0

@@ -44,3 +44,9 @@ setup.cfg
 CLAUDE.md
 GEMINI.md
 .claude/
+
+# What examples/ writes when run: generated, never committed
+examples/*.step
+examples/*.html
+examples/*.json
+examples/*.md

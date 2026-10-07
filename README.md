@@ -1,240 +1,408 @@
 # wrenchroom
 
-**wrenchroom checks that a real hand tool can reach, turn and remove every fastener in a
-mechanical assembly.** Give it a STEP file (from any CAD) or a list of shapes from a
-Python CAD library, and it reports, fastener by fastener, which tool gets on, whether it
-can swing far enough to turn, whether the screw can come out, and what is in the way when
-it can't. It runs from the command line, from Python, and in CI.
+[![CI](https://github.com/kmoneil/wrenchroom/actions/workflows/ci.yml/badge.svg)](https://github.com/kmoneil/wrenchroom/actions/workflows/ci.yml)
+![Python 3.13 | 3.14](https://img.shields.io/badge/python-3.13%20%7C%203.14-blue)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-A collision check says the parts fit. It doesn't say the thing can be put together or
-taken apart. The classic failure is a bolt nobody can get a tool on, found when the parts
-arrive: a socket head screw 15 mm under a wall needs a 5 mm hex key whose short leg alone
-is 33 mm. The fix is cheap seen early (a hex head a spanner turns from the side) and a
-re-order seen late, and a collision check can't see it either way.
+**Can a real hand tool reach, turn and remove every fastener in your assembly?**
+wrenchroom finds out before the parts are made.
 
-## Status
+Give it a STEP file from any CAD program (Fusion, Onshape, SolidWorks, FreeCAD,
+CadQuery...), or shapes straight from build123d. For every screw, bolt and nut it
+does what a mechanic would: picks up a real tool at a standard size (a hex key, a
+spanner, a socket on its ratchet, a screwdriver), puts it on, tries to swing it far
+enough to turn, and checks that the screw can then come out. Then it tells you which
+ones can't be done, and exactly what is in the way.
 
-**`wrenchroom check` works on real STEP files, finds fasteners by their names and
-solids, is fast enough for CI, and shows its answers in 3D.** What exists today (M1
-to M5):
-
-- `wrenchroom check model.step` reads a STEP assembly (names kept, repeats made
-  unique; a part drawn as several solids, a nut and its washer, is one part to a rule
-  and to detection, its largest solid keeping the name and the rest going with it),
-  takes fastener descriptions from a `wrenchroom.yaml` sidecar, resolves each
-  fastener's seat and axis from its geometry (a nut is turned from the end nothing sits
-  against, its bolt not counted even where it is drawn into the nut, as a bolt at its
-  nominal diameter is in a nut bored at the thread's minor; or, drawn off its seat with
-  its washer left out, from the end with the more room), and tries real tools against the real
-  parts: metric hex keys (driver straight in, short leg, long leg), combination
-  spanners (the ring, then the open end from the side, each at full length and then
-  stubby, in the sizes stubbies are sold: 6 to 32 mm and 1/4 to 1-1/4 in; the
-  lengths are makers', the longest of a few makers' standard series at each size),
-  sockets on a ratchet with stock extensions, Phillips and slotted drivers. A tool on a hex's
-  flats needs the room the hex's own corners sweep as it turns, and a socket the
-  room for its wall round the hex. A part in that first room stops the hex whatever
-  grips it, which is said once, before any tool is tried (`the nut's corners hit
-  block as it turns`). A fastener nothing turns, or whose free face can't be told,
-  is measured against the parts that stopped it: drawn into one, it is a clash
-  in the model, not covered, with the shared volume (`drawn into lid (96.1 mm^3):
-  fix the model`). Only its hex and its widest region are measured, a nut's body
-  and flange, a head, a gland's hex and dome: a shank or stub in a tapped hole, or
-  a bolt drawn at its nominal diameter in a nut bored at its minor, is a thread,
-  and its own bolt no clash. A clash that stops nothing changes no verdict, and
-  isn't looked for. A tool grips the hex where its flats are, not the
-  part's widest region (a flange, or a gland's dome), and a ring, socket or nut
-  driver has to get on over whatever the part has past its hex: a dome wider than
-  their bore leaves only the open end, and the report says so. Verdicts per fastener
-  with every blocker named, led by the ones that decided it: where a tool swings
-  some of the arc it needs, the parts at each end of its best arc (`explain` says
-  `holds, best 15 of 30 deg, between post_a and post_b`), and with hand room what
-  stopped the hand along that arc. A failure's line names each part once and three
-  at most, the one hit at the most positions first, then how many more (`only holds,
-  and it has no nut; best arc between post_a and post_b`; `no room for a hand: the
-  hand hits deck_plate, deck_guard, rail and 18 more on its best arc`); the JSON
-  (`blocked_by`, `deciding`), `explain` and the HTML view list them all. Terminal table, JSON
-  (`--json FILE`), Markdown for a CI job summary or a PR comment (`--md FILE`), exit
-  codes for CI (0 pass, 1 a fastener fails, 2 not covered or config error). A FILE of
-  `-` writes that report to stdout instead and moves the table to stderr, so it can be
-  piped: `--json - | jq`, `--md - >> "$GITHUB_STEP_SUMMARY"`. Only one report can go
-  to stdout; a file really named `-` is `./-`. Names come from the
-  model, so the terminal shows control characters written out and the Markdown puts
-  every name in a code span: a crafted part name can't steer a terminal or post a
-  link or an image in a comment.
-- A kit says which tools exist, and only those are tried (`--kit`; `wrenchroom tools
-  --kit NAME` lists them). `metric-home`, the default, is a home toolbox: hex keys
-  1.5 to 10 mm, combination spanners and 1/4" and 3/8" drive sockets 5.5 to 19 mm,
-  Phillips 1 to 3 and slotted drivers. `imperial-home` is the same in inch sizes, as
-  US home sets come: ASME B18.3 keys 0.050 to 3/8 in, spanners 1/4 to 3/4 in, sockets
-  3/16 to 3/4 in. `full` holds every size the tables describe, both systems, its
-  spanners and sockets reaching 50 mm for large cable glands (an M32 gland is
-  commonly 41 across flats). A
-  fastener that needs a tool the kit lacks is not covered, and the reason names the
-  tool and the kits that have it (`needs spanner-24, which kit metric-home does not
-  hold (full has it)`). `full` also has Torx keys T10 to T40 (ISO 10664 sizes, swept
-  like hex keys; a Torx head takes the size ISO 14579 and its kin give its thread,
-  M6 T30), ball-end keys 3 to 10 mm, tried when no straight key gets in (the long leg
-  leant up to 25 degrees off the axis, Bondhus' and Wiha's figure, every way round),
-  in socket heads and shoulder screws only (a button or countersunk head's socket is
-  barely deeper than the ball); a pass only a ball end reaches says so, as a ball end
-  takes much less torque than a straight key,
-  and nut drivers 5.5 to 13 mm, tried last, straight in, where nothing that swings
-  can get down to a nut. Inch tools carry their unit (`spanner-7/16in`), and inch
-  fasteners (`#10`, `1/4`, `3/4`; UNC and UNF alike) take their ASME tools: socket,
-  button and flat heads (B18.3), nuts (B18.2.2, B18.6.3) and hex heads (B18.2.1),
-  which part ways with their nuts at 7/16 and 9/16.
-- Tools a kit doesn't have (a long-series or short-arm key, a shop-made spanner, a
-  thin-wall socket, a long screwdriver) go in the sidecar's `tools:` list, each by
-  the numbers the built-in tables hold for its kind, and swept the same way. They
-  join whatever kit is used: a fastener of their kind and size tries the kit's own
-  tools first, then the sidecar's, in its order, and a rule's `tool:` may name one.
-  `wrenchroom tools --config wrenchroom.yaml` lists them after the kit's own.
-
-  ```yaml
-  tools:
-    - name: stubby-key-5          # the name reports give it; never a built-in's
-      type: hex-key               # hex-key, torx-key, spanner, socket, nut-driver, driver
-      across_flats: 5
-      long: 60
-      short: 20
-    - name: shop-spanner-24
-      type: spanner
-      across_flats: 24
-      length: 300                 # the head defaults to the built-in 24's
-      ends: [ring]                # ring, open, or both (the default)
-  ```
-
-  The kinds and their numbers, mm (optional ones default to the built-in tool's for
-  the size): `hex-key` across_flats, long, short (across_corners); `torx-key` size,
-  long, short (point_to_point); `spanner` across_flats, length (stubby, ends,
-  head_thickness, ring_outer_radius, handle_width, open_width, open_thickness);
-  `socket` across_flats (outer_radius, length); `nut-driver` across_flats
-  (outer_radius, handle_radius, handle_length); `driver` tip (shaft_radius,
-  shaft_length). Anything else in an entry is an error, as elsewhere in the sidecar.
-- Room for the hand (`--hand-room`, or `checks: {hand_room: true}` in the sidecar):
-  a hand of radius 35 mm along each handle's last 90 mm, resting on it from the side
-  the tool comes from, and a fist round a driver's handle. Where the tool alone would
-  turn and the hand can't follow, the fastener is blocked, "no room for a hand",
-  naming what the hand hit. Off by default: the spec's figures are not yet tuned
-  against real hands, and L-key arms, turned with the fingertips, get no hand. Every
-  report ends by saying what it didn't check.
-- `--html FILE` writes the 3D view: one self-contained file that opens
-  offline. The assembly is grey and each fastener coloured by how it fared (green
-  turns, blue held, amber passes only in another state, red blocked or stuck, grey
-  not covered). Click one, or pick it from the list, to see every tool position that
-  was tried, drawn translucent where the check put it (orange where it hit
-  something), with the parts in its way in magenta; a fastener reached in another
-  state is drawn in that state. `wrenchroom explain model.step NAME --html f.html`
-  writes the same view opened on one fastener, and `report.html#NAME` opens any
-  fastener directly. The page embeds three.js (r186, MIT) and its content security
-  policy lets it load nothing and run nothing but its own two scripts, so a report
-  of a private model can't send anything anywhere.
-- Dimension tables cite their standards (ISO 2936, 4762, 7380-1, 10642, 4032) with the
-  date checked; approximations are labelled as such.
-- A sidecar glob that matches nothing (a rule's parts or mates, an ignore, a state's
-  removal, `--only`) is reported and fails the run: that is how a renamed part hides.
-  A rule's `mates:` (parts that travel with the fastener and leave its scene, such as
-  a washer or a nyloc's separate dome) take globs like the rest.
-- Pairs (a nut that only holds passes through its turning bolt), extraction (a
-  screw that turns but can't come out is `stuck`), states (parts removed, another
-  model of the mechanism, retries that say where a fastener passed), `explain`
-  (every attempt for one fastener, with the blockers) and `tools` (the kit's
-  dimensions, caveats inline) all work. `explain` and `check --only` narrow what is
-  reported, not what is resolved: a fastener's pair is checked with it, so its
-  verdict is the full run's.
-- Fixed threads (`kind: insert`): a well nut, rivnut, threaded insert, cage, T-,
-  press or weld nut holds itself, like a carriage bolt. It is never given a tool and
-  is reported as held, and the screw into it is the one that must turn. Detection
-  knows them by name (`rivnut`, `threaded_insert`, `base_well_nut`; a word before
-  "nut" counts only if the solid shows no hex, so a nut deep in a well stays a nut),
-  and a nut whose solid shows no hex is not covered rather than given a spanner that
-  couldn't grip it.
-- No sidecar needed for named parts. Fasteners are found from their part names (ISO
-  and DIN designations, McMaster-Carr numbers, descriptions such as `M6x20 SHCS` or
-  `hex nut M8`, code-CAD names such as `lift_link_bolt`) and completed from their
-  solids: the drive the model shows (a hex, a hex socket, a cross, a slot, a carriage
-  bolt's square neck) and the size that drive or the shank gives. A head drawn as a
-  plain cylinder is held to the standards' outlines for its size (an M5 head 9.5 across
-  and 2.75 high is ISO 7380-1's button head, not ISO 4762's socket head), and where
-  none fits, its head is a guess from its proportions: detection's confidence is low,
-  and the check says so (`NOTE screw: its head is a guess: ...`, and `notes` in the
-  JSON). A shoulder screw (`head: shoulder`, ISO 7379) takes the key its thread sets,
-  smaller than a cap screw's (an M6 on an 8 mm shoulder takes 4 mm); `shoulder` in a
-  name says so, and so does a plain head of ISO 7379's outline over its shoulder (13
-  by 5.5 over 8 mm is an M6's); a shoulder drawn without its thread, or with it at no
-  size, is sized by ISO 7379's table. A head word counts
-  where it touches the noun (`lid_button_screw`), as elsewhere it may describe
-  something else (`button_panel_screw`); a drive word (`torx`, `hexalobular`,
-  `phillips`, `pozidriv`) can describe nothing else and counts anywhere
-  (`torx_lid_screw`). A hex drawn inside its nut standard's tolerance takes that
-  spanner (an M8 nut at 12.8: ISO 4032 allows 12.73 to 13), the thread's own standard
-  first where an inch and a metric band overlap. A known thread keeps to its own
-  system's tools: a hex drawn up to 0.3 mm under its standard's band (an M8 nut at
-  12.6) takes that size, and the report notes it (`NOTE nut: hex drawn undersize:
-  ...`, and `notes` in the JSON); only a hex exactly a size of the other system, and
-  no size of its own, takes that, noted too. A size from a band alone is a guess,
-  which the name's size outranks, and a nut takes the size of the bolt it runs on.
-  Where no tool takes a hex, the reason names the one that fits nearest: the
-  smallest spanner that goes over it, or the largest key that goes into it. A
-  sidecar rule still describes a part outright, `across_flats:`
-  gives a hex its measured size, and `checks: {detect: false}` turns detection off.
-  A name with ordinary words after its fastener noun (`box_gland_vent`, `bolt_hole_cover`)
-  is only a candidate: it is taken when its solid shows a drive a tool fits (a hex, a
-  hex socket, a cross), and otherwise passed over, which every report lists, so a
-  fastener is never missed without a word. With every fastener rule removed, the
-  golden bench's 86 are all found with the right kind and size, each screw with its
-  rule's head, and its 26 plates, blocks and studs named for their cells are passed over.
-- `wrenchroom detect model.step > wrenchroom.yaml` writes what it found as a sidecar to
-  correct and keep: one rule per fastener, and above each a comment with how sure
-  detection was, what found it, the axis it resolved and how the part fares now.
-  Where the name says one head and the solid's drive shows another, the drive wins
-  and the comment says what the name said. A
-  fastener found but not understood (a set screw, say) is written commented out with
-  its reason, for you to complete, and so is a part passed over. Kept as written, the
-  file reproduces every verdict.
-- Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed
-  from their primitives, overlap volumes from manifold3d. The golden bench scaled to
-  567 fasteners is read and checked with the full kit in about 8.7 s on an Apple M5
-  Max laptop (the target is 10 s). Its four graze cells, deliberate worst cases in
-  which the exact engine decides every position of a key grazing all the way round,
-  are kept out of that figure and timed apart (about 0.7 s for the four). The bench is dense with fasteners that fail, and
-  a failing one tries every tool it has: open ends, and ball-end keys leant every way
-  round, cost most of that. `--exact` swaps in OCP boolean intersections on the
-  B-rep, slower. The mesh engine decides alone only beyond doubt (a hit whose
-  overlap stays over the floor with the mesh's possible error taken off, a clear
-  wider than a part's mesh can stray) and asks the exact engine about the rest, so
-  the two agree, a key grazing a face included. An overlap above noise but under
-  the 0.05 mm^3 floor is a graze: not a hit, but when one decides a verdict the
-  report says so (`NOTE marginal: ... the tool grazing ...`, and `grazes` in the
-  JSON). Both engines give the bench the same report, field for field.
-- A golden bench of generated cells with hand-worked truth gates every change, on both
-  engines; its whole-report snapshot is byte-identical across Linux and macOS, 3.13
-  and 3.14.
-
-## From Python, and in pytest
-
-```python
-import wrenchroom as wr
-
-asm = wr.Assembly.from_step("robot.step")  # or wr.Assembly.from_shapes([(name, shape), ...])
-cfg = wr.Config.load("wrenchroom.yaml")  # optional
-report = wr.check(asm, cfg, kit="metric-home")
-for f in report.failures():
-    print(f.name, f.tool, f.verdict, f.blocked_by)
-report.to_json("report.json")
-report.to_html("report.html")
-report.to_markdown("report.md")
+```console
+$ wrenchroom check examples/bracket.step
+5 fasteners: 3 turn, 0 held, 1 blocked, 1 stuck, 0 not covered
+  M6 hex screw             spanner-10     x1    1 of 1 fail
+  M6 socket screw          hex-key-5      x2    1 of 2 fail
+  M8 hex screw             spanner-13     x1    all pass (ring, full length)
+  M8 nut                   spanner-13     x1    all pass (ring, full length)
+FAIL rear_screw  hex-key-5  blocked  shelf
+FAIL side_bolt  spanner-10  stuck  cover
+NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts the model doesn't have
 ```
 
-In CI, the pytest plugin fails the build when a design change buries a fastener.
-Installing wrenchroom registers it; name the model in the project's pytest settings
-(paths relative to that file) and ask for the report:
+The same check as a 3D view (`--html report.html`), opened on the rear screw: the
+5 mm key, straight in, meets the shelf (magenta) long before it reaches the screw.
+
+![The bracket in wrenchroom's 3D view: rear_screw selected, the hex key's position drawn in orange where it hits the shelf, the shelf in magenta, the other fasteners green where they turn and red where they fail](docs/images/bracket-view.png)
+
+No setup is needed when parts are named the way CAD models usually name them
+(`rear_screw`, `M6x20 SHCS`, `hex nut M8`): the names say what each part is, and
+the solids give the rest. It runs from the command line, from Python, from pytest,
+and in CI, where an unreachable fastener fails the build like a broken test.
+
+## Contents
+
+- [Why](#why)
+- [Install](#install)
+- [Quick start](#quick-start)
+- [A worked example](#a-worked-example)
+- [Reading the report](#reading-the-report)
+- [Describing your model: the sidecar](#describing-your-model-the-sidecar)
+- [Tool kits](#tool-kits)
+- [In CI](#in-ci)
+- [From Python](#from-python)
+- [How it works](#how-it-works)
+- [What it doesn't check](#what-it-doesnt-check)
+- [Development](#development)
+
+## Why
+
+A collision check tells you the parts fit. It doesn't tell you the thing can be put
+together, or taken apart again for service. The classic miss is a bolt nobody can get
+a tool on, found when the parts arrive: an M6 socket head screw 15 mm under a shelf
+needs a 5 mm hex key, whose short leg alone is 33 mm long. Seen early, the fix costs
+nothing: move the shelf, or use a hex head a spanner turns from the side. Seen late,
+it's a re-order. A collision check can't see it either way, because the tool isn't in
+the model.
+
+wrenchroom puts the tools in. What it catches:
+
+- **No room for the tool.** Every way a tool goes on is tried: a hex key straight in
+  like a driver, short leg in, long leg in; a spanner's ring, then its open end from
+  the side, full length then stubby; a socket on its ratchet, then on each extension;
+  a screwdriver; a nut driver.
+- **No room to swing.** A spanner that fits but can't swing the 30 degrees it needs
+  only holds. wrenchroom finds its best arc and names the two parts at its ends.
+- **Turns, but can't come out.** A screw that turns but can't be drawn out along its
+  axis is `stuck`, and the report names what's over it.
+- **Nut and bolt.** One side has to turn while the other is held. A nut and bolt
+  pair passes when either side turns and the other can be held, or holds itself.
+- **A hex its own corners can't turn.** A part inside the circle a nut's corners
+  sweep stops it, whatever grips it.
+- **The wrong toolbox.** A fastener that needs a tool your kit doesn't have (a 24 mm
+  spanner, in a home toolbox) is reported with the kits that have it.
+- **Mistakes in the model.** A nut drawn into the part beside it is a clash in the
+  CAD, not a reach problem, and is reported as one, with the volume they share.
+- **Parts that come off.** Take a lid off, or swing a lever up (a second model of the
+  same mechanism), and retry: the report says where each fastener passed.
+
+It's for mechanical designers checking serviceability before a design review,
+hardware teams who want a buried fastener to fail CI, and code-CAD users who want
+reach checked in their test suite.
+
+## Install
+
+wrenchroom needs Python 3.13 or later. It isn't on PyPI yet, so install it from
+GitHub, as a command-line tool with [uv](https://docs.astral.sh/uv/):
+
+```console
+$ uv tool install git+https://github.com/kmoneil/wrenchroom
+```
+
+or into an environment with `pip install git+https://github.com/kmoneil/wrenchroom`.
+It brings build123d (OpenCascade, to read STEP) and manifold3d (the collision
+checks), both as prebuilt wheels.
+
+## Quick start
+
+1. **Check your model.** `wrenchroom check model.step`. It uses a home toolbox,
+   `metric-home`, unless you choose another kit (`--kit full` has every size).
+2. **Ask about a failure.** `wrenchroom explain model.step rear_screw` lists every
+   tool and way that was tried, and what each one hit.
+3. **See it in 3D.** `wrenchroom check model.step --html report.html`, then open the
+   file in a browser. Click a fastener to see every tool position that was tried.
+4. **Correct what it misread.** `wrenchroom detect model.step > wrenchroom.yaml`
+   writes what it found as a sidecar file. Fix anything wrong, keep the file beside
+   the model, and every later check reads it.
+
+## A worked example
+
+[`examples/bracket.py`](examples/bracket.py) builds a small bracket with build123d and
+writes it as STEP. It has a base plate and five fasteners:
+
+- `front_screw` and `rear_screw`: M6 socket head cap screws, with a shelf 15 mm over
+  the rear one;
+- `side_bolt`: an M6 hex bolt, 20 mm long, with a cover 8 mm over its head;
+- `clamp_bolt` and `clamp_nut`: an M8 bolt up from under the plate, and its nut.
+
+From a clone of this repository:
+
+```console
+$ python examples/bracket.py
+wrote examples/bracket.step
+```
+
+```console
+$ wrenchroom check examples/bracket.step
+5 fasteners: 3 turn, 0 held, 1 blocked, 1 stuck, 0 not covered
+  M6 hex screw             spanner-10     x1    1 of 1 fail
+  M6 socket screw          hex-key-5      x2    1 of 2 fail
+  M8 hex screw             spanner-13     x1    all pass (ring, full length)
+  M8 nut                   spanner-13     x1    all pass (ring, full length)
+FAIL rear_screw  hex-key-5  blocked  shelf
+FAIL side_bolt  spanner-10  stuck  cover
+NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts the model doesn't have
+```
+
+There's no sidecar here. The names say screw, bolt and nut, and the solids give the
+rest: each head's shape, the size of its hex or hex socket, and so the thread. The
+summary groups fasteners by what they are and the tool they take; then each failure
+gets a line of its own. The exit code is 1, because a fastener failed.
+
+Ask why the rear screw failed:
+
+```console
+$ wrenchroom explain examples/bracket.step rear_screw
+rear_screw: blocked with hex-key-5
+  found by name+geometry: noun 'screw'; solid: socket, 5 across flats, M6 measured
+  tried hex-key-5, driver straight in: blocked; hit shelf
+  tried hex-key-5, short leg in: blocked; hit shelf
+  tried hex-key-5, long leg in: blocked; hit shelf
+```
+
+It found the screw by its name, and measured an M6 socket head with a 5 mm hex
+socket. Then it tried the 5 mm key three ways: straight in like a driver, short leg in
+with the long arm swinging, and long leg in with the short arm swinging. The shelf
+stops all three.
+
+And the side bolt:
+
+```console
+$ wrenchroom explain examples/bracket.step side_bolt
+side_bolt: stuck with spanner-10, ring, full length
+  found by name+geometry: noun 'bolt'; solid: hex, 10 across flats, M6 measured
+  tried spanner-10, ring, full length: turns; hit clamp_bolt, clamp_nut
+  cannot come out: cover in the way
+```
+
+A 10 mm ring spanner turns it. On the way round its handle meets the clamp's bolt
+and nut, but it still has all the swing it needs. The bolt can't come out, though:
+there's 8 mm under the cover, and the bolt is 20 mm long.
+
+Now fix both: raise the shelf to 45 mm, which is room for the key's short leg, and
+cut a 14 mm hole in the cover for the bolt to come out through.
+`python examples/bracket.py --fixed` writes that version:
+
+```console
+$ python examples/bracket.py --fixed
+wrote examples/bracket.step
+$ wrenchroom check examples/bracket.step
+5 fasteners: 5 turn, 0 held, 0 blocked, 0 stuck, 0 not covered
+  M6 hex screw             spanner-10     x1    all pass (ring, full length)
+  M6 socket screw          hex-key-5      x2    all pass (driver straight in)
+  M8 hex screw             spanner-13     x1    all pass (ring, full length)
+  M8 nut                   spanner-13     x1    all pass (ring, full length)
+NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts the model doesn't have
+```
+
+Everything passes, and the exit code is 0.
+
+## Reading the report
+
+Each fastener gets one verdict:
+
+| Verdict | What it means | Passes |
+| --- | --- | :---: |
+| `turns` | A tool gets on and swings far enough to turn it, and a screw can come out. | yes |
+| `held` | It only needs holding while its partner turns (a bolt whose nut is turned), or it holds itself (a carriage bolt, a threaded insert). | yes |
+| `blocked` | No tool turns it. The line names what's in the way, the parts that decided it first. | no |
+| `stuck` | It turns, but can't come out along its axis. The line names what's over it. | no |
+| `not covered` | wrenchroom can't judge it, and the line says why: no tool in the kit fits, it can't tell which end is free, or the model has a clash. | no |
+
+A failure's line names at most three parts, the one hit at the most positions first,
+then how many more. When a plain list of parts isn't the whole story, the line says
+what is:
+
+| You may see | Meaning |
+| --- | --- |
+| `only holds, and it has no nut; best arc between post_a and post_b` | A tool fits, but its swing is too short to turn it, and there's no partner to turn instead. |
+| `only holds, and its partner clamp_nut does not turn` | Neither side of the pair can be turned. |
+| `the nut's corners hit rib as it turns` | A part sits inside the circle the hex's corners sweep. No tool can turn it. |
+| `drawn into lid (96.1 mm^3): fix the model` | The fastener's solid overlaps another part: a clash in the model. |
+| `needs spanner-24, which kit metric-home does not hold (full has it)` | Choose a bigger kit, or add the tool to the sidecar. |
+| `no room for a hand: the hand hits frame on its best arc` | With `--hand-room`: the tool would turn, but the hand on it can't follow. |
+| `cannot tell the nut's free face: both ends are covered` | Say which way the tool comes from with `axis:` in the sidecar. |
+
+Exit codes are for scripts and CI: **0** every fastener passes, **1** a fastener
+fails, **2** a fastener is not covered, or the sidecar has a problem (a rule that
+matches no part, say, which is usually a renamed part).
+
+### Every way to see it
+
+- **The terminal table**, as above. Part names come from the model, so control
+  characters in them are written out rather than sent to your terminal.
+- **`explain`** for one fastener: every tool and way tried, what each hit, and how
+  the part was recognised.
+- **JSON** (`--json report.json`): every field, for scripts. One fastener's entry:
+
+  ```json
+  {
+   "name": "rear_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [0.0, 0.0, 1.0],
+   "seat": [-20.0, 0.0, 6.0],
+   "source": "name+geometry",
+   "tool": "hex-key-5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": ["shelf"],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  }
+  ```
+
+- **Markdown** (`--md report.md`) for a CI job summary or a pull request comment: the
+  same tables, with every part name in a code span, so a crafted name can't post a
+  link or an image.
+- **The 3D view** (`--html report.html`): one self-contained file that opens offline.
+  The assembly is grey, and each fastener is coloured by how it fared: green turns,
+  blue held, amber passes only in another state, red blocked or stuck, grey not
+  covered. Click one, or pick it from the list, to see every tool position that was
+  tried, drawn where the check put it (orange where it hit something), with the
+  parts in its way in magenta. `report.html#rear_screw` opens on one fastener. The
+  page loads nothing and runs nothing but its own scripts, so a report of a private
+  model can't send anything anywhere.
+
+`-` for a file writes that report to stdout and moves the table to stderr, so it can
+be piped: `--json - | jq`, `--md - >> "$GITHUB_STEP_SUMMARY"`.
+
+## Describing your model: the sidecar
+
+Often you won't need one. When you do (a part's name says nothing, detection
+misread a head, a nut's washer should go with it, a lid comes off for service), put a
+`wrenchroom.yaml` beside the model. `wrenchroom detect model.step > wrenchroom.yaml`
+writes a starting point: one rule per fastener it found, each with a comment saying
+how sure it was and how the part fares now. Kept as written, the file reproduces
+every verdict.
+
+A sidecar with every section:
+
+```yaml
+# wrenchroom.yaml
+fasteners:
+  - parts: "frame_bolt_*"        # a glob over part names
+    kind: screw                  # screw, nut or insert
+    head: hex                    # socket, button, flat, hex, torx, phillips,
+                                 # slotted, carriage or shoulder
+    size: M8                     # M8, #10, 1/4, ...
+  - parts: frame_bolt_3          # a later rule replaces an earlier one, whole
+    kind: screw
+    head: hex
+    size: M8
+    tool: spanner-13             # try only this tool
+    axis: -z                     # the way the tool comes from: +x ... -z, or [x, y, z]
+  - parts: "frame_nut_*"
+    kind: nut
+    size: M8
+    mates: ["frame_washer_*"]    # parts that go with it: not in its way
+  - parts: cable_gland
+    kind: nut
+    across_flats: 24             # a hex of no thread size: give its size
+    socket: false                # a cable runs through it: no socket goes over
+  - parts: battery_screw_*
+    state: lid-off               # reached only with the lid off
+
+ignore: ["*_cable", "*_hose"]    # not solid obstacles: left out of every check
+
+pairs:
+  - [axle_bolt, axle_nut]        # pair these, where geometry wouldn't
+
+states:
+  lid-off:
+    remove: [lid, "lid_screw_*"] # parts taken off
+  lever-up:
+    model: robot_lever-up.step   # the same parts, moved: another STEP
+
+checks:
+  try_states: [lid-off]          # retry each failure in these states
+  hand_room: false               # also check room for a hand (untuned, off)
+  detect: true                   # find fasteners the rules don't name
+
+tools:                           # tools your kit doesn't have
+  - name: stubby-key-5
+    type: hex-key
+    across_flats: 5
+    long: 60
+    short: 20
+```
+
+Mistakes are loud. An unknown key is an error, not ignored, and a glob that matches
+no part fails the run (exit 2), because that's how a renamed part hides. A fastener
+that passes only in another state passes, and `explain`, the JSON and the 3D view
+(amber) say which state.
+
+### Your own tools
+
+A kit lists the tools wrenchroom may use. A tool it doesn't have (a long-series key, a
+short-arm key, a shop-made spanner, a thin-wall socket, a long screwdriver) goes in
+the sidecar's `tools:` list, given by the same numbers the built-in tables hold for
+its kind. It joins whatever kit you use: a fastener of its kind and size tries the
+kit's own tools first, then yours, in order, and a rule's `tool:` may name one.
+
+```yaml
+# wrenchroom.yaml
+tools:
+  - name: shop-spanner-24
+    type: spanner
+    across_flats: 24
+    length: 300              # the head defaults to the built-in 24's
+    ends: [ring]             # ring, open, or both (the default)
+```
+
+`wrenchroom tools --config wrenchroom.yaml` lists them after the kit's own. The
+kinds and their numbers, all in mm, are in the [reference](docs/reference.md#your-own-tools).
+
+## Tool kits
+
+| Kit | What's in it |
+| --- | --- |
+| `metric-home` (default) | A home toolbox: ISO 2936 hex keys 1.5 to 10 mm, combination spanners and 1/4 and 3/8 in drive sockets 5.5 to 19 mm, Phillips 1 to 3 and slotted drivers. |
+| `imperial-home` | The same in inch sizes, as US home sets come: ASME B18.3 keys 0.050 to 3/8 in, spanners 1/4 to 3/4 in, sockets 3/16 to 3/4 in. |
+| `full` | Every size the tables hold, both systems: keys to 19 mm and 3/4 in, ball-end keys, Torx keys T10 to T40, spanners and sockets to 50 mm (for large cable glands) and 1-1/2 in, nut drivers. |
+
+`wrenchroom tools --kit full` lists every tool with its dimensions and where they
+come from. Sizes are the standards' (ISO 2936, 4762, 7380-1, 10642, 4032; ASME B18.3,
+B18.2.1, B18.2.2), and spanner lengths are makers', the longest of a few makers'
+standard series at each size. Where a figure is an approximation, the listing says
+so.
+
+## In CI
+
+The exit code fails the job when a fastener fails; `--md -` puts the report in the
+job summary, and the 3D view goes up as an artifact:
+
+```yaml
+# .github/workflows/reach.yml
+name: reach
+on: [push, pull_request]
+jobs:
+  wrenchroom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - run: uv tool install git+https://github.com/kmoneil/wrenchroom
+      - run: wrenchroom check cad/robot.step --html reach.html --md - >> "$GITHUB_STEP_SUMMARY"
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reach
+          path: reach.html
+```
+
+Or in pytest: installing wrenchroom registers a plugin. Name the model in your pytest
+settings (paths are relative to that file) and ask for the report:
 
 ```ini
 [pytest]
 wrenchroom_model = cad/robot.step
 ; optional: wrenchroom_config (default: wrenchroom.yaml beside the model),
-; wrenchroom_kit, wrenchroom_state, wrenchroom_exact = true
+; wrenchroom_kit, wrenchroom_state, wrenchroom_exact = true, wrenchroom_hand_room = true
 ```
 
 ```python
@@ -242,33 +410,68 @@ def test_every_fastener_reachable(wrenchroom_report):
     wrenchroom_report.assert_all_pass()
 ```
 
-A failure prints what `wrenchroom check` prints: the summary and a line per problem.
-The model is checked once per session; the plugin loads nothing until a test asks
-for it, and `-p no:wrenchroom` turns it off.
+A failure prints what `wrenchroom check` prints. The model is checked once per
+session, the plugin loads nothing until a test asks for it, and `-p no:wrenchroom`
+turns it off.
 
-## What it will do
+## From Python
 
-```console
-$ wrenchroom check bench.step --kit full    # the golden bench's own report, verbatim
-37 fasteners: 24 turn, 2 held, 10 blocked, 1 stuck, 0 not covered
-  M16 nut                  spanner-24     x5    3 of 5 fail
-  M6 carriage screw        -              x1    all pass (holds itself)
-  ...
-FAIL glands_close_a_gland  spanner-24  blocked  glands_close_b_gland
-FAIL key_wall_near_screw  hex-key-5  blocked  key_wall_near_wall
+```python
+import wrenchroom as wr
+
+report = wr.check(wr.Assembly.from_step("examples/bracket.step"), kit="metric-home")
+print(report.summary)
+for f in report.failures():
+    print(f.headline, f.stuck_on or f.blocked_by)
 ```
 
-- **Any CAD.** STEP assemblies (AP203, AP214, AP242) from Fusion, Onshape, SolidWorks,
-  FreeCAD, build123d, CadQuery; or shapes passed straight from Python.
-- **Real tools at standard sizes**: hex and Torx keys, combination and stubby spanners,
-  sockets on ratchets and extensions, screwdrivers, nut drivers.
-- **The checks that matter**: the tool gets on; it can swing far enough to turn; a nut
-  and its screw are a pair, one side turned and the other held; the screw can come out
-  along its axis; retried with parts removed or the mechanism moved.
-- **Every failure explained**: which tool, which way it was tried, what it hit, and
-  which parts decided it.
-- **Fast enough for CI**: 500 fasteners in under 10 seconds, with JSON output and exit
-  codes, a terminal table, Markdown to post, and a self-contained HTML 3D view.
+```text
+{'fasteners': 5, 'turns': 3, 'held': 0, 'blocked': 1, 'stuck': 1, 'not_covered': 0}
+rear_screw: blocked with hex-key-5 ('shelf',)
+side_bolt: stuck with spanner-10, ring, full length ('cover',)
+```
+
+From build123d, skip the STEP file: `wr.Assembly.from_shapes([(name, shape), ...])`
+takes the shapes as they are. `wr.Config.load("wrenchroom.yaml")`
+reads a sidecar to pass as `check`'s second argument, and a report writes itself with
+`report.to_json(path)`, `to_markdown(path)` and `to_html(path)`.
+
+## How it works
+
+1. **Read the model.** A STEP assembly keeps its part names; repeated names are made
+   unique, and a part drawn as several solids (a nut and its washer) is one part.
+2. **Find the fasteners.** From their names (ISO and DIN designations, McMaster-Carr
+   numbers, descriptions like `M6x20 SHCS` or `hex nut M8`, code-CAD names like
+   `lift_link_bolt`) and their solids: the drive the model shows, a hex, a hex socket,
+   a cross or a slot, and the size it or the shank gives. Sidecar rules outrank both.
+3. **Orient each one.** Its axis from its geometry, and the end a tool comes from: a
+   screw's head, a nut's free face (the end nothing sits against).
+4. **Try the tools.** Each tool the kit has for that drive and size, every way it goes
+   on, swung through its arc in 15 degree steps, the tool's own solid tested against
+   the parts at every step. A tool on a hex needs the room the hex's corners sweep,
+   and a socket the room for its wall.
+5. **Decide.** Turns, held, blocked, stuck or not covered, with what decided it.
+   Pairs are resolved together, and failures retried in the states you named.
+
+Collision checks run on meshes with [manifold3d](https://github.com/elalish/manifold),
+and anything too close to call is referred to exact OpenCascade booleans, so both
+engines give the same report (`--exact` uses the exact one throughout). A
+generated bench of 500 fasteners is read and checked in under 10 seconds on a laptop.
+
+Every rule and figure, with the standards and the reasoning, is in
+**[docs/reference.md](docs/reference.md)**.
+
+## What it doesn't check
+
+- **Room for a hand** is off by default (`--hand-room` turns it on): its figures
+  aren't yet tuned against real hands. Every report says what it didn't check.
+- **Parts the model doesn't have.** Cables, hoses and anything not drawn aren't in
+  the way. Neither is a part you `ignore`.
+- **Torque.** Whether a tool reaches and turns is checked, not whether it can apply
+  the torque the joint needs. A pass that only a ball-end key reaches says so, as a
+  ball end takes much less torque than a straight key.
+- **Assembly order.** Each fastener is checked in the model as drawn, or in a state
+  you name, not in the order the parts would be fitted.
 
 ## Development
 
@@ -284,28 +487,31 @@ $ uv run python scripts/lanes.py perf     # the bench at 500 fasteners, timed
 ```
 
 The golden bench (`tests/golden/`) is a generated assembly of small cells, one
-mechanism each, with every verdict worked out by hand; features that haven't landed
-yet are strict xfails naming their milestone. It runs on both collision engines
-against one snapshot, and again as three copies along the grid (a verdict mustn't
-depend on where its cell sits). `scripts/perf.py` repeats it to 500 fasteners and
-times it; CI reports that number on every push and fails if any verdict count moves.
-`uv run python scripts/golden.py --out some-dir` writes `bench.step` and its sidecars
-for you to open and check against; a nightly job re-runs the bench against upgraded
-dependencies so a CAD-kernel update that moves a verdict shows up before it lands.
+mechanism each, with every verdict worked out by hand. It runs on both collision
+engines against one snapshot, and again as three copies along the grid (a verdict
+mustn't depend on where its cell sits). `scripts/perf.py` repeats it to 500 fasteners
+and times it; CI reports that number on every push and fails if any verdict count
+moves. `uv run python scripts/golden.py --out some-dir` writes `bench.step` and its
+sidecars for you to open and check against, and a nightly job re-runs the bench
+against upgraded dependencies, so a CAD-kernel update that moves a verdict shows up
+before it lands. This README's examples are tests too: `tests/test_readme.py` runs
+each command shown here and compares its output.
 
 The bench's HTML report is tested in the page itself: Node runs the page's own
-scripts against a stand-in DOM (three's scene graph is real, so every colour can be
-read), and headless Chrome opens the file and draws it with WebGL. Both come with
-CI's runners; locally each test skips, saying why, if its tool is missing. The
-three.js bundle in `src/wrenchroom/view/vendor/` is built by
+scripts against a stand-in DOM, and headless Chrome opens the file and draws it with
+WebGL. Both come with CI's runners; locally each test skips, saying why, if its tool
+is missing. The three.js bundle in `src/wrenchroom/view/vendor/` is built by
 `scripts/vendor_three.py` from a pinned npm tarball (its sha512 checked) and a pinned
 esbuild; `uv run python scripts/lanes.py vendor-check` rebuilds it and compares byte
 for byte, and the nightly job does the same.
 
-CI runs the same lanes by the same names; `scripts/lanes.py` is the only spelling of how
-this project runs its checks.
+CI runs the same lanes by the same names; `scripts/lanes.py` is the only spelling of
+how this project runs its checks. `main` is protected: changes land by pull request,
+rebased, with `gates`, every `fast` row and both `perf` rows green, and no new
+high-severity CodeQL alert. The rule lives in `.github/rulesets/main.json`, exported
+from GitHub; change both together. Security reports go through
+[SECURITY.md](SECURITY.md).
 
-`main` is protected: changes land by pull request, rebased, with `gates`, every `fast` row
-and both `perf` rows green, and no new high-severity CodeQL alert. The rule lives in
-`.github/rulesets/main.json`, exported from GitHub; change both together. Security
-reports go through [SECURITY.md](SECURITY.md).
+## Licence
+
+Apache-2.0. The 3D view bundles three.js (MIT), whose licence travels with it.
