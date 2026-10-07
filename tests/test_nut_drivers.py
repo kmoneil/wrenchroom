@@ -111,7 +111,7 @@ def test_its_fist_needs_room_with_hand_room_on():
     assert run(in_a_tube(upper=30.0)).verdict is Verdict.TURNS
     result = run(in_a_tube(upper=30.0), hand_room=True)
     assert result.verdict is Verdict.BLOCKED
-    assert result.reason == "no room for a hand (tube in the way)"
+    assert result.reason == "no room for a hand: the hand hits tube"
 
 
 @pytest.mark.parametrize(

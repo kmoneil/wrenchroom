@@ -232,10 +232,11 @@ def test_every_report_names_the_deciding_parts(ring_report):
         f"best arc between {first} and {second}"
     )
     assert (
-        f"| `nut` | `spanner-13` | blocked | `only holds, and it has no nut`; "
-        f"best arc between `{first}` and `{second}` |"
+        f"| `nut` | `spanner-13` | blocked | `only holds, and it has no nut; "
+        f"best arc between {first} and {second}` |"
     ) in ring_report.markdown()
     (entry,) = json.loads(ring_report.json_text())["fasteners"]
+    assert entry["reason"] == fail.split("blocked  ")[1]  # the JSON says it the same
     assert entry["deciding"] == [first, second]
     assert entry["blocked_by"][:2] == [first, second]
     assert len(entry["blocked_by"]) == 12
@@ -277,6 +278,6 @@ def test_a_held_nut_names_no_deciding_parts():
 def test_with_hand_room_the_hand_names_what_stopped_it(ring_report):
     config = Config.from_dict({"fasteners": [NUT], "checks": {"hand_room": True}})
     (result,) = check(ring_of_posts(), config, kit="full").results
-    assert result.reason == "no room for a hand (roof in the way)"
+    assert result.reason == "no room for a hand: the hand hits roof on its best arc"
     (plain,) = ring_report.results
-    assert plain.reason == "only holds, and it has no nut"
+    assert plain.reason.startswith("only holds, and it has no nut; best arc between ")

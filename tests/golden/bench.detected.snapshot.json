@@ -488,7 +488,7 @@
     "dome_rib_rib"
    ],
    "stuck_on": [],
-   "reason": "only holds, and it has no nut",
+   "reason": "only holds, and it has no nut; best arc bounded by dome_rib_rib",
    "grazes": [],
    "notes": []
   },
@@ -647,7 +647,7 @@
     "gland_rib_rib"
    ],
    "stuck_on": [],
-   "reason": "only holds, and it has no nut",
+   "reason": "only holds, and it has no nut; best arc bounded by gland_rib_rib",
    "grazes": [],
    "notes": []
   },
@@ -1738,7 +1738,7 @@
     "pair_both_hold_pocket_high"
    ],
    "stuck_on": [],
-   "reason": "only holds, and its partner pair_both_hold_nut does not turn",
+   "reason": "only holds, and its partner pair_both_hold_nut does not turn; best arc bounded by pair_both_hold_pocket_high",
    "grazes": [],
    "notes": []
   },
@@ -1772,7 +1772,7 @@
     "pair_both_hold_pocket_low"
    ],
    "stuck_on": [],
-   "reason": "only holds, and its partner pair_both_hold_bolt does not turn",
+   "reason": "only holds, and its partner pair_both_hold_bolt does not turn; best arc bounded by pair_both_hold_pocket_low",
    "grazes": [],
    "notes": []
   },
@@ -1997,7 +1997,7 @@
     "post_ring_post_b"
    ],
    "stuck_on": [],
-   "reason": "only holds, and it has no nut",
+   "reason": "only holds, and it has no nut; best arc between post_ring_post_a and post_ring_post_b",
    "grazes": [],
    "notes": []
   },
@@ -2490,7 +2490,7 @@
     "tapped_hold_slot"
    ],
    "stuck_on": [],
-   "reason": "only holds, and it has no nut",
+   "reason": "only holds, and it has no nut; best arc bounded by tapped_hold_slot",
    "grazes": [],
    "notes": []
   },

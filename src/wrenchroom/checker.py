@@ -47,7 +47,7 @@ from wrenchroom.fasteners import (
     spanner_af,
     standard_hex_afs,
 )
-from wrenchroom.report import FastenerResult, Report, StateModel, Verdict
+from wrenchroom.report import FastenerResult, Report, StateModel, Verdict, bounded, listed
 from wrenchroom.tools.ball_end import BALL_END_KEYS, BallEndKey, ball_end_attempts
 from wrenchroom.tools.custom import (
     ENDS,
@@ -898,12 +898,16 @@ def _finish(
         reason = "only holds, and " + (
             f"its partner {partner_name} does not turn" if partner_name else "it has no nut"
         )
+        if candidate.deciding:  # what kept its best arc short (issues #52, #64)
+            reason += f"; best arc {bounded(candidate.deciding, candidate.attempts)}"
     else:
         how = None
         if candidate.no_hand_room:
-            # What stopped the hand where the tool's arc was best, if known (#52).
+            # What stopped the hand where the tool's arc was best, if known (#52);
+            # named once, and a few at most (#64).
             hand = candidate.deciding or candidate.no_hand_room
-            reason = f"no room for a hand ({', '.join(hand)} in the way)"
+            where = " on its best arc" if candidate.deciding else ""
+            reason = f"no room for a hand: the hand hits {listed(hand, candidate.attempts)}{where}"
     return FastenerResult(
         fastener,
         verdict,
