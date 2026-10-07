@@ -40,7 +40,13 @@ A head drawn as a plain cylinder is held to the standards' outlines for its size
 M5 head 9.5 across and 2.75 high is ISO 7380-1's button head, not ISO 4762's socket
 head), and where none fits, its head is a guess from its proportions: detection's
 confidence is low, and the check says so (`NOTE screw: its head is a guess: ...`, and
-`notes` in the JSON). A shoulder screw (`head: shoulder`, ISO 7379) takes the key its
+`notes` in the JSON). A head is countersunk only where its own cone runs from the
+shank out to its rim at 82 to 120 degrees: the chamfers, socket mouths, drill points
+and chamfered tips makers' models are full of are cones too, and none of them makes
+a head countersunk. Which keyed head (socket, button, countersunk) a hex socket sits
+in is the outline's to say, so where the name gives one (`M3x16 BHCS`, `ISO 4762`),
+the name's stands; where a countersink or a standard's outline shows another, the
+comment `detect` writes says so, at low confidence. A shoulder screw (`head: shoulder`, ISO 7379) takes the key its
 thread sets, smaller than a cap screw's (an M6 on an 8 mm shoulder takes 4 mm);
 `shoulder` in a name says so, and so does a plain head of ISO 7379's outline over its
 shoulder (13 by 5.5 over 8 mm is an M6's); a shoulder drawn without its thread, or
@@ -85,7 +91,8 @@ passed over. Kept as written, the file reproduces every verdict.
 ## Which end a tool comes from
 
 Each fastener's seat and axis come from its geometry. A screw is turned from its
-head. A nut is turned from the end nothing sits against, its bolt not counted even
+head, which is its wide end: not the end with the larger flat face, which on a domed
+head can be the tip's. A nut is turned from the end nothing sits against, its bolt not counted even
 where it is drawn into the nut, as a bolt at its nominal diameter is in a nut bored at
 the thread's minor; or, drawn off its seat with its washer left out, from the end with
 the more room. A rule's `axis:` (`+x` to `-z`, or `[x, y, z]`, pointing to where the

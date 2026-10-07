@@ -32,7 +32,7 @@ from build123d import GeomType, Plane, Solid
 from wrenchroom.assembly import Assembly, Part
 from wrenchroom.config import Config, ConfigError, is_mate
 from wrenchroom.detect import find
-from wrenchroom.detect.geometry import read_shape
+from wrenchroom.detect.geometry import read_shape, wide_end
 from wrenchroom.engine import (
     DEFAULT_ENGINE,
     ENGINES,
@@ -1198,21 +1198,22 @@ def _drawn_af(frame: _Frame, fastener: Fastener) -> float | None:
 def _is_flipped(frame: _Frame, fastener: Fastener, scene: Scene) -> bool:
     """Does the axis point into the joint instead of out of it?"""
     if fastener.kind is Kind.SCREW:
-        return _head_is_at_bottom(frame.faces, frame.direction)
+        return _head_is_at_bottom(frame)
     thread = fastener.size.diameter_mm / 2 if fastener.size is not None else 0.0
     return _free_face_is_at_bottom(frame, scene, thread)
 
 
-def _head_is_at_bottom(faces: tuple[_Face, ...], direction: Vec) -> bool:
-    """A screw's head end is the extreme planar face with the larger area."""
-    planes = [f for f in faces if f.plane and abs(_dot(f.normal, direction)) > _AXIAL]
-    if len(planes) < 2:  # noqa: PLR2004  (two ends make a comparison)
-        raise NotCovered("cannot tell the head end: no planar face at each end")
-    by_height = sorted(planes, key=lambda f: _dot(f.point, direction))
-    bottom, top = by_height[0].face, by_height[-1].face
-    if bottom.area == top.area:
+def _head_is_at_bottom(frame: _Frame) -> bool:
+    """A screw's head end is its wide end (issue #81).
+
+    Not the end with the larger flat face, as it was: a domed head's only flat is
+    a ring round its socket, smaller than a chamfered tip's end, and the key was
+    tried from inside the part the screw threads into.
+    """
+    end = wide_end(frame.projections, frame.radials)
+    if end == 0:
         raise NotCovered("cannot tell the head end: both ends look alike")
-    return bottom.area > top.area
+    return end < 0
 
 
 def _free_face_is_at_bottom(frame: _Frame, scene: Scene, thread_radius: float = 0.0) -> bool:

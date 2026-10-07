@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 88,
-  "turns": 65,
+  "fasteners": 94,
+  "turns": 71,
   "held": 3,
   "blocked": 18,
   "stuck": 1,
@@ -337,6 +337,36 @@
    "notes": []
   },
   {
+   "name": "chamfers_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1000.0,
+    11000.0,
+    4.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-3",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "channel_nut",
    "kind": "nut",
    "head": null,
@@ -432,6 +462,36 @@
    ],
    "stuck_on": [],
    "reason": "only holds, and it has no nut; best arc bounded by dome_rib_rib",
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "dome_tip_screw",
+   "kind": "screw",
+   "head": "button",
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    11000.0,
+    1.65
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
    "grazes": [],
    "notes": []
   },
@@ -1223,6 +1283,36 @@
    ],
    "source": "name+geometry",
    "tool": "hex-key-4",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "named_head_bhcs",
+   "kind": "screw",
+   "head": "button",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4000.0,
+    11000.0,
+    4.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2.5",
    "verdict": "turns",
    "how": "driver straight in",
    "swing_deg": 360.0,
@@ -2280,6 +2370,36 @@
    ]
   },
   {
+   "name": "sunk_tip_screw",
+   "kind": "screw",
+   "head": "flat",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    11000.0,
+    0.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2.5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "tail_in_socket_bolt",
    "kind": "screw",
    "head": "hex",
@@ -2575,7 +2695,7 @@
    ],
    "seat": [
     900.0,
-    11000.0,
+    12000.0,
     6.0
    ],
    "source": "name+geometry",
@@ -2607,7 +2727,7 @@
    ],
    "seat": [
     1100.0,
-    11000.0,
+    12000.0,
     6.0
    ],
    "source": "name+geometry",
@@ -2707,6 +2827,66 @@
    "verdict": "turns",
    "how": "ring, full length",
    "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "w4032_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M5",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    12000.0,
+    4.7
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-8",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "w4762_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M5",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    5000.0,
+    11000.0,
+    5.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-4",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
    "state": null,
    "pair": null,
    "blocked_by": [],

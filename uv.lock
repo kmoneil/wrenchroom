@@ -37,6 +37,20 @@ wheels = [
 ]
 
 [[package]]
+name = "bd-warehouse"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "bd-materials" },
+    { name = "build123d" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/02/7b/1a860283b544e39763d9b6357b39785ed1db9055756b3a6cec0bb67f084a/bd_warehouse-0.4.0.tar.gz", hash = "sha256:3c98f83b0b5c67fade67411b9775ae98a7fcffc714e231e825886f0c86778191", size = 22358664, upload-time = "2026-10-07T17:50:09.441Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7d/4b/2eadc5c20456b0ddff63c1b14444a7f2852ceb7956b578b521162a4e8149/bd_warehouse-0.4.0-py3-none-any.whl", hash = "sha256:2bb830513dc53a5095904d645a92466e629a50bd5493783544bdf3a7d5efc339", size = 179019, upload-time = "2026-10-07T17:50:07.634Z" },
+]
+
+[[package]]
 name = "build123d"
 version = "0.13.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1327,6 +1341,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "bd-warehouse" },
     { name = "markdown-it-py", extra = ["linkify"] },
     { name = "pillow" },
     { name = "pytest" },
@@ -1345,6 +1360,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "bd-warehouse", specifier = ">=0.4.0" },
     { name = "markdown-it-py", extras = ["linkify"], specifier = ">=4.2.0" },
     { name = "pillow", specifier = ">=12.3.0" },
     { name = "pytest", specifier = ">=8.3" },

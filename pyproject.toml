@@ -72,8 +72,13 @@ wrenchroom = "wrenchroom.cli:main"
 [project.entry-points.pytest11]
 wrenchroom = "wrenchroom.pytest_plugin"
 
+# bd_warehouse draws fasteners to their ISO standards as makers do, chamfers, rounded
+# heads and recesses at the standard's sizes: the solids detection has to read right
+# (issue #81). Tests and the golden bench only; it bounds build123d below 0.14 for now,
+# in the lock and not in what wrenchroom asks of an install.
 [dependency-groups]
 dev = [
+  "bd-warehouse>=0.4.0",
   "markdown-it-py[linkify]>=4.2.0",
   "pillow>=12.3.0",
   "pytest>=8.3",

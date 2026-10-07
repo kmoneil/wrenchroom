@@ -61,8 +61,9 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
         kind = Kind(rule.get("kind", "screw"))
         size = Size.parse(rule["size"]) if "size" in rule else None  # a gland may give none
         head = Head(rule["head"]) if "head" in rule else None
-        # A shoulder screw's head is the one only its name can tell (issue #40).
-        named = head if head is Head.SHOULDER else None
+        # A shoulder screw's head is the one only its name can tell (issue #40), and
+        # named_head's outline is a socket head's, the name's button standing (#81).
+        named = head if head is Head.SHOULDER or name in _BY_NAME else None
         reading = read_shape(bench_parts[name].shape, kind, named)
         expected_af = rule.get("across_flats")
         if expected_af is None and size is not None and (kind is Kind.NUT or head is Head.HEX):
@@ -106,6 +107,15 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
 
 
 _STANDARD = {Head.BUTTON: "ISO 7380-1", Head.SHOULDER: "ISO 7379"}
+
+#: Screws whose head only their name gives, with the head their outline shows instead.
+_BY_NAME = {"named_head_bhcs": Head.SOCKET}
+
+
+def test_a_head_only_its_name_gives_is_disputed_by_its_outline(bench_parts):
+    for name, outline in _BY_NAME.items():
+        reading = read_shape(bench_parts[name].shape, Kind.SCREW)
+        assert (reading.head, reading.head_standard) == (outline, "ISO 4762"), name
 
 
 def test_the_step_round_trip_changes_no_reading(bench_parts):

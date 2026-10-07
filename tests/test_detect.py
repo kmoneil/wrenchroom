@@ -307,13 +307,22 @@ def test_a_nut_whose_size_has_no_spanner_is_not_covered_not_a_crash():
 # ---------------------------------------------------------------------------
 
 
+def _plain_head(dk, k):
+    """An M6 with a plain head of no standard's outline: proportions alone call it."""
+    return Pos(0, 0, -10) * Cylinder(3, 20) + Pos(0, 0, k / 2) * Cylinder(dk / 2, k)
+
+
 @pytest.mark.parametrize(
     ("name", "shape", "level"),
     [
         ("ISO 4762 M6x20", lambda: socket_screw("M6"), "high"),  # standard, socket shown
         ("frame_bolt", lambda: hex_bolt("M8"), "high"),  # hex shown, size settled by it
         ("frame_nut", lambda: hex_nut("M10"), "high"),
-        ("button head screw M6", lambda: socket_screw("M6", pocket=False), "high"),  # name says all
+        ("socket head screw M6", lambda: socket_screw("M6", pocket=False), "high"),  # name says all
+        # The name says all, and the outline, ISO 4762's exactly, says another (issue #81).
+        ("button head screw M6", lambda: socket_screw("M6", pocket=False), "low"),
+        # Nothing but proportions says otherwise: the name stands, sure.
+        ("button head screw M6", lambda: _plain_head(13.0, 6.0), "high"),
         ("hex bolt M6x20", lambda: socket_screw("M6"), "medium"),  # name and drive disagree
         ("torx_lid_screw M6", torx_screw, "high"),  # a drive word away from the noun
         ("lift_bolt", lambda: socket_screw("M6", pocket=False), "medium"),  # head by outline

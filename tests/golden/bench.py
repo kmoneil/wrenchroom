@@ -52,10 +52,11 @@ SLOTS = len(CELLS) + 1
 #: snug_dome, wide_dome, dome_rib, sunk_cap and flange_nut, 82 with #49's reach_13
 #: and big_tube, 84 with #51's ball_button and ball_shoulder, 85 with #52's post_ring,
 #: 87 with short_key and shop_spanner (a sidecar's own tools, spec 5.3), 88 with
-#: #63's corner_touch (drawn_in's two clashes are the edges sidecar's alone).
+#: #63's corner_touch (drawn_in's two clashes are the edges sidecar's alone), 94
+#: with #81's chamfers, dome_tip, sunk_tip, named_head, w4762 and w4032.
 FINAL_COUNTS = {
-    "fasteners": 88,
-    "turns": 67,
+    "fasteners": 94,
+    "turns": 73,
     "held": 3,
     "blocked": 17,
     "stuck": 1,
