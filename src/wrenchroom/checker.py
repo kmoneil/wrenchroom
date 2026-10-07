@@ -22,9 +22,11 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field, replace
 from fnmatch import fnmatchcase
+from itertools import compress
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import numpy as np
 from build123d import GeomType
 
 from wrenchroom.assembly import Assembly, Part
@@ -72,7 +74,7 @@ from wrenchroom.tools.torx_keys import ISO_10664
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from build123d import Axis
+    from build123d import Axis, Face
 
 #: How parallel a face normal must be to the axis to count as an end face.
 _AXIAL = 0.99
@@ -274,6 +276,8 @@ class _Frame:
     #: Which vertices lie on a flat parallel to the axis (a hex's): where the
     #: band is, when the part has any (issue #47).
     flats: tuple[bool, ...] = ()
+    #: The part's planar and cylindrical faces, read once (:func:`_faces_of`).
+    faces: tuple[_Face, ...] = ()
 
     @property
     def extent(self) -> float:
@@ -283,9 +287,39 @@ class _Frame:
         return _add(self.origin, _scale(self.direction, t))
 
 
+@dataclass(frozen=True)
+class _Face:
+    """A planar or cylindrical face, read once: a point on it and its normal there."""
+
+    face: Face
+    plane: bool
+    point: Vec
+    normal: Vec
+
+
+def _faces_of(part: Part) -> tuple[_Face, ...]:
+    """Every planar and cylindrical face of a part, each read once for its frame.
+
+    The point and normal are the face's own, at the middle of its parameters, not
+    at its centroid: on a plane or a coaxial cylinder any point gives the same
+    answer to the tests here, and a centroid is an integral over the face, which
+    the frame's tests used to take again and again.
+    """
+    found = []
+    for face in part.shape.faces():
+        kind = face.geom_type
+        if kind is GeomType.PLANE or kind is GeomType.CYLINDER:
+            point: Vec = tuple(face.position_at(0.5, 0.5))  # type: ignore[assignment]
+            normal: Vec = tuple(face.normal_at(0.5, 0.5))  # type: ignore[assignment]
+            found.append(_Face(face, kind is GeomType.PLANE, point, normal))
+    return tuple(found)
+
+
 def _frame(part: Part, fastener: Fastener) -> _Frame:
-    direction = _axis_direction(part, fastener)
-    origin, vertices = _axis_frame(part, direction)
+    faces = _faces_of(part)
+    axis = _largest_cylinder_axis(faces)
+    direction = _axis_direction(axis, fastener)
+    origin, vertices = _axis_frame(part, axis)
     projections = tuple(_dot(_sub(v, origin), direction) for v in vertices)
     radials = tuple(_radial(_sub(v, origin), direction) for v in vertices)
     return _Frame(
@@ -294,13 +328,16 @@ def _frame(part: Part, fastener: Fastener) -> _Frame:
         origin=origin,
         projections=projections,
         radials=radials,
-        bore=_bore_radius(part, direction),
+        bore=_bore_radius(faces, direction),
         oriented=isinstance(fastener.axis, tuple),
-        flats=_on_flats(part, origin, direction, vertices),
+        flats=_on_flats(faces, origin, direction, vertices),
+        faces=faces,
     )
 
 
-def _on_flats(part: Part, origin: Vec, direction: Vec, vertices: list[Vec]) -> tuple[bool, ...]:
+def _on_flats(
+    faces: tuple[_Face, ...], origin: Vec, direction: Vec, vertices: list[Vec]
+) -> tuple[bool, ...]:
     """Which vertices lie on a planar face parallel to the axis, facing out: a hex's flats.
 
     None do unless at least three such faces stand round it (a hex, a square):
@@ -308,13 +345,13 @@ def _on_flats(part: Part, origin: Vec, direction: Vec, vertices: list[Vec]) -> t
     A flat facing the axis is a key's pocket or a slot, which no spanner grips.
     """
     flats = []
-    for face in part.shape.faces().filter_by(GeomType.PLANE):
-        on: Vec = tuple(face.center())  # type: ignore[assignment]
-        normal: Vec = tuple(face.normal_at(face.center()))  # type: ignore[assignment]
-        out = _sub(on, origin)
+    for face in faces:
+        if not face.plane:
+            continue
+        out = _sub(face.point, origin)
         radial = _sub(out, _scale(direction, _dot(out, direction)))
-        if abs(_dot(normal, direction)) < 1 - _AXIAL and _dot(normal, radial) > 0:
-            flats.append(face)
+        if abs(_dot(face.normal, direction)) < 1 - _AXIAL and _dot(face.normal, radial) > 0:
+            flats.append(face.face)
     if len(flats) < 3:  # noqa: PLR2004  (a square has four, a hex six)
         return ()
     corners = {_vertex_key(tuple(v)) for face in flats for v in face.vertices()}
@@ -325,24 +362,22 @@ def _vertex_key(v: Vec) -> tuple[float, float, float]:
     return (round(v[0], 6), round(v[1], 6), round(v[2], 6))
 
 
-def _largest_cylinder_axis(part: Part) -> Axis | None:
-    cylinders = part.shape.faces().filter_by(GeomType.CYLINDER)
+def _largest_cylinder_axis(faces: tuple[_Face, ...]) -> Axis | None:
+    cylinders = [face.face for face in faces if not face.plane]
     if not cylinders:
         return None
     return max(cylinders, key=lambda f: f.area).axis_of_rotation
 
 
-def _axis_direction(part: Part, fastener: Fastener) -> Vec:
+def _axis_direction(axis: Axis | None, fastener: Fastener) -> Vec:
     if isinstance(fastener.axis, tuple):
         return fastener.axis
-    axis = _largest_cylinder_axis(part)
     if axis is None:
         raise NotCovered("axis is auto but the part has no cylindrical face")
     return tuple(axis.direction)  # type: ignore[return-value]
 
 
-def _axis_frame(part: Part, direction: Vec) -> tuple[Vec, list[Vec]]:
-    axis = _largest_cylinder_axis(part)
+def _axis_frame(part: Part, axis: Axis | None) -> tuple[Vec, list[Vec]]:
     if axis is not None:
         origin: Vec = tuple(axis.position)  # type: ignore[assignment]
     else:
@@ -374,21 +409,22 @@ def _band(
     return (min(heights), max(heights))
 
 
-def _bore_radius(part: Part, direction: Vec) -> float:
+def _bore_radius(faces: tuple[_Face, ...], direction: Vec) -> float:
     """The smallest coaxial cylinder facing the axis: a nut's bore, a gland's cable way.
 
     0 if none. Only a face looking in is a bore: a gland's dome, outside, used to
     be taken for one, and leave no face to probe (issue #47).
     """
     radii = []
-    for face in part.shape.faces().filter_by(GeomType.CYLINDER):
-        axis, radius = face.axis_of_rotation, face.radius
+    for face in faces:
+        if face.plane:
+            continue
+        axis, radius = face.face.axis_of_rotation, face.face.radius
         if axis is None or radius is None or abs(_dot(tuple(axis.direction), direction)) <= _AXIAL:
             continue
-        on: Vec = tuple(face.center())  # type: ignore[assignment]
-        out = _sub(on, tuple(axis.position))  # type: ignore[arg-type]
+        out = _sub(face.point, tuple(axis.position))  # type: ignore[arg-type]
         radial = _sub(out, _scale(direction, _dot(out, direction)))
-        if _dot(tuple(face.normal_at(face.center())), radial) < 0:  # type: ignore[arg-type]
+        if _dot(face.normal, radial) < 0:
             radii.append(radius)
     return min(radii, default=0.0)
 
@@ -506,6 +542,15 @@ class _StateSpace:
         self._models: dict[str, Assembly] = {}
         self._warned: set[tuple[str, str]] = set()
         self._ignored: dict[str, bool] = {}
+        # Per assembly (the assembly rides along, so its id can't be reused):
+        # its parts, their boxes, the ones not ignored, and where each name is.
+        self._scene_parts: dict[
+            int,
+            tuple[
+                Assembly,
+                tuple[tuple[Part, ...], np.ndarray, np.ndarray, np.ndarray, dict[str, list[int]]],
+            ],
+        ] = {}
         self.engine = engine
         self.warnings: list[str] = []
         #: Every state resolved so far, as the check saw it: kept for the report,
@@ -513,10 +558,34 @@ class _StateSpace:
         self.models: dict[str, StateModel] = {}
 
     def scene(self, assembly: Assembly, excluded: set[str] | frozenset[str]) -> Scene:
-        """The obstacles: every part but the excluded and the ignored ones."""
-        return self.engine.scene(
-            part for part in assembly if part.name not in excluded and not self._is_ignored(part)
-        )
+        """The obstacles: every part but the excluded and the ignored ones.
+
+        The assembly's parts, boxes and ignored ones are gathered once
+        (:meth:`_obstacles`); each fastener's scene masks out its own.
+        """
+        parts, low, high, kept, where = self._obstacles(assembly)
+        mask = kept.copy()
+        for name in excluded:
+            mask[where.get(name, [])] = False
+        return Scene(compress(parts, mask), self.engine, (low[mask], high[mask]))
+
+    def _obstacles(
+        self, assembly: Assembly
+    ) -> tuple[tuple[Part, ...], np.ndarray, np.ndarray, np.ndarray, dict[str, list[int]]]:
+        """An assembly's parts, their boxes, which aren't ignored, and where each name is."""
+        cached = self._scene_parts.get(id(assembly))
+        if cached is None or cached[0] is not assembly:
+            parts = tuple(assembly)
+            boxes = [self.engine.part_bounds(part) for part in parts]
+            low = np.array([lo for lo, _ in boxes], dtype=float).reshape(-1, 3)
+            high = np.array([hi for _, hi in boxes], dtype=float).reshape(-1, 3)
+            kept = np.array([not self._is_ignored(part) for part in parts], dtype=bool)
+            where: dict[str, list[int]] = {}
+            for index, part in enumerate(parts):
+                where.setdefault(part.name, []).append(index)
+            cached = (assembly, (parts, low, high, kept, where))
+            self._scene_parts[id(assembly)] = cached
+        return cached[1]
 
     def _is_ignored(self, part: Part) -> bool:
         # Memoised: the ignore globs are tried once per name, not once per scene.
@@ -897,22 +966,18 @@ def _orient(frame: _Frame, fastener: Fastener, scene: Scene) -> tuple[Mount, _Ge
 def _is_flipped(frame: _Frame, fastener: Fastener, scene: Scene) -> bool:
     """Does the axis point into the joint instead of out of it?"""
     if fastener.kind is Kind.SCREW:
-        return _head_is_at_bottom(frame.part, frame.direction)
+        return _head_is_at_bottom(frame.faces, frame.direction)
     thread = fastener.size.diameter_mm / 2 if fastener.size is not None else 0.0
     return _free_face_is_at_bottom(frame, scene, thread)
 
 
-def _head_is_at_bottom(part: Part, direction: Vec) -> bool:
+def _head_is_at_bottom(faces: tuple[_Face, ...], direction: Vec) -> bool:
     """A screw's head end is the extreme planar face with the larger area."""
-    planes = [
-        face
-        for face in part.shape.faces().filter_by(GeomType.PLANE)
-        if abs(_dot(tuple(face.normal_at(face.center())), direction)) > _AXIAL
-    ]
+    planes = [f for f in faces if f.plane and abs(_dot(f.normal, direction)) > _AXIAL]
     if len(planes) < 2:  # noqa: PLR2004  (two ends make a comparison)
         raise NotCovered("cannot tell the head end: no planar face at each end")
-    by_height = sorted(planes, key=lambda f: _dot(tuple(f.center()), direction))
-    bottom, top = by_height[0], by_height[-1]
+    by_height = sorted(planes, key=lambda f: _dot(f.point, direction))
+    bottom, top = by_height[0].face, by_height[-1].face
     if bottom.area == top.area:
         raise NotCovered("cannot tell the head end: both ends look alike")
     return bottom.area > top.area
