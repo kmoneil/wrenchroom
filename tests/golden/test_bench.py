@@ -146,4 +146,11 @@ def test_the_undersize_nut_is_noted_in_every_format(bench_report, bench_json):
     assert "\n#### Notes\n\n" in markdown
     assert f"\n- `undersize_nut`: {note}\n" in markdown.split("#### Notes")[1]
     noted = {name for name, entry in bench_json.items() if entry["notes"]}
-    assert noted == {"undersize_nut", "wide_dome_gland", "sunk_cap_cap_nut"}  # and #47's
+    # And #47's own bodies, and #51's pass only a ball end reaches.
+    assert noted == {
+        "undersize_nut",
+        "wide_dome_gland",
+        "sunk_cap_cap_nut",
+        "ball_tilt_screw",
+        "ball_shoulder_screw",
+    }

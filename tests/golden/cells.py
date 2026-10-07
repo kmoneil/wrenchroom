@@ -673,7 +673,18 @@ def torx_wall():
 @cell(
     "ball_tilt",
     [{"parts": "screw", **M6_SOCKET}],
-    {"screw": {"verdict": "turns", "tool": "ball-end-key-5"}},
+    {
+        "screw": {
+            "verdict": "turns",
+            "tool": "ball-end-key-5",
+            # Issue #51: a pass only a ball end reaches says so.
+            "notes": [
+                "only a ball end turns it (ball end, 25 deg off the axis): a ball end takes "
+                "much less torque than a straight key, so tightening it to its torque, or "
+                "breaking it loose, may need a straight key, which can't get in"
+            ],
+        }
+    },
 )
 def ball_tilt():
     """A socket head reached only leant off its axis (GOLDEN-BENCH section 6, M6).
@@ -1296,3 +1307,55 @@ def flange_nut():
         ("stud", Pos(0, 0, 2.5) * Cylinder(4, 25)),
         ("nut", nut),
     ]
+
+
+@cell(
+    "ball_button",
+    [{"parts": "screw", "kind": "screw", "head": "button", "size": "M6"}],
+    {"screw": {"verdict": "blocked", "tool": "hex-key-4", "blocked_by": ["ceiling"]}},
+)
+def ball_button():
+    """ball_tilt's ceiling over an M6 button head (ISO 7380-1, a 4 mm key), its
+    underside 20 over the head (issue #51). The plain key meets it whichever way.
+    A ball end, leant 20 deg into the slot, would turn it, but a button head's
+    socket is about half as deep as a socket head's, barely deeper than the ball,
+    and no ball end is credited in it: blocked. It used to turn with one.
+    """
+    ceiling = slab(3.3 + 20) - Pos(32.25, 0, 3.3 + 25) * Box(55.5, 20, 12)
+    return [
+        ("plate", plate(holes=[(0, 0, 3)])),
+        ("screw", button_screw()),
+        ("ceiling", ceiling),
+    ]
+
+
+@cell(
+    "ball_shoulder",
+    [{"parts": "screw", "kind": "screw", "head": "shoulder", "size": "M6"}],
+    {
+        "screw": {
+            "verdict": "turns",
+            "tool": "ball-end-key-4",
+            "notes": [
+                "only a ball end turns it (ball end, 20 deg off the axis): a ball end takes "
+                "much less torque than a straight key, so tightening it to its torque, or "
+                "breaking it loose, may need a straight key, which can't get in"
+            ],
+        }
+    },
+)
+def ball_shoulder():
+    """ball_tilt's ceiling over an M6 shoulder screw (ISO 7379: head 13 by 5.5, its
+    4 mm socket as deep as a cap screw's), the underside 20 over its head. The plain
+    key meets the ceiling whichever way; the ball end, leant 20 deg into the slot,
+    turns it, and the result says only a ball end does (issue #51). The shank is
+    short (18 under the head), so its way out stays under the ceiling.
+    """
+    screw = (
+        Pos(0, 0, 2.75) * Cylinder(6.5, 5.5)
+        + Pos(0, 0, -6) * Cylinder(4, 12)
+        + Pos(0, 0, -15) * Cylinder(3, 6)
+        - hex_prism(4.0, 3.31, 5.5 - 3.3)
+    )
+    ceiling = slab(5.5 + 20) - Pos(32.25, 0, 5.5 + 25) * Box(55.5, 20, 12)
+    return [("plate", plate(holes=[(0, 0, 4.1)])), ("screw", screw), ("ceiling", ceiling)]
