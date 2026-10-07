@@ -969,3 +969,26 @@ def pivot():
         ("lever", Pos(0, 0, 10) * (Box(60, 30, 20) - Cylinder(4.1, 21))),
         ("shoulder_screw", screw),
     ]
+
+
+@cell(
+    "channel",
+    [{"parts": "nut", "kind": "nut", "size": "M8"}],
+    {"nut": {"verdict": "blocked", "tool": "spanner-13", "blocked_by": ["left", "right"]}},
+)
+def channel():
+    """An M8 nut (af 13, 6.8 tall, its flats facing y) in a channel: ribs 4 high,
+    their faces 2.0 off the flats (y = -8.5 and 8.5), lower than the nut. The hex's
+    corners (7.5, 7.8 with the clearance) clear the ribs, so it could turn; but
+    every tool on its flats stands wider. The ring (outer 12.4) and the open end
+    (head 29.1 wide) meet a rib at every angle; the socket's wall round the hex (to
+    r 9.0) meets both, at every extension; so does the full kit's nut driver's
+    (r 9.2). The socket used to be drawn from the nut's top up, over the ribs, and
+    turned it.
+    """
+    return [
+        ("plate", plate()),
+        ("nut", hex_nut(8, 13, 6.8)),
+        ("left", Pos(0, -13.5, 2) * Box(80, 10, 4)),
+        ("right", Pos(0, 13.5, 2) * Box(80, 10, 4)),
+    ]

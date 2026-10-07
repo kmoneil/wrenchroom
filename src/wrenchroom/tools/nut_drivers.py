@@ -19,8 +19,8 @@ from math import sqrt
 from typing import TYPE_CHECKING
 
 from wrenchroom.tools.sizes import size_name
-from wrenchroom.tools.sockets import BORE_DEPTH
-from wrenchroom.tools.spanners import RING_CLEARANCE
+from wrenchroom.tools.sockets import BORE_DEPTH, socket_wall
+from wrenchroom.tools.spanners import RING_CLEARANCE, corner_sweep
 from wrenchroom.tools.sweep import (
     CONTACT_OFFSET,
     HAND_LENGTH,
@@ -75,13 +75,19 @@ NUT_DRIVERS: dict[float, NutDriver] = {
 }
 
 
-def nut_driver_solid(driver: NutDriver, hex_af: float) -> ToolSolid:
-    """The whole driver in the local frame: mouth, solid socket and blade, handle."""
+def nut_driver_solid(driver: NutDriver, hex_af: float, hex_band: tuple[float, float]) -> ToolSolid:
+    """The whole driver in the local frame, from the hex up to the handle's end.
+
+    The hex's corner sweep and the socket's wall round the hex (as a socket's),
+    then the mouth, the solid socket and blade, and the handle.
+    """
     inner = hex_af / sqrt(3) + RING_CLEARANCE
     mouth_to = CONTACT_OFFSET + BORE_DEPTH
     handle_from = CONTACT_OFFSET + BLADE_LENGTH
     return (
-        axial_annulus(inner, driver.outer_radius, CONTACT_OFFSET, BORE_DEPTH)
+        corner_sweep(hex_af, hex_band)
+        + socket_wall(hex_af, driver.outer_radius, hex_band)
+        + axial_annulus(inner, driver.outer_radius, CONTACT_OFFSET, BORE_DEPTH)
         + axial_cylinder(driver.outer_radius, mouth_to, handle_from)
         + axial_cylinder(driver.handle_radius, handle_from, handle_from + driver.handle_length)
     )
@@ -94,13 +100,18 @@ def nut_driver_hand(driver: NutDriver) -> ToolSolid:
 
 
 def nut_driver_attempt(
-    mount: Mount, driver: NutDriver, hex_af: float, scene: Scene, hand_room: bool = False
+    mount: Mount,
+    driver: NutDriver,
+    hex_af: float,
+    hex_band: tuple[float, float],
+    scene: Scene,
+    hand_room: bool = False,
 ) -> Attempt:
     """One straight-in clearance test: clear, it turns."""
     return straight_attempt(
         tool=driver.name,
         way="nut driver straight in",
         scene=scene,
-        solid=mount.place(nut_driver_solid(driver, hex_af)),
+        solid=mount.place(nut_driver_solid(driver, hex_af, hex_band)),
         hand=mount.place(nut_driver_hand(driver)) if hand_room else None,
     )

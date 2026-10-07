@@ -46,12 +46,12 @@ SLOTS = len(CELLS) + 1
 #: glands_close's two turn; 47 since issue #27's hex_band, 48 with #26's nut_gap,
 #: 49 with #30's vented, 50 with #31's low_head, 52 with #29's rubber, 54 with
 #: #28's one_part_lock, 55 with #33's big_gland, 59 with #25's grazes, 60 with
-#: #40's pivot.
+#: #40's pivot, 61 with the channel (a socket's wall round the hex).
 FINAL_COUNTS = {
-    "fasteners": 60,
+    "fasteners": 61,
     "turns": 46,
     "held": 3,
-    "blocked": 10,
+    "blocked": 11,
     "stuck": 1,
     "not_covered": 0,
 }

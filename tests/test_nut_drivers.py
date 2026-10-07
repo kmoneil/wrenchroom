@@ -16,7 +16,8 @@ from wrenchroom.report import Verdict
 from wrenchroom.solids import AxialCylinder, AxialRing
 from wrenchroom.tools.kits import FULL, IMPERIAL_HOME, METRIC_HOME
 from wrenchroom.tools.nut_drivers import BLADE_LENGTH, NUT_DRIVERS, nut_driver_solid
-from wrenchroom.tools.sockets import BORE_DEPTH
+from wrenchroom.tools.sockets import BORE_DEPTH, socket_wall
+from wrenchroom.tools.spanners import corner_sweep
 from wrenchroom.tools.sweep import CONTACT_OFFSET
 
 RULE = {"parts": "nut", "kind": "nut", "size": "M6"}
@@ -60,7 +61,12 @@ def test_the_drivers_are_the_larger_of_two_makers():
 
 def test_the_solid_is_mouth_blade_and_handle_end_to_end():
     driver = NUT_DRIVERS[10.0]
-    mouth, blade, handle = nut_driver_solid(driver, 10.0).primitives
+    band = (0.0, -5.0)
+    corners, wall, mouth, blade, handle = nut_driver_solid(driver, 10.0, band).primitives
+    (expected_corners,) = corner_sweep(10.0, band).primitives
+    (expected_wall,) = socket_wall(10.0, driver.outer_radius, band).primitives
+    assert (corners, wall) == (expected_corners, expected_wall)
+    assert (wall.z0, wall.z1) == pytest.approx((-5.0, CONTACT_OFFSET))  # round the hex
     assert isinstance(mouth, AxialRing)
     assert (mouth.outer, mouth.z0, mouth.z1) == (7.2, CONTACT_OFFSET, CONTACT_OFFSET + BORE_DEPTH)
     assert mouth.inner == pytest.approx(10 / 3**0.5 + 0.3)

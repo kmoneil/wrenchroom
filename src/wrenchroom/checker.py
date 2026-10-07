@@ -1002,10 +1002,10 @@ def _hex_flats_tools(
         yield from ring_attempts(mount, spanner_for(af), af, band, scene, step, hand)
         yield from open_end_attempts(mount, spanner_for(af), af, band, scene, step, hand)
     if f"socket-{size_name(af)}" in held:
-        yield from socket_attempts(mount, socket_for(af), af, scene, step, hand)
+        yield from socket_attempts(mount, socket_for(af), af, band, scene, step, hand)
     driver = NUT_DRIVERS.get(af)
     if driver is not None and driver.name in held:
-        yield nut_driver_attempt(mount, driver, af, scene, hand)
+        yield nut_driver_attempt(mount, driver, af, band, scene, hand)
 
 
 def _spanner_ends(
@@ -1063,25 +1063,26 @@ def _forced_flats(
 ) -> Iterator[Attempt] | None:
     """spanner-13, socket-7/16in, nut-driver-10; None for another family."""
     family, _, size_text = name.rpartition("-")
+    if family not in {"spanner", "socket", "nut-driver"}:
+        return None
+    if geometry.band_height <= _MIN_BAND:
+        raise NotCovered("could not measure the hex's height")
+    band = (geometry.band_top, geometry.band_bottom)
     if family == "spanner":
         af = _tool_mm(size_text, name)
-        if geometry.band_height <= _MIN_BAND:
-            raise NotCovered("could not measure the hex's height")
         tools.need(name)
-        band = (geometry.band_top, geometry.band_bottom)
         return _spanner_ends(mount, af, band, scene, tools)
     if family == "socket":
         af = _tool_mm(size_text, name)
         tools.need(name)
-        return socket_attempts(mount, socket_for(af), af, scene, tools.step_deg, tools.hand_room)
-    if family == "nut-driver":
-        nut_driver = NUT_DRIVERS.get(_tool_mm(size_text, name))
-        if nut_driver is None:
-            raise NotCovered(f"no nut driver sized {size_text}: the tables hold 5.5 to 13")
-        tools.need(name)
-        af = nut_driver.af
-        return iter([nut_driver_attempt(mount, nut_driver, af, scene, tools.hand_room)])
-    return None
+        socket = socket_for(af)
+        return socket_attempts(mount, socket, af, band, scene, tools.step_deg, tools.hand_room)
+    nut_driver = NUT_DRIVERS.get(_tool_mm(size_text, name))
+    if nut_driver is None:
+        raise NotCovered(f"no nut driver sized {size_text}: the tables hold 5.5 to 13")
+    tools.need(name)
+    af = nut_driver.af
+    return iter([nut_driver_attempt(mount, nut_driver, af, band, scene, tools.hand_room)])
 
 
 def _forced_driver(

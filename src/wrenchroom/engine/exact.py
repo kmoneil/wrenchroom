@@ -39,6 +39,13 @@ class ExactEngine(Engine):
 
     name: ClassVar[str] = "exact"
 
+    def __init__(self) -> None:
+        super().__init__()
+        #: Each placed piece's overlap volume with each part, measured once (a
+        #: socket's mouth comes back on every extension). Keyed by the piece, its
+        #: placement and the part's identity; the part is kept with its box.
+        self.measured: dict[tuple[object, ...], float] = {}
+
     def query(self, tool: Tool) -> ExactQuery:
         """Prepare a tool; its OCP pieces are built only if a part is near them."""
         return ExactQuery(self, tool)
@@ -67,6 +74,18 @@ class ExactQuery:
         low, high = self.bounds
         return np.array([low], dtype=float), np.array([high], dtype=float)
 
+    def _overlap(self, index: int, part: Part) -> float:
+        """One piece's overlap volume with the part, kept for the next tool that has it."""
+        tool = self._tool
+        if not isinstance(tool, ToolSolid):
+            return exact_overlap(part.shape, self._piece(index))
+        key = (tool.primitives[index], tool.seat, tool.axis, id(part))
+        measured = self._engine.measured.get(key)
+        if measured is None:
+            measured = exact_overlap(part.shape, self._piece(index))
+            self._engine.measured[key] = measured
+        return measured
+
     def _piece(self, index: int) -> Shape:
         if index not in self._pieces:
             tool = self._tool
@@ -83,7 +102,7 @@ class ExactQuery:
         """The pieces' summed overlap with the part, as a contact; stops at a hit."""
         total = 0.0
         for index in pieces_near(*self._boxes, self._engine.part_box(part)):
-            total += exact_overlap(part.shape, self._piece(int(index)))
+            total += self._overlap(int(index), part)
             if total > HIT_MIN_VOLUME:
                 return Contact.HIT
         return contact_of(total)

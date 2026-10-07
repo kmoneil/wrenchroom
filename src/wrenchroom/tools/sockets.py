@@ -11,6 +11,7 @@ from math import sqrt
 from typing import TYPE_CHECKING
 
 from wrenchroom.tools.sizes import size_name
+from wrenchroom.tools.spanners import RING_CLEARANCE, corner_sweep
 from wrenchroom.tools.sweep import (
     CONTACT_OFFSET,
     DEFAULT_STEP_DEG,
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from wrenchroom.engine import Scene
+    from wrenchroom.solids import ToolSolid
 
 #: How deep a socket is hollow from its mouth, mm: the bolt's end goes into it.
 #: Approximation (prototype).
@@ -77,24 +79,43 @@ RATCHET_HANDLE_WIDTH = 16.0
 RATCHET_HANDLE_THICKNESS = 10.0
 
 
+def socket_wall(hex_af: float, outer_radius: float, hex_band: tuple[float, float]) -> ToolSolid:
+    """A socket's wall round the hex, in the local frame, up to where its bore starts.
+
+    From the hex's lower edge up to :data:`CONTACT_OFFSET` over the seat. A
+    socket slides down over the hex it grips, so its wall stands beside the
+    hex's flats over their whole height: a rib beside a nut, no taller than it,
+    is in the way (it used to be missed, the socket drawn from the seat up).
+    """
+    _, band_bottom = hex_band
+    return axial_annulus(
+        hex_af / sqrt(3) + RING_CLEARANCE, outer_radius, band_bottom, CONTACT_OFFSET - band_bottom
+    )
+
+
 def socket_attempts(
     mount: Mount,
     socket: Socket,
     hex_af: float,
+    hex_band: tuple[float, float],
     scene: Scene,
     step_deg: float = DEFAULT_STEP_DEG,
     hand_room: bool = False,
 ) -> Iterator[Attempt]:
     """The socket on the ratchet directly, then on each stock extension, lazily.
 
-    The socket is hollow for its first :data:`BORE_DEPTH` (the bolt's end goes
-    into it), solid above, then the extension, then the ratchet head whose
-    handle needs only :data:`RATCHET_72_SWING_DEG` of free arc.
+    The socket's wall stands round the hex over its height (``hex_band``, as the
+    ring's), with the hex's own corner sweep inside it; above the seat it is
+    hollow for :data:`BORE_DEPTH` (the bolt's end goes into it), solid above,
+    then the extension, then the ratchet head whose handle needs only
+    :data:`RATCHET_72_SWING_DEG` of free arc.
     """
     tool = f"socket-{size_name(socket.af)}"
-    inner = hex_af / sqrt(3) + 0.3
-    mouth = axial_annulus(
-        inner, socket.outer_radius, CONTACT_OFFSET, min(BORE_DEPTH, socket.length)
+    inner = hex_af / sqrt(3) + RING_CLEARANCE
+    mouth = (
+        corner_sweep(hex_af, hex_band)
+        + socket_wall(hex_af, socket.outer_radius, hex_band)
+        + axial_annulus(inner, socket.outer_radius, CONTACT_OFFSET, min(BORE_DEPTH, socket.length))
     )
     body_from = CONTACT_OFFSET + BORE_DEPTH
     body_to = CONTACT_OFFSET + socket.length
