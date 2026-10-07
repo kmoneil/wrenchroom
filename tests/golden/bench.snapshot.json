@@ -3,10 +3,10 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 84,
+  "fasteners": 85,
   "turns": 65,
   "held": 3,
-  "blocked": 15,
+  "blocked": 16,
   "stuck": 1,
   "not_covered": 0
  },
@@ -173,6 +173,7 @@
    "blocked_by": [
     "ball_button_ceiling"
    ],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -202,6 +203,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -233,6 +235,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -264,6 +267,7 @@
    "state": null,
    "pair": "band_agrees_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -293,6 +297,7 @@
    "state": null,
    "pair": "band_agrees_bolt",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -322,6 +327,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -353,6 +359,7 @@
    "blocked_by": [
     "big_tube_wall"
    ],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -382,6 +389,7 @@
    "state": null,
    "pair": "carriage_boxed_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -411,6 +419,7 @@
    "state": null,
    "pair": "carriage_boxed_bolt",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -443,6 +452,7 @@
     "channel_left",
     "channel_right"
    ],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -474,6 +484,9 @@
    "blocked_by": [
     "dome_rib_rib"
    ],
+   "deciding": [
+    "dome_rib_rib"
+   ],
    "stuck_on": [],
    "reason": "only holds, and it has no nut",
    "grazes": [],
@@ -503,6 +516,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -535,6 +549,7 @@
     "flat_deep_lid",
     "flat_deep_under"
    ],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -564,6 +579,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [
@@ -595,6 +611,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -624,6 +641,9 @@
    "state": null,
    "pair": null,
    "blocked_by": [
+    "gland_rib_rib"
+   ],
+   "deciding": [
     "gland_rib_rib"
    ],
    "stuck_on": [],
@@ -657,6 +677,7 @@
    "blocked_by": [
     "glands_apart_b_gland"
    ],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -686,6 +707,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -717,6 +739,7 @@
    "blocked_by": [
     "glands_close_b_gland"
    ],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -746,6 +769,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -775,6 +799,7 @@
    "state": null,
    "pair": "guessed_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -804,6 +829,7 @@
    "state": null,
    "pair": "guessed_bolt",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -833,6 +859,7 @@
    "state": null,
    "pair": "hand_tight_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -862,6 +889,7 @@
    "state": null,
    "pair": "hand_tight_bolt",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -891,6 +919,7 @@
    "state": null,
    "pair": "hex_band_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -920,6 +949,7 @@
    "state": null,
    "pair": "hex_band_bolt",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -951,6 +981,7 @@
    "blocked_by": [
     "hex_side_wall_wall"
    ],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -980,6 +1011,7 @@
    "state": null,
    "pair": "inch_pair_screw",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1009,6 +1041,7 @@
    "state": null,
    "pair": "inch_pair_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1038,6 +1071,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1067,6 +1101,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1096,6 +1131,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1127,6 +1163,7 @@
    "blocked_by": [
     "key_wall_near_wall"
    ],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1156,6 +1193,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1185,6 +1223,7 @@
    "state": null,
    "pair": "minor_bore_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1214,6 +1253,7 @@
    "state": null,
    "pair": "minor_bore_bolt",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1243,6 +1283,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1272,6 +1313,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1301,6 +1343,7 @@
    "state": null,
    "pair": "nut_deep_well_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1330,6 +1373,7 @@
    "state": null,
    "pair": "nut_deep_well_bolt",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1359,6 +1403,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1388,6 +1433,7 @@
    "state": null,
    "pair": "nut_stubby_box_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1417,6 +1463,7 @@
    "state": null,
    "pair": "nut_stubby_box_bolt",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1446,6 +1493,7 @@
    "state": null,
    "pair": "nut_tube_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1475,6 +1523,7 @@
    "state": null,
    "pair": "nut_tube_bolt",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1504,6 +1553,7 @@
    "state": null,
    "pair": "nyloc_two_bodies_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1533,6 +1583,7 @@
    "state": null,
    "pair": "nyloc_two_bodies_bolt",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1562,6 +1613,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1591,6 +1643,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1620,6 +1673,7 @@
    "state": null,
    "pair": "one_part_lock_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1649,6 +1703,7 @@
    "state": null,
    "pair": "one_part_lock_bolt",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1678,6 +1733,9 @@
    "state": null,
    "pair": "pair_both_hold_nut",
    "blocked_by": [
+    "pair_both_hold_pocket_high"
+   ],
+   "deciding": [
     "pair_both_hold_pocket_high"
    ],
    "stuck_on": [],
@@ -1711,6 +1769,9 @@
    "blocked_by": [
     "pair_both_hold_pocket_low"
    ],
+   "deciding": [
+    "pair_both_hold_pocket_low"
+   ],
    "stuck_on": [],
    "reason": "only holds, and its partner pair_both_hold_bolt does not turn",
    "grazes": [],
@@ -1740,6 +1801,7 @@
    "state": null,
    "pair": "pair_nut_held_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1771,6 +1833,7 @@
    "blocked_by": [
     "pair_nut_held_pocket"
    ],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1800,6 +1863,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1831,6 +1895,7 @@
    "blocked_by": [
     "phillips_shelf_shelf"
    ],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1860,6 +1925,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1889,8 +1955,49 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "post_ring_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1000.0,
+    10000.0,
+    6.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 15.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "post_ring_post_a",
+    "post_ring_post_b",
+    "post_ring_post_1",
+    "post_ring_post_2",
+    "post_ring_post_3",
+    "post_ring_post_4"
+   ],
+   "deciding": [
+    "post_ring_post_a",
+    "post_ring_post_b"
+   ],
+   "stuck_on": [],
+   "reason": "only holds, and it has no nut",
    "grazes": [],
    "notes": []
   },
@@ -1918,6 +2025,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1947,6 +2055,7 @@
    "state": null,
    "pair": "rubber_well_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -1972,6 +2081,7 @@
    "state": null,
    "pair": "rubber_screw",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2001,6 +2111,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2030,6 +2141,7 @@
    "state": "lever-up",
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2059,6 +2171,7 @@
    "state": "lid-off",
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2088,6 +2201,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2117,6 +2231,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [
     "stuck_screw_ceiling"
    ],
@@ -2151,6 +2266,7 @@
     "sunk_cap_cap_nut",
     "sunk_cap_plate"
    ],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2182,6 +2298,7 @@
    "state": null,
    "pair": "tail_in_socket_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2211,6 +2328,7 @@
    "state": null,
    "pair": "tail_in_socket_bolt",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2240,6 +2358,7 @@
    "state": null,
    "pair": "tail_too_long_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2272,6 +2391,7 @@
     "tail_too_long_collar",
     "tail_too_long_bolt"
    ],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2301,7 +2421,10 @@
    "state": null,
    "pair": null,
    "blocked_by": [
-    "tapped_hold_ceiling",
+    "tapped_hold_slot",
+    "tapped_hold_ceiling"
+   ],
+   "deciding": [
     "tapped_hold_slot"
    ],
    "stuck_on": [],
@@ -2336,6 +2459,7 @@
     "torus_deep_lid",
     "torus_deep_under"
    ],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2365,6 +2489,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [
@@ -2396,6 +2521,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2425,6 +2551,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2442,7 +2569,7 @@
     1.0
    ],
    "seat": [
-    900.0,
+    1900.0,
     10000.0,
     6.0
    ],
@@ -2456,6 +2583,7 @@
    "blocked_by": [
     "twins_wall"
    ],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2473,7 +2601,7 @@
     1.0
    ],
    "seat": [
-    1100.0,
+    2100.0,
     10000.0,
     6.0
    ],
@@ -2485,6 +2613,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2514,6 +2643,7 @@
    "state": null,
    "pair": "undersize_nut",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2543,6 +2673,7 @@
    "state": null,
    "pair": "undersize_bolt",
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2574,6 +2705,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2603,6 +2735,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],
@@ -2634,6 +2767,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [],
+   "deciding": [],
    "stuck_on": [],
    "reason": null,
    "grazes": [],

@@ -107,6 +107,12 @@ class Attempt:
         grazes: What the tool only grazed at positions it was clear at: an
             overlap no more than the hit floor, a key rubbing along a face.
             A report says so when the attempt decides a verdict (issue #25).
+        bounds: When the swing found some free arc but not enough, what stood
+            at each end of the best one: the parts that decided it, out of all
+            the blockers (issue #52). The hand's, where only the hand was
+            stopped; and where the tool alone would turn or hold and the hand
+            can't follow it, what the hand ran into along the tool's best arc.
+        required_deg: The arc the tool needs to turn, for a swing search.
     """
 
     tool: str
@@ -119,6 +125,8 @@ class Attempt:
     hand_blockers: tuple[str, ...] = ()
     no_hand_room: bool = False
     grazes: tuple[str, ...] = ()
+    bounds: tuple[str, ...] = ()
+    required_deg: float = 0.0
 
 
 def swing_attempt(
@@ -156,41 +164,44 @@ def swing_attempt(
         _note(grazed, engagement_grazes)
 
     samples = max(1, round(FULL_CIRCLE / step_deg))
-    arm_clear: dict[int, bool] = {}
-    hand_clear: dict[int, bool] = {}
+    arm_hits: dict[int, tuple[str, ...]] = {}
+    hand_hits: dict[int, tuple[str, ...]] = {}
 
     def arm_is_clear(index: int) -> bool:
-        if index not in arm_clear:
+        if index not in arm_hits:
             arm = arm_at(index * step_deg)
             hits, grazes = scene.contacts(arm)
             probes.append(Probe(arm, hits, grazes))
             _note(blockers, hits)
             _note(grazed, () if hits else grazes)  # a graze where the arm was clear
-            arm_clear[index] = not hits
-        return arm_clear[index]
+            arm_hits[index] = hits
+        return not arm_hits[index]
 
     def is_free(index: int) -> bool:
         if not arm_is_clear(index):
             return False
         if hand_at is None:
             return True
-        if index not in hand_clear:
+        if index not in hand_hits:
             hand = hand_at(index * step_deg)
             hits = scene.hits(hand)
             probes.append(Probe(hand, hits))
             _note(hand_blockers, hits)
-            hand_clear[index] = not hits
-        return hand_clear[index]
+            hand_hits[index] = hits
+        return not hand_hits[index]
 
-    best = _longest_run(is_free, samples, step_deg, required_deg)
+    best, end = _longest_run(is_free, samples, step_deg, required_deg)
     swing = _swing(best, samples, step_deg)
     turns = swing >= required_deg
     holds = best >= 1
     no_hand_room = False
+    bounds = () if turns else _bounds(best, end, samples, arm_hits, hand_hits)
     if hand_at is not None and not turns:
-        alone = _longest_run(arm_is_clear, samples, step_deg, required_deg)
+        alone, alone_end = _longest_run(arm_is_clear, samples, step_deg, required_deg)
         alone_turns = _swing(alone, samples, step_deg) >= required_deg
         no_hand_room = alone_turns or (alone >= 1 and not holds)
+        # Where the tool alone would do, what stopped the hand along its best arc.
+        bounds = _hand_bounds(alone, alone_end, samples, hand_hits) if no_hand_room else bounds
     return Attempt(
         tool,
         way,
@@ -202,7 +213,35 @@ def swing_attempt(
         tuple(hand_blockers),
         no_hand_room,
         tuple(grazed),
+        bounds,
+        required_deg,
     )
+
+
+def _hand_bounds(
+    run: int, end: int, samples: int, hand_hits: dict[int, tuple[str, ...]]
+) -> tuple[str, ...]:
+    """What the hand ran into along the tool's best arc, the ``run`` positions to ``end``."""
+    found: list[str] = []
+    for k in range(run):
+        _note(found, hand_hits.get((end - k) % samples, ()))
+    return tuple(found)
+
+
+def _bounds(
+    best: int,
+    end: int,
+    samples: int,
+    arm_hits: dict[int, tuple[str, ...]],
+    hand_hits: dict[int, tuple[str, ...]],
+) -> tuple[str, ...]:
+    """What stopped the best arc at each end: the arm's hits there, else the hand's."""
+    if best < 1:
+        return ()
+    bounds: list[str] = []
+    for index in ((end - best) % samples, (end + 1) % samples):
+        _note(bounds, arm_hits.get(index) or hand_hits.get(index, ()))
+    return tuple(bounds)
 
 
 def _note(seen: list[str], hits: tuple[str, ...]) -> None:
@@ -213,14 +252,18 @@ def _note(seen: list[str], hits: tuple[str, ...]) -> None:
 
 def _longest_run(
     is_free: Callable[[int], bool], samples: int, step_deg: float, required_deg: float
-) -> int:
-    """The longest run of free positions found, stopping once the required arc is proven.
+) -> tuple[int, int]:
+    """The longest run of free positions, and the position it ends at.
 
-    The circle is walked twice so a run across 0 degrees counts whole; the second
-    lap stops at the first blocked position, having nothing more to add.
+    The search stops as soon as the required arc is proven. The circle is walked
+    twice so a run across 0 degrees counts whole; the second lap stops at the
+    first blocked position, having nothing more to add. Short of the required
+    arc, every position has been tried, and the ones either side of the longest
+    run, which stopped it, were among them.
     """
     run = 0
     best = 0
+    end = 0
     for position in range(2 * samples):
         if not is_free(position % samples):
             run = 0
@@ -228,10 +271,11 @@ def _longest_run(
                 break  # second lap adds nothing once a wall is seen again
             continue
         run = min(run + 1, samples)
-        best = max(best, run)
+        if run > best:
+            best, end = run, position % samples
         if run == samples or (run - 1) * step_deg >= required_deg:
             break
-    return best
+    return best, end
 
 
 def _swing(best: int, samples: int, step_deg: float) -> float:

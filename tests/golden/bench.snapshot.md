@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**84 fasteners: 65 turn, 3 held, 15 blocked, 1 stuck, 0 not covered**
+**85 fasteners: 65 turn, 3 held, 16 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -32,7 +32,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 26 parts
 | M6 socket screw | `hex-key-5` | 12 | 4 of 12 fail |
 | M6 torx screw | `torx-key-T30` | 1 | all pass (short leg in) |
 | M8 hex screw | `spanner-13` | 8 | 1 of 8 fail |
-| M8 nut | `spanner-13` | 12 | 2 of 12 fail |
+| M8 nut | `spanner-13` | 13 | 3 of 13 fail |
 
 #### Failures
 
@@ -41,16 +41,17 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 26 parts
 | `ball_button_screw` | `hex-key-4` | blocked | `ball_button_ceiling` |
 | `big_tube_gland` | `spanner-36` | blocked | `big_tube_wall` |
 | `channel_nut` | `spanner-13` | blocked | `channel_left`, `channel_right` |
-| `dome_rib_gland` | `spanner-15` | blocked | `only holds, and it has no nut` |
+| `dome_rib_gland` | `spanner-15` | blocked | `only holds, and it has no nut`; best arc bounded by `dome_rib_rib` |
 | `flat_deep_screw` | `hex-key-2.5` | blocked | `flat_deep_lid`, `flat_deep_under` |
-| `gland_rib_gland` | `spanner-24` | blocked | `only holds, and it has no nut` |
+| `gland_rib_gland` | `spanner-24` | blocked | `only holds, and it has no nut`; best arc bounded by `gland_rib_rib` |
 | `key_wall_near_screw` | `hex-key-5` | blocked | `key_wall_near_wall` |
-| `pair_both_hold_bolt` | `spanner-13` | blocked | `only holds, and its partner pair_both_hold_nut does not turn` |
-| `pair_both_hold_nut` | `spanner-13` | blocked | `only holds, and its partner pair_both_hold_bolt does not turn` |
+| `pair_both_hold_bolt` | `spanner-13` | blocked | `only holds, and its partner pair_both_hold_nut does not turn`; best arc bounded by `pair_both_hold_pocket_high` |
+| `pair_both_hold_nut` | `spanner-13` | blocked | `only holds, and its partner pair_both_hold_bolt does not turn`; best arc bounded by `pair_both_hold_pocket_low` |
 | `phillips_shelf_screw` | `driver-ph2` | blocked | `phillips_shelf_shelf` |
+| `post_ring_nut` | `spanner-13` | blocked | `only holds, and it has no nut`; best arc between `post_ring_post_a` and `post_ring_post_b` |
 | `sunk_cap_cap_nut` | `spanner-16` | blocked | `sunk_cap_cap_nut`, `sunk_cap_plate` |
 | `tail_too_long_nut` | `spanner-16` | blocked | `tail_too_long_collar`, `tail_too_long_bolt` |
-| `tapped_hold_screw` | `hex-key-5` | blocked | `only holds, and it has no nut` |
+| `tapped_hold_screw` | `hex-key-5` | blocked | `only holds, and it has no nut`; best arc bounded by `tapped_hold_slot` |
 | `torus_deep_screw` | `hex-key-2.5` | blocked | `torus_deep_lid`, `torus_deep_under` |
 | `twins_a_screw` | `hex-key-5` | blocked | `twins_wall` |
 | `stuck_screw_screw` | `hex-key-5` | stuck | `stuck_screw_ceiling` |

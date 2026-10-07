@@ -582,6 +582,8 @@ class _Candidate:
     no_hand_room: tuple[str, ...] = ()
     #: What the turning attempt only grazed (issue #25).
     grazes: tuple[str, ...] = ()
+    #: The parts that bound the best arc any attempt found, when none turned.
+    deciding: tuple[str, ...] = ()
     #: What the result should say of how it was checked (issue #47).
     notes: tuple[str, ...] = ()
 
@@ -710,7 +712,23 @@ def _run_attempts(candidate: _Candidate, attempts_iter: Iterator[Attempt]) -> No
         candidate.swing_deg = max((a.swing_deg for a in tried), default=0.0)
         candidate.no_hand_room = _hand_blockers(tried)
         hand = candidate.no_hand_room
-        candidate.blockers = tuple(blockers) + tuple(n for n in hand if n not in blockers)
+        every = tuple(blockers) + tuple(n for n in hand if n not in blockers)
+        candidate.deciding = _deciding(tried)
+        rest = tuple(n for n in every if n not in candidate.deciding)
+        candidate.blockers = candidate.deciding + rest
+
+
+def _deciding(tried: list[Attempt]) -> tuple[str, ...]:
+    """What bounds the best arc any attempt found: the first attempt with the most swing.
+
+    Every probe's hits are blockers, most of them far round the sweep, changing
+    nothing; the two ends of the best arc are what kept it short (issue #52).
+    """
+    bounded = [attempt for attempt in tried if attempt.bounds]
+    if not bounded:
+        return ()
+    best = max(bounded, key=lambda attempt: attempt.swing_deg)
+    return best.bounds
 
 
 def _hand_blockers(tried: list[Attempt]) -> tuple[str, ...]:
@@ -798,7 +816,9 @@ def _finish(
     else:
         how = None
         if candidate.no_hand_room:
-            reason = f"no room for a hand ({', '.join(candidate.no_hand_room)} in the way)"
+            # What stopped the hand where the tool's arc was best, if known (#52).
+            hand = candidate.deciding or candidate.no_hand_room
+            reason = f"no room for a hand ({', '.join(hand)} in the way)"
     return FastenerResult(
         fastener,
         verdict,
@@ -816,6 +836,7 @@ def _finish(
         pair=partner_name,
         grazes=grazes if verdict in {Verdict.TURNS, Verdict.STUCK, Verdict.HELD} else (),
         notes=candidate.notes,
+        deciding=candidate.deciding if verdict is Verdict.BLOCKED else (),
     )
 
 
