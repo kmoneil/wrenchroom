@@ -1,12 +1,17 @@
 """Truth per fastener, the whole-bench counts, isolation and the round trip."""
 
+import shutil
+
 import pytest
+import yaml
 from bench import FINAL_COUNTS, KIT, build, check_bench, sidecar_and_truth
+from build123d import Compound, export_step
 from cells import CELLS
 
 from wrenchroom.assembly import Assembly
 from wrenchroom.checker import check
 from wrenchroom.config import Config
+from wrenchroom.report import md_text
 
 
 def _truth_params():
@@ -242,6 +247,52 @@ def test_a_rule_s_tool_that_can_t_drive_its_fastener_is_not_covered(edges_report
         ), role
     drawn = by_name["wrong_tool_drawn_nut"]
     assert (drawn.verdict.value, drawn.tool) == ("turns", "spanner-15")
+
+
+def test_a_state_model_missing_a_fastener_fails_the_run(bench_dir, tmp_path):
+    """Issue #74, as reported: the bench with state_lever_screw renamed in its
+    lever-up model. The screw passes only with the lever up; renamed there, it isn't
+    tried there, which fails the run, and the rename is noted."""
+    for name in ("bench.step", "wrenchroom.yaml"):
+        shutil.copy(bench_dir / name, tmp_path / name)
+    shapes = []
+    for part in Assembly.from_step(bench_dir / "bench_lever-up.step"):
+        renamed = part.name == "state_lever_screw"
+        part.shape.label = f"{part.name}_renamed" if renamed else part.name
+        shapes.append(part.shape)
+    export_step(Compound(children=shapes), str(tmp_path / "bench_lever-up.step"))
+    report = check_bench(tmp_path)
+    (screw,) = [r for r in report.results if r.fastener.name == "state_lever_screw"]
+    assert (screw.verdict.value, screw.blocked_by) == ("blocked", ("state_lever_lever",))
+    assert report.warnings == (
+        "state 'lever-up': its model bench_lever-up.step has no part state_lever_screw "
+        "(renamed?), so it wasn't tried there",
+    )
+    (note,) = report.notes
+    assert note == (
+        "state 'lever-up': its model bench_lever-up.step lacks 1 part of the main model's: "
+        "state_lever_screw; has 1 part the main model doesn't: state_lever_screw_renamed"
+    )
+    assert report.exit_code == 2
+    lines = report.terminal_lines()
+    assert f"WARN {report.warnings[0]}" in lines
+    assert f"NOTE {note}" in lines
+    assert f"- {md_text(note)}" in report.markdown()
+    # With lever-up its own state (the rule says so), the screw is not covered,
+    # naming the model, and nothing warns twice.
+    sidecar = yaml.safe_load((tmp_path / "wrenchroom.yaml").read_text())
+    for rule in sidecar["fasteners"]:
+        if rule["parts"] == "state_lever_screw":
+            rule["state"] = "lever-up"
+    (tmp_path / "wrenchroom.yaml").write_text(yaml.safe_dump(sidecar, sort_keys=False))
+    own = check_bench(tmp_path)
+    (screw,) = [r for r in own.results if r.fastener.name == "state_lever_screw"]
+    assert (screw.verdict.value, screw.reason) == (
+        "not-covered",
+        "not in state 'lever-up', whose model bench_lever-up.step has no part of its name "
+        "(renamed?)",
+    )
+    assert own.warnings == ()
 
 
 def test_a_nut_its_corners_cannot_turn_says_so_once(bench_report, bench_json):

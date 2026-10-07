@@ -176,6 +176,10 @@ class Report:
     #: fastener noun with ordinary words after it, and no drive in the solid.
     #: Not failures, but every report lists them, so none goes unsaid.
     passed_over: tuple[PassedOver, ...] = ()
+    #: What the run noticed about the model or the sidecar as a whole, not about one
+    #: fastener: a state's model whose part names differ from the main model's
+    #: (issue #74). Said, and the run doesn't fail for them.
+    notes: tuple[str, ...] = ()
 
     @property
     def not_checked(self) -> str:
@@ -252,6 +256,7 @@ class Report:
             "unmatched_rules": list(self.unmatched_rules),
             "unmatched_ignores": list(self.unmatched_ignores),
             "warnings": list(self.warnings),
+            "notes": list(self.notes),
             "hand_room": self.hand_room,
             "passed_over": [
                 {"name": part.name, "kind": part.kind.value, "reason": part.reason}
@@ -292,6 +297,7 @@ class Report:
         for glob in self.unmatched_ignores:
             lines.append(f"WARN ignore matched nothing: {glob!r}")
         lines.extend(f"WARN {warning}" for warning in self.warnings)
+        lines.extend(f"NOTE {note}" for note in self.notes)
         shown = self.passed_over[:PASSED_OVER_SHOWN]
         lines.extend(f"NOTE passed over {part.name}: {part.reason}" for part in shown)
         if len(self.passed_over) > len(shown):
@@ -395,7 +401,13 @@ class Report:
             lines.extend(f"- {warning}" for warning in warnings)
         lines += _md_list(
             "Notes",
-            [f"{md_code(name, in_table=False)}: {md_text(note)}" for name, note in self.noted()],
+            [
+                *(md_text(note) for note in self.notes),
+                *(
+                    f"{md_code(name, in_table=False)}: {md_text(note)}"
+                    for name, note in self.noted()
+                ),
+            ],
         )
         lines += _md_list(
             "Marginal",
