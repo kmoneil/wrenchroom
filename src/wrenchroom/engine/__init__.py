@@ -9,7 +9,9 @@ and nothing outside this package may assume either one:
   forever behind ``--exact`` as the referee for borderline results (``exact.py``).
 
 Both count a hit the same way, an overlap of more than :data:`HIT_MIN_VOLUME`
-(``scene.py``), so they differ only by how closely a mesh follows a curved face.
+(``scene.py``), and a graze the same way, an overlap above noise but no more
+than that. The mesh engine refers anything a mesh can't be sure of to an exact
+referee (``mesh.py``), so the two give the same answers (issue #25).
 """
 
 from wrenchroom.engine.exact import ExactEngine

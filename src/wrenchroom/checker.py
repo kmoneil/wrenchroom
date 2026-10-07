@@ -475,6 +475,8 @@ class _Candidate:
     #: What the hand ran into, when no attempt turns because the hand can't
     #: follow a tool that would: the spec's ``blocked (no room for a hand)``.
     no_hand_room: tuple[str, ...] = ()
+    #: What the turning attempt only grazed (issue #25).
+    grazes: tuple[str, ...] = ()
 
 
 def _check_fastener(
@@ -523,7 +525,11 @@ def _try_in_state(
             frame = _frame(assembly[fastener.name], fastener)
         except NotCovered as exc:
             return _Candidate(fastener, reason=str(exc), state=state_name)
-    mates = {name for name in assembly.names if is_mate(name, fastener.mates)}
+    mates = (
+        {name for name in assembly.names if is_mate(name, fastener.mates)}
+        if fastener.mates
+        else set()
+    )
     pieces = assembly.pieces(fastener.name)  # its other solids, which go with it
     scene = space.scene(assembly, {fastener.name, *mates, *pieces} | removed)
     try:
@@ -564,6 +570,7 @@ def _run_attempts(candidate: _Candidate, attempts_iter: Iterator[Attempt]) -> No
             candidate.how = attempt.way
             candidate.swing_deg = attempt.swing_deg
             candidate.blockers = attempt.blockers
+            candidate.grazes = attempt.grazes
             break
     candidate.attempts = tuple(tried)
     if not candidate.turns:
@@ -637,6 +644,7 @@ def _finish(
     fastener = candidate.fastener
     verdict = Verdict.BLOCKED
     tool, how, reason = candidate.tool, candidate.how, candidate.reason
+    grazes = candidate.grazes
     stuck_on: tuple[str, ...] = ()
     if candidate.reason is not None:
         verdict, how = Verdict.NOT_COVERED, None
@@ -647,7 +655,7 @@ def _finish(
     elif candidate.turns:
         verdict = Verdict.TURNS
     elif candidate.hold is not None and _partner_turns(partner):
-        tool, how = candidate.hold.tool, candidate.hold.way
+        tool, how, grazes = candidate.hold.tool, candidate.hold.way, candidate.hold.grazes
         if candidate.extraction_blocked:
             verdict, stuck_on = Verdict.STUCK, candidate.extraction_blocked
         else:
@@ -676,6 +684,7 @@ def _finish(
         seat=candidate.seat,
         state=candidate.state,
         pair=partner_name,
+        grazes=grazes if verdict in {Verdict.TURNS, Verdict.STUCK, Verdict.HELD} else (),
     )
 
 

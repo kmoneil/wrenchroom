@@ -188,10 +188,13 @@ class ToolSolid:
         Never smaller than the true solid's box (a rotated box's box can only
         grow), which is all a prefilter needs.
         """
-        boxes = [transform_bounds(p.local_bounds(), self.matrix()) for p in self.primitives]
-        lows = np.min([lo for lo, _ in boxes], axis=0)
-        highs = np.max([hi for _, hi in boxes], axis=0)
-        return _vec(lows), _vec(highs)
+        lows, highs = self.piece_boxes()
+        return _vec(lows.min(axis=0)), _vec(highs.max(axis=0))
+
+    def piece_boxes(self) -> tuple[np.ndarray, np.ndarray]:
+        """Every primitive's placed box, as (n, 3) arrays of low and high corners."""
+        local = np.array([p.local_bounds() for p in self.primitives], dtype=float)
+        return transform_boxes(local[:, 0], local[:, 1], self.matrix())
 
 
 # ---------------------------------------------------------------------------
@@ -224,14 +227,25 @@ def frame_matrix(seat: Vec, axis: Vec) -> np.ndarray:
     return matrix
 
 
+def transform_boxes(
+    lows: np.ndarray, highs: np.ndarray, matrix: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """The axis-aligned boxes round (n, 3) boxes after an affine transform, all at once.
+
+    A box's box after the transform is its centre moved, give or take its
+    half-size through the rotation's absolute values: the same box as its eight
+    corners' extremes, without building them.
+    """
+    rotation, shift = matrix[:3, :3], matrix[:3, 3]
+    centre = (lows + highs) / 2 @ rotation.T + shift
+    half = (highs - lows) / 2 @ np.abs(rotation).T
+    return centre - half, centre + half
+
+
 def transform_bounds(bounds: Bounds, matrix: np.ndarray) -> Bounds:
     """The axis-aligned box round a box's eight corners after a transform."""
-    (x0, y0, z0), (x1, y1, z1) = bounds
-    corners = np.array(
-        [[x, y, z, 1.0] for x in (x0, x1) for y in (y0, y1) for z in (z0, z1)],
-    )
-    moved = corners @ matrix.T
-    return _vec(moved[:, :3].min(axis=0)), _vec(moved[:, :3].max(axis=0))
+    lows, highs = transform_boxes(np.array([bounds[0]]), np.array([bounds[1]]), matrix)
+    return _vec(lows[0]), _vec(highs[0])
 
 
 def _rotated_bounds(low: Vec, high: Vec, phi_deg: float) -> Bounds:

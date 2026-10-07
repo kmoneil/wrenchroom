@@ -15,6 +15,7 @@ keeps the plain names, so one copy is exactly the bench; copy k puts `r<k>_` in
 front of every name, and its rules, mates, removals and truth follow.
 """
 
+from collections import Counter
 from pathlib import Path
 
 import yaml
@@ -44,12 +45,12 @@ SLOTS = len(CELLS) + 1
 #: inch_pair, torx_wall, ball_tilt and nut_tube; and since M6's open end,
 #: glands_close's two turn; 47 since issue #27's hex_band, 48 with #26's nut_gap,
 #: 49 with #30's vented, 50 with #31's low_head, 52 with #29's rubber, 54 with
-#: #28's one_part_lock, 55 with #33's big_gland.
+#: #28's one_part_lock, 55 with #33's big_gland, 59 with #25's grazes.
 FINAL_COUNTS = {
-    "fasteners": 55,
-    "turns": 43,
+    "fasteners": 59,
+    "turns": 45,
     "held": 3,
-    "blocked": 8,
+    "blocked": 10,
     "stuck": 1,
     "not_covered": 0,
 }
@@ -60,16 +61,33 @@ def copy_prefix(copy):
     return f"r{copy}_" if copy else ""
 
 
-def sidecar_and_truth(copies=1):
+def _chosen(cell, which):
+    """Whether a cell is in a bench of ``which``: "all", "timed" or "untimed" cells."""
+    return which == "all" or cell.timed == (which == "timed")
+
+
+def summary_of(truth):
+    """The report summary a truth table comes to: what a scaled bench must report."""
+    verdicts = Counter(expected["verdict"] for expected in truth.values())
+    counts = {"fasteners": len(truth)}
+    counts.update({key: verdicts[key] for key in ("turns", "held", "blocked", "stuck")})
+    counts["not_covered"] = verdicts["not-covered"]
+    return counts
+
+
+def sidecar_and_truth(copies=1, which="all"):
     """The sidecar and the truth table: static, no geometry built.
 
     Truth is keyed by full part name; each entry holds the expected JSON fields
-    plus an optional "needs" (the milestone or issue it waits on).
+    plus an optional "needs" (the milestone or issue it waits on). ``which``
+    picks the cells: "all", or the perf bench's "timed" or "untimed" ones.
     """
     rules, truth, ignore, lids = [], {}, set(), []
     for copy in range(copies):
         prefix = copy_prefix(copy)
         for cell in CELLS:
+            if not _chosen(cell, which):
+                continue
             name = f"{prefix}{cell.name}"
             for rule in cell.rules:
                 entry = dict(rule)
@@ -80,16 +98,18 @@ def sidecar_and_truth(copies=1):
             ignore.update(cell.ignore)
             for role, expected in cell.truth.items():
                 truth[f"{name}_{role}"] = _named_truth(expected, name)
-        rules.append(
-            {"parts": f"{prefix}twins_*_screw", "kind": "screw", "head": "socket", "size": "M6"}
-        )
-        twins_truth = {
-            "a_screw": {"verdict": "blocked", "blocked_by": ["wall"]},
-            "b_screw": {"verdict": "turns"},
-        }
-        for role, expected in twins_truth.items():
-            truth[f"{prefix}twins_{role}"] = _named_truth(expected, f"{prefix}twins")
-        lids.append(f"{prefix}state_lid_lid")
+        if which != "untimed":  # the twins are ordinary: timed with the rest
+            rules.append(
+                {"parts": f"{prefix}twins_*_screw", "kind": "screw", "head": "socket", "size": "M6"}
+            )
+            twins_truth = {
+                "a_screw": {"verdict": "blocked", "blocked_by": ["wall"]},
+                "b_screw": {"verdict": "turns"},
+            }
+            for role, expected in twins_truth.items():
+                truth[f"{prefix}twins_{role}"] = _named_truth(expected, f"{prefix}twins")
+        if any(c.name == "state_lid" and _chosen(c, which) for c in CELLS):
+            lids.append(f"{prefix}state_lid_lid")
     sidecar = {
         "fasteners": rules,
         "ignore": sorted(ignore),
@@ -105,7 +125,7 @@ def sidecar_and_truth(copies=1):
 def _named_truth(expected, name):
     """A cell's truth with its roles turned into full part names."""
     entry = dict(expected)
-    for key in ("blocked_by", "stuck_on"):
+    for key in ("blocked_by", "stuck_on", "grazes"):
         if key in entry:
             entry[key] = [f"{name}_{role}" for role in entry[key]]
     if "pair" in entry:
@@ -113,19 +133,22 @@ def _named_truth(expected, name):
     return entry
 
 
-def build(raised=False, copies=1):
-    """Build every cell's labelled parts in their grid places (geometry; slow-ish)."""
+def build(raised=False, copies=1, which="all"):
+    """Build every chosen cell's labelled parts in their grid places (geometry; slow-ish)."""
     shapes = []
     for copy in range(copies):
         prefix = copy_prefix(copy)
         for index, cell in enumerate(CELLS):
+            if not _chosen(cell, which):
+                continue
             at = _slot(copy * SLOTS + index)
             for role, shape in cell.build():
                 raised_lever = raised and cell.name == "state_lever" and role == "lever"
                 placed = at * (state_lever_raised() if raised_lever else shape)
                 placed.label = f"{prefix}{cell.name}_{role}"
                 shapes.append(placed)
-        shapes += _twins(copy * SLOTS + len(CELLS), prefix)
+        if which != "untimed":
+            shapes += _twins(copy * SLOTS + len(CELLS), prefix)
     return shapes
 
 
@@ -168,12 +191,12 @@ def edges_sidecar():
     }
 
 
-def write(directory, copies=1):
+def write(directory, copies=1, which="all"):
     """Write bench.step, bench_lever-up.step and both sidecars into a directory."""
     directory = Path(directory)
-    sidecar, truth = sidecar_and_truth(copies)
-    export_step(Compound(children=build(copies=copies)), str(directory / "bench.step"))
-    raised = Compound(children=build(raised=True, copies=copies))
+    sidecar, truth = sidecar_and_truth(copies, which)
+    export_step(Compound(children=build(copies=copies, which=which)), str(directory / "bench.step"))
+    raised = Compound(children=build(raised=True, copies=copies, which=which))
     export_step(raised, str(directory / "bench_lever-up.step"))
     (directory / "wrenchroom.yaml").write_text(yaml.safe_dump(sidecar, sort_keys=False))
     (directory / "bench_edges.yaml").write_text(yaml.safe_dump(edges_sidecar(), sort_keys=False))

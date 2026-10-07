@@ -238,16 +238,19 @@ def test_meshing_ignores_whatever_meshed_the_shape_before():
     assert solid_mesh(shape).volume() == fresh
 
 
-@pytest.mark.parametrize(("clearance", "mesh_says"), [(0.05, ("tube",)), (0.5, ())])
-def test_the_one_place_the_engines_may_differ(clearance, mesh_says):
+@pytest.mark.parametrize(("clearance", "referred"), [(0.05, 1), (0.5, 0)])
+def test_where_a_mesh_could_be_wrong_the_referee_decides(clearance, referred):
     # A shaft in a bore. The bore's mesh is drawn inside its true circle by up
-    # to the 0.2 mm tolerance, so with 0.05 mm of clearance the mesh engine
-    # reads blocked where the exact engine reads clear. Outside the tolerance
-    # they agree. This is the band `--exact` exists to referee.
+    # to the 0.2 mm tolerance, so with 0.05 mm of clearance the mesh alone read
+    # blocked where the exact engine reads clear (issue #25). The mesh engine
+    # now refers such a part to its exact referee, and agrees; with 0.5 mm the
+    # gap is wider than the mesh can stray, and it decides alone.
     tube = Cylinder(30, 40) - Cylinder(5 + clearance, 41)
     shaft = axial_cylinder(5, -10, 10).placed((0.0, 0.0, 0.0), (0.0, 0.0, 1.0))
     assert make_engine("exact").scene([Part("tube", tube)]).hits(shaft) == ()
-    assert make_engine("mesh").scene([Part("tube", tube)]).hits(shaft) == mesh_says
+    mesh = make_engine("mesh")
+    assert mesh.scene([Part("tube", tube)]).hits(shaft) == ()
+    assert mesh.referred == referred
 
 
 def test_hits_are_volumes_not_contacts():

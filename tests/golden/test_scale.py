@@ -99,3 +99,23 @@ def test_every_copy_reports_like_the_first(scaled):
                     )
                 else:
                     assert other[key] == first[key], (prefix + name, key)
+
+
+def test_the_perf_bench_s_timed_and_untimed_cells_make_the_whole_bench():
+    # scripts/perf.py times the "timed" copies against the budget and the
+    # deliberate worst cases apart (issue #25): between them, nothing is left out.
+    from bench import sidecar_and_truth, summary_of  # noqa: PLC0415
+
+    whole = sidecar_and_truth(1)[1]
+    timed = sidecar_and_truth(1, "timed")[1]
+    untimed = sidecar_and_truth(1, "untimed")[1]
+    assert summary_of(whole) == FINAL_COUNTS
+    assert set(timed) | set(untimed) == set(whole)
+    assert not set(timed) & set(untimed)
+    assert sorted(untimed) == [
+        "flat_deep_screw",
+        "flat_graze_screw",
+        "torus_deep_screw",
+        "torus_graze_screw",
+    ]
+    assert summary_of(sidecar_and_truth(3, "timed")[1])["fasteners"] == 3 * len(timed)

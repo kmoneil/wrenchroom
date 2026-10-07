@@ -3,7 +3,11 @@
 A hit is an overlap of more than :data:`HIT_MIN_VOLUME` between the tool and a
 part, whichever engine measures it. A tangent touch is not a hit (both engines
 measure zero volume for it), which is why tools start 0.3 mm off the seat rather
-than on it.
+than on it. An overlap above :data:`GRAZE_MIN_VOLUME` but no more than the floor
+is a graze: not a hit, but a tool rubbing along a face, which a report says when
+it decides a verdict (issue #25). Both engines measure a graze exactly (the mesh
+engine asks its exact referee whenever a mesh can't be sure), so they find the
+same ones.
 
 An engine lives for one run and caches per part: a part's box is computed once
 however many fasteners' scenes it sits in. Parts are keyed by identity, never by
@@ -13,6 +17,7 @@ part with its own geometry.
 
 from __future__ import annotations
 
+import enum
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, ClassVar, Protocol
 
@@ -32,6 +37,26 @@ if TYPE_CHECKING:
 #: collision. The spec's figure; both engines measure volume, so both use it.
 HIT_MIN_VOLUME = 0.05
 
+#: Overlap volume in mm^3 above which an overlap at or under the hit floor is a
+#: graze, not numerical noise: a tangent touch measures zero, or near it.
+GRAZE_MIN_VOLUME = 1e-4
+
+
+class Contact(enum.Enum):
+    """How a tool meets a part: not at all, grazing it, or running into it."""
+
+    CLEAR = "clear"
+    GRAZE = "graze"
+    HIT = "hit"
+
+
+def contact_of(volume: float) -> Contact:
+    """The contact an exactly measured overlap volume is."""
+    if volume > HIT_MIN_VOLUME:
+        return Contact.HIT
+    return Contact.GRAZE if volume > GRAZE_MIN_VOLUME else Contact.CLEAR
+
+
 #: Bounding boxes grown by this much, mm, before the overlap prefilter; covers
 #: a kernel finding an intersection a hair outside a tight box.
 BOX_MARGIN = 0.1
@@ -49,8 +74,8 @@ class Query(Protocol):
         """The tool's axis-aligned box; parts outside it are never tested."""
         ...
 
-    def hits(self, part: Part) -> bool:
-        """True when the tool overlaps the part by more than HIT_MIN_VOLUME."""
+    def contact(self, part: Part) -> Contact:
+        """How the tool meets the part: a hit beyond HIT_MIN_VOLUME, a graze, or clear."""
         ...
 
 
@@ -62,6 +87,7 @@ class Engine(ABC):
 
     def __init__(self) -> None:
         self._bounds: dict[int, tuple[Part, Bounds]] = {}
+        self._box_arrays: dict[int, tuple[Part, np.ndarray]] = {}
 
     def scene(self, parts: Iterable[Part]) -> Scene:
         """The obstacles for one fastener's check, queried through this engine."""
@@ -74,6 +100,14 @@ class Engine(ABC):
             # The part rides along so its id cannot be reused while cached.
             cached = (part, shape_bounds(part.shape))
             self._bounds[id(part)] = cached
+        return cached[1]
+
+    def part_box(self, part: Part) -> np.ndarray:
+        """The part's box as a (2, 3) array of low and high corners, kept per part."""
+        cached = self._box_arrays.get(id(part))
+        if cached is None:
+            cached = (part, np.array(self.part_bounds(part), dtype=float))
+            self._box_arrays[id(part)] = cached
         return cached[1]
 
     @abstractmethod
@@ -98,19 +132,29 @@ class Scene:
 
     def hits(self, tool: Tool) -> tuple[str, ...]:
         """Every part the tool solid overlaps, by name, in assembly order."""
-        return tuple(self._scan(tool, stop_at_first=False))
+        return self.contacts(tool)[0]
+
+    def contacts(self, tool: Tool) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        """(the parts the tool overlaps, the parts it only grazes), each in assembly order."""
+        hits: list[str] = []
+        grazes: list[str] = []
+        for name, contact in self._scan(tool, stop_at_first=False):
+            (hits if contact is Contact.HIT else grazes).append(name)
+        return tuple(hits), tuple(grazes)
 
     def clear(self, tool: Tool) -> bool:
-        """True when the tool overlaps nothing; stops at the first offender."""
-        return not any(self._scan(tool, stop_at_first=True))
+        """True when the tool overlaps nothing (a graze is clear); stops at the first hit."""
+        return not any(c is Contact.HIT for _, c in self._scan(tool, stop_at_first=True))
 
-    def _scan(self, tool: Tool, stop_at_first: bool) -> Iterator[str]:
+    def _scan(self, tool: Tool, stop_at_first: bool) -> Iterator[tuple[str, Contact]]:
+        """Each part the tool meets, and how; with ``stop_at_first``, up to the first hit."""
         query = self.engine.query(tool)
         for index in self._near(query.bounds):
             part = self.parts[index]
-            if query.hits(part):
-                yield part.name
-                if stop_at_first:
+            contact = query.contact(part)
+            if contact is not Contact.CLEAR:
+                yield part.name, contact
+                if stop_at_first and contact is Contact.HIT:
                     return
 
     def _near(self, bounds: Bounds) -> np.ndarray:
@@ -137,6 +181,12 @@ def shape_bounds(shape: Shape) -> Bounds:
     BRepBndLib.Add_s(topo, box, False)
     low, high = box.CornerMin(), box.CornerMax()
     return (low.X(), low.Y(), low.Z()), (high.X(), high.Y(), high.Z())
+
+
+def pieces_near(lows: np.ndarray, highs: np.ndarray, box: np.ndarray) -> np.ndarray:
+    """Indices of the (n, 3) boxes that overlap a (2, 3) box, with the margin."""
+    near = (lows - BOX_MARGIN <= box[1]) & (box[0] - BOX_MARGIN <= highs)
+    return np.flatnonzero(near.all(axis=1))
 
 
 def boxes_overlap(a: Bounds, b: Bounds, margin: float = BOX_MARGIN) -> bool:

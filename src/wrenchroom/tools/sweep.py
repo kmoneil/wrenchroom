@@ -77,10 +77,12 @@ class Probe:
     Attributes:
         solid: The tool solid as placed for the test.
         hits: The parts it overlapped, in assembly order; empty when it was clear.
+        grazes: The parts it only grazed: overlapped by no more than the hit floor.
     """
 
     solid: ToolSolid
     hits: tuple[str, ...]
+    grazes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -102,6 +104,9 @@ class Attempt:
         hand_blockers: What the hand ran into, where the tool itself was clear.
         no_hand_room: The tool alone would turn (or hold) this way, and the
             hand can't follow it: the spec's ``blocked (no room for a hand)``.
+        grazes: What the tool only grazed at positions it was clear at: an
+            overlap no more than the hit floor, a key rubbing along a face.
+            A report says so when the attempt decides a verdict (issue #25).
     """
 
     tool: str
@@ -113,6 +118,7 @@ class Attempt:
     probes: tuple[Probe, ...] = ()
     hand_blockers: tuple[str, ...] = ()
     no_hand_room: bool = False
+    grazes: tuple[str, ...] = ()
 
 
 def swing_attempt(
@@ -140,12 +146,14 @@ def swing_attempt(
     """
     blockers: list[str] = []
     hand_blockers: list[str] = []
+    grazed: list[str] = []
     probes: list[Probe] = []
     if engagement is not None:
-        engagement_hits = scene.hits(engagement)
-        probes.append(Probe(engagement, engagement_hits))
+        engagement_hits, engagement_grazes = scene.contacts(engagement)
+        probes.append(Probe(engagement, engagement_hits, engagement_grazes))
         if engagement_hits:
             return Attempt(tool, way, False, False, 0.0, engagement_hits, tuple(probes))
+        _note(grazed, engagement_grazes)
 
     samples = max(1, round(FULL_CIRCLE / step_deg))
     arm_clear: dict[int, bool] = {}
@@ -154,9 +162,10 @@ def swing_attempt(
     def arm_is_clear(index: int) -> bool:
         if index not in arm_clear:
             arm = arm_at(index * step_deg)
-            hits = scene.hits(arm)
-            probes.append(Probe(arm, hits))
+            hits, grazes = scene.contacts(arm)
+            probes.append(Probe(arm, hits, grazes))
             _note(blockers, hits)
+            _note(grazed, () if hits else grazes)  # a graze where the arm was clear
             arm_clear[index] = not hits
         return arm_clear[index]
 
@@ -192,6 +201,7 @@ def swing_attempt(
         tuple(probes),
         tuple(hand_blockers),
         no_hand_room,
+        tuple(grazed),
     )
 
 
@@ -236,8 +246,8 @@ def straight_attempt(
 
     With ``hand``, the hand round the handle must be clear too.
     """
-    hits = scene.hits(solid)
-    probes = [Probe(solid, hits)]
+    hits, grazes = scene.contacts(solid)
+    probes = [Probe(solid, hits, grazes)]
     hand_hits: tuple[str, ...] = ()
     if not hits and hand is not None:
         hand_hits = scene.hits(hand)
@@ -253,6 +263,7 @@ def straight_attempt(
         tuple(probes),
         hand_hits,
         no_hand_room=bool(hand_hits),
+        grazes=() if hits else grazes,
     )
 
 
