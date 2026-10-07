@@ -249,7 +249,9 @@ def corner_sweep(hex_af: float, hex_band: tuple[float, float]) -> ToolSolid:
     hex's height: anything in it stops the hex turning, whatever grips it. A
     ring's bore and a socket's mouth stand outside the corners and hide that
     space, so every tool on the flats tests it with its engagement; a part one
-    mm off a flat (two glands side by side, a rib beside a nut) is in it.
+    mm off a flat (two glands side by side, a rib beside a nut) is in it. The
+    checker tries it alone first, so that a part in it is said once, as the
+    hex's corners stopped, not as every tool blocked (issue #63).
     """
     band_top, band_bottom = hex_band
     return axial_annulus(

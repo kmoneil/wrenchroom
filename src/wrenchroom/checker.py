@@ -27,12 +27,21 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from build123d import GeomType
+from build123d import GeomType, Plane, Solid
 
 from wrenchroom.assembly import Assembly, Part
 from wrenchroom.config import Config, ConfigError, is_mate
 from wrenchroom.detect import find
-from wrenchroom.engine import DEFAULT_ENGINE, ENGINES, Engine, Scene, make_engine
+from wrenchroom.engine import (
+    DEFAULT_ENGINE,
+    ENGINES,
+    HIT_MIN_VOLUME,
+    Engine,
+    Scene,
+    make_engine,
+)
+from wrenchroom.engine.exact import exact_overlap
+from wrenchroom.engine.scene import boxes_overlap
 from wrenchroom.fasteners import (
     HEX_AF_MIN,
     PHILLIPS_NUMBER,
@@ -67,6 +76,7 @@ from wrenchroom.tools.sizes import FLATS, is_inch, size_mm, size_name, snap
 from wrenchroom.tools.sockets import socket_attempts, socket_for
 from wrenchroom.tools.spanners import (
     RING_CLEARANCE,
+    corner_sweep,
     open_end_attempts,
     ring_attempts,
     spanner_for,
@@ -84,7 +94,7 @@ from wrenchroom.tools.torx_keys import ISO_10664
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from build123d import Axis, Face
+    from build123d import Axis, Face, Shape
 
     from wrenchroom.tools.nut_drivers import NutDriver
     from wrenchroom.tools.sockets import Socket
@@ -118,6 +128,10 @@ Vec = tuple[float, float, float]
 
 class NotCovered(Exception):  # noqa: N818  (it is a verdict carrier, not an error suffix)
     """Raised inside the loop when a fastener can't be understood; becomes the verdict."""
+
+
+class _BothEndsCovered(NotCovered):
+    """A nut both of whose ends something sits against: a clash, it may be (issue #63)."""
 
 
 def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hide the API)
@@ -212,8 +226,9 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         if fastener.name in failures:
             candidates.append(_Candidate(fastener, reason=failures[fastener.name]))
             continue
+        frame, partner = frames[fastener.name], pairs.get(fastener.name)
         candidates.append(
-            _check_fastener(fastener, frames[fastener.name], space, config, default_state, tools)
+            _check_fastener(fastener, frame, space, config, default_state, tools, partner)
         )
     results = [
         replace(r, notes=(*r.fastener.notes, *_drive_notes(r.fastener), *r.notes))
@@ -680,6 +695,7 @@ def _check_fastener(
     config: Config,
     default_state: str | None,
     tools: _Tools,
+    partner: str | None = None,
 ) -> _Candidate:
     own_state = fastener.state if fastener.state is not None else default_state
     if fastener.kind is Kind.INSERT:
@@ -690,7 +706,7 @@ def _check_fastener(
     order += [s for s in config.try_states if s != own_state]
     first: _Candidate | None = None
     for index, state_name in enumerate(order):
-        candidate = _try_in_state(fastener, frame, state_name, space, tools)
+        candidate = _try_in_state(fastener, frame, state_name, space, tools, partner)
         if first is None:
             first = candidate
         if candidate.reason is not None and index == 0:
@@ -709,6 +725,7 @@ def _try_in_state(
     state_name: str | None,
     space: _StateSpace,
     tools: _Tools,
+    partner: str | None = None,
 ) -> _Candidate:
     assembly, removed, same_model = space.resolve(state_name)
     if fastener.name not in assembly.names:
@@ -728,18 +745,41 @@ def _try_in_state(
     scene = space.scene(assembly, {fastener.name, *mates, *pieces} | removed)
     try:
         mount, geometry = _orient(frame, fastener, scene)
+    except _BothEndsCovered as exc:  # a clash in the model, it may be (issue #63)
+        clash = _drawn_into(frame, scene, partner)
+        return _Candidate(fastener, reason=clash or str(exc), state=state_name)
     except NotCovered as exc:
         return _Candidate(fastener, reason=str(exc), state=state_name)
     candidate = _Candidate(fastener, axis=mount.axis, seat=mount.seat, state=state_name)
     if fastener.self_holding:
         candidate.how = "holds itself"
         return candidate
+    _try_tools(candidate, frame, mount, geometry, scene, tools, partner)
+    return candidate
+
+
+def _try_tools(
+    candidate: _Candidate,
+    frame: _Frame,
+    mount: Mount,
+    geometry: _Geometry,
+    scene: Scene,
+    tools: _Tools,
+    partner: str | None,
+) -> None:
+    """Each tool for the fastener in turn, then what the attempts say beyond a verdict."""
+    fastener = candidate.fastener
     try:
         attempts_iter = _attempts_for(fastener, mount, geometry, scene, tools)
         _run_attempts(candidate, attempts_iter)
     except NotCovered as exc:  # also any a lazy attempt raises while running
         candidate.reason = str(exc)
-        return candidate
+        return
+    if not candidate.turns:  # what stopped it may be drawn into it (issue #63)
+        candidate.reason = _drawn_into(frame, scene, partner, candidate.blockers)
+        if candidate.reason is not None:
+            candidate.tool = None  # no tool is the question until the model is fixed
+            return
     candidate.notes = _attempt_notes(fastener, candidate, geometry)
     if fastener.kind is Kind.SCREW and (candidate.turns or candidate.hold):
         candidate.way_out = _way_out(fastener, frame, geometry, mount, scene)
@@ -747,7 +787,90 @@ def _try_in_state(
         if candidate.turns and candidate.extraction_blocked:
             candidate.stuck = True
             candidate.stuck_on = candidate.extraction_blocked
-    return candidate
+
+
+def _blocked_reason(candidate: _Candidate) -> str | None:
+    """Why nothing turns or holds it, beyond the parts in the way, when there is more."""
+    corners = next((a for a in candidate.attempts if a.way == _CORNERS_WAY), None)
+    if corners is not None:  # said once, not by every tool (issue #63)
+        hex_ = "nut" if candidate.fastener.kind is Kind.NUT else "head"
+        hit = listed(corners.blockers, candidate.attempts)
+        return f"the {hex_}'s corners hit {hit} as it turns"
+    if candidate.no_hand_room:
+        # What stopped the hand where the tool's arc was best, if known (#52);
+        # named once, and a few at most (#64).
+        hand = candidate.deciding or candidate.no_hand_room
+        where = " on its best arc" if candidate.deciding else ""
+        return f"no room for a hand: the hand hits {listed(hand, candidate.attempts)}{where}"
+    return None
+
+
+#: How far from the axis a thread drawn at its nominal diameter reaches into a bore
+#: drawn at its minor, as a multiple of the bore's radius: 1.2 for M3 to M24
+#: (ISO 724's D1 against D). Inside that, an overlap is a thread, not a clash.
+_THREAD_REACH = 1.25
+
+#: A widest region thinner than this along the axis (a countersunk head's rim) is
+#: no region: the whole part is measured for a clash instead.
+_REGION_MIN = 0.1
+
+
+def _measured(frame: _Frame) -> tuple[Shape, Shape]:
+    """What of a fastener a clash is measured on, and what of that is past its thread.
+
+    Its hex and its widest region along the axis, and what lies between: a nut's
+    body, flange and all, a screw's head, a gland's hex and dome. A shank or a
+    gland's stub sits in its hole, often drawn at the nominal diameter in a tapped
+    hole drawn at the minor: a thread, never measured. Nor, for deciding, is the
+    region within :data:`_THREAD_REACH` of a bore. The widest region alone would
+    miss a hex on a flange wider than it by a third, the hex alone a flange.
+    """
+    hex_low, hex_high = _band(frame.projections, frame.radials, frame.flats)
+    wide_low, wide_high = _band(frame.projections, frame.radials)
+    low, high = min(hex_low, wide_low), max(hex_high, wide_high)
+    if high - low < _REGION_MIN:
+        low, high = min(frame.projections), max(frame.projections)
+    plane = Plane(origin=frame.point_at(low), z_dir=frame.direction)
+    region = frame.part.shape & Solid.make_cylinder(max(frame.radials) + 1.0, high - low, plane)
+    if region is None:  # the region is the part's own, so never empty; for the types
+        region = frame.part.shape
+    if frame.bore <= 0:
+        return region, region
+    under = Plane(origin=frame.point_at(low - 1.0), z_dir=frame.direction)
+    thread = Solid.make_cylinder(frame.bore * _THREAD_REACH, high - low + 2.0, under)
+    return region, region - thread
+
+
+def _drawn_into(
+    frame: _Frame, scene: Scene, partner: str | None, among: tuple[str, ...] | None = None
+) -> str | None:
+    """The parts a fastener's own solid is drawn into, past the hit floor: a clash.
+
+    A nut drawn into the part beside it isn't a reach problem, and no tool choice fixes
+    it: the model does (issue #63). Only asked once something has gone wrong,
+    both its ends covered or nothing turning it, and then only of the parts that
+    stopped it, so the booleans are few: asked of every fastener, they cost a
+    fifth of the 500-fastener budget, for clashes that change no verdict.
+    A thread is no clash (:func:`_measured`), and its pair's partner is passed
+    over. A part overlapping the measured region past the thread is a clash, and
+    its whole overlap with that region is the volume told.
+    """
+    part, engine = frame.part, scene.engine
+    box = engine.part_bounds(part)
+    region, past_thread = _measured(frame)
+    found: list[tuple[str, float]] = []
+    for other in scene.parts:
+        if other.name == partner or (among is not None and other.name not in among):
+            continue
+        if not boxes_overlap(box, engine.part_bounds(other)):
+            continue
+        if exact_overlap(past_thread, other.shape) > HIT_MIN_VOLUME:
+            found.append((other.name, exact_overlap(region, other.shape)))
+    if not found:
+        return None
+    total = sum(volume for _, volume in found)
+    names = tuple(name for name, _ in found)
+    return f"drawn into {listed(names)} ({total:.1f} mm^3): fix the model"
 
 
 def _attempt_notes(
@@ -902,12 +1025,7 @@ def _finish(
             reason += f"; best arc {bounded(candidate.deciding, candidate.attempts)}"
     else:
         how = None
-        if candidate.no_hand_room:
-            # What stopped the hand where the tool's arc was best, if known (#52);
-            # named once, and a few at most (#64).
-            hand = candidate.deciding or candidate.no_hand_room
-            where = " on its best arc" if candidate.deciding else ""
-            reason = f"no room for a hand: the hand hits {listed(hand, candidate.attempts)}{where}"
+        reason = _blocked_reason(candidate)
     return FastenerResult(
         fastener,
         verdict,
@@ -1035,7 +1153,7 @@ def _free_face_is_at_bottom(frame: _Frame, scene: Scene, thread_radius: float = 
     if top_free != bottom_free:
         return bottom_free
     if not top_free:
-        raise NotCovered("cannot tell the nut's free face: both ends are covered")
+        raise _BothEndsCovered("cannot tell the nut's free face: both ends are covered")
     for depth in _ROOM_DEPTHS:
         top_room = scene.clear(plane_top.place(axial_annulus(inner, outer, 0.1, depth)))
         bottom_room = scene.clear(plane_bottom.place(axial_annulus(inner, outer, 0.1, depth)))
@@ -1387,7 +1505,17 @@ def _hex_flats_tools(
     scene: Scene,
     tools: _Tools,
 ) -> Iterator[Attempt]:
-    """Each tool held, the kit's then the sidecar's own; a ring, socket or driver if on."""
+    """Each tool held, the kit's then the sidecar's own; a ring, socket or driver if on.
+
+    First the hex's own corner sweep, alone: something in it stops the hex
+    turning whatever grips it, which is said once (:data:`_CORNERS_WAY`), not as
+    every tool blocked (issue #63).
+    """
+    corners = mount.place(corner_sweep(af, (geometry.band_top, geometry.band_bottom)))
+    hits = scene.hits(corners)
+    if hits:
+        yield Attempt(held[0], _CORNERS_WAY, False, False, 0.0, hits, (Probe(corners, hits),))
+        return
     spanner = spanner_for(af)
     if spanner.label in held:
         yield from _spanner_ends(spanner, ENDS, mount, af, geometry, scene, tools)
@@ -1451,6 +1579,9 @@ def _nut_driver_on(
     band = (geometry.band_top, geometry.band_bottom)
     yield nut_driver_attempt(mount, driver, af, band, scene, tools.hand_room)
 
+
+#: The way an attempt says the hex's own corners were stopped, turning (issue #63).
+_CORNERS_WAY = "its corners, turning"
 
 #: The ways each covering tool tries, as their sweeps name them.
 _RING_WAYS = ("ring, full length", "ring, stubby")

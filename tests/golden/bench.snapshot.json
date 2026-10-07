@@ -3,10 +3,10 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 87,
+  "fasteners": 88,
   "turns": 67,
   "held": 3,
-  "blocked": 16,
+  "blocked": 17,
   "stuck": 1,
   "not_covered": 0
  },
@@ -455,6 +455,38 @@
    "deciding": [],
    "stuck_on": [],
    "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "corner_touch_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4000.0,
+    10000.0,
+    6.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "corner_touch_block"
+   ],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": "the nut's corners hit corner_touch_block as it turns",
    "grazes": [],
    "notes": []
   },
@@ -2629,8 +2661,8 @@
     1.0
    ],
    "seat": [
-    3900.0,
-    10000.0,
+    -100.0,
+    11000.0,
     6.0
    ],
    "source": "sidecar",
@@ -2661,8 +2693,8 @@
     1.0
    ],
    "seat": [
-    4100.0,
-    10000.0,
+    100.0,
+    11000.0,
     6.0
    ],
    "source": "sidecar",

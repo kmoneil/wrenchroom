@@ -135,6 +135,96 @@ def test_config_edges(bench_dir):
     assert torx.reason == "needs torx-key-T30, which kit metric-home does not hold (full has it)"
 
 
+@pytest.fixture(scope="module")
+def edges_report(bench_dir, bench_engine):
+    return check_bench(bench_dir, config_name="bench_edges.yaml", engine=bench_engine)
+
+
+FREE_FACE = "cannot tell the nut's free face: both ends are covered"
+
+
+def test_a_nut_drawn_into_a_part_is_a_clash(edges_report):
+    """Issue #63: drawn_in's fasteners, which only the edges sidecar keeps (the
+    bench's own runs ignore them, a clash being not-covered). Each clash names what
+    it is drawn into, with no tool, and the model to fix; the volumes, by hand:
+
+    - side: the corner's tip 1 deep, 1.73 mm^2, 3 tall: 5.2 mm^3;
+    - top: the hex less its bore, 1 deep: 146.36 - 50.27 = 96.1;
+    - head: the head less its key's hex, 0.5 deep: (78.54 - 21.65) * 0.5 = 28.4;
+    - fat: the stud past the minor bore over the nut: pi (4.5^2 - 3.32^2) 6.8 = 196.6;
+    - tapped: the head alone, its top (28.4) and its side, pi (5^2 - 4.5^2) 5.5 =
+      82.1: 110.5; the shank's 186 in its tapped hole, a thread, isn't told;
+    - flange: the hex's tip over z 1.5 to 6, 1.73 * 4.5 = 7.79, and the flange's
+      segment past x 6.51, 121 acos(6.51 / 11) - 6.51 sqrt(121 - 6.51^2) = 55.79
+      mm^2, 1.5 thick, 83.68: 91.5.
+
+    The thread_nut's stud is its thread and the pair_nut's bolt its partner: no
+    clash, and the lid over each leaves only the free face untold. The side_chip,
+    in the side_nut, stops nothing and isn't named."""
+    by_name = {r.fastener.name: r for r in edges_report.results}
+    clashes = {
+        name: (r.verdict.value, r.tool, r.reason)
+        for name, r in by_name.items()
+        if name.startswith("drawn_in_")
+    }
+    assert clashes == {
+        "drawn_in_side_nut": (
+            "not-covered",
+            None,
+            "drawn into drawn_in_side_block (5.2 mm^3): fix the model",
+        ),
+        "drawn_in_top_nut": (
+            "not-covered",
+            None,
+            "drawn into drawn_in_top_block (96.1 mm^3): fix the model",
+        ),
+        "drawn_in_head_screw": (
+            "not-covered",
+            None,
+            "drawn into drawn_in_head_block (28.4 mm^3): fix the model",
+        ),
+        "drawn_in_fat_nut": (
+            "not-covered",
+            None,
+            "drawn into drawn_in_fat_stud (196.6 mm^3): fix the model",
+        ),
+        "drawn_in_tapped_screw": (
+            "not-covered",
+            None,
+            "drawn into drawn_in_tapped_block (110.5 mm^3): fix the model",
+        ),
+        "drawn_in_flange_nut": (
+            "not-covered",
+            None,
+            "drawn into drawn_in_flange_block (91.5 mm^3): fix the model",
+        ),
+        "drawn_in_thread_nut": ("not-covered", None, FREE_FACE),
+        "drawn_in_pair_nut": ("not-covered", None, FREE_FACE),
+        "drawn_in_pair_bolt": ("turns", "spanner-13", None),
+    }
+    assert by_name["drawn_in_pair_nut"].pair == "drawn_in_pair_bolt"
+    lines = edges_report.terminal_lines()
+    assert "FAIL drawn_in_top_nut  -  not-covered  drawn into drawn_in_top_block" in "\n".join(
+        lines
+    )
+    # The corner the block only touches is no clash: corner_touch's nut is blocked.
+    assert by_name["corner_touch_nut"].verdict.value == "blocked"
+
+
+def test_a_nut_its_corners_cannot_turn_says_so_once(bench_report, bench_json):
+    """Issue #63: corner_touch's nut, stopped by its own corners, not by a tool. One
+    attempt, the corners' sweep, and one reason; not every tool blocked by the block.
+    (Not in the truth table: the reason names the block, which a copy renames.)"""
+    entry = bench_json["corner_touch_nut"]
+    assert entry["reason"] == "the nut's corners hit corner_touch_block as it turns"
+    (result,) = [r for r in bench_report.results if r.fastener.name == "corner_touch_nut"]
+    assert [(a.way, a.blockers) for a in result.attempts] == [
+        ("its corners, turning", ("corner_touch_block",))
+    ]
+    (fail,) = [line for line in bench_report.terminal_lines() if "corner_touch_nut" in line]
+    assert fail == f"FAIL corner_touch_nut  spanner-13  blocked  {entry['reason']}"
+
+
 def test_the_undersize_nut_is_noted_in_every_format(bench_report, bench_json):
     """Issue #50: the one note on the described bench, as each report gives it."""
     note = (
