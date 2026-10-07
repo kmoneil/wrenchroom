@@ -3,10 +3,10 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 80,
-  "turns": 63,
+  "fasteners": 82,
+  "turns": 64,
   "held": 3,
-  "blocked": 13,
+  "blocked": 14,
   "stuck": 1,
   "not_covered": 0
  },
@@ -254,6 +254,37 @@
    "notes": []
   },
   {
+   "name": "big_tube_gland",
+   "kind": "nut",
+   "head": null,
+   "size": "M24",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    9000.0,
+    20.0
+   ],
+   "source": "sidecar",
+   "tool": "spanner-36",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "big_tube_wall"
+   ],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "carriage_boxed_bolt",
    "kind": "screw",
    "head": "carriage",
@@ -386,7 +417,7 @@
     1.0
    ],
    "seat": [
-    2000.0,
+    4000.0,
     9000.0,
     8.0
    ],
@@ -1790,6 +1821,35 @@
    "notes": []
   },
   {
+   "name": "reach_13_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    9000.0,
+    6.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, stubby",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "rubber_screw",
    "kind": "screw",
    "head": "button",
@@ -2308,7 +2368,7 @@
     1.0
    ],
    "seat": [
-    2900.0,
+    4900.0,
     9000.0,
     6.0
    ],
@@ -2339,7 +2399,7 @@
     1.0
    ],
    "seat": [
-    3100.0,
+    5100.0,
     9000.0,
     6.0
    ],

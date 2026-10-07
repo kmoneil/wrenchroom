@@ -1,15 +1,17 @@
 """The bench with hand room on (spec 6.4), which it isn't by default.
 
-Hand room only ever takes a pass away, and says why. On the bench it takes two:
-hand_tight's nut, the cell built for it (cells.py works it by hand), and
-pair_nut_held's nut. The second is a finding for the tuning hand room still needs:
-the spanner's handle leaves its pocket through a slit no taller than the handle,
-and the hand's 90 mm, from r 47.7 to the 137.7 reach, starts inside the block
-(edge 60) where a real hand, holding the outer end, would not be. pair_both_hold's
-bolt and nut, blocked already, are blocked for the same reason in their own
-pockets: their reason changes from "only holds" to "no room for a hand". Every
-other field of every fastener comes out exactly as with hand room off, on both
-engines.
+Hand room only ever takes a pass away, or moves it to another tool, and says why.
+On the bench it takes one: hand_tight's nut, the cell built for it (cells.py
+works it by hand). And it moves one: nut_stubby_box's nut, whose stubby (Tekton's
+101.6) puts the hand on its handle against the box, so the socket on a 50 mm
+extension turns it instead.
+
+Until the spanners took makers' lengths (issue #49), the prototype's formula made
+them short, and put the hand where a real hand would not be: starting inside the
+block beside pair_nut_held's nut (whose pass it took) and pair_both_hold's
+pockets (whose bolt's and nut's reason it changed). With real lengths the hand
+holds the handle's outer end, clear of them: those come out as with hand room
+off. Every other field of every fastener does too, on both engines.
 """
 
 import pytest
@@ -18,14 +20,15 @@ from bench import check_bench
 #: The passes hand room takes on the bench, and the reason each gives.
 CHANGES = {
     "hand_tight_nut": "no room for a hand (hand_tight_block in the way)",
-    "pair_nut_held_nut": "no room for a hand (pair_nut_held_pocket in the way)",
 }
 
-#: Fasteners blocked either way whose reason hand room changes.
-REASONS = {
-    "pair_both_hold_bolt": "no room for a hand (pair_both_hold_pocket_high in the way)",
-    "pair_both_hold_nut": "no room for a hand (pair_both_hold_pocket_low in the way)",
+#: The passes hand room moves to another tool: (tool, how) with the hand.
+MOVES = {
+    "nut_stubby_box_nut": ("socket-10", "socket, 50 mm extension"),
 }
+
+#: The hand the formula's short spanners misplaced (issue #49): now as without it.
+CLEARED = ("pair_nut_held_nut", "pair_both_hold_bolt", "pair_both_hold_nut")
 
 
 @pytest.fixture(scope="session")
@@ -42,19 +45,24 @@ def test_hand_room_takes_exactly_these_passes_and_says_why(hand_report, bench_js
         if (hand[name].verdict.value, hand[name].tool, hand[name].how)
         != (entry["verdict"], entry["tool"], entry["how"])
     }
-    assert changed == set(CHANGES)
+    assert changed == set(CHANGES) | set(MOVES)
     for name, reason in CHANGES.items():
         assert bench_json[name]["verdict"] in {"turns", "held"}, name  # a pass, taken
         assert hand[name].verdict.value == "blocked", name
         assert hand[name].reason == reason, name
+    for name, (tool, how) in MOVES.items():
+        assert bench_json[name]["verdict"] == hand[name].verdict.value == "turns", name
+        assert (hand[name].tool, hand[name].how) == (tool, how), name
 
 
-def test_some_already_blocked_now_say_it_is_the_hand(hand_report, bench_json):
+def test_a_real_length_s_hand_holds_the_handle_s_end(hand_report, bench_json):
     hand = {r.fastener.name: r for r in hand_report.results}
-    for name, reason in REASONS.items():
-        assert bench_json[name]["verdict"] == hand[name].verdict.value == "blocked", name
-        assert bench_json[name]["reason"].startswith("only holds"), name
-        assert hand[name].reason == reason, name
+    for name in CLEARED:
+        entry = bench_json[name]
+        assert (hand[name].verdict.value, hand[name].reason) == (
+            entry["verdict"],
+            entry["reason"],
+        ), name
 
 
 def test_everything_else_is_the_same_report(hand_report, bench_json):
@@ -62,9 +70,7 @@ def test_everything_else_is_the_same_report(hand_report, bench_json):
     assert document["hand_room"] is True
     for entry in document["fasteners"]:
         name = entry["name"]
-        if name in REASONS:
-            assert {**entry, "reason": None} == {**bench_json[name], "reason": None}, name
-        elif name not in CHANGES:
+        if name not in CHANGES and name not in MOVES:
             assert entry == bench_json[name], name
 
 

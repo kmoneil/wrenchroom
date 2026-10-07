@@ -22,7 +22,7 @@ from wrenchroom.config import Config
 from wrenchroom.report import Verdict
 from wrenchroom.tools.kits import FULL, IMPERIAL_HOME, METRIC_HOME
 from wrenchroom.tools.sizes import METRIC_FLATS
-from wrenchroom.tools.spanners import LARGE_LENGTHS, spanner_for
+from wrenchroom.tools.spanners import spanner_for
 
 # ---------------------------------------------------------------------------
 # 1. Spanners above 36 mm.
@@ -39,12 +39,12 @@ def test_the_metric_sizes_go_on_to_50():
 
 
 def test_the_big_spanners_are_as_long_as_a_maker_makes_them():
-    # Gedore 1 B, to DIN 3113: 41 is 520 long, 46 550, 50 580.
-    assert LARGE_LENGTHS == {41.0: 520.0, 46.0: 550.0, 50.0: 580.0}
-    for af, length in LARGE_LENGTHS.items():
-        assert spanner_for(af).length == length
-        assert length > 9 * af + 45  # longer than the formula: the safe side
-    assert spanner_for(36.0).length == 9 * 36 + 45  # below, the formula as before
+    # GearWrench's long pattern 41 and 46, Tekton's 50 (issue #49): the longest
+    # made. Gedore 1 B's 520, 550 and 580 were this table before; every size has
+    # its maker's length now (test_spanner_lengths.py).
+    lengths = {af: spanner_for(af).length for af in (41.0, 46.0, 50.0)}
+    assert lengths == {41.0: 612.0, 46.0: 649.0, 50.0: 650.2}
+    assert all(spanner_for(af).stubby_length is None for af in lengths)  # none made
 
 
 def big_gland_on_wall(af=41.0):

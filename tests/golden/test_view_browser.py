@@ -364,8 +364,11 @@ def test_failures_show_red_and_their_blockers_magenta_on_screen(bench_page, tmp_
     # A screw under a wall: from above, the highlighted wall fills the frame.
     assert shots["#key_wall_near_screw"][0] > 2000, shots
     # A gland beside a rib: the gland red, the rib in its way magenta, both in view.
-    # The open end's fan of 24 positions, drawn over it, hides most of the low rib:
-    # CI measured 129 magenta and 617 red pixels (2026-10-06); the floors keep
+    # The open end's fan of 24 positions, drawn over it, hides most of the low rib,
+    # and the view frames the whole fan: since the spanners took makers' lengths
+    # (issue #49; the 24 mm is 336.6 where the formula said 261) it frames a longer
+    # one, and draws the rib and gland smaller. CI measured 39 magenta and 386 to 388
+    # red pixels on Linux and macOS (2026-10-07; 129 and 617 before); the floors keep
     # about 2.5 times margin under those.
-    assert shots["#gland_rib_gland"][0] > 50, shots
-    assert shots["#gland_rib_gland"][1] > 250, shots
+    assert shots["#gland_rib_gland"][0] > 15, shots
+    assert shots["#gland_rib_gland"][1] > 150, shots

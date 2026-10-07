@@ -1,7 +1,7 @@
 """Lays the cells on the grid, writes the STEPs and sidecars, defines the truth.
 
 Cells sit 1000 mm apart so no tool reaches from one into the next (the longest
-reach, a socket on a 250 extension plus a 180 ratchet handle, is under 500).
+reach, a 50 mm spanner's handle, 0.85 of its 650, is 553).
 Nothing binary is committed: builders can't drift from the numbers a test
 claims, a stored STEP can.
 
@@ -49,12 +49,13 @@ SLOTS = len(CELLS) + 1
 #: #40's pivot, 61 with the channel (a socket's wall round the hex), 68 with #50's
 #: undersize, guessed, band_agrees and named_size, 70 with minor_bore, 73 with
 #: #48's plain_pin, stepped_pin, minor_pin and odd_head (two), 77 with #47's
-#: snug_dome, wide_dome, dome_rib, sunk_cap and flange_nut.
+#: snug_dome, wide_dome, dome_rib, sunk_cap and flange_nut, 82 with #49's reach_13
+#: and big_tube.
 FINAL_COUNTS = {
-    "fasteners": 80,
-    "turns": 63,
+    "fasteners": 82,
+    "turns": 64,
     "held": 3,
-    "blocked": 13,
+    "blocked": 14,
     "stuck": 1,
     "not_covered": 0,
 }
