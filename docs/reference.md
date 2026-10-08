@@ -89,6 +89,12 @@ A name is about its own phrase: a phrase in brackets or after `for` says what th
 part goes with (`Nylon Washer (Thumbscrew)`, `Washer for M3 screw`), so a part whose
 own noun isn't a fastener's is none, and isn't listed (issue #96).
 
+A leadscrew, a ball screw, and the nut that runs on one (`Leadscrew Nut`, `Lead Screw
+Nut`, `Ball Screw`, `T8 nut`, `Tr8x8 nut`, `trapezoidal nut`, `ACME nut`,
+`anti-backlash nut`) move a part, and no tool turns them: passed over whatever the
+solid shows, listed, and failing nothing (issue #117). `T8` says so of a nut only: a
+`T8 screw` is a Torx screw as readily.
+
 A set screw (`ISO 4026` to `4029`, `DIN 913` to `916`, `set screw`, `grub screw`) is
 `head: set`: no head, a hex socket in one end of its thread, turned from that end
 with the key its own standard gives (M3 1.5, M6 3, where a socket head cap screw takes
@@ -209,6 +215,20 @@ is noted, and the solid's length, which the way out meets, is the one taken: und
 the head for a socket, button or hex head, overall for a countersunk head or a set
 screw. A Phillips or Torx head's length isn't compared, as its standard measures a
 pan head under the head and a countersunk one overall, and the drive looks the same.
+
+A name's thread size is noted the same way where the solid is drawn as another size
+(issue #117): a screw named `M5x16 SHCS` and drawn as an M3, its 2.5 socket and its
+3 mm shank both an M3's, is checked as the M3 it is drawn as, noted (`NOTE M5x16
+SHCS: drawn as an M3 (3.00 shank, 2.50 socket), where its name says M5: taken as
+drawn`), and detected at low confidence, the comment `detect` writes saying what the
+name said. Likewise a nut
+by its hex and its bore, and a screw with no hex or socket (a Phillips) by its shank
+alone, which used to take its name's size and a driver that doesn't fit its cross. A
+thread is drawn anywhere from its minor diameter (ISO 724's, on its coarse pitch) to
+its nominal, and a nut's bore up to 1.15 of it, with clearance: drawn so, it could be
+the name's size, and is quiet (a 2.9 shank on an M3, an M5 drawn at its minor). So is
+a hex in a nut standard's band alone, a drive that fits two sizes, and an insert's
+bore, which the name outranks as before.
 
 ## Verdicts, and what decided them
 

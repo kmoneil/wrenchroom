@@ -179,6 +179,10 @@ class ShapeReading:
             should settle which is right (issue #81).
         bore_mm: A nut's or an insert's bore, the thinnest round facing its
             axis, as drawn, mm; None when it has none (issue #84).
+        shank_mm: A screw's shank, the thinnest round on its axis facing out
+            and narrower than its head, as drawn, mm; None when it has none (a
+            tapping screw's cone, a thread modelled). A name's size it is no
+            thread of is one the solid disagrees with (issue #117).
         length_mm: A screw's length as its standard gives one, as drawn, mm:
             under the head for a socket, button or hex head, overall for a
             countersunk head or a set screw; None for any other, a pan or a
@@ -198,6 +202,7 @@ class ShapeReading:
     outline_head: Head | None = None
     bore_mm: float | None = None
     length_mm: float | None = None
+    shank_mm: float | None = None
 
 
 @dataclass(frozen=True)
@@ -285,12 +290,22 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
         head_drawn=outline.drawn,
         outline_head=outline.head if disputed else None,
         length_mm=_length(profile, head),
+        shank_mm=_shank(convex, profile, head),
     )
 
 
 #: Heads whose standard's length is the screw's under them, and overall (issue #94).
 _UNDER_HEAD = (Head.SOCKET, Head.BUTTON, Head.HEX)
 _OVERALL = (Head.FLAT, Head.SET)
+
+
+def _shank(convex: list[float], profile: _Profile, head: Head | None) -> float | None:
+    """A screw's shank as drawn, mm: the thinnest round under its head (issue #117).
+
+    A set screw has no head: its thread is all of it.
+    """
+    under = [r for r in convex if head is Head.SET or r < _WIDE * profile.widest]
+    return 2 * min(under) if under else None
 
 
 def _length(profile: _Profile, head: Head | None) -> float | None:

@@ -1,12 +1,12 @@
 ### wrenchroom: `bench.step`
 
-**128 fasteners: 98 turn, 8 held, 21 blocked, 1 stuck, 0 not covered**
+**131 fasteners: 101 turn, 8 held, 21 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
 The model: 1 part drawn as a surface, not a solid, is left out, as nothing can meet it: `shelled_decal`.
 
-Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts named like a fastener, with no drive or bore in the solid (passed over); 3 parts shaped like fasteners, not named as any (passed over); 1 part drawn as a surface, not a solid (left out); parts the model doesn't have.
+Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts named like a fastener, with no drive or bore in the solid (passed over); 1 part named for a leadscrew or a ball screw, which no tool turns (passed over); 3 parts shaped like fasteners, not named as any (passed over); 1 part drawn as a surface, not a solid (left out); parts the model doesn't have.
 
 | Fasteners | Tool | Count | Outcome |
 | --- | --- | ---: | --- |
@@ -31,10 +31,11 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | M24 nut | `spanner-36` | 1 | 1 of 1 fail |
 | M3 button screw | `hex-key-2` | 1 | all pass (driver straight in) |
 | M3 nut | - | 3 | all pass (held by its trap in trap\_stopped\_block) |
-| M3 nut | `spanner-5.5` | 1 | 1 of 1 fail |
+| M3 nut | `spanner-5.5` | 2 | 1 of 2 fail |
+| M3 phillips screw | `driver-ph1` | 1 | all pass (driver straight in) |
 | M3 screw | `hand` | 2 | all pass (fingers round its head) |
 | M3 set screw | `hex-key-1.5` | 1 | all pass (short leg in) |
-| M3 socket screw | `hex-key-2.5` | 5 | 1 of 5 fail |
+| M3 socket screw | `hex-key-2.5` | 6 | 1 of 6 fail |
 | M4 button screw | `hex-key-2.5` | 6 | 2 of 6 fail |
 | M4 flat screw | `hex-key-2.5` | 2 | all pass (driver straight in) |
 | M4 insert | - | 2 | all pass (holds itself) |
@@ -113,4 +114,4 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 - `flange_nut_stud`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
 - `badge_insert`: noun 'insert'; named only as an insert, with no thread size or word such as threaded, and its solid shows no bore: an inlay, not a fixed thread
 - `std_M8x60`: thread and length M8x60; its solid shows no hex, hex socket or cross a tool fits
-- and 3 more (the JSON lists every one)
+- and 4 more (the JSON lists every one)

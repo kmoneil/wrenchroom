@@ -94,13 +94,16 @@ def test_everything_else_is_the_same_report(hand_report, bench_json):
 
 
 def test_the_note_stops_listing_hand_room(hand_report, bench_report):
-    named = sum(part.named for part in hand_report.passed_over)
-    alike = len(hand_report.passed_over) - named
+    motion = sum(part.motion for part in hand_report.passed_over)
+    named = sum(part.named for part in hand_report.passed_over) - motion
+    alike = len(hand_report.passed_over) - named - motion
     assert alike == 3  # a vacuity guard: std's part7, part8 and part9 (issue #95)
+    assert motion == 1  # misnamed's leadscrew nut (issue #117)
     assert hand_report.surfaces == ("shelled_decal",)  # issue #104
     assert hand_report.terminal_lines()[-1] == (
         f"NOTE not checked: {named} parts named like a fastener, "
-        f"with no drive or bore in the solid (passed over); {alike} parts shaped like "
+        "with no drive or bore in the solid (passed over); 1 part named for a leadscrew "
+        f"or a ball screw, which no tool turns (passed over); {alike} parts shaped like "
         "fasteners, not named as any (passed over); 1 part drawn as a surface, not a "
         "solid (left out); parts the model doesn't have"
     )

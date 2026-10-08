@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 128,
-  "turns": 98,
+  "fasteners": 131,
+  "turns": 101,
   "held": 8,
   "blocked": 21,
   "stuck": 1,
@@ -96,6 +96,12 @@
    "kind": "nut",
    "reason": "not named as a fastener, but its solid looks like one: M8 nut, 12.8 across flats",
    "named": false
+  },
+  {
+   "name": "misnamed_leadscrew_nut",
+   "kind": "nut",
+   "reason": "noun 'nut'; named for a leadscrew or a ball screw, or the nut that runs on one: a motion part, which no tool turns",
+   "named": true
   }
  ],
  "fasteners": [
@@ -1497,6 +1503,98 @@
    ],
    "source": "sidecar",
    "tool": "hex-key-4",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "misnamed_M5_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4020.0,
+    14000.0,
+    2.4
+   ],
+   "source": "sidecar",
+   "tool": "spanner-5.5",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "misnamed_leadscrew_nut"
+   ],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "misnamed_M5x12_phillips_screw",
+   "kind": "screw",
+   "head": "phillips",
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3980.0,
+    14000.0,
+    2.4
+   ],
+   "source": "sidecar",
+   "tool": "driver-ph1",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "misnamed_M5x16_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3940.0,
+    14000.0,
+    3.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-2.5",
    "verdict": "turns",
    "how": "driver straight in",
    "swing_deg": 360.0,
@@ -3696,7 +3794,7 @@
     1.0
    ],
    "seat": [
-    3900.0,
+    4900.0,
     14000.0,
     6.0
    ],
@@ -3728,7 +3826,7 @@
     1.0
    ],
    "seat": [
-    4100.0,
+    5100.0,
     14000.0,
     6.0
    ],

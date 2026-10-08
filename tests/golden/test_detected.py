@@ -150,7 +150,7 @@ def test_every_candidate_name_is_taken_on_its_solid_or_passed_over(detected):
     taken_on_solid = {"vented_gland_vent", "badge_boss_insert"}
     taken_on_solid |= {f"std_{role}" for role in ("M3x16", "M5-0.8x12", "M4x0.7x12", "#10-32x1")}
     assert "std_M8x60" in said - taken_on_solid
-    named = {part.name for part in detected.passed_over if part.named}
+    named = {part.name for part in detected.passed_over if part.named and not part.motion}
     assert named == said - taken_on_solid
     taken = {r.fastener.name for r in detected.results}
     assert candidates & taken == taken_on_solid
@@ -181,6 +181,32 @@ def test_a_name_s_length_the_solid_disagrees_with_is_noted(detected):
     assert result.notes == (
         "drawn 8.00 long under its head, where its name says 12: taken as drawn",
     )
+
+
+def test_a_name_s_size_the_solid_disagrees_with_is_noted(detected):
+    """Issue #117: misnamed's three M3s, each named M5, are taken as drawn and say
+    so, at low confidence; the Phillips takes the PH1 that fits its cross, not an
+    M5's PH2. The leadscrew's nut is passed over, in both runs."""
+    by_name = {r.fastener.name: r for r in detected.results}
+    said = {
+        "misnamed_M5x16_screw": "3.00 shank, 2.50 socket",
+        "misnamed_M5x12_phillips_screw": "3.00 shank",
+        "misnamed_M5_nut": "3.00 bore, 5.50 hex",
+    }
+    for name, shown in said.items():
+        result = by_name[name]
+        assert (result.fastener.size.designation, result.fastener.confidence) == ("M3", "low")
+        assert result.notes == (
+            f"drawn as an M3 ({shown}), where its name says M5: taken as drawn",
+        )
+    assert by_name["misnamed_M5x12_phillips_screw"].tool == "driver-ph1"
+
+
+def test_a_leadscrew_s_nut_is_passed_over_in_both_runs(detected, bench_report):
+    for report in (detected, bench_report):
+        motion = [(p.name, p.kind.value) for p in report.passed_over if p.motion]
+        assert motion == [("misnamed_leadscrew_nut", "nut")]
+        assert "misnamed_leadscrew_nut" not in {r.fastener.name for r in report.results}
 
 
 def test_the_detected_report_matches_its_snapshot(detected):
@@ -223,6 +249,9 @@ def test_a_nut_drawn_small_says_so_and_where_its_size_came_from(detected):
         "ball_tilt_screw",
         "ball_shoulder_screw",
         "renamed_M3x12_screw",  # drawn 8 long (issue #94)
+        "misnamed_M5x16_screw",  # drawn as M3s (issue #117)
+        "misnamed_M5x12_phillips_screw",
+        "misnamed_M5_nut",
     }
 
 
