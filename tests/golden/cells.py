@@ -2079,3 +2079,49 @@ def trap():
     half_width = 2.82 / 2 + 60 * math.tan(math.radians(18))  # the 2.5 key's shaft, 2.82 round
     stop = [("guide", Pos(200, 0, 0) * slot_block(15, 30, 8, half_width))]
     return [*parts, *stop, ("ceiling", Pos(200, 0, 0) * slab(33, w=130, d=130))]
+
+
+# ---------------------------------------------------------------- issue #94: drawn twice, drawn in
+
+
+def _m3x8():
+    """ISO 4762 M3x8: a 5.5 by 3 head, a 2.5 socket 1.3 deep, the shank under z = 0."""
+    return socket_screw(d=3, length=8, dk=5.5, k=3, s=2.5, t=1.3)
+
+
+@cell("twice", ignore=["*twice_*"], timed=False)
+def twice():
+    """Drawing faults, which a sidecar rule describes as readily as a name (issue #94).
+    Not-covered, so only the edges sidecar keeps them, as drawn_in's.
+
+    In side, a box 10 on a side drawn 1 into the side of an M3x8's head (clear of its
+    socket): the key goes in straight and turns it, and the box is in its way out. Its
+    overlap with the head, by hand: the head's segment past x 1.75, 2.75^2 acos(1.75
+    / 2.75) - 1.75 sqrt(2.75^2 - 1.75^2) = 2.957 mm^2, 3 high: 8.9 mm^3. It used to be
+    stuck, the box in its way out, sending a reader looking for an order to take it
+    apart in. In dup, the same M3x8 drawn twice in one hole, once named M3x12: the
+    whole screw in common, the head's 71.27 less its socket's 7.04 and the shank's
+    56.55, 120.8 mm^3. Each used to pass, and count. In clean, neither: it turns.
+    """
+    parts = []
+    for where, x in (("side", -100), ("dup", 0), ("clean", 100)):
+        parts.append(
+            (f"{where}_plate", Pos(x, 0, -5) * Box(30, 30, 10) - Pos(x, 0, 0) * Cylinder(1.5, 30))
+        )
+        parts.append((f"{where}_screw", Pos(x, 0, 0) * _m3x8()))
+    parts.append(("side_box", Pos(-100 + 2.75 - 1 + 5, 0, 5) * Box(10, 10, 10)))
+    parts.append(("dup_M3x12_screw", _m3x8()))
+    return parts
+
+
+@cell(
+    "renamed",
+    [{"parts": "M3x12_screw", **_M3_SOCKET}],
+    {"M3x12_screw": {"verdict": "turns", "tool": "hex-key-2.5", "how": "driver straight in"}},
+)
+def renamed():
+    """An M3 socket head screw named M3x12 and drawn 8 long under its head (issue #94),
+    as a screw copied and renamed in a CAD tree is, open above. Described, it turns;
+    detected, its name's 12 is noted against the solid's 8, which is the length taken.
+    """
+    return [("plate", plate(holes=[(0, 0, 1.6)])), ("M3x12_screw", _m3x8())]

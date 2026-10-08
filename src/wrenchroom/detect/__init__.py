@@ -197,12 +197,14 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
     elif size is not None and (reading.size_from_drive or hint.size is None):
         used.append(f"{size.designation} measured")
     basis = hint.basis + (f"; solid: {', '.join(used)}" if used else "")
+    length, length_note = _length(hint, reading)
+    notes = (*notes, length_note) if length_note else notes
     return Fastener(
         name=part.name,
         kind=hint.kind,
         head=head,
         size=size,
-        length_mm=hint.length_mm,
+        length_mm=length,
         socket_allowed=hint.socket_allowed,
         tool=HAND if hint.by_hand else None,
         drive_af=reading.drive_af,
@@ -213,6 +215,28 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
         size_guessed=guessed,
         notes=notes,
     )
+
+
+#: A name's length agrees with its solid's within this, mm, or this fraction of it.
+LENGTH_SLACK_MM = 0.5
+LENGTH_SLACK = 0.05
+
+
+def _length(hint: NameHint, reading: ShapeReading) -> tuple[float | None, str | None]:
+    """The length to report, and a note where the name's and the solid's disagree (#94).
+
+    The solid's is what the check's way out meets, so where they disagree it is
+    the one taken, and the note says what the name said: a screw named M3x12 and
+    drawn 8 long, as one drawn twice under two names was.
+    """
+    named, drawn = hint.length_mm, reading.length_mm
+    if named is None or drawn is None:
+        return named, None
+    if abs(named - drawn) <= max(LENGTH_SLACK_MM, LENGTH_SLACK * named):
+        return named, None
+    where = "overall" if reading.head in (Head.FLAT, Head.SET) else "under its head"
+    note = f"drawn {drawn:.2f} long {where}, where its name says {named:g}: taken as drawn"
+    return round(drawn, 2), note
 
 
 def _head_guessed(hint: NameHint, reading: ShapeReading) -> bool:

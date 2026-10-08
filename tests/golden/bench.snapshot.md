@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**124 fasteners: 96 turn, 8 held, 19 blocked, 1 stuck, 0 not covered**
+**125 fasteners: 97 turn, 8 held, 19 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -31,7 +31,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | M3 nut | - | 3 | all pass (held by its trap in trap\_stopped\_block) |
 | M3 screw | `hand` | 2 | all pass (fingers round its head) |
 | M3 set screw | `hex-key-1.5` | 1 | all pass (short leg in) |
-| M3 socket screw | `hex-key-2.5` | 4 | 1 of 4 fail |
+| M3 socket screw | `hex-key-2.5` | 5 | 1 of 5 fail |
 | M4 button screw | `hex-key-2.5` | 6 | 2 of 6 fail |
 | M4 flat screw | `hex-key-2.5` | 2 | all pass (driver straight in) |
 | M4 insert | - | 2 | all pass (holds itself) |

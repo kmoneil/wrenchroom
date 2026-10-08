@@ -173,6 +173,16 @@ def test_an_unnamed_part_that_looks_like_a_fastener_is_passed_over(detected, ben
         ]
 
 
+def test_a_name_s_length_the_solid_disagrees_with_is_noted(detected):
+    """Issue #94: renamed's screw, named M3x12 and drawn 8 long: noted, and the
+    solid's length taken, in the detected run; its rule describes it outright."""
+    (result,) = [r for r in detected.results if r.fastener.name == "renamed_M3x12_screw"]
+    assert result.fastener.length_mm == 8.0
+    assert result.notes == (
+        "drawn 8.00 long under its head, where its name says 12: taken as drawn",
+    )
+
+
 def test_the_detected_report_matches_its_snapshot(detected):
     got = canonical(detected.to_json_dict())
     want = json.loads(SNAPSHOT.read_text())
@@ -212,6 +222,7 @@ def test_a_nut_drawn_small_says_so_and_where_its_size_came_from(detected):
         "sunk_cap_cap_nut",
         "ball_tilt_screw",
         "ball_shoulder_screw",
+        "renamed_M3x12_screw",  # drawn 8 long (issue #94)
     }
 
 

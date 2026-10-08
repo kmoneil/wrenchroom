@@ -415,3 +415,30 @@ def test_a_nut_in_its_trap_is_held_by_it(bench_report, bench_json):
     )
     (fail,) = [line for line in bench_report.terminal_lines() if "trap_stopped_screw" in line]
     assert fail == f"FAIL trap_stopped_screw  hex-key-2.5  blocked  {reason}"
+
+
+def test_a_screw_drawn_twice_or_into_its_way_out_is_a_fault(edges_report):
+    """Issue #94: twice's screws, which only the edges sidecar keeps, as drawn_in's.
+    side's box, drawn 8.9 mm^3 into its head's side and in its way out, is a clash,
+    not something to take apart first; dup's screw, drawn twice (the whole of it,
+    120.8 mm^3, in common), is said once, on the first by name, and the other isn't
+    checked; clean's turns. The volumes by hand are in the cell's docstring."""
+    by_name = {r.fastener.name: r for r in edges_report.results}
+    found = {
+        name: (r.verdict.value, r.tool, r.reason)
+        for name, r in by_name.items()
+        if name.startswith("twice_")
+    }
+    assert found == {
+        "twice_side_screw": (
+            "not-covered",
+            None,
+            "drawn into twice_side_box (8.9 mm^3): fix the model",
+        ),
+        "twice_dup_M3x12_screw": (
+            "not-covered",
+            None,
+            "drawn twice: twice_dup_screw is drawn over it (120.8 mm^3 in common): fix the model",
+        ),
+        "twice_clean_screw": ("turns", "hex-key-2.5", None),
+    }
