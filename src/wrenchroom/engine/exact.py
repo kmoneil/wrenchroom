@@ -15,6 +15,7 @@ from functools import cached_property, lru_cache
 from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
+from build123d import Location, Shape
 
 from wrenchroom.engine.scene import (
     HIT_MIN_VOLUME,
@@ -28,8 +29,6 @@ from wrenchroom.engine.scene import (
 from wrenchroom.solids import Bounds, ToolSolid, frame_location
 
 if TYPE_CHECKING:
-    from build123d import Shape
-
     from wrenchroom.assembly import Part
     from wrenchroom.solids import Primitive
 
@@ -124,8 +123,27 @@ def _unit_shape(primitive: Primitive) -> Shape:
 
 
 def exact_overlap(a: Shape, b: Shape) -> float:
-    """The volume two OCP shapes share, mm^3; zero for a touch."""
-    pieces = a.intersect(b)
+    """The volume two OCP shapes share, mm^3; zero for a touch.
+
+    Measured with both moved by one step, b's box centre to the origin (issue
+    #107). OCP's tolerances are absolute, 1e-7 mm, but a boolean multiplies
+    coordinates, and 35 m out such a product's last digit as a double is about
+    2e-7: on Linux a key's arm 0.004 mm into a ring, 0.026 mm^3, measured 365
+    mm^3 there. Near the origin an overlap measures as it does wherever its
+    model sits.
+    """
+    low, high = shape_bounds(b)
+    step = Location(tuple(-(lo + hi) / 2 for lo, hi in zip(low, high, strict=True)))
+    pieces = _moved(a, step).intersect(_moved(b, step))
     if pieces is None:
         return 0.0
     return sum(piece.volume for piece in pieces)
+
+
+def _moved(shape: Shape, step: Location) -> Shape:
+    """The shape moved by a location, its geometry shared.
+
+    build123d's moved copies the whole B-rep first and throws the copy away:
+    0.15 ms on a bench part of 28 faces, where this takes 0.004.
+    """
+    return Shape.cast(shape.wrapped.Moved(step.wrapped))

@@ -7,7 +7,7 @@ the two engines are allowed to differ, said out loud.
 """
 
 import pytest
-from build123d import Box, Cylinder, Pos, Rectangle, Rot
+from build123d import Box, Cylinder, Pos, Rectangle, Rot, Shape
 
 import wrenchroom.engine.mesh as mesh_module
 from wrenchroom.assembly import Assembly, Part
@@ -21,6 +21,7 @@ from wrenchroom.engine import (
     MeshEngine,
     make_engine,
 )
+from wrenchroom.engine.exact import exact_overlap
 from wrenchroom.engine.mesh import MESH_TOLERANCE, solid_mesh
 from wrenchroom.engine.scene import boxes_overlap, shape_bounds
 from wrenchroom.solids import RadialBox, ToolSolid
@@ -287,3 +288,30 @@ def test_a_part_across_two_pieces_counts_their_overlaps_together(engine):
         (0.0, 0.0, 0.0), (0.0, 0.0, 1.0)
     )
     assert scene.hits(alone) == ()  # one piece's share alone is under the floor
+
+
+def test_an_overlap_is_measured_next_to_the_origin(monkeypatch):
+    # 35 m out, a double's last digit of a coordinate squared is as large as the
+    # 1e-7 mm OCP decides a coincidence by, and on Linux a graze measured 365
+    # mm^3 there (issue #107). Both shapes are moved by one step, the second's
+    # box centre to the origin, as locations sharing their geometry.
+    ring = Cylinder(70, 4) - Cylinder(12, 4)
+    arm = Pos(40, 0, 2 - 0.004 + 1.25) * Box(40, 2.5, 2.5)  # 0.004 into the ring's top
+    near = exact_overlap(ring, arm)
+    assert near == pytest.approx(40 * 2.5 * 0.004)
+    far = Pos(3000, 35000, 0)
+    ring, arm = far * ring, far * arm
+    seen = []
+    intersect = Shape.intersect
+
+    def spy(self, *others, **kwargs):
+        seen.extend((self, *others))
+        return intersect(self, *others, **kwargs)
+
+    monkeypatch.setattr(Shape, "intersect", spy)
+    assert exact_overlap(ring, arm) == pytest.approx(near, rel=1e-9)
+    assert len(seen) == 2
+    for shape, was in zip(seen, (ring, arm), strict=True):
+        assert shape.wrapped.IsPartner(was.wrapped)  # the same geometry, not a copy
+        low, high = shape_bounds(shape)
+        assert max(abs(c) for c in (*low, *high)) < 200
