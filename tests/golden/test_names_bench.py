@@ -37,7 +37,8 @@ def test_the_bench_names_read_as_its_sidecar_says():
         if found is not None and found.needs_drive:
             candidates.append(name)
         if rule is None:  # a candidate waits on its solid: a drive, or a bare insert's bore
-            if found is not None and not (found.needs_drive or found.needs_bore):
+            # A leadscrew's nut is passed over by its name alone (issue #117).
+            if found is not None and not (found.needs_drive or found.needs_bore or found.motion):
                 wrong.append((name, "read as a fastener", found))
             continue
         want = Kind(rule.get("kind", "screw"))

@@ -92,6 +92,50 @@ IMPERIAL_SIZES: dict[str, float] = {
 
 _THREAD_SUFFIX = re.compile(r"[- ]\d+$")  # "1/4-20", "#10-32": the pitch half
 
+#: ASME B1.1's UNC threads per inch (#0 has none: its UNF 80).
+_UNC_TPI = {
+    "#0": 80, "#1": 64, "#2": 56, "#3": 48, "#4": 40, "#6": 32, "#8": 32, "#10": 24,
+    "#12": 24, "1/4": 20, "5/16": 18, "3/8": 16, "7/16": 14, "1/2": 13, "9/16": 12,
+    "5/8": 11, "3/4": 10,
+}  # fmt: skip
+
+#: Each size's coarse pitch, mm: ISO 261's coarse series, and ASME B1.1's UNC. Coarse
+#: is the largest pitch a size comes in, so it gives the smallest minor diameter, the
+#: least a thread may be drawn at.
+COARSE_PITCH_MM: dict[str, float] = {
+    "M1.6": 0.35,
+    "M2": 0.4,
+    "M2.5": 0.45,
+    "M3": 0.5,
+    "M3.5": 0.6,
+    "M4": 0.7,
+    "M5": 0.8,
+    "M6": 1.0,
+    "M8": 1.25,
+    "M10": 1.5,
+    "M12": 1.75,
+    "M14": 2.0,
+    "M16": 2.0,
+    "M18": 2.5,
+    "M20": 2.5,
+    "M22": 2.5,
+    "M24": 3.0,
+    **{size: round(_MM_PER_INCH / tpi, 4) for size, tpi in _UNC_TPI.items()},
+}
+
+#: An external thread's minor diameter is its major less this many pitches: ISO 724's
+#: d3, the root of the bolt's thread (d1 less a sixth of the triangle's height H).
+_MINOR_PITCHES = 1.226869
+
+
+def thread_minor_mm(size: Size) -> float:
+    """The least diameter a thread of this size is drawn at: its bolt's minor, mm.
+
+    A thread is drawn anywhere from there (a cosmetic thread at its minor) to its
+    nominal (issue #117).
+    """
+    return size.diameter_mm - _MINOR_PITCHES * COARSE_PITCH_MM[size.designation]
+
 
 @dataclass(frozen=True)
 class Size:
@@ -164,14 +208,16 @@ class Fastener:
             the solid), ``medium`` (something rests on a head's outline or a
             measured shank, the name and the solid's drive disagree on the
             head, or the name has words after its fastener noun), ``low``
-            (something is missing, or a head is guessed from its proportions
-            alone, fitting no standard's outline). Empty from a sidecar.
+            (something is missing, a head is guessed from its proportions
+            alone, fitting no standard's outline, or the solid is drawn as
+            another size than its name's). Empty from a sidecar.
         size_guessed: True when detection had the size from a hex's tolerance
             band alone, which can't tell an M8 nut drawn small from a 5/16 one:
             the bolt a nut runs on outranks it (issue #50).
         notes: What a person should know of how this description was reached,
             which a check's result repeats: a head guessed (issue #48), a size
-            taken from the bolt (issue #50).
+            taken from the bolt (issue #50), a size or length drawn other than
+            the name's (issues #94, #117).
     """
 
     name: str
@@ -206,13 +252,16 @@ class PassedOver:
     its solid could make it a fastener, and the solid shows no drive. Reported,
     never dropped: that is how a fastener goes unchecked without a word. Or it is
     named nothing a fastener is (``Part7``), and its solid looks like one
-    (``named`` False, issue #95): detection checks named parts only.
+    (``named`` False, issue #95): detection checks named parts only. Or it is
+    named for a leadscrew, a ball screw or the nut that runs on one, which no
+    tool turns (``motion``, issue #117).
     """
 
     name: str
     kind: Kind
     reason: str
     named: bool = True
+    motion: bool = False
 
 
 # ---------------------------------------------------------------------------

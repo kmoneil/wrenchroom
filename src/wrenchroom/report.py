@@ -586,13 +586,20 @@ def _marginal_text(result: FastenerResult) -> str:
 
 
 def _passed_over_count(passed: tuple[PassedOver, ...]) -> str:
-    named = sum(part.named for part in passed)
-    alike = len(passed) - named
+    motion = sum(part.motion for part in passed)
+    named = sum(part.named for part in passed) - motion
+    alike = len(passed) - named - motion
     said = []
     if named:
         noun = "part" if named == 1 else "parts"
         said.append(
             f"{named} {noun} named like a fastener, with no drive or bore in the solid "
+            "(passed over)"
+        )
+    if motion:  # issue #117
+        noun = "part" if motion == 1 else "parts"
+        said.append(
+            f"{motion} {noun} named for a leadscrew or a ball screw, which no tool turns "
             "(passed over)"
         )
     if alike:  # issue #95

@@ -27,6 +27,10 @@ A name is about its own phrase: a parenthesised phrase or a ``for ...`` after it
 says what the part goes with (``Nylon Washer (Thumbscrew)``, ``Washer for M3
 screw``), so a name whose own noun isn't a fastener's is no fastener (issue #96).
 
+A leadscrew, a ball screw and the nut that runs on one (``Leadscrew Nut``, ``T8
+nut``, ``ball screw``) move a part, and no tool turns them: such a name is
+``motion``, passed over whatever its solid shows (issue #117).
+
 Whatever the name doesn't say stays None for geometry to fill in (spec 5.2: names,
 then geometry, then the sidecar, each overriding the one before). A name that is
 clearly a fastener the kit can't check (a low-head socket screw, an M1) comes back
@@ -36,6 +40,7 @@ with ``not_covered`` and the reason, never as nothing. A set screw has its own k
 
 from __future__ import annotations
 
+import itertools
 import re
 from dataclasses import dataclass
 from fractions import Fraction
@@ -76,6 +81,9 @@ class NameHint:
             bore, and passed over if it doesn't (issue #84).
         by_hand: Turned by hand, a thumb screw, a wing nut: no tool fits it, and
             the room it needs is room for fingers round it (issue #96).
+        motion: A leadscrew, a ball screw or the nut that runs on one: a motion
+            part, which no tool turns, passed over whatever its solid shows
+            (issue #117).
     """
 
     kind: Kind
@@ -89,6 +97,7 @@ class NameHint:
     unless_hex: bool = False
     needs_bore: bool = False
     by_hand: bool = False
+    motion: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -217,6 +226,17 @@ _SET_SCREW_NOUNS = {"setscrew", "grubscrew"}
 #: Describing words that settle a fastener as a set screw, or one turned by hand.
 _HAND_WORDS = {"wing", "thumb", "knurled"}
 _SET_WORDS = {"set", "grub"}
+#: Words that make a screw or a nut a motion part: a leadscrew, a ball screw, a
+#: trapezoidal or Acme thread, an anti-backlash nut (issue #117). And the words that
+#: make the screw after them one: a lead screw, a ball screw.
+_MOTION_WORDS = {
+    "leadscrew", "leadscrews", "ballscrew", "ballscrews", "trapezoidal", "acme",
+    "backlash", "antibacklash",
+}  # fmt: skip
+_MOTION_SCREWS = {"lead", "ball"}
+#: A trapezoidal thread as a nut's maker writes it: T8, Tr8, Tr8x8, Tr10x2. A nut's
+#: only: a T8 screw is a Torx screw as readily.
+_TRAPEZOIDAL = re.compile(r"tr?\d+(?:x\d+)?")
 
 #: Every fastener noun to its kind.
 _NOUN_KIND: dict[str, Kind] = {
@@ -386,6 +406,7 @@ def read_name(name: str) -> NameHint | None:
         size, size_text, size_reason = None, None, None
     if size_text:
         basis.append(size_text)
+    motion = _motion(words, kind)
     return NameHint(
         kind=kind,
         head=head,
@@ -398,6 +419,7 @@ def read_name(name: str) -> NameHint | None:
         unless_hex=kind is Kind.INSERT and word not in _INSERT_NOUNS,
         needs_bore=bare and size is None and size_reason is None,
         by_hand=by_hand,
+        motion=motion,
     )
 
 
@@ -602,6 +624,16 @@ def _descriptors(words: list[str], at: int | None) -> set[str]:
             run.add(words[index])
             index += step
     return run
+
+
+def _motion(words: list[str], kind: Kind) -> bool:
+    """A leadscrew, a ball screw or the nut that runs on one (issue #117)."""
+    if set(words) & _MOTION_WORDS:
+        return True
+    pairs = itertools.pairwise(words)
+    if any(word in _MOTION_SCREWS and after in {"screw", "screws"} for word, after in pairs):
+        return True
+    return kind is Kind.NUT and any(_TRAPEZOIDAL.fullmatch(word) for word in words)
 
 
 def _is_insert(words: list[str], at: int, kind: Kind) -> bool:

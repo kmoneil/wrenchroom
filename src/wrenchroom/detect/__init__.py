@@ -20,7 +20,11 @@ How a detected fastener is put together, field by field:
   alone never makes one: without a square neck in the solid it is not covered.
 - **size**: a size the solid's drive settles outranks the name's; the name's
   outranks a measured shank or bore (which a thread drawn at its minor diameter
-  can fool). A gland takes no size at all: its hex is not its thread's nut.
+  can fool). Where the solid is drawn as another size, its drive and its shank
+  or bore both saying so, or its shank alone with no drive, and no thread of
+  the name's size could be drawn so, the solid's is taken, and noted, at low
+  confidence (issue #117). A gland takes no size at all: its hex is not its
+  thread's nut.
 - **across flats**: measured, when the solid shows a hex or a socket.
 - **length**: the name's, when it gives one.
 
@@ -34,7 +38,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
-from wrenchroom.detect.geometry import ShapeReading, looks_like, read_shape
+from wrenchroom.detect.geometry import SIZE_SNAP_MM, ShapeReading, looks_like, read_shape
 from wrenchroom.detect.names import NameHint, ends_in_part_noun, read_name
 from wrenchroom.fasteners import (
     Fastener,
@@ -44,6 +48,7 @@ from wrenchroom.fasteners import (
     in_hex_band,
     in_recess_band,
     loosely_fits,
+    thread_minor_mm,
 )
 from wrenchroom.tools.fingers import HAND
 from wrenchroom.tools.hex_keys import HEX_KEYS
@@ -81,6 +86,12 @@ NO_DRIVE = "its solid shows no hex, hex socket or cross a tool fits"
 NO_THREAD = (
     "named only as an insert, with no thread size or word such as threaded, and "
     "its solid shows no bore: an inlay, not a fixed thread"
+)
+
+#: Why a leadscrew's or a ball screw's nut, or the screw itself, is passed over (issue #117).
+MOTION = (
+    "named for a leadscrew or a ball screw, or the nut that runs on one: a motion "
+    "part, which no tool turns"
 )
 
 #: Why a part named nothing a fastener is, whose solid looks like one, is listed (issue #95).
@@ -124,7 +135,8 @@ def find(parts: Iterable[Part]) -> Found:
         if missing is None:
             fasteners.append(describe(part, hint, reading))
         elif not ends_in_part_noun(part.name):  # a nut_plate is a plate (issue #75)
-            passed.append(PassedOver(part.name, hint.kind, f"{hint.basis}; {missing}"))
+            reason = f"{hint.basis}; {missing}"
+            passed.append(PassedOver(part.name, hint.kind, reason, motion=hint.motion))
     return Found(tuple(fasteners), tuple(passed))
 
 
@@ -132,7 +144,10 @@ def _missing(hint: NameHint, reading: ShapeReading) -> str | None:
     """What a name that needs its solid to say more found missing there; None if nothing.
 
     A candidate name needs a drive (issue #30); a bare insert, a bore (issue #84).
+    A motion part is passed over whatever its solid shows (issue #117).
     """
+    if hint.motion:
+        return MOTION
     if hint.needs_drive and not shows_drive(reading):
         return NO_DRIVE
     if hint.needs_bore and reading.bore_mm is None:
@@ -174,7 +189,7 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
     gland = not hint.socket_allowed
     # Turned by hand, a thumb screw needs no head: fingers grip whatever it is (#96).
     head, head_note, reason = (None, None, None) if hint.by_hand else _head(hint, reading)
-    size = None if gland else _size(hint, reading)
+    size, size_note = (None, None) if gland else _size(hint, reading)
     if hint.kind is Kind.NUT and reading.drive_af is None and not hint.by_hand:
         reason = reason or NO_HEX  # a round nut: nothing a spanner can grip
     not_covered = hint.not_covered or reason
@@ -194,11 +209,13 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
         used.append(f"{size.designation} by its socket alone, drawn past its standard's most")
     elif guessed:
         used.append(f"{size.designation} by its hex's tolerance band alone")
+    elif size is not None and size_note and hint.size is not None:
+        used.append(f"{size.designation} measured (the name says {hint.size.designation})")
     elif size is not None and (reading.size_from_drive or hint.size is None):
         used.append(f"{size.designation} measured")
     basis = hint.basis + (f"; solid: {', '.join(used)}" if used else "")
     length, length_note = _length(hint, reading)
-    notes = (*notes, length_note) if length_note else notes
+    notes = (*notes, *(note for note in (size_note, length_note) if note))
     return Fastener(
         name=part.name,
         kind=hint.kind,
@@ -211,7 +228,7 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
         source="name+geometry" if used else "name",
         basis=basis,
         not_covered=not_covered,
-        confidence=_confidence(hint, reading, head, size, not_covered),
+        confidence=_confidence(hint, reading, head, size, not_covered or size_note),
         size_guessed=guessed,
         notes=notes,
     )
@@ -266,12 +283,16 @@ def _confidence(
     reading: ShapeReading,
     head: Head | None,
     size: Size | None,
-    not_covered: str | None,
+    doubted: str | None,
 ) -> str:
-    """high, medium or low: see Fastener.confidence."""
+    """high, medium or low: see Fastener.confidence.
+
+    ``doubted`` is a not-covered reason, or a note that the solid is drawn as
+    another size than its name's (issue #117): either makes it low.
+    """
     has_size = size is not None or reading.drive_af is not None
     headed = hint.kind is not Kind.SCREW or hint.by_hand or head is not None
-    if not_covered or not has_size or not headed:
+    if doubted or not has_size or not headed:
         return "low"
     if _head_guessed(hint, reading) or reading.outline_head is not None:
         return "low"
@@ -323,7 +344,60 @@ def _outline_said(reading: ShapeReading, head: Head | None = None) -> str | None
     return f"a {reading.outline_head.value} head's outline (the name's {kept.value} stands)"
 
 
-def _size(hint: NameHint, reading: ShapeReading) -> Size | None:
+def _size(hint: NameHint, reading: ShapeReading) -> tuple[Size | None, str | None]:
+    """The size, and a note where the solid is drawn as another than its name's (#117)."""
+    drawn = _drawn_as(hint, reading)
+    if drawn is not None:
+        return drawn
     if reading.size is not None and reading.size_from_drive:
-        return reading.size
-    return hint.size or reading.size
+        return reading.size, None
+    return hint.size or reading.size, None
+
+
+#: A nut's bore may be drawn this much over its thread, as a fraction of it: with
+#: clearance, as printed parts' nuts are (an M3's at 3.4).
+NUT_BORE_OVER = 1.15
+
+
+def _drawn_as(hint: NameHint, reading: ShapeReading) -> tuple[Size, str] | None:
+    """The size the solid is drawn as, where it isn't the name's, and the note (#117).
+
+    A screw named M5x16 and drawn as an M3: whichever is right, the screw bought
+    or the bill of materials is wrong, so it is said. The solid's size counts
+    where its drive settles it, and the shank (a nut's bore) is drawn as that
+    size too, or as no thread of the name's size could be; or where it has no
+    drive and its shank alone is so drawn. A thread is drawn anywhere from its
+    minor diameter to its nominal (a nut's bore with clearance over it), so a
+    2.9 shank on an M3, or an M5's drawn at its minor that sits on #8, is the
+    name's, and quiet. Taken as drawn, as a length is: the solid is what the
+    check's tools and way out meet.
+    """
+    named, solid = hint.size, reading.size
+    if named is None or solid is None or solid == named or hint.kind is Kind.INSERT:
+        return None
+    if reading.drive_af is not None and not reading.size_from_drive:
+        return None  # a drive that settled nothing, or a band's guess, which a name outranks
+    nut = hint.kind is Kind.NUT
+    thread = reading.bore_mm if nut else reading.shank_mm
+    if thread is not None:
+        most = named.diameter_mm * NUT_BORE_OVER if nut else named.diameter_mm
+        could_be = thread_minor_mm(named) - SIZE_SNAP_MM <= thread <= most + SIZE_SNAP_MM
+        drawn_so = abs(thread - solid.diameter_mm) <= SIZE_SNAP_MM
+        if could_be and not (reading.size_from_drive and drawn_so):
+            return None
+    elif not reading.size_from_drive:
+        return None
+    shown = [f"{thread:.2f} {'bore' if nut else 'shank'}"] if thread is not None else []
+    if reading.drive_af is not None:
+        hexed = nut or reading.head is Head.HEX
+        shown.append(f"{reading.drive_af:.2f} {'hex' if hexed else 'socket'}")
+    note = (
+        f"drawn as {_an(solid.designation)} ({', '.join(shown)}), where its name says "
+        f"{named.designation}: taken as drawn"
+    )
+    return solid, note
+
+
+def _an(designation: str) -> str:
+    """``an M3``, ``a #4``, ``a 1/4``: the article a size takes, read aloud."""
+    return f"{'an' if designation.startswith('M') else 'a'} {designation}"

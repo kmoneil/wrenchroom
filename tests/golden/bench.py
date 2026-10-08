@@ -61,10 +61,11 @@ SLOTS = len(CELLS) + 1
 #: named by thread and length alone, 118 with #96's grip, a set screw and three
 #: fasteners turned by hand, 124 with #93's trap, three nuts their blocks hold and
 #: their screws, 125 with #94's renamed (twice's three are the edges sidecar's), 126
-#: with #103's reach_55, 127 with #101's ph4, 128 with #104's shelled.
+#: with #103's reach_55, 127 with #101's ph4, 128 with #104's shelled, 131 with
+#: #117's misnamed, three M3s under M5 names (its leadscrew nut is passed over).
 FINAL_COUNTS = {
-    "fasteners": 128,
-    "turns": 98,
+    "fasteners": 131,
+    "turns": 101,
     "held": 8,
     "blocked": 21,
     "stuck": 1,

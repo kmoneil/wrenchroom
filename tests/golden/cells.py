@@ -2196,3 +2196,48 @@ def shelled():
         ("ceiling", Shell(slab(6 + 15).faces())),
         ("decal", Shell(decal.faces().sort_by(Axis.Z)[-1:])),
     ]
+
+
+# ---------------------------------------------------------------- issue #117: a name's size
+
+
+@cell(
+    "misnamed",
+    [
+        {"parts": "M5x16_screw", **_M3_SOCKET},
+        {"parts": "M5x12_phillips_screw", "kind": "screw", "head": "phillips", "size": "M3"},
+        {"parts": "M5_nut", **_M3_NUT},
+    ],
+    {
+        "M5x16_screw": {"verdict": "turns", "tool": "hex-key-2.5", "how": "driver straight in"},
+        "M5x12_phillips_screw": {
+            "verdict": "turns",
+            "tool": "driver-ph1",
+            "how": "driver straight in",
+        },
+        "M5_nut": {"verdict": "turns", "tool": "spanner-5.5", "how": "ring, full length"},
+    },
+)
+def misnamed():
+    """Three M3s under M5 names, open above, and a leadscrew's nut (issue #117).
+
+    An ISO 4762 M3x16, its 2.5 socket and 3 shank both an M3's; an M3 pan head
+    Phillips, 5.6 across, a 3 shank and no hex; an M3 nut, 5.5 across and bored 3,
+    on a stud. Described as M3s, the key, the PH1 driver and the 5.5 ring each go
+    straight on. Detected, each is taken as drawn and noted: no M5 is drawn so, its
+    minor being 4.02. The screw and nut were checked as M3s before, silently; the
+    Phillips was an M5 by its name, and took a PH2 that doesn't fit a PH1 cross.
+    The leadscrew nut, a T8's flanged and bored 8, is no fastener a tool turns: it
+    is passed over, in both runs, and fails nothing.
+    """
+    nut_x, lead_x = 20.0, 60.0
+    flange = Pos(lead_x, 0, 1.75) * Cylinder(11, 3.5)
+    body = Pos(lead_x, 0, 3.5 + 5.5) * Cylinder(5, 11)
+    return [
+        ("plate", plate(holes=[(-60, 0, 1.6), (-20, 0, 1.6), (nut_x, 0, 1.6), (lead_x, 0, 4)])),
+        ("M5x16_screw", Pos(-60, 0, 0) * socket_screw(d=3, length=16, dk=5.5, k=3, s=2.5, t=1.3)),
+        ("M5x12_phillips_screw", Pos(-20, 0, 0) * pan_phillips(d=3, length=12, dk=5.6, k=2.4)),
+        ("stud", Pos(nut_x, 0, 2) * Cylinder(1.5, 8)),
+        ("M5_nut", Pos(nut_x, 0, 0) * hex_nut(3, 5.5, 2.4)),
+        ("leadscrew_nut", flange + body - Pos(lead_x, 0, 0) * Cylinder(4, 40)),
+    ]
