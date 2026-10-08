@@ -303,29 +303,118 @@ def _chrome_run(chrome, profile, url, action, finished):
     return out.decode(errors="replace"), stderr, done
 
 
-def _dump(chrome, tmp_path, page, hash_):
-    profile = tmp_path / f"profile{abs(hash(hash_))}"
+def _dump(chrome, tmp_path, page, hash_, attempt=1):
+    """What the page says it drew at a hash: (record, None), or (None, what went wrong)."""
+    profile = tmp_path / f"profile{abs(hash(hash_))}-{attempt}"
+    started = time.monotonic()
     stdout, stderr, done = _chrome_run(
         chrome, profile, page.as_uri() + hash_, ["--dump-dom"], lambda out: b"</html>" in out
     )
     found = re.search(r'<output id="drawn"[^>]*>(.*?)</output>', stdout, flags=re.DOTALL)
-    if not done or found is None:
-        return None, stderr[-2000:]
-    return json.loads(html.unescape(found.group(1))), None
+    if done and found is not None:
+        return json.loads(html.unescape(found.group(1))), None
+    seconds = time.monotonic() - started
+    if done:
+        what = f"the page came without its #drawn record after {seconds:.0f} s"
+    elif seconds >= CHROME_SECONDS:
+        what = f"no whole page in {CHROME_SECONDS} s ({len(stdout)} characters of it)"
+    else:
+        what = f"Chrome stopped after {seconds:.0f} s, {len(stdout)} characters into the page"
+    return None, f"try {attempt}: {what}; its stderr ends:\n{stderr[-1500:]}"
+
+
+def _drawn(chrome, tmp_path, page, hashes):
+    """Each hash's (record, error), four Chromes at a time.
+
+    On a hosted macOS runner, one of 22 Chromes drawing in software four at a time
+    now and then delivers no page, its stderr full of GPU process errors (issue
+    #113). A run that delivers none is tried once more, alone, after the rest: a
+    page that doesn't draw fails both times, and says so twice.
+    """
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        runs = list(pool.map(lambda hash_: _dump(chrome, tmp_path, page, hash_), hashes))
+    if all(record is None for record, _ in runs):
+        _unavailable(f"Chrome would not open the page: {runs[0][1]}")
+    for index, (record, error) in enumerate(runs):
+        if record is None:
+            again, second = _dump(chrome, tmp_path, page, hashes[index], attempt=2)
+            runs[index] = (again, None if again is not None else f"{error}\n{second}")
+    return runs
 
 
 def test_every_failure_is_drawn_red_with_its_blockers_in_chrome(bench_page, tmp_path):
     chrome = _chrome()
     page, view = bench_page
     failing = _failing(view)
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        runs = list(pool.map(lambda f: _dump(chrome, tmp_path, page, _hash(f["name"])), failing))
-    if runs[0][0] is None:
-        _unavailable(f"Chrome would not open the page: {runs[0][1]}")
+    runs = _drawn(chrome, tmp_path, page, [_hash(f["name"]) for f in failing])
     for entry, (record, error) in zip(failing, runs, strict=True):
         assert record is not None, error
         assert record["webgl"] is True, record["error"]
         _assert_drawn_as_decided(record, view, view["fasteners"].index(entry))
+
+
+#: A page as Chrome dumps it once the viewer has drawn.
+DRAWN_PAGE = '<html><output id="drawn">{&quot;ready&quot;: true}</output></html>'
+
+
+def _stand_in_chrome(monkeypatch, pages):
+    """Chrome stood in for: each run at a hash gives that hash's next (page, done).
+
+    Returns the (hash, profile) of each run, in the order they were run.
+    """
+    runs = []
+
+    def run(chrome, profile, url, action, finished):
+        hash_ = "#" + url.partition("#")[2]
+        runs.append((hash_, profile))
+        page, done = pages[hash_].pop(0)
+        return page, "ERROR: Invalid mailbox.", done
+
+    monkeypatch.setattr(sys.modules[__name__], "_chrome_run", run)
+    return runs
+
+
+def test_a_run_that_delivers_no_page_is_tried_once_more_alone(monkeypatch, tmp_path):
+    monkeypatch.setattr(sys.modules[__name__], "IN_CI", True)  # nothing may skip
+    runs = _stand_in_chrome(
+        monkeypatch,
+        {
+            "#a": [("<html><body>", False), (DRAWN_PAGE, True)],
+            "#b": [(DRAWN_PAGE, True)],
+            "#c": [("<html></html>", True), ("<html>", False)],
+        },
+    )
+    drawn = _drawn("chrome", tmp_path, tmp_path / "bench.html", ["#a", "#b", "#c"])
+    assert drawn[:2] == [({"ready": True}, None), ({"ready": True}, None)]
+    record, error = drawn[2]
+    assert record is None
+    assert error.startswith("try 1: the page came without its #drawn record after 0 s")
+    assert "try 2: Chrome stopped after 0 s, 6 characters into the page" in error
+    assert error.count("Invalid mailbox") == 2  # each try's stderr, said
+    assert sorted(hash_ for hash_, _ in runs[:3]) == ["#a", "#b", "#c"]
+    assert [hash_ for hash_, _ in runs[3:]] == ["#a", "#c"]  # again, after the rest
+    # A killed Chrome can leave its profile locked: a second try gets its own.
+    assert len({profile for _, profile in runs}) == len(runs)
+
+
+def test_a_run_out_of_time_says_how_much_page_it_had(monkeypatch, tmp_path):
+    _stand_in_chrome(monkeypatch, {"#a": [("<html><body>", False)]})
+    monkeypatch.setattr(sys.modules[__name__], "CHROME_SECONDS", 0)
+    record, error = _dump("chrome", tmp_path, tmp_path / "bench.html", "#a")
+    assert record is None
+    assert error.startswith("try 1: no whole page in 0 s (12 characters of it)")
+
+
+def test_a_chrome_that_opens_no_page_at_all_is_unavailable(monkeypatch, tmp_path):
+    runs = _stand_in_chrome(monkeypatch, {"#a": [("", False)], "#b": [("", False)]})
+    monkeypatch.setattr(sys.modules[__name__], "IN_CI", False)
+    with pytest.raises(pytest.skip.Exception, match="Chrome would not open the page"):
+        _drawn("chrome", tmp_path, tmp_path / "bench.html", ["#a", "#b"])
+    assert sorted(hash_ for hash_, _ in runs) == ["#a", "#b"]  # no Chrome to try again
+    monkeypatch.setattr(sys.modules[__name__], "IN_CI", True)
+    _stand_in_chrome(monkeypatch, {"#a": [("", False)]})
+    with pytest.raises(pytest.fail.Exception, match="CI must run this test"):
+        _drawn("chrome", tmp_path, tmp_path / "bench.html", ["#a"])
 
 
 #: The panel's width, px (viewer.css): its legend and list have swatches of every
