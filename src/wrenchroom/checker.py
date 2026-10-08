@@ -199,10 +199,20 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         config.state(default_state)  # raises on a typo
     matches = config.apply(assembly)
     fasteners, passed_over = _fasteners(assembly, config, matches.fasteners)
+    # One fastener drawn twice, over itself, is a fault in the model, said once on
+    # the first by name; the other isn't checked again (issue #94).
+    space = _StateSpace(assembly, config, model_dir, make_engine(engine))
+    twice = _drawn_twice(fasteners, assembly, space.engine)
+    fasteners = [f for f in fasteners if f.name not in twice]
+    twin = {kept: other for other, (kept, _) in twice.items()}
     # ``only`` narrows what is reported, not what is resolved (issue #46): pairs
     # are found over the whole model, and a chosen fastener's partner is checked
     # with it, so a narrowed verdict is the full run's.
-    chosen = [f for f in fasteners if only is None or fnmatchcase(f.name, only)]
+    chosen = [
+        f
+        for f in fasteners
+        if only is None or any(fnmatchcase(n, only) for n in (f.name, twin.get(f.name, f.name)))
+    ]
     if only is not None:
         passed_over = tuple(p for p in passed_over if fnmatchcase(p.name, only))
     # A narrowing glob that picks nothing checks nothing: as with a sidecar rule
@@ -220,18 +230,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         for parts, glob in matches.unmatched_mates
     ]
 
-    space = _StateSpace(assembly, config, model_dir, make_engine(engine))
-    frames: dict[str, _Frame] = {}
-    failures: dict[str, str] = {}
-    for fastener in fasteners:
-        if fastener.not_covered is not None:
-            failures[fastener.name] = fastener.not_covered
-            continue
-        try:
-            pieces = _pieces(assembly, fastener.name)
-            frames[fastener.name] = _frame(assembly[fastener.name], fastener, pieces)
-        except NotCovered as exc:
-            failures[fastener.name] = str(exc)
+    frames, failures = _frames(fasteners, assembly, twice)
     pairs, pair_warnings = _find_pairs(fasteners, frames, config)
     fasteners = _sized_by_partners(fasteners, pairs)
     reported = {f.name for f in chosen}
@@ -275,6 +274,64 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
             if _ignored(config, part)
         ),
     )
+
+
+#: Two fasteners sharing more than this fraction of each one's volume are one drawn
+#: twice (issue #94): a screw drawn once for each of two optional parts, say.
+_TWICE = 0.5
+
+
+def _drawn_twice(
+    fasteners: list[Fastener], assembly: Assembly, engine: Engine
+) -> dict[str, tuple[str, float]]:
+    """Fasteners drawn over another: each to (the one it's over, the volume in common).
+
+    Their boxes go first, all at once, the engine's, which it keeps for the scenes:
+    only two whose boxes share half of each are measured, by a boolean. Of two, the
+    later by name is the one drawn over the other.
+    """
+    if len(fasteners) < 2:  # noqa: PLR2004  (a pair)
+        return {}
+    parts = [assembly[fastener.name] for fastener in fasteners]
+    shapes = [part.shape for part in parts]
+    corners = np.array([engine.part_box(part) for part in parts], dtype=float)
+    low = np.maximum(corners[:, None, 0], corners[None, :, 0])
+    high = np.minimum(corners[:, None, 1], corners[None, :, 1])
+    shared = np.clip(high - low, 0.0, None).prod(axis=2)
+    own = (corners[:, 1] - corners[:, 0]).prod(axis=1)
+    near = np.triu(shared > _TWICE * np.maximum(own[:, None], own[None, :]), k=1)
+    found: dict[str, tuple[str, float]] = {}
+    for first, second in np.argwhere(near):
+        kept, other = fasteners[first].name, fasteners[second].name
+        if kept in found or other in found:
+            continue
+        common = exact_overlap(shapes[first], shapes[second])
+        if common > _TWICE * max(shapes[first].volume, shapes[second].volume):
+            found[other] = (kept, common)
+    return found
+
+
+def _frames(
+    fasteners: list[Fastener], assembly: Assembly, twice: dict[str, tuple[str, float]]
+) -> tuple[dict[str, _Frame], dict[str, str]]:
+    """Each fastener's frame, or why it can't be understood: the first phase."""
+    frames: dict[str, _Frame] = {}
+    failures = {
+        kept: f"drawn twice: {other} is drawn over it ({common:.1f} mm^3 in common): fix the model"
+        for other, (kept, common) in twice.items()
+    }
+    for fastener in fasteners:
+        if fastener.name in failures:
+            continue
+        if fastener.not_covered is not None:
+            failures[fastener.name] = fastener.not_covered
+            continue
+        try:
+            pieces = _pieces(assembly, fastener.name)
+            frames[fastener.name] = _frame(assembly[fastener.name], fastener, pieces)
+        except NotCovered as exc:
+            failures[fastener.name] = str(exc)
+    return frames, failures
 
 
 def _ignored(config: Config, part: Part) -> bool:
@@ -937,6 +994,11 @@ def _try_tools(
     if fastener.kind is Kind.SCREW and (candidate.turns or candidate.hold):
         candidate.way_out = _way_out(fastener, frame, geometry, mount, scene)
         candidate.extraction_blocked = candidate.way_out.hits if candidate.way_out else ()
+        if candidate.extraction_blocked:  # what's in its way out may be drawn into it (#94)
+            clash = _drawn_into(frame, scene, partner, candidate.extraction_blocked)
+            if clash is not None:
+                candidate.reason, candidate.tool = clash, None
+                return
         if candidate.turns and candidate.extraction_blocked:
             candidate.stuck = True
             candidate.stuck_on = candidate.extraction_blocked

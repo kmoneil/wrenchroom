@@ -60,10 +60,10 @@ SLOTS = len(CELLS) + 1
 #: #0, 110 with #82's w7380, w10642 and pan_t40, 114 with #95's std, four screws
 #: named by thread and length alone, 118 with #96's grip, a set screw and three
 #: fasteners turned by hand, 124 with #93's trap, three nuts their blocks hold and
-#: their screws.
+#: their screws, 125 with #94's renamed (twice's three are the edges sidecar's).
 FINAL_COUNTS = {
-    "fasteners": 124,
-    "turns": 96,
+    "fasteners": 125,
+    "turns": 97,
     "held": 8,
     "blocked": 19,
     "stuck": 1,
@@ -213,6 +213,8 @@ def edges_sidecar():
             {"parts": "drawn_in_*_nut", "kind": "nut", "size": "M8"},
             {"parts": "drawn_in_*_screw", "kind": "screw", "head": "socket", "size": "M6"},
             {"parts": "drawn_in_pair_bolt", "kind": "screw", "head": "hex", "size": "M8"},
+            # twice's screws, which the bench's own sidecar ignores too (issue #94).
+            {"parts": "twice_*screw", "kind": "screw", "head": "socket", "size": "M3"},
             # wrong_tool's fasteners, each with a tool its rule names (issue #72).
             *(_wrong_tool(role, rule) for role, rule in WRONG_TOOL.items()),
         ],

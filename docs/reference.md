@@ -183,12 +183,24 @@ the tables don't hold says that instead. `tool: hand` says the fastener is turne
 hand.
 
 A fastener nothing turns, or whose free face can't be told, is measured against the
-parts that stopped it: drawn into one, it is a clash in the model, not covered, with
-the shared volume (`drawn into lid (96.1 mm^3): fix the model`). Only its hex and its
+parts that stopped it, and a screw against what its way out meets: drawn into one, it
+is a clash in the model, not covered, with the shared volume (`drawn into lid (96.1
+mm^3): fix the model`), not a reach problem nor an order to take things apart in
+(issue #94). Only its hex and its
 widest region are measured, a nut's body and flange, a head, a gland's hex and dome:
 a shank or stub in a tapped hole, or a bolt drawn at its nominal diameter in a nut
 bored at its minor, is a thread, and its own bolt no clash. A clash that stops
 nothing changes no verdict, and isn't looked for.
+
+A fastener drawn twice, over itself (most of each one's volume in common), as a model
+drawing two optional parts in place can have it, is one fault: said once, on the
+first by name (`drawn twice: M3x8 SHCS is drawn over it (120.8 mm^3 in common): fix
+the model`), and the other isn't checked again, nor counted. A name's length that
+the solid disagrees with by more than half a millimetre or 5% (`M3x12` drawn 8 long)
+is noted, and the solid's length, which the way out meets, is the one taken: under
+the head for a socket, button or hex head, overall for a countersunk head or a set
+screw. A Phillips or Torx head's length isn't compared, as its standard measures a
+pan head under the head and a countersunk one overall, and the drive looks the same.
 
 ## Verdicts, and what decided them
 

@@ -215,6 +215,8 @@ what is:
 | `only holds, and its partner clamp_nut does not turn` | Neither side of the pair can be turned. |
 | `the nut's corners hit rib as it turns` | A part sits inside the circle the hex's corners sweep. No tool can turn it. |
 | `drawn into lid (96.1 mm^3): fix the model` | The fastener's solid overlaps another part: a clash in the model. |
+| `drawn twice: M3x8 SHCS is drawn over it (120.8 mm^3 in common): fix the model` | One fastener is drawn twice, in the same place. |
+| `held by its trap in block` | A nut in a hex pocket or a slot its width: the part holds it, so its screw must turn. |
 | `needs spanner-24, which kit metric-home does not hold (full has it)` | Choose a bigger kit, or add the tool to the sidecar. |
 | `no room for a hand: the hand hits frame on its best arc` | With `--hand-room`: the tool would turn, but the hand on it can't follow. |
 | `cannot tell the nut's free face: both ends are covered` | Say which way the tool comes from with `axis:` in the sidecar. |

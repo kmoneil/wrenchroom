@@ -179,6 +179,10 @@ class ShapeReading:
             should settle which is right (issue #81).
         bore_mm: A nut's or an insert's bore, the thinnest round facing its
             axis, as drawn, mm; None when it has none (issue #84).
+        length_mm: A screw's length as its standard gives one, as drawn, mm:
+            under the head for a socket, button or hex head, overall for a
+            countersunk head or a set screw; None for any other, a pan or a
+            countersunk Phillips or Torx head looking alike to a drive (issue #94).
     """
 
     axis: Vec | None = None
@@ -193,6 +197,7 @@ class ShapeReading:
     head_drawn: tuple[float, float] | None = None
     outline_head: Head | None = None
     bore_mm: float | None = None
+    length_mm: float | None = None
 
 
 @dataclass(frozen=True)
@@ -279,7 +284,21 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
         size_from_band=banded,
         head_drawn=outline.drawn,
         outline_head=outline.head if disputed else None,
+        length_mm=_length(profile, head),
     )
+
+
+#: Heads whose standard's length is the screw's under them, and overall (issue #94).
+_UNDER_HEAD = (Head.SOCKET, Head.BUTTON, Head.HEX)
+_OVERALL = (Head.FLAT, Head.SET)
+
+
+def _length(profile: _Profile, head: Head | None) -> float | None:
+    """A screw's length as its head's standard measures it, as drawn: see ShapeReading."""
+    if not profile.along or head not in (*_UNDER_HEAD, *_OVERALL):
+        return None
+    overall = max(profile.along) - min(profile.along)
+    return overall if head in _OVERALL else overall - profile.head()[1]
 
 
 def looks_like(shape: Shape) -> tuple[Kind, str] | None:

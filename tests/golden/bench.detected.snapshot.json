@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 124,
-  "turns": 93,
+  "fasteners": 125,
+  "turns": 94,
   "held": 8,
   "blocked": 20,
   "stuck": 1,
@@ -2311,6 +2311,38 @@
    "notes": []
   },
   {
+   "name": "renamed_M3x12_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M3",
+   "length": 8.0,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    14000.0,
+    3.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2.5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "drawn 8.00 long under its head, where its name says 12: taken as drawn"
+   ]
+  },
+  {
    "name": "rubber_screw",
    "kind": "screw",
    "head": "button",
@@ -3574,8 +3606,8 @@
     1.0
    ],
    "seat": [
-    4900.0,
-    13000.0,
+    900.0,
+    14000.0,
     6.0
    ],
    "source": "name+geometry",
@@ -3606,8 +3638,8 @@
     1.0
    ],
    "seat": [
-    5100.0,
-    13000.0,
+    1100.0,
+    14000.0,
     6.0
    ],
    "source": "name+geometry",
