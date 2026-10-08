@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**125 fasteners: 97 turn, 8 held, 19 blocked, 1 stuck, 0 not covered**
+**126 fasteners: 97 turn, 8 held, 20 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -29,6 +29,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | M24 nut | `spanner-36` | 1 | 1 of 1 fail |
 | M3 button screw | `hex-key-2` | 1 | all pass (driver straight in) |
 | M3 nut | - | 3 | all pass (held by its trap in trap\_stopped\_block) |
+| M3 nut | `spanner-5.5` | 1 | 1 of 1 fail |
 | M3 screw | `hand` | 2 | all pass (fingers round its head) |
 | M3 set screw | `hex-key-1.5` | 1 | all pass (short leg in) |
 | M3 socket screw | `hex-key-2.5` | 5 | 1 of 5 fail |
@@ -73,6 +74,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | `pair_both_hold_nut` | `spanner-13` | blocked | `only holds, and its partner pair_both_hold_bolt does not turn; best arc bounded by pair_both_hold_pocket_low` |
 | `phillips_shelf_screw` | `driver-ph2` | blocked | `phillips_shelf_shelf` |
 | `post_ring_nut` | `spanner-13` | blocked | `only holds, and it has no nut; best arc between post_ring_post_a and post_ring_post_b` |
+| `reach_55_nut` | `spanner-5.5` | blocked | `reach_55_wall`, `reach_55_shelf` |
 | `sunk_cap_cap_nut` | `spanner-16` | blocked | `sunk_cap_plate`, `sunk_cap_cap_nut` |
 | `tail_too_long_nut` | `spanner-16` | blocked | `tail_too_long_collar`, `tail_too_long_bolt` |
 | `tapped_hold_screw` | `hex-key-5` | blocked | `only holds, and it has no nut; best arc bounded by tapped_hold_slot` |

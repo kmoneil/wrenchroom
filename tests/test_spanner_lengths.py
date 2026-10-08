@@ -39,6 +39,7 @@ def test_every_spanner_size_has_a_maker_s_length():
         (4.0, 90.0),  # Facom 440.4H, its own page
         (4.5, 85.0),  # Stahlwille OPEN-BOX 16, Gedore 7
         (5.0, 123.0),  # Elora 205-5
+        (5.5, 123.0),  # Elora 205-5,5 (issue #103)
         (13.0, 206.1),  # GearWrench 81670
         (19.0, 278.6),  # GearWrench 81676
         (23.0, 328.0),  # Hazet 600N-23
@@ -62,6 +63,13 @@ GEDORE_1B = {19.0: 258.0, 30.0: 390.0, 36.0: 460.0, 41.0: 520.0, 46.0: 550.0, 50
 def test_no_length_is_shorter_than_gedore_s():
     for af, length in GEDORE_1B.items():
         assert spanner_for(af).length >= length, af
+
+
+def test_the_5_5_is_no_shorter_than_the_5():
+    # Issue #103: the 5.5 was 105, Hazet's, under the 5's 123, Elora's; Elora makes a
+    # 5.5 at 123 too. (Elsewhere a size the longest maker skips can be shorter than
+    # the size before it, as the makers sell them: GearWrench's 28 against Tekton's 29.)
+    assert spanner_for(5.5).length >= spanner_for(5.0).length
 
 
 def test_every_metric_length_is_longer_than_the_formula_was():
