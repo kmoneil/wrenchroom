@@ -40,11 +40,21 @@ ignore naming one is satisfied (issue #104).
 ## Finding fasteners
 
 No sidecar is needed for named parts. Fasteners are found from their part names (ISO
-and DIN designations, McMaster-Carr numbers, descriptions such as `M6x20 SHCS` or
-`hex nut M8`, `M3 Hexnut` with the words run together, code-CAD names such as
-`lift_link_bolt`) and completed from their
+and DIN designations, ASME's (`ANSI B18.6.3`, `ASME B18.3`), McMaster-Carr numbers,
+descriptions such as `M6x20 SHCS` or `hex nut M8`, `M3 Hexnut` with the words run
+together, code-CAD names such as `lift_link_bolt`) and completed from their
 solids: the drive the model shows (a hex, a hex socket, a cross, a slot, a carriage
 bolt's square neck) and the size that drive or the shank gives.
+
+A cross recess is read as makers draw one (issue #115): four wings at right angles
+round the axis, each a pair of walls facing each other at one offset, out along the
+wing, the walls leaning up to 10 degrees off the axis. Whatever closes the wings' ends
+(square, or sloping in to the centre) or fills between them (V faces) doesn't matter,
+and its size is the wings' span, which the comment `detect` writes gives (`a cross
+3.20 across its wings`). A head whose solid shows a recess with walls that is no hex
+socket, cross or slot (a square's) isn't guessed from its outline, as a button or
+socket head a hex key would turn: unless its name says the head, it is not covered,
+and says so.
 
 A head drawn as a plain cylinder is held to the standards' outlines for its size (an
 M5 head 9.5 across and 2.75 high is ISO 7380-1's button head, not ISO 4762's socket
@@ -65,9 +75,13 @@ with it at no size, is sized by ISO 7379's table.
 A head word counts where it touches the noun (`lid_button_screw`), as elsewhere it may
 describe something else (`button_panel_screw`); a drive word (`torx`, `hexalobular`,
 `phillips`, `pozidriv`) can describe nothing else and counts anywhere
-(`torx_lid_screw`). A name with ordinary words after its fastener noun
-(`box_gland_vent`, `bolt_hole_cover`) is only a candidate: it is taken when its solid
-shows a drive a tool fits (a hex, a hex socket, a cross), and otherwise passed over,
+(`torx_lid_screw`), and so do `cross recessed` and `Type I`, ASME's name for a
+Phillips recess (`Type I Cross Recessed Fillister Head Tapping Screw`). Beside an
+ASME standard, a numbered size may be written bare, as Fusion writes it (`ANSI
+B18.6.4 1-42 x 0.1875` is a #1, 3/16 long), where the pair is a thread the size comes
+in (UNC, UNF, or B18.6.4's tapping threads). A name with ordinary words after its
+fastener noun (`box_gland_vent`, `bolt_hole_cover`) is only a candidate: it is taken
+when its solid shows a drive a tool fits (a hex, a hex socket, a cross), and otherwise passed over,
 which every report lists, so a fastener is never missed without a word. Not a name
 whose last word is a part's own noun (`nut_plate`, `gland_plate`, `screw_boss`,
 `box_wall`): it says what the part is, so it isn't listed, though a solid showing a

@@ -29,8 +29,15 @@ the head's end and size are read from the screw's widest section
 Flats are found as planar faces parallel to the axis. A face whose outward
 normal points away from the axis is the outside of a prism (a hex head, a nut, a
 square neck); one pointing toward it is the wall of a pocket or recess (a hex
-socket, the arms of a cross, a slot). Distances are measured from the axis to
-each face's plane, so a face split by other features still counts.
+socket, a slot). Distances are measured from the axis to each face's plane, so a
+face split by other features still counts.
+
+A cross recess is read from its wings (issue #115): four at right angles round
+the axis, each a pair of walls facing each other at one offset, out along the
+wing. Makers taper the walls a few degrees and slope the wings' ends, and some
+fill between the wings with V faces; none of that matters. A recess with walls
+that is no hex socket, cross or slot (a square's) is ``unread_recess``, and the
+head isn't guessed from its outline: a hex key fits none of them.
 """
 
 from __future__ import annotations
@@ -80,6 +87,13 @@ SIZE_SNAP_MM = 0.05
 #: Faces count as parallel or perpendicular to the axis within this, as a cosine.
 _PARALLEL = 0.999
 _PERPENDICULAR = 0.02
+
+#: A recess's walls lean off the axis by up to this, degrees: makers taper a cross
+#: recess's, 4 and 6 degrees in the models of issue #115.
+_WALL_TAPER_DEG = 10.0
+
+#: A cross's walls sit at one offset from the axis within this, mm.
+_CROSS_WALLS = 0.05
 
 #: Flats at the same distance from the axis, within this, mm, belong to one prism.
 _SAME_DISTANCE = 0.02
@@ -187,6 +201,10 @@ class ShapeReading:
             under the head for a socket, button or hex head, overall for a
             countersunk head or a set screw; None for any other, a pan or a
             countersunk Phillips or Torx head looking alike to a drive (issue #94).
+        cross_mm: A cross recess's span across its wings, as drawn, mm: its
+            size (issue #115).
+        unread_recess: True when the solid shows a recess with walls that is no
+            hex socket, cross or slot (a square's): no head is guessed for it.
     """
 
     axis: Vec | None = None
@@ -203,6 +221,8 @@ class ShapeReading:
     bore_mm: float | None = None
     length_mm: float | None = None
     shank_mm: float | None = None
+    cross_mm: float | None = None
+    unread_recess: bool = False
 
 
 @dataclass(frozen=True)
@@ -212,6 +232,16 @@ class _Flat:
     angle_deg: float  # direction of the outward normal round the axis, 0..360
     distance: float  # from the axis to the face's plane
     outward: bool  # normal points away from the axis
+
+
+@dataclass(frozen=True)
+class _Wall:
+    """A planar face facing the axis and near parallel to it: a recess's wall."""
+
+    angle_deg: float  # direction of its normal round the axis, 0..360
+    offset: float  # from the axis to its middle, across it
+    along: float  # its middle along it, measured one way round the axis
+    reach: float  # its farthest point along it from the axis
 
 
 def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeReading:
@@ -251,6 +281,8 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
             bore_mm=2 * min(bores) if bores else None,
         )
     convex = [r for r, outside in rounds if outside]
+    walls = _walls(faces, origin, direction)
+    span: float | None = None
     shank = _snap(convex)  # the thinnest
     shoulder = named is Head.SHOULDER
     pocket = _regular(inner, 6)
@@ -263,11 +295,12 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
     elif pocket is not None:
         head, outline = _socket_head(faces, (origin, direction), convex, profile, shank, named)
         drive_af = pocket
-    elif _is_cross(inner):
+    elif (span := _cross_span(walls)) is not None:
         head = Head.PHILLIPS
     elif _is_slot(inner):
         head = Head.SLOTTED
-    if head is None:
+    unread = head is None and bool(walls)  # a recess a hex key fits no better (#115)
+    if head is None and not unread:
         outline = _keyed_head(faces, origin, direction, convex, profile, shank)
     if shoulder or outline.head is Head.SHOULDER:  # by its name, or by its outline
         shank = _shoulder_shank(convex, shank, outline.shoulder)
@@ -291,6 +324,8 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
         outline_head=outline.head if disputed else None,
         length_mm=_length(profile, head),
         shank_mm=_shank(convex, profile, head),
+        cross_mm=span,
+        unread_recess=unread,
     )
 
 
@@ -340,7 +375,8 @@ def looks_like(shape: Shape) -> tuple[Kind, str] | None:
     faces = list(shape.faces())
     rounds = _coaxial_rounds(faces, origin, direction)
     flats = _flats(faces, origin, direction)
-    screw = _screw_like(rounds, [f for f in flats if not f.outward], profile)
+    inner = [f for f in flats if not f.outward]
+    screw = _screw_like(rounds, inner, _walls(faces, origin, direction), profile)
     if screw is not None:
         return Kind.SCREW, screw
     nut = _nut_like(rounds, [f for f in flats if f.outward], profile)
@@ -348,7 +384,7 @@ def looks_like(shape: Shape) -> tuple[Kind, str] | None:
 
 
 def _screw_like(
-    rounds: list[tuple[float, bool]], inner: list[_Flat], profile: _Profile
+    rounds: list[tuple[float, bool]], inner: list[_Flat], walls: list[_Wall], profile: _Profile
 ) -> str | None:
     """A screw its solid plainly shows, said in a few words; else None."""
     shank = _snap([r for r, convex in rounds if convex])
@@ -362,7 +398,7 @@ def _screw_like(
         in_recess_band(pocket, key) or loosely_fits(pocket, key) for key in keys
     ):
         return f"{shank.designation} screw, a {round(pocket, 2):g} hex socket"
-    if _is_cross(inner):
+    if _cross_span(walls) is not None:
         return f"{shank.designation} screw, a cross in its head"
     return None
 
@@ -674,14 +710,81 @@ def _regular(flats: list[_Flat], sides: int) -> float | None:
     return None
 
 
-def _is_cross(inner: list[_Flat]) -> bool:
-    """Two slots crossing at right angles: both directions show the same two offsets."""
-    by_axis = _offsets_by_axis(inner)
-    if len(by_axis) != 2:  # noqa: PLR2004  (a cross has two arms)
-        return False
-    (a_angle, a_offsets), (b_angle, b_offsets) = by_axis.items()
-    square = abs(_angle_gap(a_angle, b_angle) - 90) < _SAME_ANGLE_DEG
-    return square and len(a_offsets) == 2 and _same_offsets(a_offsets, b_offsets)  # noqa: PLR2004
+def _walls(faces: list[Face], origin: Vec, direction: Vec) -> list[_Wall]:
+    """Every recess wall: a planar face facing the axis, leaning off it by a taper at most."""
+    x_dir = _any_perpendicular(direction)
+    y_dir = _cross(direction, x_dir)
+    most = math.sin(math.radians(_WALL_TAPER_DEG))
+    found = []
+    for face in faces:
+        if face.geom_type is not GeomType.PLANE:
+            continue
+        normal = _unit(_vec(face.normal_at(face.center())))
+        axial = _dot(normal, direction)
+        if abs(axial) > most:
+            continue
+        across = _unit(
+            _sub(normal, (direction[0] * axial, direction[1] * axial, direction[2] * axial))
+        )
+        middle = _sub(_vec(face.center()), origin)
+        signed = _dot(middle, across)
+        if signed >= 0:
+            continue  # facing away from the axis: an outside
+        along = _cross(direction, across)  # the wall's own way, which flips with its facing
+        reach = max(abs(_dot(_sub(_vec(v), origin), along)) for v in face.vertices())
+        angle = math.degrees(math.atan2(_dot(across, y_dir), _dot(across, x_dir))) % 360
+        found.append(_Wall(angle, -signed, _dot(middle, along), reach))
+    return found
+
+
+def _cross_span(walls: list[_Wall]) -> float | None:
+    """A cross recess's span across its wings, or None when the walls make no cross.
+
+    Four wings at right angles round the axis (issue #115): a wing is a pair of
+    walls facing each other at one offset, their middles out along the wing past
+    that offset, so the walls of a square socket or a slot, centred on the axis,
+    make none, and nor do V faces between wings, which face each other across it.
+    Whatever closes the wings' ends or fills between them is not a wall here. The
+    span is the farthest the wings' walls reach, one way and the other, added.
+    """
+    for anchor in walls:
+        spans = []
+        for turn in (0.0, 90.0):
+            line = (anchor.angle_deg + turn) % 180
+            on = [
+                w
+                for w in walls
+                if _same_line(w.angle_deg, line) and abs(w.offset - anchor.offset) <= _CROSS_WALLS
+            ]
+            reaches = [_wing(on, line, side) for side in (1, -1)]
+            if None in reaches:
+                break
+            spans.append(sum(r for r in reaches if r is not None))
+        else:
+            return max(spans)
+    return None
+
+
+def _same_line(angle: float, line: float) -> bool:
+    """Whether a direction round the axis lies on a line through it, either way."""
+    gap = _angle_gap(angle % 180, line)
+    return gap < _SAME_ANGLE_DEG or gap > 180 - _SAME_ANGLE_DEG
+
+
+def _wing(on: list[_Wall], line: float, side: int) -> float | None:
+    """How far out a wing reaches on one side of the axis, or None if there is none.
+
+    ``on`` are walls facing along ``line``, one way or the other; a wing on
+    ``side`` has walls facing both ways out on that side, past their offset.
+    """
+    facing: dict[int, list[_Wall]] = {}
+    for wall in on:
+        sign = 1 if _angle_gap(wall.angle_deg, line) < 90 else -1  # noqa: PLR2004
+        if wall.along * sign * side > wall.offset:  # "along" flips with the facing
+            facing.setdefault(sign, []).append(wall)
+    if len(facing) != 2:  # noqa: PLR2004  (a wall facing each way)
+        return None
+    return max(wall.reach for walls in facing.values() for wall in walls)
 
 
 def _is_slot(inner: list[_Flat]) -> bool:
@@ -706,10 +809,6 @@ def _offsets_by_axis(inner: list[_Flat]) -> dict[float, list[float]]:
         if all(abs(o - flat.distance) > _SAME_DISTANCE for o in offsets):
             offsets.append(flat.distance)
     return {k: sorted(v) for k, v in groups.items()}
-
-
-def _same_offsets(a: list[float], b: list[float]) -> bool:
-    return len(a) == len(b) and all(abs(x - y) <= _SAME_DISTANCE for x, y in zip(a, b, strict=True))
 
 
 # ---------------------------------------------------------------------------

@@ -2,15 +2,18 @@
 
 Four kinds of evidence, strongest first:
 
-1. A standard: ``ISO 4762``, ``DIN 912``, ``DIN EN ISO 4017``. Gives kind and head.
+1. A standard: ``ISO 4762``, ``DIN 912``, ``DIN EN ISO 4017``, ``ANSI B18.6.3``.
+   Gives kind and head.
 2. A McMaster-Carr part number: ``91290A115``. Its series gives kind and head.
 3. A description: ``SHCS``, ``button head``, ``hex nut``, ``nyloc``, ``carriage bolt``.
 4. A plain noun ending a code-CAD name: ``lift_link_0_bolt_bot`` is a bolt. That
    gives the kind and nothing else, but for a drive word (``torx``, ``phillips``)
-   anywhere in the name, which gives the head: ``torx_lid_screw``.
+   or phrase (``cross recessed``, ``Type I``) anywhere in the name, which gives
+   the head: ``torx_lid_screw``.
 
 Any of them may come with a thread size (``M6``, ``M6x20``, ``M6x1x20``,
-``1/4-20 x 3/4``, ``#10-32``) and a length.
+``1/4-20 x 3/4``, ``#10-32``, and with an ASME standard ``1-42`` as Fusion writes
+it) and a length.
 
 A name reads as a fastener when the word it is about, its last noun, is a
 fastener noun, or when it carries a standard or a catalogue number. A name that
@@ -171,6 +174,15 @@ STANDARDS: dict[str, tuple[Kind | None, Head | None, str | None]] = {
     "DIN 985": (_N, None, None),
     "ISO 4161": (_N, None, None),
     "DIN 6923": (_N, None, None),
+    # ASME (as ANSI too), issue #115: machine and tapping screws, slotted and cross
+    # recessed alike; bolts and screws, hex, square or lobed; nuts; socket screws, cap,
+    # button, flat or set. Each holds several heads, so the head is the other words'
+    # or the solid's
+    "ASME B18.6.3": (_S, None, None),
+    "ASME B18.6.4": (_S, None, None),
+    "ASME B18.2.1": (_S, None, None),
+    "ASME B18.2.2": (_N, None, None),
+    "ASME B18.3": (_S, None, None),
     # washers: not fasteners (spec 4), whatever size they carry
     "ISO 7089": (None, None, None),
     "ISO 7090": (None, None, None),
@@ -312,6 +324,14 @@ _HEAD_RANK = (
 #: socket), and says the head only touching the noun (see _descriptors).
 _DRIVE_WORDS = {"torx", "hexalobular", "phillips", "pozidriv", "pozi"}
 
+#: Phrases that say a drive wherever they sit, as a drive word does, to the word
+#: they say (issue #115): a cross recess, and ASME B18.6.3's Type I, a Phillips.
+_DRIVE_PHRASES = {
+    ("cross", "recessed"): "phillips",
+    ("cross", "recess"): "phillips",
+    ("type", "i"): "phillips",
+}
+
 #: Describing words that are the noun when they end the name.
 _END_NOUNS = {"cap", "shoulder"}
 
@@ -337,6 +357,30 @@ _INSTANCE_SUFFIX = re.compile(r"(?:(?<=\S)#\d+|\s*<\d+>|\s*\(\d+\)|:\d+)\s*$")
 _STANDARD = re.compile(
     r"(?<![A-Za-z])(?:DIN[\s_-]*EN[\s_-]*)?(ISO|DIN)[\s_-]*(\d{2,5})(?![0-9])", re.IGNORECASE
 )
+#: ``ANSI B18.6.3``, ``ASME B18.3``, ``ANSI/ASME B18.2.1``, ``ansi_b18_6_3``: one
+#: standard, as it was renamed from the one body to the other.
+_ASME = re.compile(
+    r"(?<![A-Za-z])(?:ANSI|ASME)(?:[\s_/-]*(?:ANSI|ASME))?[\s_-]*B[\s_-]?(18(?:[._]\d+){1,2})"
+    r"(?![0-9])",
+    re.IGNORECASE,
+)
+#: A numbered size bare, ``1-42``, as Fusion writes an ASME screw's (issue #115);
+#: a length may follow it, ``4-40x1/4``, and nothing else in the same word.
+_BARE_GAUGE = re.compile(r"(?<![A-Za-z0-9#/.-])(\d{1,2})-(\d{2,3})(?![0-9/])(?![A-WYZa-wyz])")
+#: The threads per inch each numbered size comes in: ASME B1.1's UNC and UNF, and
+#: B18.6.4's tapping screws (type AB and B, and type A). A bare pair reads as a size
+#: only if it is one of these.
+_GAUGE_TPI = {
+    0: {80, 48},
+    1: {64, 72, 42},
+    2: {56, 64, 32},
+    3: {48, 56, 28},
+    4: {40, 48, 24},
+    6: {32, 40, 20, 18},
+    8: {32, 36, 18, 15},
+    10: {24, 32, 16, 12},
+    12: {24, 28, 14, 11},
+}
 _MCMASTER = re.compile(r"(?<![0-9A-Za-z])(\d{4,5}A)\d{1,4}(?![0-9A-Za-z])", re.IGNORECASE)
 #: ``M6``, ``M6x20``, ``M6x1x20``, and the pitch after a dash as suppliers write it,
 #: ``M6-1x20``, ``M3-0.5 x 16``.
@@ -393,10 +437,11 @@ def read_name(name: str) -> NameHint | None:
         basis = [f"noun {word!r}" + (", words after it" if needs_drive else "")]
     if head is None:
         near = _head_from(run, kind)
-        head = _head_from(run | (set(words) & _DRIVE_WORDS), kind)
+        drives = _drives(words)
+        head = _head_from(run | set(drives.values()), kind)
         if head is not near:  # said by a drive word away from the noun: name it
-            drive = next(w for w in words if w in _DRIVE_WORDS and _HEAD_WORDS[w] is head)
-            basis.append(f"drive {drive!r}")
+            said = next(text for text, word in drives.items() if _HEAD_WORDS[word] is head)
+            basis.append(f"drive {said!r}")
     socket_allowed = noun not in _GLAND_NOUNS
     size, length, size_text, size_reason = _size_in(cleaned)
     bare = kind is Kind.INSERT and noun in _BARE_INSERTS and not set(words) & _THREAD_WORDS
@@ -478,7 +523,20 @@ def _standard_in(text: str) -> tuple[str, tuple[Kind | None, Head | None, str | 
         label = f"{match.group(1).upper()} {match.group(2)}"
         if label in STANDARDS:
             return label, STANDARDS[label]
+    for match in _ASME.finditer(text):
+        label = f"ASME B{match.group(1).replace('_', '.')}"
+        if label in STANDARDS:
+            return label, STANDARDS[label]
     return None
+
+
+def _drives(words: list[str]) -> dict[str, str]:
+    """The drive words and phrases a name holds, anywhere, each to the drive word it says."""
+    found = {word: word for word in words if word in _DRIVE_WORDS}
+    for pair in itertools.pairwise(words):
+        if pair in _DRIVE_PHRASES:
+            found[" ".join(pair)] = _DRIVE_PHRASES[pair]
+    return found
 
 
 def _mcmaster_in(text: str) -> tuple[str, tuple[Kind, Head | None]] | None:
@@ -667,10 +725,26 @@ def _size_in(text: str) -> tuple[Size | None, float | None, str | None, str | No
     metric = _METRIC.search(text)
     if metric is not None:
         return _metric(metric)
-    imperial = _IMPERIAL.search(text)
+    imperial = _IMPERIAL.search(_numbered(text))
     if imperial is not None and (imperial.group(2) or imperial.group(1).startswith("#")):
         return _imperial(imperial)
     return None, None, None, None
+
+
+def _numbered(text: str) -> str:
+    """A name with its bare numbered sizes marked, ``#1-42``, where it names an ASME standard.
+
+    Fusion writes an ASME screw's size bare (``ANSI B18.6.4 1-42 x 0.1875``); a
+    pair counts only as a thread its size comes in (issue #115).
+    """
+    if _ASME.search(text) is None:
+        return text
+
+    def marked(match: re.Match[str]) -> str:
+        gauge, tpi = int(match.group(1)), int(match.group(2))
+        return f"#{match.group(0)}" if tpi in _GAUGE_TPI.get(gauge, set()) else match.group(0)
+
+    return _BARE_GAUGE.sub(marked, text)
 
 
 def _metric(match: re.Match[str]) -> tuple[Size | None, float | None, str | None, str | None]:

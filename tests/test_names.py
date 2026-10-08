@@ -3,6 +3,8 @@
 The bench's own part names are read in tests/golden/test_names_bench.py.
 """
 
+import re
+
 import numpy as np
 import pytest
 
@@ -33,6 +35,8 @@ def _standard_cases():
             yield pytest.param(
                 f"DIN EN ISO {number} M6x20", kind, head, reason, id=f"DIN EN {label}"
             )
+        if body == "ASME":  # renamed from ANSI, which names it as often (issue #115)
+            yield pytest.param(f"ANSI {number} M6x20", kind, head, reason, id=f"ANSI {number}")
 
 
 @pytest.mark.parametrize(("name", "kind", "head", "reason"), list(_standard_cases()))
@@ -45,7 +49,7 @@ def test_every_standard_reads_in_every_spelling(name, kind, head, reason):
     assert (found.kind, found.head, found.not_covered) == (kind, head, reason)
     assert found.size.designation == "M6"
     assert found.length_mm == 20
-    assert found.basis.startswith(("ISO ", "DIN "))
+    assert found.basis.startswith(("ISO ", "DIN ", "ASME "))
 
 
 def test_a_standard_part_suffix_is_read_as_the_standard():
@@ -336,8 +340,11 @@ def test_any_string_is_answered_and_never_raises():
 def test_every_table_key_is_spelled_as_the_reader_spells_it():
     for label in STANDARDS:
         body, number = label.split()
-        assert body in {"ISO", "DIN"}
-        assert number.isdigit()
+        assert body in {"ISO", "DIN", "ASME"}
+        if body == "ASME":  # B18.6.3, as the reader writes it whatever the name's spelling
+            assert re.fullmatch(r"B18(\.\d+){1,2}", number), label
+        else:
+            assert number.isdigit()
     for series in MCMASTER:
         assert series[:-1].isdigit()
         assert series.endswith("A")

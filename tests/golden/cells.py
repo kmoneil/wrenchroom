@@ -27,6 +27,7 @@ from build123d import (
     Compound,
     Cone,
     Cylinder,
+    Plane,
     Pos,
     RegularPolygon,
     Rot,
@@ -2329,3 +2330,88 @@ def domed():
         parts.append((f"flat_{case}_screw", Pos(xs[case], 0, 0) * _countersunk_m6()))
         parts.append((f"flat_{case}_block", Pos(xs[case], 0, 0) * _counterbored(bore)))
     return parts
+
+
+# ---------------------------------------------------------------- issue #115: cross recesses
+
+
+def _cut_past(solid, point, normal):
+    """The solid less everything past a plane through ``point``, ``normal`` out of it."""
+    return solid - Plane(origin=point, z_dir=normal) * Pos(0, 0, 50) * Box(100, 100, 100)
+
+
+def _wing(top, reach, floor, width, depth, taper):
+    """A cross recess's wing along +x, planes all: ``reach`` out at the top, its end
+    sloping in to ``floor`` at its floor ``depth`` down, its walls ``width`` apart at
+    the top and leaning in ``taper`` degrees."""
+    block = Pos(reach / 2, 0, top - depth / 2 + 0.005) * Box(reach, width, depth + 0.01)
+    lean = math.tan(math.radians(taper))
+    for side in (1, -1):
+        block = _cut_past(block, (0, side * width / 2, top), (0, side, -lean))
+    return _cut_past(block, (reach, 0, top), (1, 0, -(reach - floor) / depth))
+
+
+def _cross_screw(d, dk, k, span, width, depth, taper, vees=0.0):
+    """A pan head ``dk`` by ``k`` on a shank ``d``, a cross recess in its top: four
+    wings ``span`` across, and with ``vees`` faces between them, a square turned 45
+    degrees whose corners reach that far out along the wings."""
+    recess = None
+    for turn in (0, 90, 180, 270):
+        piece = Rot(0, 0, turn) * _wing(k, span / 2, span / 8, width, depth, taper)
+        recess = piece if recess is None else recess + piece
+    if vees:
+        block = Pos(0, 0, k - depth / 2) * Box(2 * vees, 2 * vees, depth)
+        for turn in (45, 135, 225, 315):
+            out = (math.cos(math.radians(turn)), math.sin(math.radians(turn)))
+            at, lean = vees / 2**0.5, math.tan(math.radians(taper))
+            block = _cut_past(block, (at * out[0], at * out[1], k), (*out, -lean))
+        recess = recess + block
+    head = Pos(0, 0, k / 2) * Cylinder(dk / 2, k) - recess
+    return head + Pos(0, 0, -5) * Cylinder(d / 2, 10)
+
+
+#: The Fusion name of the cross cell's tapping screw, as SO-101's are named.
+FUSION_TAPPING = (
+    "Type I Cross Recessed Fillister Head Tapping Screw ANSI B18.6.4 1-42 x 0.1875 Type AB"
+)
+
+
+@cell(
+    "cross",
+    [
+        {"parts": "M3x6_screw", "kind": "screw", "head": "phillips", "size": "M3"},
+        {"parts": "M2_self_tapping_screw", "kind": "screw", "head": "phillips", "size": "M2"},
+        {"parts": FUSION_TAPPING, "kind": "screw", "head": "phillips", "size": "#1"},
+    ],
+    {
+        "M3x6_screw": {"verdict": "turns", "tool": "driver-ph1", "how": "driver straight in"},
+        "M2_self_tapping_screw": {
+            "verdict": "turns",
+            "tool": "driver-ph0",
+            "how": "driver straight in",
+        },
+        FUSION_TAPPING: {"verdict": "turns", "tool": "driver-ph0", "how": "driver straight in"},
+    },
+)
+def cross():
+    """Cross recesses drawn as makers draw them, open above (issue #115). Described,
+    each turns with the driver its thread's standard gives, straight in: PH1 for
+    the M3 (ISO 7045), PH0 for the M2 and the #1 (ASME B18.6.3).
+
+    The M3, the issue's: a pan head 5.6 by 2.4, its wings 3.2 across and 0.6 wide,
+    1.4 deep, their ends sloping in. The M2, as the Voron Legacy's: wings 2.4 across,
+    0.33 wide, walls leaning 6 degrees, V faces between them. The #1 as SO-101's,
+    under its Fusion name: wings 1.6 across, 0.31 wide, leaning 4 degrees. Detected,
+    each used to be no cross: the M3's head was guessed a button and turned with a
+    hex key, the M2's was not covered, there being no M2 button head, and the #1
+    was passed over, its name's noun followed by words and no drive read in it.
+    """
+    return [
+        ("plate", plate(holes=[(-60, 0, 1.6), (0, 0, 1.1), (60, 0, 1.0)])),
+        ("M3x6_screw", Pos(-60, 0, 0) * _cross_screw(3, 5.6, 2.4, 3.2, 0.6, 1.4, 0)),
+        (
+            "M2_self_tapping_screw",
+            Pos(0, 0, 0) * _cross_screw(2, 3.8, 1.6, 2.4, 0.33, 1.0, 6, vees=0.75),
+        ),
+        (FUSION_TAPPING, Pos(60, 0, 0) * _cross_screw(1.854, 3.3, 1.5, 1.6, 0.31, 0.8, 4)),
+    ]
