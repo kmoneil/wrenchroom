@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**118 fasteners: 94 turn, 5 held, 18 blocked, 1 stuck, 0 not covered**
+**124 fasteners: 96 turn, 8 held, 19 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -28,9 +28,10 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | M2.5 nut | `spanner-5` | 1 | all pass (ring, full length) |
 | M24 nut | `spanner-36` | 1 | 1 of 1 fail |
 | M3 button screw | `hex-key-2` | 1 | all pass (driver straight in) |
+| M3 nut | - | 3 | all pass (held by its trap in trap\_stopped\_block) |
 | M3 screw | `hand` | 2 | all pass (fingers round its head) |
 | M3 set screw | `hex-key-1.5` | 1 | all pass (short leg in) |
-| M3 socket screw | `hex-key-2.5` | 1 | all pass (driver straight in) |
+| M3 socket screw | `hex-key-2.5` | 4 | 1 of 4 fail |
 | M4 button screw | `hex-key-2.5` | 6 | 2 of 6 fail |
 | M4 flat screw | `hex-key-2.5` | 2 | all pass (driver straight in) |
 | M4 insert | - | 2 | all pass (holds itself) |
@@ -77,6 +78,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | `tapped_hold_screw` | `hex-key-5` | blocked | `only holds, and it has no nut; best arc bounded by tapped_hold_slot` |
 | `tee_hold_screw` | `hex-key-5` | blocked | `only holds, and it screws into a fixed thread (tee_hold_tnut), so it must turn; best arc bounded by tee_hold_slot` |
 | `torus_deep_screw` | `hex-key-2.5` | blocked | `torus_deep_under`, `torus_deep_lid` |
+| `trap_stopped_screw` | `hex-key-2.5` | blocked | `only holds, and its nut (trap_stopped_nut) is held by its trap in trap_stopped_block, so it must turn; best arc bounded by trap_guide` |
 | `twins_a_screw` | `hex-key-5` | blocked | `twins_wall` |
 | `stuck_screw_screw` | `hex-key-5` | stuck | `stuck_screw_ceiling` |
 

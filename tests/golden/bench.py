@@ -59,12 +59,13 @@ SLOTS = len(CELLS) + 1
 #: logo insert is passed over), 107 with #83's small, eight fasteners below M3 and at
 #: #0, 110 with #82's w7380, w10642 and pan_t40, 114 with #95's std, four screws
 #: named by thread and length alone, 118 with #96's grip, a set screw and three
-#: fasteners turned by hand.
+#: fasteners turned by hand, 124 with #93's trap, three nuts their blocks hold and
+#: their screws.
 FINAL_COUNTS = {
-    "fasteners": 118,
-    "turns": 94,
-    "held": 5,
-    "blocked": 18,
+    "fasteners": 124,
+    "turns": 96,
+    "held": 8,
+    "blocked": 19,
     "stuck": 1,
     "not_covered": 0,
 }
