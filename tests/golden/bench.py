@@ -217,6 +217,10 @@ def edges_sidecar():
             {"parts": "drawn_in_pair_bolt", "kind": "screw", "head": "hex", "size": "M8"},
             # twice's screws, which the bench's own sidecar ignores too (issue #94).
             {"parts": "twice_*screw", "kind": "screw", "head": "socket", "size": "M3"},
+            # domed's screws, which the bench's own sidecar ignores too (issue #116).
+            {"parts": "domed_button_*_screw", "kind": "screw", "head": "button", "size": "M4"},
+            {"parts": "domed_pan_screw", "kind": "screw", "head": "phillips", "size": "M4"},
+            {"parts": "domed_flat_*_screw", "kind": "screw", "head": "flat", "size": "M6"},
             # wrong_tool's fasteners, each with a tool its rule names (issue #72).
             *(_wrong_tool(role, rule) for role, rule in WRONG_TOOL.items()),
         ],

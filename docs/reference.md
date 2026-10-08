@@ -200,11 +200,13 @@ A fastener nothing turns, or whose free face can't be told, is measured against 
 parts that stopped it, and a screw against what its way out meets: drawn into one, it
 is a clash in the model, not covered, with the shared volume (`drawn into lid (96.1
 mm^3): fix the model`), not a reach problem nor an order to take things apart in
-(issue #94). Only its hex and its
-widest region are measured, a nut's body and flange, a head, a gland's hex and dome:
-a shank or stub in a tapped hole, or a bolt drawn at its nominal diameter in a nut
-bored at its minor, is a thread, and its own bolt no clash. A clash that stops
-nothing changes no verdict, and isn't looked for.
+(issue #94). A screw's whole head is measured, from its bearing face to its top,
+whatever its profile: a button head's dome and a pan head's crown, not only the rim
+under them, and a countersunk head's cone (issue #116). Of a nut, its hex and its
+widest region, its body and flange, and of a gland its hex and dome. A shank (a
+shoulder's too) or a stub in a tapped hole, or a bolt drawn at its nominal diameter
+in a nut bored at its minor, is a thread, and its own bolt no clash. A clash that
+stops nothing changes no verdict, and isn't looked for.
 
 A fastener drawn twice, over itself (most of each one's volume in common), as a model
 drawing two optional parts in place can have it, is one fault: said once, on the

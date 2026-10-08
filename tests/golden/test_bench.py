@@ -223,6 +223,40 @@ def test_a_nut_drawn_into_a_part_is_a_clash(edges_report):
     assert by_name["corner_touch_nut"].verdict.value == "blocked"
 
 
+def test_a_clash_is_measured_on_all_of_a_head(edges_report):
+    """Issue #116: domed's screws, which only the edges sidecar keeps, as drawn_in's.
+    Their volumes, by hand (the cell says how): a button head buried, all of it,
+    62.35 mm^3, its rim alone 18.15; a cover into its dome, clear of the rim, 4.54;
+    one into a pan head's crown, 16.68; a countersunk head's cone in a counterbore
+    too small, 16.76, its thread in a hole tapped at the minor not added. A cover
+    clear of the button head blocks the key, and a countersunk head clear of its
+    counterbore is blocked, its thread no clash."""
+    by_name = {r.fastener.name: r for r in edges_report.results}
+    clashes = {
+        name: (r.verdict.value, r.tool, r.reason, r.blockers)
+        for name, r in by_name.items()
+        if name.startswith("domed_")
+    }
+
+    def clash(name, volume):
+        part = f"domed_{name}"
+        return ("not-covered", None, f"drawn into {part} ({volume} mm^3): fix the model", (part,))
+
+    assert clashes == {
+        "domed_button_buried_screw": clash("button_buried_block", 62.4),
+        "domed_button_dome_screw": clash("button_dome_cover", 4.5),
+        "domed_button_clear_screw": (
+            "blocked",
+            "hex-key-2.5",
+            None,
+            ("domed_button_clear_cover",),
+        ),
+        "domed_pan_screw": clash("pan_cover", 16.7),
+        "domed_flat_cone_screw": clash("flat_cone_block", 16.8),
+        "domed_flat_thread_screw": ("blocked", "hex-key-4", None, ("domed_flat_thread_block",)),
+    }
+
+
 def test_a_rule_s_tool_that_can_t_drive_its_fastener_is_not_covered(edges_report):
     """Issue #72: wrong_tool's fasteners, which only the edges sidecar keeps. Each
     misfit is not covered and nothing is swept; a tool no table holds says so; the
