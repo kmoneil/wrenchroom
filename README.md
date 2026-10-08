@@ -365,7 +365,7 @@ kinds and their numbers, all in mm, are in the [reference](https://github.com/km
 | --- | --- |
 | `metric-home` (default) | A home toolbox: ISO 2936 hex keys 1.5 to 10 mm, combination spanners and 1/4 and 3/8 in drive sockets 5.5 to 19 mm, Phillips 1 to 3 and slotted drivers. |
 | `imperial-home` | The same in inch sizes, as US home sets come: ASME B18.3 keys 0.050 to 3/8 in, spanners 1/4 to 3/4 in, sockets 3/16 to 3/4 in. |
-| `full` | Every size the tables hold, both systems, M1.6 and #0 up: keys 1.3 to 19 mm and 0.035 to 3/4 in, ball-end keys, Torx keys T6 to T40, spanners and sockets 3.2 to 50 mm (for large cable glands) and 5/32 to 1-1/2 in, nut drivers, a PH0 driver. |
+| `full` | Every size the tables hold, both systems, M1.6 and #0 up: keys 1.3 to 19 mm and 0.035 to 3/4 in, ball-end keys, Torx keys T6 to T40, spanners and sockets 3.2 to 50 mm (for large cable glands) and 5/32 to 1-1/2 in, nut drivers, PH0 and PH4 drivers. |
 
 `wrenchroom tools --kit full` lists every tool with its dimensions and where they
 come from. Sizes are the standards' (ISO 2936, 4762, 7380-1, 10642, 4032; ASME B18.3,

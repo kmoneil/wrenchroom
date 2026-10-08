@@ -59,6 +59,8 @@ PAST_HOME = {
     "small_phillips_screw": "needs driver-ph0, which kit metric-home does not hold (full has it)",
     # Issue #82: a T40 recess on an M8, by its across_flats.
     "pan_t40_torx_screw": "needs torx-key-T40, which kit metric-home does not hold (full has it)",
+    # Issue #101: an M8 Phillips takes PH4, which the home drivers stop short of.
+    "ph4_screw": "needs driver-ph4, which kit metric-home does not hold (full has it)",
     # Issue #95: a #10 socket head named by thread and length.
     "std_#10-32x1": (
         "needs hex-key-5/32in, which kit metric-home does not hold (imperial-home and full have it)"

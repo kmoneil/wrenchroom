@@ -826,10 +826,13 @@ TORX_SIZE: dict[str, str] = {
     "M12": "T55",
 }
 
-#: Phillips driver number by thread. Approximation (catalogue-typical pairings;
-#: no ISO or ASME table maps thread to recess number across head styles).
+#: Phillips recess number by thread. The ISO cross-recess standards agree size for size
+#: across head styles: ISO 7045 (pan), 7046-1 and 7046-2 (countersunk) and 7047 (raised
+#: countersunk), each 2011's Table 1, read from the iTeh previews 2026-10-07 (ISO 7046-2
+#: starts at M2). M8 and M10 take PH4 (issue #101). Inch: ASME B18.6.3 Type I, pan and
+#: flat countersunk alike, as the suppliers' copies give it.
 PHILLIPS_NUMBER: dict[str, int] = {
-    "M1.6": 0,  # ISO 7045, 7046-1 and 7047 agree from M1.6 to M3 (issue #83)
+    "M1.6": 0,
     "M2": 0,
     "M2.5": 1,
     "M3": 1,
@@ -837,8 +840,9 @@ PHILLIPS_NUMBER: dict[str, int] = {
     "M4": 2,
     "M5": 2,
     "M6": 3,
-    "M8": 3,
-    "#0": 0,  # ASME B18.6.3, as the suppliers' copies give it (issue #83)
+    "M8": 4,
+    "M10": 4,
+    "#0": 0,
     "#1": 0,
     "#2": 1,
     "#3": 1,

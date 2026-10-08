@@ -40,6 +40,9 @@ SHAFT_RADIUS: dict[str, float] = {
     "ph1": 2.5,
     "ph2": 3.0,
     "ph3": 4.0,
+    # PH4, an M8's and M10's (issue #101): 10 mm round, Wera 350 PH4 x 200's (Fabory)
+    # and Wiha 311 PH4 x 200's (retailers' spec sheets), read 2026-10-08.
+    "ph4": 5.0,
     "slotted": 3.0,
 }
 

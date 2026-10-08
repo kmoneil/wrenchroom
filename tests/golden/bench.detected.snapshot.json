@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 126,
-  "turns": 94,
+  "fasteners": 127,
+  "turns": 95,
   "held": 8,
   "blocked": 21,
   "stuck": 1,
@@ -2118,6 +2118,36 @@
    "notes": []
   },
   {
+   "name": "ph4_screw",
+   "kind": "screw",
+   "head": "phillips",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    14000.0,
+    6.0
+   ],
+   "source": "name+geometry",
+   "tool": "driver-ph4",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "phillips_open_screw",
    "kind": "screw",
    "head": "phillips",
@@ -3639,7 +3669,7 @@
     1.0
    ],
    "seat": [
-    1900.0,
+    2900.0,
     14000.0,
     6.0
    ],
@@ -3671,7 +3701,7 @@
     1.0
    ],
    "seat": [
-    2100.0,
+    3100.0,
     14000.0,
     6.0
    ],
