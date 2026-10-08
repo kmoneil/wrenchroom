@@ -32,12 +32,15 @@ from parts import (
     hex_prism,
     pan_phillips,
     plate,
+    set_screw,
     slab,
     slot_block,
     socket_screw,
+    thumb_screw,
     vendor_button_screw,
     vendor_flat_screw,
     vendor_socket_screw,
+    wing_nut,
 )
 
 
@@ -1962,4 +1965,63 @@ def _others():
         ("pin", pin),
         ("M4x10 spacer", Pos(0, 0, 5) * (Cylinder(2.5, 10) - Cylinder(2.1, 11))),
         ("M3x5x4", Pos(0, 0, 2.5) * (Cylinder(2.3, 5) - Cylinder(1.6, 6))),
+    ]
+
+
+# ---------------------------------------------------------------- issue #96: set screws, by hand
+
+_GRIP_HOW = {"set_screw": "short leg in", "thumb_screw": "fingers round its head"}
+_GRIP_HOW |= {"wheel_thumbscrew": "a fingertip on its rim", "wing_nut": "fingers round it"}
+
+
+@cell(
+    "grip",
+    [
+        {"parts": "set_screw", "kind": "screw", "head": "set", "size": "M3", "length": 4},
+        {"parts": "thumb_screw", "kind": "screw", "size": "M3", "tool": "hand"},
+        {"parts": "wheel_thumbscrew", "kind": "screw", "size": "M3", "tool": "hand"},
+        {"parts": "wing_nut", "kind": "nut", "size": "M6", "tool": "hand"},
+    ],
+    {
+        role: {
+            "verdict": "turns",
+            "tool": "hex-key-1.5" if role == "set_screw" else "hand",
+            "how": how,
+        }
+        for role, how in _GRIP_HOW.items()
+    },
+)
+def grip():
+    """Issue #96: what isn't turned with a head's key or a spanner.
+
+    An M3x4 set screw (ISO 4026: a 1.5 key, where ISO 4762's M3 takes 2.5) in a
+    pulley's hub, socket out, 3.5 down its tapped hole (drawn at the 2.5 tap drill),
+    10 over the plate: the key goes in along the hole, short leg first, as a driver's
+    handle (14 round) meets the plate; and the screw backs out the same way. A thumb
+    screw (an 8 across, 3 high knurled head) on a washer named for it, in the open:
+    fingers round its head. A thumb wheel shut in a block but for a window on +x, 9
+    high and 12 wide: no room for fingers round it, but a fingertip on its rim
+    through the window turns it. An M6 wing nut (22 across its wings) on a stud,
+    over a nylon washer named for it: fingers round it, the stud's end between them.
+    The washers are named after their fasteners and are none themselves, nor is a
+    spacer whose name's aside gives its screw's standard.
+    """
+    hub = Pos(-240, 0, 10) * (Cylinder(10, 12) - Cylinder(2.5, 13))
+    hub -= Pos(-240 + 6.25, 0, 10) * Rot(0, 90, 0) * Cylinder(1.25, 7.5)
+    block = Box(40, 40, 20) - Cylinder(5, 4) - Pos(0, 0, -6) * Cylinder(1.6, 9)
+    block -= Pos(0, 0, 6) * Cylinder(4.6, 9) + Pos(12.5, 0, 0) * Box(25, 12, 9)
+    washer = Cylinder(4, 1) - Cylinder(1.6, 2)
+    return [
+        ("plate", plate(w=640, d=360, holes=[(-80, 0, 1.6), (240, 0, 3.2)])),
+        ("shaft", Pos(-240, 0, 15) * Cylinder(2.5, 30)),
+        ("pulley", hub),
+        ("set_screw", Pos(-240 + 6.5, 0, 10) * Rot(0, 90, 0) * set_screw()),
+        ("washer_for_m3_screw", Pos(-80, 0, 0.5) * washer),
+        ("thumb_screw", Pos(-80, 0, 1) * thumb_screw()),
+        ("block", Pos(80, 0, 10) * block),
+        ("wheel_thumbscrew", Pos(80, 0, 8.5) * thumb_screw(length=8.0)),
+        ("stud", Pos(240, 0, 5) * Cylinder(3, 30)),
+        ("nylon_washer (wingnut)", Pos(240, 0, 0.5) * (Cylinder(6, 1) - Cylinder(3.2, 2))),
+        ("wing_nut", Pos(240, 0, 1) * wing_nut()),
+        ("spacer (ISO 4762 M6 screw)", Pos(0, 120, 5) * (Cylinder(5, 10) - Cylinder(3.2, 11))),
     ]

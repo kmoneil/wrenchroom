@@ -84,6 +84,7 @@ from wrenchroom.tools.custom import (
     CustomTools,
 )
 from wrenchroom.tools.drivers import SHAFT_RADIUS, driver_attempt
+from wrenchroom.tools.fingers import HAND, finger_attempts
 from wrenchroom.tools.hex_keys import HEX_KEYS, HexKey, hex_key_attempts
 from wrenchroom.tools.kits import DEFAULT_KIT, Kit, kit_named, missing
 from wrenchroom.tools.nut_drivers import NUT_DRIVERS, nut_driver_attempt
@@ -131,7 +132,7 @@ _ROOM_DEPTHS = (2.0, 5.0, 10.0, 25.0, 50.0)
 _PAIR_MAX_ANGLE_DEG = 0.5
 _PAIR_MAX_OFFSET_MM = 0.3
 
-_KEYED_HEADS = (Head.SOCKET, Head.BUTTON, Head.FLAT, Head.SHOULDER)
+_KEYED_HEADS = (Head.SOCKET, Head.BUTTON, Head.FLAT, Head.SHOULDER, Head.SET)
 
 #: The keyed heads whose sockets are deep enough for a ball end: ISO 4762's and
 #: ISO 7379's. A button head's (ISO 7380) or a countersunk head's (ISO 10642) is
@@ -226,7 +227,8 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
             failures[fastener.name] = fastener.not_covered
             continue
         try:
-            frames[fastener.name] = _frame(assembly[fastener.name], fastener)
+            pieces = _pieces(assembly, fastener.name)
+            frames[fastener.name] = _frame(assembly[fastener.name], fastener, pieces)
         except NotCovered as exc:
             failures[fastener.name] = str(exc)
     pairs, pair_warnings = _find_pairs(fasteners, frames, config)
@@ -326,6 +328,10 @@ class _Frame:
     flats: tuple[bool, ...] = ()
     #: The part's planar and cylindrical faces, read once (:func:`_faces_of`).
     faces: tuple[_Face, ...] = ()
+    #: Its other solids' vertices, as (projection, radial): a thumb screw's shank
+    #: drawn apart from its knurled head (issue #96). Read only where its own solid
+    #: can't tell which end is its head.
+    pieces: tuple[tuple[float, float], ...] = ()
 
     @property
     def extent(self) -> float:
@@ -363,13 +369,19 @@ def _faces_of(part: Part) -> tuple[_Face, ...]:
     return tuple(found)
 
 
-def _frame(part: Part, fastener: Fastener) -> _Frame:
+def _pieces(assembly: Assembly, name: str) -> tuple[Part, ...]:
+    """The other solids of a part's leaf, which go with it (issue #28)."""
+    return tuple(assembly[piece] for piece in assembly.pieces(name))
+
+
+def _frame(part: Part, fastener: Fastener, pieces: tuple[Part, ...] = ()) -> _Frame:
     faces = _faces_of(part)
     axis = _largest_cylinder_axis(faces)
     direction = _axis_direction(axis, fastener)
     origin, vertices = _axis_frame(part, axis)
     projections = tuple(_dot(_sub(v, origin), direction) for v in vertices)
     radials = tuple(_radial(_sub(v, origin), direction) for v in vertices)
+    others = [tuple(v) for piece in pieces for v in piece.shape.vertices()]
     return _Frame(
         part=part,
         direction=direction,
@@ -380,6 +392,10 @@ def _frame(part: Part, fastener: Fastener) -> _Frame:
         oriented=isinstance(fastener.axis, tuple),
         flats=_on_flats(faces, origin, direction, vertices),
         faces=faces,
+        pieces=tuple(
+            (_dot(_sub(v, origin), direction), _radial(_sub(v, origin), direction))  # type: ignore[arg-type]
+            for v in others
+        ),
     )
 
 
@@ -845,7 +861,7 @@ def _try_in_state(
     frame = default_frame
     if not same_model:  # parts may have moved: measure this model's own copy
         try:
-            frame = _frame(assembly[fastener.name], fastener)
+            frame = _frame(assembly[fastener.name], fastener, _pieces(assembly, fastener.name))
         except NotCovered as exc:
             return _Candidate(fastener, reason=str(exc), state=state_name)
     mates = (
@@ -1083,7 +1099,12 @@ def _way_out(
         length = frame.extent - geometry.band_height
     if length <= 0:
         return None
-    swept = mount.place(axial_cylinder(geometry.circumradius, 0.0, length))
+    radius = geometry.circumradius
+    if fastener.head is Head.SET:
+        # No head: it backs out through its own tapped hole, which a thread drawn
+        # at its minor diameter fills to within the thread's reach (issue #96).
+        radius /= _THREAD_REACH
+    swept = mount.place(axial_cylinder(radius, 0.0, length))
     return Probe(swept, scene.hits(swept))
 
 
@@ -1245,6 +1266,8 @@ def _drawn_af(frame: _Frame, fastener: Fastener) -> float | None:
 
 def _is_flipped(frame: _Frame, fastener: Fastener, scene: Scene) -> bool:
     """Does the axis point into the joint instead of out of it?"""
+    if fastener.kind is Kind.SCREW and fastener.head is Head.SET:
+        return _socket_is_at_bottom(frame)
     if fastener.kind is Kind.SCREW:
         return _head_is_at_bottom(frame)
     thread = fastener.size.diameter_mm / 2 if fastener.size is not None else 0.0
@@ -1259,9 +1282,40 @@ def _head_is_at_bottom(frame: _Frame) -> bool:
     tried from inside the part the screw threads into.
     """
     end = wide_end(frame.projections, frame.radials)
+    if end == 0 and frame.pieces:  # a head drawn apart from its shank (issue #96)
+        along, out = zip(*frame.pieces, strict=True)
+        end = wide_end((*frame.projections, *along), (*frame.radials, *out))
     if end == 0:
         raise NotCovered("cannot tell the head end: both ends look alike")
     return end < 0
+
+
+def _socket_is_at_bottom(frame: _Frame) -> bool:
+    """A set screw is turned from the end its socket is in (issue #96).
+
+    It has no head to say: the socket's walls, flats parallel to the axis facing
+    it, sit nearer one end than the other.
+    """
+    walls = [
+        _dot(_sub(face.point, frame.origin), frame.direction)
+        for face in frame.faces
+        if face.plane
+        and abs(_dot(face.normal, frame.direction)) < 1 - _AXIAL
+        and _dot(face.normal, _radial_of(face.point, frame)) < 0
+    ]
+    if not walls:
+        raise NotCovered("cannot tell which end its socket is in: no socket in the solid")
+    middle = (min(frame.projections) + max(frame.projections)) / 2
+    lower = [wall < middle for wall in walls]
+    if any(lower) and not all(lower):
+        raise NotCovered("cannot tell which end its socket is in: both ends look alike")
+    return all(lower)
+
+
+def _radial_of(point: Vec, frame: _Frame) -> Vec:
+    """The direction from the frame's axis out to a point, unnormalised."""
+    out = _sub(point, frame.origin)
+    return _sub(out, _scale(frame.direction, _dot(out, frame.direction)))
 
 
 def _free_face_is_at_bottom(frame: _Frame, scene: Scene, thread_radius: float = 0.0) -> bool:
@@ -1363,6 +1417,29 @@ def _attempts_for(
     if fastener.head is Head.TORX:
         return _torx_attempts(fastener, mount, scene, tools)
     raise NotCovered("head unknown: name it in the sidecar")
+
+
+def _by_hand(
+    fastener: Fastener, mount: Mount, geometry: _Geometry, scene: Scene, tools: _Tools
+) -> Iterator[Attempt]:
+    """A thumb screw or wing nut: no tool, but room for fingers at its grip (issue #96).
+
+    The grip is its widest region, from its end down; over a nut's end the fingers
+    leave its bolt alone, as anything threaded through it must fit its bore.
+    """
+    nut = fastener.kind is Kind.NUT
+    thread = fastener.size.diameter_mm / 2 if fastener.size is not None else 0.0
+    bolt = max(geometry.bore_radius, thread) + 0.5 if nut else 0.0
+    return finger_attempts(
+        mount,
+        scene,
+        geometry.circumradius,
+        -geometry.band_bottom,
+        bolt,
+        nut=nut,
+        step_deg=tools.step_deg,
+        hand_room=tools.hand_room,
+    )
 
 
 def _drivers(tip: str, mount: Mount, scene: Scene, tools: _Tools) -> Iterator[Attempt]:
@@ -1606,8 +1683,11 @@ def _key_af(fastener: Fastener, tools: _Tools) -> float:
             raise NotCovered("head or size unknown: name them in the sidecar")
         size = _known_size(fastener)
         af = hex_key_af(fastener.head, size)
-        if af is None or (af not in HEX_KEYS and not tools.custom.hex_keys(af)):
+        if af is None:
             raise NotCovered(no_such_head(fastener.head, size))
+        if af not in HEX_KEYS and not tools.custom.hex_keys(af):
+            # Its standard's key, whose L-key no table here holds: an M1.6 set screw's 0.7
+            raise NotCovered(missing((f"hex-key-{size_name(af)}",), tools.kit))
     return af
 
 
@@ -1868,6 +1948,8 @@ def _forced_attempts(
     kit says which tools there are.
     """
     name = fastener.tool or ""
+    if name == HAND:  # turned by hand: room for fingers, not a tool (issue #96)
+        return _by_hand(fastener, mount, geometry, scene, tools)
     misfit = _forced_misfit(fastener, name, tools, geometry.drawn_af)
     if misfit is not None:
         raise NotCovered(misfit)
@@ -1888,6 +1970,7 @@ _HEAD_DRIVES = {
     Head.BUTTON: ("key", "button head"),
     Head.FLAT: ("key", "countersunk head"),
     Head.SHOULDER: ("key", "shoulder screw's head"),
+    Head.SET: ("key", "set screw"),
     Head.TORX: ("torx", "Torx head"),
     Head.PHILLIPS: ("phillips", "Phillips head"),
     Head.SLOTTED: ("slotted", "slotted head"),

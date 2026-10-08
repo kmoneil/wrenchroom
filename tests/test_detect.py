@@ -143,9 +143,10 @@ def test_a_gland_takes_its_hex_and_no_size():
     assert not found.socket_allowed
 
 
-def test_a_set_screw_is_not_covered_with_the_reason():
+def test_a_set_screw_named_takes_its_own_head_and_size():
+    # Issue #96: ISO 4026's keys, not ISO 4762's; with no socket drawn, the name's.
     found = detected("set screw M6x10", Cylinder(3, 10))
-    assert "set screw" in found.not_covered
+    assert (found.head, found.size.designation, found.not_covered) == (Head.SET, "M6", None)
 
 
 def test_a_name_with_nothing_measurable_is_source_name():
@@ -327,7 +328,8 @@ def _plain_head(dk, k):
         ("torx_lid_screw M6", torx_screw, "high"),  # a drive word away from the noun
         ("lift_bolt", lambda: socket_screw("M6", pocket=False), "medium"),  # head by outline
         ("frame_screw", pan_phillips, "medium"),  # size from the shank alone
-        ("set screw M6x10", lambda: Cylinder(3, 10), "low"),  # not covered
+        ("set screw M6x10", lambda: Cylinder(3, 10), "high"),  # the name says all (#96)
+        ("DIN 7984 M6x10", lambda: socket_screw("M6"), "low"),  # not covered
         ("bolt", lambda: Box(5, 5, 5), "low"),  # nothing measurable, no size
     ],
 )

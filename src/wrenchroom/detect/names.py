@@ -23,10 +23,15 @@ may be a gland or a vent, ``bolt_hole_cover`` is a cover, and ``pair_nut_held_up
 is about ``held``. Only its solid can say, by showing a drive (issue #30: such a
 name used to be passed over without a word).
 
+A name is about its own phrase: a parenthesised phrase or a ``for ...`` after it
+says what the part goes with (``Nylon Washer (Thumbscrew)``, ``Washer for M3
+screw``), so a name whose own noun isn't a fastener's is no fastener (issue #96).
+
 Whatever the name doesn't say stays None for geometry to fill in (spec 5.2: names,
 then geometry, then the sidecar, each overriding the one before). A name that is
-clearly a fastener the kit can't check (a set screw, an M1) comes back with
-``not_covered`` and the reason, never as nothing.
+clearly a fastener the kit can't check (a low-head socket screw, an M1) comes back
+with ``not_covered`` and the reason, never as nothing. A set screw has its own keys
+(``head`` set), and a thumb screw or wing nut is turned by hand (``by_hand``).
 """
 
 from __future__ import annotations
@@ -69,6 +74,8 @@ class NameHint:
             thread size and no word that says threaded: a decorative inlay as
             readily as a fixed thread, so a fastener only if its solid shows a
             bore, and passed over if it doesn't (issue #84).
+        by_hand: Turned by hand, a thumb screw, a wing nut: no tool fits it, and
+            the room it needs is room for fingers round it (issue #96).
     """
 
     kind: Kind
@@ -81,6 +88,7 @@ class NameHint:
     needs_drive: bool = False
     unless_hex: bool = False
     needs_bore: bool = False
+    by_hand: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -88,9 +96,6 @@ class NameHint:
 # ---------------------------------------------------------------------------
 
 _S, _N = Kind.SCREW, Kind.NUT
-_SET_SCREW = (
-    "a set screw takes a smaller key than the socket-head table; name the tool in the sidecar"
-)
 _LOW_HEAD = (
     "a low-head socket screw takes a smaller key than ISO 4762; name the tool in the sidecar"
 )
@@ -137,15 +142,15 @@ STANDARDS: dict[str, tuple[Kind | None, Head | None, str | None]] = {
     "DIN 603": (_S, Head.CARRIAGE, None),
     "ISO 8677": (_S, Head.CARRIAGE, None),
     "ISO 8678": (_S, Head.CARRIAGE, None),
-    # set screws
-    "ISO 4026": (_S, None, _SET_SCREW),
-    "DIN 913": (_S, None, _SET_SCREW),
-    "ISO 4027": (_S, None, _SET_SCREW),
-    "DIN 914": (_S, None, _SET_SCREW),
-    "ISO 4028": (_S, None, _SET_SCREW),
-    "DIN 915": (_S, None, _SET_SCREW),
-    "ISO 4029": (_S, None, _SET_SCREW),
-    "DIN 916": (_S, None, _SET_SCREW),
+    # set screws, flat, cone, dog and cup point: their own keys (issue #96)
+    "ISO 4026": (_S, Head.SET, None),
+    "DIN 913": (_S, Head.SET, None),
+    "ISO 4027": (_S, Head.SET, None),
+    "DIN 914": (_S, Head.SET, None),
+    "ISO 4028": (_S, Head.SET, None),
+    "DIN 915": (_S, Head.SET, None),
+    "ISO 4029": (_S, Head.SET, None),
+    "DIN 916": (_S, Head.SET, None),
     # nuts: plain, thin, nylon-insert, flange
     "ISO 4032": (_N, None, None),
     "DIN 934": (_N, None, None),
@@ -209,10 +214,9 @@ _THREAD_WORDS = {"threaded", "thread", "tapped", "heatset", "heat", "brass", "he
 #: "hexbolt", "nylocnut"): read as the two words they are (issue #84). Longest first.
 _COMPOUND_NOUNS = ("screws", "screw", "bolts", "bolt", "nuts", "nut")
 _SET_SCREW_NOUNS = {"setscrew", "grubscrew"}
-#: Describing words that settle a fastener as one the kit can't check.
+#: Describing words that settle a fastener as a set screw, or one turned by hand.
 _HAND_WORDS = {"wing", "thumb", "knurled"}
 _SET_WORDS = {"set", "grub"}
-_BY_HAND = "turned by hand: there is no tool to check"
 
 #: Every fastener noun to its kind.
 _NOUN_KIND: dict[str, Kind] = {
@@ -340,13 +344,16 @@ def read_name(name: str) -> NameHint | None:
     Never raises: any string is a possible part name.
     """
     cleaned = _clean(name)
+    own = _own_phrase(cleaned)
+    words = _words(own) or _words(cleaned)
+    at = _last_noun(words)
+    if own != cleaned and at is not None and _noun_reading(words, at) is None:
+        return None  # "Nylon Washer (Thumbscrew)": a washer, for a thumb screw (issue #96)
     standard = _standard_in(cleaned)
     catalogue = _mcmaster_in(cleaned)
-    words = _words(cleaned)
-    at = _last_noun(words)
     noun = words[at] if at is not None else None
     run = _descriptors(words, at)
-    needs_drive = False
+    needs_drive, by_hand = False, False
     if standard is not None:
         label, (kind, head, reason) = standard
         if kind is None:
@@ -360,7 +367,8 @@ def read_name(name: str) -> NameHint | None:
         reading = _noun_reading(words, at)
         if reading is None:
             return _designation(cleaned, words, at)
-        at, (kind, head, reason, word), needs_drive = reading
+        at, (kind, head, by_hand, word), needs_drive = reading
+        reason = None
         noun, run = words[at], _descriptors(words, at)
         basis = [f"noun {word!r}" + (", words after it" if needs_drive else "")]
     if head is None:
@@ -389,6 +397,7 @@ def read_name(name: str) -> NameHint | None:
         needs_drive=needs_drive,
         unless_hex=kind is Kind.INSERT and word not in _INSERT_NOUNS,
         needs_bore=bare and size is None and size_reason is None,
+        by_hand=by_hand,
     )
 
 
@@ -404,16 +413,33 @@ def _designation(text: str, words: list[str], at: int | None) -> NameHint | None
     if at is not None or length is None or size_text is None:
         return None
     run = set(words)
-    _, _, reason, _ = _noun_hint("screw", run) or (None, None, None, None)
+    _, head, by_hand, _ = _noun_hint("screw", run) or (Kind.SCREW, None, False, "")
     return NameHint(
         kind=Kind.SCREW,
-        head=_head_from(run, Kind.SCREW),
+        head=head or _head_from(run, Kind.SCREW),
         size=size,
         length_mm=length,
         basis=f"thread and length {size_text}",
-        not_covered=reason or size_reason,
+        not_covered=size_reason,
         needs_drive=True,
+        by_hand=by_hand,
     )
+
+
+#: A phrase in brackets with a word in it, and ``for`` as a word: what a name says
+#: its part goes with (issue #96). A bracketed number is an instance marker.
+_ASIDE = re.compile(r"\([^()]*[A-Za-z][^()]*\)")
+_FOR = re.compile(r"(?<![A-Za-z0-9])for(?![A-Za-z0-9])", re.IGNORECASE)
+
+
+def _own_phrase(text: str) -> str:
+    """The name without what it says its part goes with: ``Nylon Washer (Thumbscrew)``.
+
+    ``Washer for M3 screw`` is a washer; ``Screw (ISO 7380 M3x8)`` a screw, whose
+    standard and size the caller still reads from the whole name.
+    """
+    own = _FOR.split(_ASIDE.sub(" ", text), maxsplit=1)[0].strip()
+    return own or text
 
 
 def _clean(name: str) -> str:
@@ -477,7 +503,8 @@ PART_NOUNS = frozenset(
 
 def ends_in_part_noun(name: str) -> bool:
     """Whether a part name's last word names a part that isn't a fastener."""
-    words = _words(_clean(name))
+    cleaned = _clean(name)
+    words = _words(_own_phrase(cleaned)) or _words(cleaned)
     return bool(words) and words[-1] in PART_NOUNS
 
 
@@ -531,7 +558,7 @@ def _last_noun(words: list[str]) -> int | None:
 
 def _noun_reading(
     words: list[str], at: int | None
-) -> tuple[int, tuple[Kind, Head | None, str | None, str], bool] | None:
+) -> tuple[int, tuple[Kind, Head | None, bool, str], bool] | None:
     """Where the fastener noun is, what it says, and whether ordinary words follow it.
 
     The word the name is about first; failing that, the last fastener noun
@@ -544,7 +571,7 @@ def _noun_reading(
             continue
         found = _noun_hint(words[index], _descriptors(words, index))
         if found is not None and _is_insert(words, index, found[0]):
-            found = (Kind.INSERT, None, None, f"{words[index - 1]} {found[3]}")  # "well nut"
+            found = (Kind.INSERT, None, False, f"{words[index - 1]} {found[3]}")  # "well nut"
         if found is not None:
             return index, found, needs_drive
     return None
@@ -583,17 +610,17 @@ def _is_insert(words: list[str], at: int, kind: Kind) -> bool:
     return kind is Kind.NUT and before in _INSERT_WORDS and not set(words) & _LOCK_WORDS
 
 
-def _noun_hint(noun: str | None, run: set[str]) -> tuple[Kind, Head | None, str | None, str] | None:
-    """(kind, head, not-covered reason, the noun) for a fastener noun, else None."""
+def _noun_hint(noun: str | None, run: set[str]) -> tuple[Kind, Head | None, bool, str] | None:
+    """(kind, head, turned by hand, the noun) for a fastener noun, else None."""
     kind = _NOUN_KIND.get(noun or "")
     if noun is None or kind is None:
         return None
     if noun in _SET_SCREW_NOUNS or (kind is Kind.SCREW and run & _SET_WORDS):
-        return kind, None, _SET_SCREW, noun
+        return kind, Head.SET, False, noun
     if noun in _HAND_TURNED or (kind is not Kind.INSERT and run & _HAND_WORDS):
-        return kind, None, _BY_HAND, noun  # never an insert: a knurled insert is set, not turned
+        return kind, None, True, noun  # never an insert: a knurled insert is set, not turned
     head = _HEAD_WORDS.get(noun) if kind is Kind.SCREW else None
-    return kind, head, None, noun
+    return kind, head, False, noun
 
 
 def _head_from(run: set[str], kind: Kind) -> Head | None:

@@ -92,6 +92,8 @@ def _block(result: FastenerResult) -> str:
         entry["across_flats"] = round(fastener.drive_af, 3)
     if not fastener.socket_allowed:
         entry["socket"] = False
+    if fastener.tool is not None:  # by hand (issue #96)
+        entry["tool"] = fastener.tool
     plain = not any(UNSAFE.search(str(value)) for value in entry.values())
     dumped = yaml.safe_dump([entry], sort_keys=False, allow_unicode=plain, width=1000)
     if result.fastener.not_covered is not None:

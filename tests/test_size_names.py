@@ -123,11 +123,14 @@ def test_a_head_word_beside_it_says_the_head(name, head):
     assert (found.kind, found.head, found.needs_drive) == (S, head, True)
 
 
+def test_a_set_or_thumb_word_beside_it_says_so():
+    assert (read_name("set M3x4").head, read_name("set M3x4").by_hand) == (Head.SET, False)
+    assert (read_name("M3x16 thumb").head, read_name("M3x16 thumb").by_hand) == (None, True)
+
+
 @pytest.mark.parametrize(
     ("name", "reason"),
     [
-        ("M3x16 thumb", "turned by hand"),
-        ("set M3x4", "set screw"),
         ("M30x100", "M30 is outside the sizes the tables hold"),
         ("#14-20x1", "#14 is outside the sizes the tables hold"),
     ],

@@ -676,7 +676,9 @@ def _groups(results: tuple[FastenerResult, ...]) -> list[_Group]:
             outcome = f"{len(failed)} of {len(members)} fail"
         else:
             ways = {m.how for m in members if m.how}
-            hardest = max(ways, default="", key=len)
+            # The longest way, and of two as long the first by name: a set's order
+            # is the process's, and a report must read the same from any run (#96).
+            hardest = max(sorted(ways, reverse=True), default="", key=len)
             outcome = f"all pass ({hardest})" if hardest else "all pass"
         rows.append(_Group(what, tool or None, len(members), outcome))
     return rows

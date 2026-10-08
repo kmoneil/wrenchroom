@@ -70,6 +70,8 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
         want = (head, expected_af and round(expected_af, 6), size)  # inch sizes in mm
         if head is Head.TORX:
             got, want = got[2], want[2]  # the size only: no Torx recess is read
+        elif rule.get("tool") == "hand":
+            got, want = got[2], want[2]  # no drive, no head to say: fingers grip it (#96)
         elif reading.head is None and reading.drive_af is None and reading.head_guess:
             outlined.append(name)  # no drive drawn: the outline's head, held to a standard
             got = (reading.head_guess, reading.head_standard, reading.size)

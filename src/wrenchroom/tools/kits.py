@@ -34,6 +34,7 @@ from dataclasses import dataclass
 
 from wrenchroom.tools.ball_end import BALL_END_KEYS
 from wrenchroom.tools.drivers import SHAFT_RADIUS
+from wrenchroom.tools.fingers import HAND
 from wrenchroom.tools.hex_keys import ASME_B18_3, HEX_KEYS, ISO_2936
 from wrenchroom.tools.nut_drivers import NUT_DRIVERS
 from wrenchroom.tools.sizes import INCH_FLATS, INCH_KEYS, METRIC_FLATS, size_mm, size_name
@@ -72,7 +73,12 @@ class Kit:
     nut_drivers: tuple[str, ...] = ()
 
     def holds(self, tool: str) -> bool:
-        """True when a tool, named as the report names it (``spanner-13``), is in the kit."""
+        """True when a tool, named as the report names it (``spanner-13``), is in the kit.
+
+        Every kit comes with hands: a thumb screw's tool (issue #96).
+        """
+        if tool == HAND:
+            return True
         family, _, size = tool.rpartition("-")
         sizes = {
             "hex-key": self.hex_keys,

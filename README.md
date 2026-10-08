@@ -288,7 +288,7 @@ fasteners:
   - parts: "frame_bolt_*"        # a glob over part names
     kind: screw                  # screw, nut or insert
     head: hex                    # socket, button, flat, hex, torx, phillips,
-                                 # slotted, carriage or shoulder
+                                 # slotted, carriage, shoulder or set
     size: M8                     # M8, #10, 1/4, ...
   - parts: frame_bolt_3          # a later rule replaces an earlier one, whole
     kind: screw

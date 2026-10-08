@@ -115,14 +115,7 @@ def test_descriptions_and_nouns(name, kind, head):
 @pytest.mark.parametrize(
     ("name", "reason"),
     [
-        ("set screw M4x6", "set screw"),
-        ("grub screw M5", "set screw"),
-        ("setscrew_m3", "set screw"),
-        ("DIN 913 M6x10", "set screw"),
         ("DIN 7984 M6x16", "low-head"),
-        ("wing nut M6", "by hand"),
-        ("thumb screw M4", "by hand"),
-        ("knurled nut M3", "by hand"),
         ("ISO 4762 M1.2x3", "M1.2 is outside the sizes the tables hold (M1.6 to M24)"),
         ("hex bolt M30x100", "M30 is outside"),
         ("SHCS #5-40 x 1/4", "#5 is outside the sizes the tables hold (#0 to 3/4)"),
@@ -191,8 +184,8 @@ def test_a_candidate_keeps_what_its_name_says():
     torx = hint("torx_lid_screw_long M6x20")
     assert (torx.head, torx.size.designation) == (Head.TORX, "M6")
     assert torx.basis == "noun 'screw', words after it, drive 'torx', M6x20"
-    set_screw = hint("screw_set_box")
-    assert "set screw" in set_screw.not_covered  # a set screw holder, or a set screw
+    set_screw = hint("screw_set_box")  # a set screw holder, or a set screw
+    assert (set_screw.head, set_screw.needs_drive) == (Head.SET, True)
 
 
 @pytest.mark.parametrize(

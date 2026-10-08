@@ -195,3 +195,21 @@ def vendor_flat_screw(size, length=12.0):
     head += Pos(0, 0, cone + rim / 2) * Cylinder(dk / 2, rim)
     screw = head + _chamfered_shank(d, length, 0.15 * d)
     return screw - _drilled_socket(s, t, cone + rim, 0.1 * s)
+
+
+def set_screw(d=3.0, length=4.0, s=1.5, t=1.5):
+    """ISO 4026-ish: no head, the socket in its top at z = 0, the body below."""
+    return Pos(0, 0, -length / 2) * Cylinder(d / 2, length) - hex_prism(s, t + 0.01, -t)
+
+
+def thumb_screw(dk=8.0, k=3.0, d=3.0, length=10.0):
+    """A knurled-head thumb screw, drawn plain: a disc on z = 0..k over the shank."""
+    head = Pos(0, 0, k / 2) * Cylinder(dk / 2, k)
+    return head + Pos(0, 0, -length / 2) * Cylinder(d / 2, length)
+
+
+def wing_nut(d=6.0, hub=10.0, height=6.0, span=22.0, wing=2.5):
+    """A DIN 315-ish wing nut on z = 0..height: a hub bored ``d``, two wings ``span`` across."""
+    body = Pos(0, 0, height / 2) * Cylinder(hub / 2, height)
+    body += Pos(0, 0, height / 2 + 0.5) * Box(span, wing, height - 1)
+    return body - Pos(0, 0, height / 2) * Cylinder(d / 2, height + 1)

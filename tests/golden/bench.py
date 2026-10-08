@@ -58,10 +58,11 @@ SLOTS = len(CELLS) + 1
 #: #84's run_in, tee_hold's screw and T-nut, and badge's screw and boss insert (its
 #: logo insert is passed over), 107 with #83's small, eight fasteners below M3 and at
 #: #0, 110 with #82's w7380, w10642 and pan_t40, 114 with #95's std, four screws
-#: named by thread and length alone.
+#: named by thread and length alone, 118 with #96's grip, a set screw and three
+#: fasteners turned by hand.
 FINAL_COUNTS = {
-    "fasteners": 114,
-    "turns": 90,
+    "fasteners": 118,
+    "turns": 94,
     "held": 5,
     "blocked": 18,
     "stuck": 1,

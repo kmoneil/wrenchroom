@@ -45,6 +45,7 @@ from wrenchroom.fasteners import (
     in_recess_band,
     loosely_fits,
 )
+from wrenchroom.tools.fingers import HAND
 from wrenchroom.tools.hex_keys import HEX_KEYS
 from wrenchroom.tools.sizes import FLATS, snap
 
@@ -171,9 +172,10 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
         # "nut_deep_well_nut": a nut deep in a well, as its hex says (issue #29).
         hint = replace(hint, kind=Kind.NUT)
     gland = not hint.socket_allowed
-    head, head_note, reason = _head(hint, reading)
+    # Turned by hand, a thumb screw needs no head: fingers grip whatever it is (#96).
+    head, head_note, reason = (None, None, None) if hint.by_hand else _head(hint, reading)
     size = None if gland else _size(hint, reading)
-    if hint.kind is Kind.NUT and reading.drive_af is None:
+    if hint.kind is Kind.NUT and reading.drive_af is None and not hint.by_hand:
         reason = reason or NO_HEX  # a round nut: nothing a spanner can grip
     not_covered = hint.not_covered or reason
     used = [head_note] if head_note else []
@@ -202,6 +204,7 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
         size=size,
         length_mm=hint.length_mm,
         socket_allowed=hint.socket_allowed,
+        tool=HAND if hint.by_hand else None,
         drive_af=reading.drive_af,
         source="name+geometry" if used else "name",
         basis=basis,
@@ -216,6 +219,7 @@ def _head_guessed(hint: NameHint, reading: ShapeReading) -> bool:
     """A screw's head from its proportions alone: no name, drive or standard says it."""
     return (
         hint.kind is Kind.SCREW
+        and not hint.by_hand
         and hint.head is None
         and reading.head is None
         and reading.head_guess is not None
@@ -242,11 +246,14 @@ def _confidence(
 ) -> str:
     """high, medium or low: see Fastener.confidence."""
     has_size = size is not None or reading.drive_af is not None
-    if not_covered or not has_size or (hint.kind is Kind.SCREW and head is None):
+    headed = hint.kind is not Kind.SCREW or hint.by_hand or head is not None
+    if not_covered or not has_size or not headed:
         return "low"
     if _head_guessed(hint, reading) or reading.outline_head is not None:
         return "low"
-    guessed_head = hint.kind is Kind.SCREW and reading.head is None and hint.head is None
+    guessed_head = (
+        hint.kind is Kind.SCREW and not hint.by_hand and reading.head is None and hint.head is None
+    )
     shank_only = size is not None and hint.size is None and not reading.size_from_drive
     hexed = hint.unless_hex and hint.kind is Kind.NUT  # named an insert, solid a nut
     doubts = (guessed_head, shank_only, _disputed(hint, reading), hint.needs_drive, hexed)
