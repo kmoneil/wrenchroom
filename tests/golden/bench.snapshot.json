@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 131,
-  "turns": 101,
+  "fasteners": 134,
+  "turns": 104,
   "held": 8,
   "blocked": 21,
   "stuck": 1,
@@ -531,6 +531,96 @@
    "deciding": [],
    "stuck_on": [],
    "reason": "the nut's corners hit corner_touch_block as it turns",
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "cross_M2_self_tapping_screw",
+   "kind": "screw",
+   "head": "phillips",
+   "size": "M2",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    15000.0,
+    1.6
+   ],
+   "source": "sidecar",
+   "tool": "driver-ph0",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "cross_M3x6_screw",
+   "kind": "screw",
+   "head": "phillips",
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    -60.0,
+    15000.0,
+    2.4
+   ],
+   "source": "sidecar",
+   "tool": "driver-ph1",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "cross_Type I Cross Recessed Fillister Head Tapping Screw ANSI B18.6.4 1-42 x 0.1875 Type AB",
+   "kind": "screw",
+   "head": "phillips",
+   "size": "#1",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    60.0,
+    15000.0,
+    1.5
+   ],
+   "source": "sidecar",
+   "tool": "driver-ph0",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
    "grazes": [],
    "notes": []
   },
@@ -3794,7 +3884,7 @@
     1.0
    ],
    "seat": [
-    -100.0,
+    900.0,
     15000.0,
     6.0
    ],
@@ -3826,7 +3916,7 @@
     1.0
    ],
    "seat": [
-    100.0,
+    1100.0,
     15000.0,
     6.0
    ],

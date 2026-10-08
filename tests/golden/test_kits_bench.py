@@ -13,10 +13,12 @@ cell comes out as under `full` in each.
 
 import pytest
 from bench import KIT, check_bench, sidecar_and_truth
+from cells import FUSION_TAPPING
 
 from wrenchroom.tools.kits import IMPERIAL_HOME, METRIC_HOME
 
 _GLAND = "needs spanner-24, which kit metric-home does not hold (full has it)"
+_PH0 = "needs driver-ph0, which kit metric-home does not hold (full has it)"
 
 #: The bench sidecar's own tools: in every kit.
 CUSTOM = {tool["name"] for tool in sidecar_and_truth()[0]["tools"]}
@@ -65,6 +67,9 @@ PAST_HOME = {
     "std_#10-32x1": (
         "needs hex-key-5/32in, which kit metric-home does not hold (imperial-home and full have it)"
     ),
+    # Issue #115: an M2 and a #1 cross recess, drawn as makers draw them, take PH0.
+    "cross_M2_self_tapping_screw": _PH0,
+    f"cross_{FUSION_TAPPING}": _PH0,
 }
 
 #: Cells metric-home holds a tool for but can't turn without full's: the ball end.
@@ -168,7 +173,8 @@ def test_imperial_home_covers_nothing_metric_but_drivers(inch_json, bench_json):
         assert entry["reason"].startswith("needs "), name
         assert "which kit imperial-home does not hold" in entry["reason"], name
         assert "in," not in entry["reason"].split(", which")[0], name  # metric tools named
-    # The carriage bolt, the well nut, the T-nut, the boss insert, the four Phillips
-    # screws (std's since issue #95, misnamed's since #117), grip's three turned by hand
-    # (issue #96) and trap's three nuts its blocks hold (issue #93).
-    assert unsized == 14
+    # The carriage bolt, the well nut, the T-nut, the boss insert, the five Phillips
+    # screws (std's since issue #95, misnamed's since #117, cross's M3 since #115),
+    # grip's three turned by hand (issue #96) and trap's three nuts its blocks hold
+    # (issue #93).
+    assert unsized == 15

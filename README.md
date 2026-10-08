@@ -443,7 +443,7 @@ reads a sidecar to pass as `check`'s second argument, and a report writes itself
 
 1. **Read the model.** A STEP assembly keeps its part names; repeated names are made
    unique, and a part drawn as several solids (a nut and its washer) is one part.
-2. **Find the fasteners.** From their names (ISO and DIN designations, McMaster-Carr
+2. **Find the fasteners.** From their names (ISO, DIN and ASME designations, McMaster-Carr
    numbers, descriptions like `M6x20 SHCS` or `hex nut M8`, a thread and length alone
    like `M3x16`, code-CAD names like `lift_link_bolt`) and their solids: the drive the
    model shows, a hex, a hex socket, a cross or a slot, and the size it or the shank

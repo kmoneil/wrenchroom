@@ -97,6 +97,12 @@ MOTION = (
 #: Why a part named nothing a fastener is, whose solid looks like one, is listed (issue #95).
 NOT_NAMED = "not named as a fastener, but its solid looks like one"
 
+#: Why a screw whose solid shows a recess no tool here fits has no head (issue #115).
+NO_RECESS_READ = (
+    "its head shows a recess that is no hex socket, cross or slot; say head: in the "
+    "sidecar, or name its drive"
+)
+
 #: Why a nut whose solid is round isn't given its thread's spanner (issue #29).
 NO_HEX = (
     "named as a nut, but its solid shows no hex for a spanner to grip; a fixed "
@@ -193,11 +199,7 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
     if hint.kind is Kind.NUT and reading.drive_af is None and not hint.by_hand:
         reason = reason or NO_HEX  # a round nut: nothing a spanner can grip
     not_covered = hint.not_covered or reason
-    used = [head_note] if head_note else []
-    if hint.unless_hex and hint.kind is Kind.NUT:
-        used.append("a hex, so a nut")
-    if reading.drive_af is not None:
-        used.append(f"{reading.drive_af:g} across flats")
+    used = _drive_said(hint, reading, head_note)
     notes = (_head_guess(reading, head),) if _head_guessed(hint, reading) else ()
     # A fixed thread's bore is a guess too: drawn at the tap drill, or the minor, it
     # can sit on another size (an M3 T-nut's 2.8 on #4's 2.845). Its screw outranks it.
@@ -232,6 +234,18 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
         size_guessed=guessed,
         notes=notes,
     )
+
+
+def _drive_said(hint: NameHint, reading: ShapeReading, head_note: str | None) -> list[str]:
+    """What the solid said of the head and drive, for the basis."""
+    used = [head_note] if head_note else []
+    if hint.unless_hex and hint.kind is Kind.NUT:
+        used.append("a hex, so a nut")
+    if reading.drive_af is not None:
+        used.append(f"{reading.drive_af:g} across flats")
+    if reading.cross_mm is not None:  # its size (issue #115)
+        used.append(f"a cross {reading.cross_mm:.2f} across its wings")
+    return used
 
 
 #: A name's length agrees with its solid's within this, mm, or this fraction of it.
@@ -329,7 +343,8 @@ def _head(hint: NameHint, reading: ShapeReading) -> tuple[Head | None, str | Non
         elif reading.head_unmatched:
             note += ", fitting no standard head"  # a guess from proportions alone
         return reading.head_guess, note, None
-    return None, None, None
+    # A recess no hex key fits better: no head is guessed for it (issue #115).
+    return None, None, NO_RECESS_READ if reading.unread_recess else None
 
 
 def _outline_said(reading: ShapeReading, head: Head | None = None) -> str | None:

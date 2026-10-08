@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**131 fasteners: 101 turn, 8 held, 21 blocked, 1 stuck, 0 not covered**
+**134 fasteners: 104 turn, 8 held, 21 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -12,6 +12,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | --- | --- | ---: | --- |
 | #0 button screw | `hex-key-0.035in` | 1 | all pass (driver straight in) |
 | #0 socket screw | `hex-key-0.050in` | 1 | all pass (driver straight in) |
+| #1 phillips screw | `driver-ph0` | 1 | all pass (driver straight in) |
 | #10 socket screw | `hex-key-5/32in` | 1 | all pass (driver straight in) |
 | 1/4 nut | `spanner-7/16in` | 1 | all pass (ring, full length) |
 | 1/4 socket screw | `hex-key-3/16in` | 1 | all pass (driver straight in) |
@@ -24,7 +25,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | M12 nut | `short-ring-18` | 1 | all pass (ring, full length) |
 | M16 nut | `spanner-24` | 6 | 1 of 6 fail |
 | M2 flat screw | `hex-key-1.3` | 1 | all pass (driver straight in) |
-| M2 phillips screw | `driver-ph0` | 1 | all pass (driver straight in) |
+| M2 phillips screw | `driver-ph0` | 2 | all pass (driver straight in) |
 | M2 socket screw | `hex-key-1.5` | 1 | all pass (driver straight in) |
 | M2 torx screw | `torx-key-T6` | 1 | all pass (driver straight in) |
 | M2.5 nut | `spanner-5` | 1 | all pass (ring, full length) |
@@ -32,7 +33,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | M3 button screw | `hex-key-2` | 1 | all pass (driver straight in) |
 | M3 nut | - | 3 | all pass (held by its trap in trap\_stopped\_block) |
 | M3 nut | `spanner-5.5` | 2 | 1 of 2 fail |
-| M3 phillips screw | `driver-ph1` | 1 | all pass (driver straight in) |
+| M3 phillips screw | `driver-ph1` | 2 | all pass (driver straight in) |
 | M3 screw | `hand` | 2 | all pass (fingers round its head) |
 | M3 set screw | `hex-key-1.5` | 1 | all pass (short leg in) |
 | M3 socket screw | `hex-key-2.5` | 6 | 1 of 6 fail |
