@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**114 fasteners: 90 turn, 5 held, 18 blocked, 1 stuck, 0 not covered**
+**118 fasteners: 94 turn, 5 held, 18 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -28,6 +28,8 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | M2.5 nut | `spanner-5` | 1 | all pass (ring, full length) |
 | M24 nut | `spanner-36` | 1 | 1 of 1 fail |
 | M3 button screw | `hex-key-2` | 1 | all pass (driver straight in) |
+| M3 screw | `hand` | 2 | all pass (fingers round its head) |
+| M3 set screw | `hex-key-1.5` | 1 | all pass (short leg in) |
 | M3 socket screw | `hex-key-2.5` | 1 | all pass (driver straight in) |
 | M4 button screw | `hex-key-2.5` | 6 | 2 of 6 fail |
 | M4 flat screw | `hex-key-2.5` | 2 | all pass (driver straight in) |
@@ -41,6 +43,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | M6 carriage screw | - | 1 | all pass (holds itself) |
 | M6 hex screw | `spanner-10` | 5 | all pass (ring, full length) |
 | M6 insert | - | 1 | all pass (holds itself) |
+| M6 nut | `hand` | 1 | all pass (fingers round it) |
 | M6 nut | `nut-driver-10` | 1 | all pass (nut driver straight in) |
 | M6 nut | `spanner-10` | 6 | all pass (ring, full length) |
 | M6 shoulder screw | `ball-end-key-4` | 1 | all pass (ball end, 20 deg off the axis) |

@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 114,
-  "turns": 90,
+  "fasteners": 118,
+  "turns": 94,
   "held": 5,
   "blocked": 18,
   "stuck": 1,
@@ -863,6 +863,126 @@
    "verdict": "turns",
    "how": "open end, full length",
    "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "grip_set_screw",
+   "kind": "screw",
+   "head": "set",
+   "size": "M3",
+   "length": 4.0,
+   "axis": [
+    1.0,
+    0.0,
+    0.0
+   ],
+   "seat": [
+    2766.5,
+    13000.0,
+    10.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-1.5",
+   "verdict": "turns",
+   "how": "short leg in",
+   "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "grip_thumb_screw",
+   "kind": "screw",
+   "head": null,
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2920.0,
+    13000.0,
+    4.0
+   ],
+   "source": "sidecar",
+   "tool": "hand",
+   "verdict": "turns",
+   "how": "fingers round its head",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "grip_wheel_thumbscrew",
+   "kind": "screw",
+   "head": null,
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3080.0,
+    13000.0,
+    11.5
+   ],
+   "source": "sidecar",
+   "tool": "hand",
+   "verdict": "turns",
+   "how": "a fingertip on its rim",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "grip_wing_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3240.0,
+    13000.0,
+    7.0
+   ],
+   "source": "sidecar",
+   "tool": "hand",
+   "verdict": "turns",
+   "how": "fingers round it",
+   "swing_deg": 360.0,
    "state": null,
    "pair": null,
    "blocked_by": [],
@@ -3267,7 +3387,7 @@
     1.0
    ],
    "seat": [
-    2900.0,
+    3900.0,
     13000.0,
     6.0
    ],
@@ -3299,7 +3419,7 @@
     1.0
    ],
    "seat": [
-    3100.0,
+    4100.0,
     13000.0,
     6.0
    ],

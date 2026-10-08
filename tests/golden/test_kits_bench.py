@@ -155,10 +155,10 @@ def test_imperial_home_covers_nothing_metric_but_drivers(inch_json, bench_json):
         if name in INCH_PAST_HOME:
             assert (entry["verdict"], entry["reason"]) == ("not-covered", INCH_PAST_HOME[name])
             continue
-        if full["tool"] is None or (
+        if full["tool"] in (None, "hand") or (
             full["tool"].startswith("driver-") and IMPERIAL_HOME.holds(full["tool"])
         ):
-            # Held by itself, or a home driver's tip: no size for the kit to lack.
+            # Held by itself, turned by hand, or a home driver's tip: no size to lack.
             assert entry == full, name
             unsized += 1
             continue
@@ -166,6 +166,6 @@ def test_imperial_home_covers_nothing_metric_but_drivers(inch_json, bench_json):
         assert entry["reason"].startswith("needs "), name
         assert "which kit imperial-home does not hold" in entry["reason"], name
         assert "in," not in entry["reason"].split(", which")[0], name  # metric tools named
-    # The carriage bolt, the well nut, the T-nut, the boss insert and the three Phillips
-    # screws (std's since issue #95).
-    assert unsized == 7
+    # The carriage bolt, the well nut, the T-nut, the boss insert, the three Phillips
+    # screws (std's since issue #95) and grip's three turned by hand (issue #96).
+    assert unsized == 10

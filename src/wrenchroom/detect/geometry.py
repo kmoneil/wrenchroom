@@ -51,6 +51,7 @@ from wrenchroom.fasteners import (
     HEX_AF,
     IMPERIAL_SIZES,
     METRIC_SIZES,
+    SET_KEY_AF,
     SHOULDER_KEY_AF,
     SHOULDER_OUTLINE,
     SHOULDER_THREAD,
@@ -95,6 +96,7 @@ _KEY_TABLES: dict[Head, dict[str, float]] = {
     Head.BUTTON: BUTTON_KEY_AF,
     Head.FLAT: FLAT_KEY_AF,
     Head.SHOULDER: SHOULDER_KEY_AF,
+    Head.SET: SET_KEY_AF,
 }
 
 #: A head this much shallower than it is wide is a button, when no standard's
@@ -104,6 +106,10 @@ _BUTTON_RATIO = 0.45
 #: A head drawn within this fraction of a standard's diameter and height is that
 #: standard's head: models draw the maxima, or near them.
 _OUTLINE_FIT = 0.12
+
+#: A head is at least this many times as wide as its thread: ISO 7379's over its
+#: shoulder, 13 over 8, is the narrowest (see :data:`_WIDE`), with room for a chamfer.
+_HEAD_OVER_THREAD = 1.3
 
 #: A point this far out, as a fraction of the screw's widest radius, is on its
 #: head: any standard head is at least 1.5 times its thread (ISO 7379's over its
@@ -245,8 +251,8 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
     elif _regular(outer, 4) is not None:
         head = Head.CARRIAGE  # a square neck: it holds itself
     elif pocket is not None:
-        outline = _keyed_head(faces, origin, direction, convex, profile, shank)
-        head, drive_af = named if named in _KEY_TABLES else outline.head, pocket
+        head, outline = _socket_head(faces, (origin, direction), convex, profile, shank, named)
+        drive_af = pocket
     elif _is_cross(inner):
         head = Head.PHILLIPS
     elif _is_slot(inner):
@@ -437,6 +443,46 @@ def wide_end(along: tuple[float, ...], out: tuple[float, ...]) -> int:
     if abs(below - above) <= _SAME_DISTANCE:
         return 0
     return 1 if above < below else -1
+
+
+def _socket_head(
+    faces: list[Face],
+    axis: tuple[Vec, Vec],
+    convex: list[float],
+    profile: _Profile,
+    shank: Size | None,
+    named: Head | None,
+) -> tuple[Head | None, _Outline]:
+    """The head a hex socket is in, and its outline.
+
+    None at all, a set screw's (issue #96). Else a keyed head the name gives, and
+    failing that the outline's; a head is no set screw's, whatever the name says.
+    """
+    if _headless(profile):
+        return Head.SET, _Outline(None)
+    outline = _keyed_head(faces, *axis, convex, profile, shank)
+    keyed = named in _KEY_TABLES and named is not Head.SET
+    return (named if keyed else outline.head), outline
+
+
+def _headless(profile: _Profile) -> bool:
+    """No end wider than the thread: a set screw's, its socket in the thread (issue #96).
+
+    Its widest region reaches both ends; or, a dog, cup or cone point narrowing
+    its far end, its wide end is no wider than the half of it away from that end:
+    any standard head is at least :data:`_HEAD_OVER_THREAD` times its thread, and
+    reaches less than half the screw's length.
+    """
+    end = wide_end(profile.along, profile.out)
+    if end == 0:
+        return True
+    middle = (min(profile.along) + max(profile.along)) / 2
+    far = [
+        out
+        for along, out in zip(profile.along, profile.out, strict=True)
+        if (along < middle if end > 0 else along > middle)
+    ]
+    return profile.widest < _HEAD_OVER_THREAD * max(far, default=0.0)
 
 
 def _coaxial_rounds(faces: list[Face], origin: Vec, direction: Vec) -> list[tuple[float, bool]]:

@@ -77,6 +77,18 @@ one: M3 screw, a 2.5 hex socket`): a hex socket its size's key goes into, or a c
 in a head at one end of a shank of a standard size, or a nut's hex round a bore of
 its size. So a model of unnamed screws doesn't pass without a word (issue #95).
 
+A name is about its own phrase: a phrase in brackets or after `for` says what the
+part goes with (`Nylon Washer (Thumbscrew)`, `Washer for M3 screw`), so a part whose
+own noun isn't a fastener's is none, and isn't listed (issue #96).
+
+A set screw (`ISO 4026` to `4029`, `DIN 913` to `916`, `set screw`, `grub screw`) is
+`head: set`: no head, a hex socket in one end of its thread, turned from that end
+with the key its own standard gives (M3 1.5, M6 3, where a socket head cap screw takes
+2.5 and 5), and backing out through its own tapped hole. A hex socket in a solid with
+no head is a set screw whatever its name says. A thumb screw, a wing nut or a knurled
+nut is turned by hand (`tool: hand`): no head is guessed for it, and its room is room
+for fingers (below).
+
 A hex drawn inside its nut standard's tolerance takes that spanner (an M8 nut at
 12.8: ISO 4032 allows 12.73 to 13), the thread's own standard first where an inch and
 a metric band overlap. A known thread keeps to its own system's tools: a hex drawn up
@@ -106,9 +118,9 @@ studs named for their cells are passed over.
 correct and keep: one rule per fastener, and above each a comment with how sure
 detection was, what found it, the axis it resolved and how the part fares now. Where
 the name says one head and the solid's drive shows another, the drive wins and the
-comment says what the name said. A fastener found but not understood (a set screw,
-say) is written commented out with its reason, for you to complete, and so is a part
-passed over. Kept as written, the file reproduces every verdict.
+comment says what the name said. A fastener found but not understood (a low-head
+socket screw, say) is written commented out with its reason, for you to complete, and
+so is a part passed over. Kept as written, the file reproduces every verdict.
 
 ## Which end a tool comes from
 
@@ -138,6 +150,10 @@ Real tools against the real parts:
 - **Phillips and slotted drivers**.
 - **Nut drivers** (in the `full` kit), tried last, straight in, where nothing that
   swings can get down to a nut.
+- **By hand**, for a thumb screw, a wing nut, a knurled nut (`tool: hand`, which every
+  kit has): fingers round its grip, its widest part, then a fingertip on its rim from
+  any one side, as a thumb wheel is turned through a window. Each is tried in place,
+  as a driver is.
 
 A tool on a hex's flats needs the room the hex's own corners sweep as it turns, and a
 socket the room for its wall round the hex. A part in that first room stops the hex
@@ -156,7 +172,8 @@ takes, either the one the unforced check would choose (a given hex, else the thr
 standard one) or the hex the solid shows. One that doesn't fit is not covered, and
 says so (`its tool: spanner-10 is 10 across flats, but the nut (M8) takes 13`); where
 the model's hex really is another size, `across_flats:` in the rule says so. A tool
-the tables don't hold says that instead.
+the tables don't hold says that instead. `tool: hand` says the fastener is turned by
+hand.
 
 A fastener nothing turns, or whose free face can't be told, is measured against the
 parts that stopped it: drawn into one, it is a clash in the model, not covered, with
@@ -303,6 +320,12 @@ a fist round a driver's handle. Where the tool alone would turn and the hand can
 follow, the fastener is blocked, "no room for a hand", naming what the hand hit. Off
 by default: the figures are not yet tuned against real hands, and L-key arms, turned
 with the fingertips, get no hand. Every report ends by saying what it didn't check.
+
+A fastener turned by hand is checked for its fingers whether or not hand room is: a
+ring 12 mm thick round its grip and the fingers 25 mm over its end, leaving a nut's
+bolt alone; or a fingertip 8 mm across reaching 30 mm out from its rim, level with
+the grip's middle or resting on what the grip sits on. With hand room, the hand behind
+the fingers must be clear too. These figures are untuned as well.
 
 ## The sidecar's globs
 

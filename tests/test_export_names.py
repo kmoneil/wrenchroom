@@ -61,7 +61,8 @@ def test_a_noun_of_its_own_keeps_its_reading(name, basis):
 
 
 def test_a_hand_turned_noun_stays_one():
-    assert read_name("wingnut").not_covered == "turned by hand: there is no tool to check"
+    found = read_name("wingnut")
+    assert (found.kind.value, found.by_hand, found.not_covered) == ("nut", True, None)
 
 
 @pytest.mark.parametrize("name", ["peanut", "walnut_trim", "coconut", "corkscrew", "thunderbolt"])

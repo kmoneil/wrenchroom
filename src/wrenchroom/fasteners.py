@@ -36,7 +36,9 @@ class Head(enum.StrEnum):
     ``CARRIAGE`` is the self-holding one: a square neck in a square hole. It is never
     turned and never extracted; its nut does all the work. ``SHOULDER`` is a socket
     head shoulder screw (ISO 7379): a hex socket, but a smaller key than a socket
-    head cap screw of its thread takes, and a shoulder wider than the thread.
+    head cap screw of its thread takes, and a shoulder wider than the thread. ``SET``
+    is a set screw (ISO 4026 to 4029): no head at all, a hex socket in one end of
+    the thread, and a smaller key again (issue #96).
     """
 
     SOCKET = "socket"
@@ -48,6 +50,7 @@ class Head(enum.StrEnum):
     SLOTTED = "slotted"
     CARRIAGE = "carriage"
     SHOULDER = "shoulder"
+    SET = "set"
 
 
 #: Metric thread designations accepted, with the nominal diameter in mm. The coarse
@@ -288,6 +291,26 @@ SHOULDER_THREAD: dict[float, str] = {
 #: engineersedge.com's ISO 10642 note; the spec's own M8 -> 5 example agrees. M2 and
 #: M2.5 came in with ISO 10642:2019 (its foreword, read 2026-10-07); their keys are
 #: from fasten.it's and Westfield's copies of its table: M2 takes ISO 2936's 1.3.
+#: ISO 4026 to 4029 hexagon socket set screws (flat, cone, dog and cup point, DIN 913
+#: to 916): thread -> socket across-flats, mm. One key for every point; read
+#: 2026-10-08 from fasten.it's DIN EN ISO 4026 table (2004), the issue's M3 to M10
+#: agreeing. ISO 4026 runs M1.6 to M24 and has no M14, M18 or M22.
+SET_KEY_AF: dict[str, float] = {
+    "M1.6": 0.7,
+    "M2": 0.9,
+    "M2.5": 1.3,
+    "M3": 1.5,
+    "M4": 2.0,
+    "M5": 2.5,
+    "M6": 3.0,
+    "M8": 4.0,
+    "M10": 5.0,
+    "M12": 6.0,
+    "M16": 8.0,
+    "M20": 10.0,
+    "M24": 12.0,
+}
+
 FLAT_KEY_AF: dict[str, float] = {
     "M2": 1.3,
     "M2.5": 1.5,
@@ -373,6 +396,30 @@ FLAT_KEY_AF.update(
             "1/2": "5/16",
             "5/8": "3/8",
             "3/4": "1/2",
+        }
+    )
+)
+# Inch set screws, ASME B18.3 Table 5A (fasten.it's copy, 2003, read 2026-10-08):
+# smaller keys than the heads take. Monster Bolts' key chart agrees from #0 to 3/8,
+# and Albany County Fasteners' set screw chart on #8, #10, 1/4, 3/8 and 1/2.
+SET_KEY_AF.update(
+    _inch(
+        {
+            "#0": "0.028",
+            "#1": "0.035",
+            "#2": "0.035",
+            "#3": "0.050",
+            "#4": "0.050",
+            "#6": "1/16",
+            "#8": "5/64",
+            "#10": "3/32",
+            "1/4": "1/8",
+            "5/16": "5/32",
+            "3/8": "3/16",
+            "7/16": "7/32",
+            "1/2": "1/4",
+            "5/8": "5/16",
+            "3/4": "3/8",
         }
     )
 )
@@ -704,6 +751,7 @@ _KEY_TABLES: dict[Head, dict[str, float]] = {
     Head.BUTTON: BUTTON_KEY_AF,
     Head.FLAT: FLAT_KEY_AF,
     Head.SHOULDER: SHOULDER_KEY_AF,
+    Head.SET: SET_KEY_AF,
 }
 
 
@@ -717,6 +765,8 @@ KEY_STANDARD: dict[tuple[Head, bool], str] = {
     (Head.FLAT, True): "ISO 10642",
     (Head.FLAT, False): "ASME B18.3",
     (Head.SHOULDER, True): "ISO 7379",
+    (Head.SET, True): "ISO 4026",
+    (Head.SET, False): "ASME B18.3",
     (Head.TORX, True): "ISO 14579",
 }
 
@@ -729,6 +779,8 @@ def no_such_head(head: Head, size: Size) -> str:
     there is no standard to name, and it says so as it always has.
     """
     standard = KEY_STANDARD.get((head, size.is_metric))
+    if standard is not None and head is Head.SET:
+        return f"{standard} has no {size.designation} set screw"
     if standard is not None:
         return f"{standard} has no {size.designation} {head.value} head"
     if head is Head.TORX:

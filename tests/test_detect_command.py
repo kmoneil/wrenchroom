@@ -47,7 +47,7 @@ def model_parts():
         ("frame_bolt", Pos(0, 0, 0) * hex_bolt("M8")),
         ("frame_nut", Pos(100, 0, 0) * hex_nut("M10")),
         ("ISO 4762 M6x20", Pos(-100, 0, 0) * socket_screw("M6")),
-        ("set screw M5x8", Pos(0, 100, 0) * socket_screw("M5")),
+        ("DIN 7984 M5x8", Pos(0, 100, 0) * socket_screw("M5")),
     ]
 
 
@@ -68,7 +68,7 @@ def test_the_sidecar_loads_and_round_trips_the_verdicts(tmp_path):
     # Everything is now described by the file, but for the commented-out one,
     # which detection finds again, and again can't check.
     sources = {r.fastener.name: r.fastener.source for r in kept.results}
-    assert {n for n, source in sources.items() if source != "sidecar"} == {"set screw M5x8"}
+    assert {n for n, source in sources.items() if source != "sidecar"} == {"DIN 7984 M5x8"}
     before = {r.fastener.name: (r.verdict, r.tool, r.how) for r in detected.results}
     after = {r.fastener.name: (r.verdict, r.tool, r.how) for r in kept.results}
     assert after == before
@@ -76,7 +76,7 @@ def test_the_sidecar_loads_and_round_trips_the_verdicts(tmp_path):
 
 def test_each_rule_says_how_sure_and_what_found_it(tmp_path):
     output = detected_yaml(tmp_path, model_parts()).stdout
-    for name in ("frame_bolt", "frame_nut", "ISO 4762 M6x20", "set screw M5x8"):
+    for name in ("frame_bolt", "frame_nut", "ISO 4762 M6x20", "DIN 7984 M5x8"):
         comment = next(
             line for line in output.splitlines() if line.strip().startswith(f"# {name}:")
         )
@@ -90,11 +90,11 @@ def test_each_rule_says_how_sure_and_what_found_it(tmp_path):
 
 def test_a_fastener_the_kit_cannot_check_is_written_commented_out(tmp_path):
     # Kept as a live rule it would become a checked socket screw with the
-    # socket-head table's key: a false "turns" for a set screw.
+    # socket-head table's key: a false "turns" for a low-head socket screw.
     output = detected_yaml(tmp_path, model_parts()).stdout
-    assert "now not-covered: a set screw" in output
-    assert "  # - parts: set screw M5x8" in output
-    assert all(e["parts"] != "set screw M5x8" for e in yaml.safe_load(output)["fasteners"])
+    assert "now not-covered: a low-head socket screw" in output
+    assert "  # - parts: DIN 7984 M5x8" in output
+    assert all(e["parts"] != "DIN 7984 M5x8" for e in yaml.safe_load(output)["fasteners"])
 
 
 def test_detect_writes_a_torx_head_wherever_the_name_says_it(tmp_path):
@@ -123,7 +123,7 @@ def test_confidence_reflects_the_evidence(tmp_path):
         if " confidence" in line
     }
     assert "high confidence" in lines["ISO 4762 M6x20"]  # standard, socket, settled size
-    assert "low confidence" in lines["set screw M5x8"]  # not covered
+    assert "low confidence" in lines["DIN 7984 M5x8"]  # not covered
 
 
 def test_a_model_with_nothing_named_like_a_fastener_writes_an_empty_sidecar(tmp_path):
