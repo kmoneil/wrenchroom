@@ -2125,3 +2125,28 @@ def renamed():
     detected, its name's 12 is noted against the solid's 8, which is the length taken.
     """
     return [("plate", plate(holes=[(0, 0, 1.6)])), ("M3x12_screw", _m3x8())]
+
+
+# ---------------------------------------------------------------- issue #103: the 5.5's length
+
+
+@cell(
+    "reach_55",
+    [{"parts": "nut", "kind": "nut", "size": "M3"}],
+    {"nut": {"verdict": "blocked", "tool": "spanner-5.5", "blocked_by": ["wall", "shelf"]}},
+)
+def reach_55():
+    """An M3 nut on a stud, a shelf 10 over it and a ring wall round it from 97 out.
+    The shelf leaves no room for a socket on its ratchet or a nut driver; the spanner
+    lies flat under it, its handle reaching 0.85 of its length from the nut. Elora's
+    5.5, 123 long, reaches 104.6 and meets the wall at every angle (5.5 has no
+    stubby). As Hazet's 105, the length it used to have, it reached 89.3 and swung
+    clear (issue #103)."""
+    wall = Pos(0, 0, 6.2) * (Cylinder(107, 12.4) - Cylinder(97, 12.5))
+    return [
+        ("plate", plate(w=300, d=300, holes=[(0, 0, 1.6)])),
+        ("stud", Pos(0, 0, 2) * Cylinder(1.5, 8)),
+        ("nut", hex_nut(3, 5.5, 2.4)),
+        ("wall", wall),
+        ("shelf", slab(2.4 + 10)),
+    ]

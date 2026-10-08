@@ -81,7 +81,9 @@ FULL_LENGTHS: dict[float, float] = {
     4.0: 90.0,  # Facom 440, its own page (two sellers say 106)
     4.5: 85.0,  # Stahlwille OPEN-BOX 16 and Gedore 7
     5.0: 123.0,  # Elora 205
-    5.5: 105.0,  # HZ
+    # Elora 205-5,5, as the 5 (issue #103): of the four makers, Hazet 600N's 105 is the
+    # longest, and Facom 440's 115, shorter than the smaller spanner beside it.
+    5.5: 123.0,
     6.0: 129.5,  # TK
     7.0: 138.3,  # GW, as to 22
     8.0: 147.3,
