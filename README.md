@@ -389,7 +389,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10
-      - run: uv tool install wrenchroom==0.2.0   # pinned: an Alpha's verdicts may move
+      - run: uv tool install wrenchroom==0.3.0   # pinned: an Alpha's verdicts may move
       - run: wrenchroom check cad/robot.step --html reach.html --md - >> "$GITHUB_STEP_SUMMARY"
       - if: always()
         uses: actions/upload-artifact@v7
