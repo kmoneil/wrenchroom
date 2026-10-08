@@ -21,7 +21,20 @@ from bd_warehouse.fastener import (
     HexNut,
     SocketHeadCapScrew,
 )
-from build123d import Axis, Box, Compound, Cone, Cylinder, Pos, Rot, Shell, Torus
+from build123d import (
+    Axis,
+    Box,
+    Compound,
+    Cone,
+    Cylinder,
+    Pos,
+    RegularPolygon,
+    Rot,
+    Shell,
+    Sphere,
+    Torus,
+    extrude,
+)
 from parts import (
     VENDOR_FLAT,
     button_screw,
@@ -2241,3 +2254,78 @@ def misnamed():
         ("M5_nut", Pos(nut_x, 0, 0) * hex_nut(3, 5.5, 2.4)),
         ("leadscrew_nut", flange + body - Pos(lead_x, 0, 0) * Cylinder(4, 40)),
     ]
+
+
+# ---------------------------------------------------------------- issue #116: all of a head
+
+#: An ISO 7380-1 M4 button head's dome: the sphere through its rim (r 3.8 at z 0.4)
+#: whose apex would be at 2.5, cut flat at 2.2 round its socket.
+_DOME_R = (3.8**2 + 2.1**2) / (2 * 2.1)
+
+
+def _button_m4():
+    """An ISO 7380-1 M4x10 button head: a rim r 3.8, z 0 to 0.4, under the dome, a
+    2.5 socket 1.3 deep; the shank r 2 under z = 0."""
+    rim = Pos(0, 0, 0.2) * Cylinder(3.8, 0.4)
+    dome = (Pos(0, 0, 2.5 - _DOME_R) * Sphere(_DOME_R)) & (Pos(0, 0, 1.3) * Box(8, 8, 1.8))
+    socket = Pos(0, 0, 0.9) * extrude(RegularPolygon(2.5 / math.sqrt(3), 6), 1.31)
+    return rim + dome - socket + Pos(0, 0, -5) * Cylinder(2, 10)
+
+
+def _countersunk_m6():
+    """An M6 countersunk head, 90 degrees, r 3 at z -3 to r 6 at z 0, no socket
+    drawn; the shank r 3, 12 under it."""
+    return Pos(0, 0, -1.5) * Cone(3, 6, 3) + Pos(0, 0, -9) * Cylinder(3, 12)
+
+
+def _counterbored(bore):
+    """A block round a countersunk M6: a counterbore r ``bore`` from z -3 up, a
+    pocket r 8 over it 1 high and closed, and a hole tapped at the minor under it."""
+    block = Pos(0, 0, -6) * Box(40, 40, 30) - Pos(0, 0, -1.5) * Cylinder(bore, 3)
+    block -= Pos(0, 0, 0.5) * Cylinder(8, 1)
+    return block - Pos(0, 0, -12) * Cylinder(_M6_MINOR / 2, 18)
+
+
+@cell("domed", ignore=["*domed_*"], timed=False)
+def domed():
+    """Heads whose widest region isn't all of them (issue #116): a clash is measured
+    on the whole head, from its bearing face to its top, and its shank is left out.
+    Clashes are not-covered, so only the edges sidecar keeps them, as drawn_in's.
+
+    An ISO 7380-1 M4 button head (its rim 18.15 mm^3, its dome 51.24, its socket
+    7.04: 62.35 in all) three ways: buried, a block over it from z 0, all 62.35 in
+    common, where its rim alone, which used to be measured, is 18.15; dome, a cover
+    0.5 down onto its dome, clear of its rim, the cap of 0.8 less the cap of 0.3 and
+    the socket's top 0.5, 8.49 - 1.24 - 2.71 = 4.54, which used to block the key;
+    clear, the cover 2 over it, which blocks the key, as before.
+
+    An M4 pan head 8 by 3.1, its top edge rounded r 1, a cover 0.5 down onto its
+    crown: pi [10u - u^3/3 + 3 (u sqrt(1 - u^2) + asin u)] from u 0.5 to 1, 20.58,
+    less the cross's 7.8 mm^2 by 0.5: 16.68. Its widest region stops under the
+    fillet, at 2.1, and the cover used to block the driver.
+
+    An M6 countersunk head, 90 degrees, in a block closed 1 over it, its shank in a
+    hole tapped at the minor: cone, the counterbore r 5 where the cone runs out to
+    6, pi (72 - 66.67) = 16.76 in common, the thread's 75 not added; thread, the
+    counterbore r 6.1, clear of the cone, only the thread in common, and blocked.
+    The thread used to be measured: the cone's rim is too thin to be a region.
+    """
+    cover = Box(20, 20, 4)
+    plate_ = Pos(0, 0, -5) * Box(30, 30, 10)
+    cases = ("buried", "dome", "clear", "pan", "cone", "thread")
+    xs = dict(zip(cases, range(-250, 300, 100), strict=True))
+    parts = []
+    for case in ("buried", "dome", "clear"):
+        x = xs[case]
+        parts.append((f"button_{case}_plate", Pos(x, 0, 0) * (plate_ - Cylinder(2, 30))))
+        parts.append((f"button_{case}_screw", Pos(x, 0, 0) * _button_m4()))
+    parts.append(("button_buried_block", Pos(xs["buried"], 0, 10) * Box(20, 20, 20)))
+    parts.append(("button_dome_cover", Pos(xs["dome"], 0, 1.7 + 2) * cover))
+    parts.append(("button_clear_cover", Pos(xs["clear"], 0, 2.2 + 2 + 2) * cover))
+    parts.append(("pan_plate", Pos(xs["pan"], 0, 0) * (plate_ - Cylinder(2, 30))))
+    parts.append(("pan_screw", Pos(xs["pan"], 0, 0) * pan_phillips(d=4, length=12, dk=8, k=3.1)))
+    parts.append(("pan_cover", Pos(xs["pan"], 0, 2.6 + 2) * cover))
+    for case, bore in (("cone", 5.0), ("thread", 6.1)):
+        parts.append((f"flat_{case}_screw", Pos(xs[case], 0, 0) * _countersunk_m6()))
+        parts.append((f"flat_{case}_block", Pos(xs[case], 0, 0) * _counterbored(bore)))
+    return parts

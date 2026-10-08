@@ -994,7 +994,7 @@ def _oriented(
         if trap is not None:
             _hold_in_trap(candidate, trap, frame, scene, partner)
             return candidate
-        clash = _drawn_into(frame, scene, partner)
+        clash = _drawn_into(frame, fastener, scene, partner)
         return _Candidate(fastener, reason=clash or str(exc), state=state_name)
     except NotCovered as exc:
         return _Candidate(fastener, reason=str(exc), state=state_name)
@@ -1021,7 +1021,9 @@ def _try_tools(
     if not candidate.turns and _in_trap(candidate, frame, scene, partner):
         return
     if not candidate.turns:  # what stopped it may be drawn into it (issue #63)
-        candidate.reason = _drawn_into(frame, scene, partner, candidate.blockers)
+        candidate.reason = _drawn_into(
+            frame, fastener, scene, partner, candidate.blockers, toward=mount.axis
+        )
         if candidate.reason is not None:
             candidate.tool = None  # no tool is the question until the model is fixed
             return
@@ -1030,7 +1032,8 @@ def _try_tools(
         candidate.way_out = _way_out(fastener, frame, geometry, mount, scene)
         candidate.extraction_blocked = candidate.way_out.hits if candidate.way_out else ()
         if candidate.extraction_blocked:  # what's in its way out may be drawn into it (#94)
-            clash = _drawn_into(frame, scene, partner, candidate.extraction_blocked)
+            blocked = candidate.extraction_blocked
+            clash = _drawn_into(frame, fastener, scene, partner, blocked, toward=mount.axis)
             if clash is not None:
                 candidate.reason, candidate.tool = clash, None
                 return
@@ -1077,7 +1080,7 @@ def _hold_in_trap(
     candidate.blockers = candidate.deciding = ()  # held by it, not blocked: in every kit
     candidate.notes = tuple(
         f"drawn {volume:.1f} mm^3 into its trap: a press fit, or a clash to fix"
-        for _, volume in _clashes(frame, scene, partner, (trap,))
+        for _, volume in _clashes(frame, candidate.fastener, scene, partner, (trap,))
     )
 
 
@@ -1153,24 +1156,33 @@ _THREAD_REACH = 1.25
 #: no region: the whole part is measured for a clash instead.
 _REGION_MIN = 0.1
 
+#: How far past its drawn radius a screw's shank is left out of its clash region, mm:
+#: a thread drawn at its nominal in a hole drawn at its minor overlaps inside it.
+_SHANK_SLACK = 0.05
 
-def _measured(frame: _Frame) -> tuple[Shape, Shape]:
+
+def _measured(frame: _Frame, fastener: Fastener, toward: Vec | None = None) -> tuple[Shape, Shape]:
     """What of a fastener a clash is measured on, and what of that is past its thread.
 
-    Its hex and its widest region along the axis, and what lies between: a nut's
-    body, flange and all, a screw's head, a gland's hex and dome. A shank or a
-    gland's stub sits in its hole, often drawn at the nominal diameter in a tapped
-    hole drawn at the minor: a thread, never measured. Nor, for deciding, is the
-    region within :data:`_THREAD_REACH` of a bore. The widest region alone would
-    miss a hex on a flange wider than it by a third, the hex alone a flange.
+    A screw's head, all of it past its shank (:func:`_head_region`), where the
+    check has found the end a tool comes from, ``toward``. Else its hex
+    and its widest region along the axis, and what lies between: a nut's body,
+    flange and all, a gland's hex and dome. A shank or a gland's stub sits in its
+    hole, often drawn at the nominal diameter in a tapped hole drawn at the minor:
+    a thread, never measured. Nor, for deciding, is the region within
+    :data:`_THREAD_REACH` of a bore. The widest region alone would miss a hex on a
+    flange wider than it by a third, the hex alone a flange.
     """
     hex_low, hex_high = _band(frame.projections, frame.radials, frame.flats)
     wide_low, wide_high = _band(frame.projections, frame.radials)
     low, high = min(hex_low, wide_low), max(hex_high, wide_high)
-    if high - low < _REGION_MIN:
-        low, high = min(frame.projections), max(frame.projections)
-    plane = Plane(origin=frame.point_at(low), z_dir=frame.direction)
-    region = frame.part.shape & Solid.make_cylinder(max(frame.radials) + 1.0, high - low, plane)
+    region = _head_region(frame, fastener, (low, high), toward)
+    if region is None:
+        if high - low < _REGION_MIN:
+            low, high = min(frame.projections), max(frame.projections)
+        plane = Plane(origin=frame.point_at(low), z_dir=frame.direction)
+        cylinder = Solid.make_cylinder(max(frame.radials) + 1.0, high - low, plane)
+        region = frame.part.shape & cylinder
     if region is None:  # the region is the part's own, so never empty; for the types
         region = frame.part.shape
     if frame.bore <= 0:
@@ -1180,8 +1192,47 @@ def _measured(frame: _Frame) -> tuple[Shape, Shape]:
     return region, region - thread
 
 
+def _head_region(
+    frame: _Frame, fastener: Fastener, band: tuple[float, float], toward: Vec | None
+) -> Shape | None:
+    """A screw's head, for a clash: all of it but its shank (issue #116).
+
+    From its bearing face, the far side of its hex and widest region from its
+    end, the one a tool comes from (``toward``), to its top, whatever its
+    profile: a button head's dome, a pan head's crown, which its widest region,
+    the rim under them, leaves out; a flange; and under the bearing face, a
+    countersunk head's cone, which flares out of the shank. The shank is a
+    cylinder its drawn radius (the widest past the bearing face: a shoulder's, a
+    thread's) from its tip up to the bearing face, and is left out, as a thread
+    is. A head drawn with no shank (a part's head piece, its shank another
+    solid) is all head. None for a set screw, which has no head, and a nut.
+    """
+    if fastener.kind is not Kind.SCREW or fastener.head is Head.SET or toward is None:
+        return None
+    end = 1 if _dot(toward, frame.direction) > 0 else -1  # the head is the tool's end
+    pairs = zip(frame.projections, frame.radials, strict=True)
+    if end > 0:  # the head at the far end along the axis
+        bearing, tip = band[0], min(frame.projections)
+        shank = [r for p, r in pairs if p < bearing - _ON]
+    else:
+        bearing, tip = band[1], max(frame.projections)
+        shank = [r for p, r in pairs if p > bearing + _ON]
+    if not shank:  # a head drawn alone: all of it is head
+        return frame.part.shape
+    start = tip - 1.0 if end > 0 else bearing  # from past the tip to the bearing face
+    plane = Plane(origin=frame.point_at(start), z_dir=frame.direction)
+    rod = Solid.make_cylinder(max(shank) + _SHANK_SLACK, abs(bearing - tip) + 1.0, plane)
+    return frame.part.shape - rod
+
+
 def _drawn_into(
-    frame: _Frame, scene: Scene, partner: str | None, among: tuple[str, ...] | None = None
+    frame: _Frame,
+    fastener: Fastener,
+    scene: Scene,
+    partner: str | None,
+    among: tuple[str, ...] | None = None,
+    *,
+    toward: Vec | None = None,
 ) -> str | None:
     """The parts a fastener's own solid is drawn into, past the hit floor: a clash.
 
@@ -1194,7 +1245,7 @@ def _drawn_into(
     over. A part overlapping the measured region past the thread is a clash, and
     its whole overlap with that region is the volume told.
     """
-    found = _clashes(frame, scene, partner, among)
+    found = _clashes(frame, fastener, scene, partner, among, toward)
     if not found:
         return None
     total = sum(volume for _, volume in found)
@@ -1203,12 +1254,17 @@ def _drawn_into(
 
 
 def _clashes(
-    frame: _Frame, scene: Scene, partner: str | None, among: tuple[str, ...] | None
+    frame: _Frame,
+    fastener: Fastener,
+    scene: Scene,
+    partner: str | None,
+    among: tuple[str, ...] | None,
+    toward: Vec | None = None,
 ) -> list[tuple[str, float]]:
     """Each part the fastener is drawn into, past its thread, and by how much (mm^3)."""
     part, engine = frame.part, scene.engine
     box = engine.part_bounds(part)
-    region, past_thread = _measured(frame)
+    region, past_thread = _measured(frame, fastener, toward)
     found: list[tuple[str, float]] = []
     for other in scene.parts:
         if other.name == partner or (among is not None and other.name not in among):
