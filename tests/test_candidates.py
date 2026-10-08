@@ -115,7 +115,9 @@ def test_a_candidate_with_no_drive_is_passed_over_saying_why():
 
 def test_a_name_with_no_fastener_noun_is_neither():
     found = find([Part("cover", holed_square()), Part("nutmeg", hex_nut("M8"))])
-    assert found == type(found)((), ())
+    assert found.fasteners == ()
+    # Its solid is plainly an M8 nut, so it is said, though not checked (issue #95).
+    assert [(p.name, p.named) for p in found.passed_over] == [("nutmeg", False)]
 
 
 # ---------------------------------------------------------------------------
@@ -169,11 +171,13 @@ def test_the_json_lists_them(report):
             "name": "bolt_hole_marker",
             "kind": "screw",
             "reason": f"noun 'bolt', words after it; {NO_DRIVE}",
+            "named": True,
         },
         {
             "name": "screw_post",
             "kind": "screw",
             "reason": f"noun 'screw', words after it; {NO_DRIVE}",
+            "named": True,
         },
     ]
     assert document["schema"] == 1  # a key added, nothing broken

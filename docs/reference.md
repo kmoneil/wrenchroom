@@ -65,6 +65,18 @@ whose last word is a part's own noun (`nut_plate`, `gland_plate`, `screw_boss`,
 `box_wall`): it says what the part is, so it isn't listed, though a solid showing a
 drive is still taken (issue #75).
 
+A name that is a thread and a length and nothing else (`M3x16`, `M3 x 16`,
+`M3-0.5x16`, `M3x0.5x16`, `1/4-20x1`, `#4-40 x 1/2`), as CAD libraries and suppliers
+name screws, is a screw candidate the same way: a stud, a rod or an insert is named
+so as readily, so it is taken on a drive in its solid and passed over otherwise. A
+bare size (`M3`) says nothing, and a name with a word of its own is about that word
+(`spacer M4x10`, `M3x16 standoff`). A part named nothing a fastener is (`Part7`)
+isn't checked, but one whose solid plainly looks like a fastener is listed as passed
+over too (`NOTE passed over Part7: not named as a fastener, but its solid looks like
+one: M3 screw, a 2.5 hex socket`): a hex socket its size's key goes into, or a cross,
+in a head at one end of a shank of a standard size, or a nut's hex round a bore of
+its size. So a model of unnamed screws doesn't pass without a word (issue #95).
+
 A hex drawn inside its nut standard's tolerance takes that spanner (an M8 nut at
 12.8: ISO 4032 allows 12.73 to 13), the thread's own standard first where an inch and
 a metric band overlap. A known thread keeps to its own system's tools: a hex drawn up

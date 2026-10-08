@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 110,
-  "turns": 86,
+  "fasteners": 114,
+  "turns": 90,
   "held": 5,
   "blocked": 18,
   "stuck": 1,
@@ -19,47 +19,80 @@
   {
    "name": "nut_stubby_box_box",
    "kind": "nut",
-   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits",
+   "named": true
   },
   {
    "name": "nyloc_two_bodies_dome",
    "kind": "nut",
-   "reason": "noun 'nyloc', words after it; its solid shows no hex, hex socket or cross a tool fits"
+   "reason": "noun 'nyloc', words after it; its solid shows no hex, hex socket or cross a tool fits",
+   "named": true
   },
   {
    "name": "pair_nut_held_upper",
    "kind": "nut",
-   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits",
+   "named": true
   },
   {
    "name": "pair_nut_held_lower",
    "kind": "nut",
-   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits",
+   "named": true
   },
   {
    "name": "pair_nut_held_pocket",
    "kind": "nut",
-   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits",
+   "named": true
   },
   {
    "name": "nut_tube_tube",
    "kind": "nut",
-   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits",
+   "named": true
   },
   {
    "name": "nut_gap_stud",
    "kind": "nut",
-   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits",
+   "named": true
   },
   {
    "name": "flange_nut_stud",
    "kind": "nut",
-   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits"
+   "reason": "noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits",
+   "named": true
   },
   {
    "name": "badge_insert",
    "kind": "insert",
-   "reason": "noun 'insert'; named only as an insert, with no thread size or word such as threaded, and its solid shows no bore: an inlay, not a fixed thread"
+   "reason": "noun 'insert'; named only as an insert, with no thread size or word such as threaded, and its solid shows no bore: an inlay, not a fixed thread",
+   "named": true
+  },
+  {
+   "name": "std_M8x60",
+   "kind": "screw",
+   "reason": "thread and length M8x60; its solid shows no hex, hex socket or cross a tool fits",
+   "named": true
+  },
+  {
+   "name": "std_part7",
+   "kind": "screw",
+   "reason": "not named as a fastener, but its solid looks like one: M6 screw, a 5 hex socket",
+   "named": false
+  },
+  {
+   "name": "std_part8",
+   "kind": "screw",
+   "reason": "not named as a fastener, but its solid looks like one: M4 screw, a cross in its head",
+   "named": false
+  },
+  {
+   "name": "std_part9",
+   "kind": "nut",
+   "reason": "not named as a fastener, but its solid looks like one: M8 nut, 12.8 across flats",
+   "named": false
   }
  ],
  "fasteners": [
@@ -2632,6 +2665,126 @@
    "notes": []
   },
   {
+   "name": "std_#10-32x1",
+   "kind": "screw",
+   "head": "socket",
+   "size": "#10",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2240.0,
+    13000.0,
+    4.83
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5/32in",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "std_M3x16",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1760.0,
+    13000.0,
+    3.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-2.5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "std_M4x0.7x12",
+   "kind": "screw",
+   "head": "phillips",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2080.0,
+    13000.0,
+    3.1
+   ],
+   "source": "sidecar",
+   "tool": "driver-ph2",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "std_M5-0.8x12",
+   "kind": "screw",
+   "head": "button",
+   "size": "M5",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1920.0,
+    13000.0,
+    2.75
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-3",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "stepped_pin_bolt",
    "kind": "screw",
    "head": "shoulder",
@@ -3114,7 +3267,7 @@
     1.0
    ],
    "seat": [
-    1900.0,
+    2900.0,
     13000.0,
     6.0
    ],
@@ -3146,7 +3299,7 @@
     1.0
    ],
    "seat": [
-    2100.0,
+    3100.0,
     13000.0,
     6.0
    ],

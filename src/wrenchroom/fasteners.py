@@ -201,12 +201,15 @@ class PassedOver:
 
     Its fastener noun has ordinary words after it (``box_gland_vent``), so only
     its solid could make it a fastener, and the solid shows no drive. Reported,
-    never dropped: that is how a fastener goes unchecked without a word.
+    never dropped: that is how a fastener goes unchecked without a word. Or it is
+    named nothing a fastener is (``Part7``), and its solid looks like one
+    (``named`` False, issue #95): detection checks named parts only.
     """
 
     name: str
     kind: Kind
     reason: str
+    named: bool = True
 
 
 # ---------------------------------------------------------------------------

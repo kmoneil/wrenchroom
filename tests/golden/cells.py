@@ -1881,3 +1881,85 @@ def pan_t40():
         ("plate", plate(holes=[(0, 0, 4.5)])),
         ("torx_screw", head + Pos(0, 0, -8) * Cylinder(4, 16)),
     ]
+
+
+# ---------------------------------------------------------------- issue #95: a thread and length
+
+#: The std cell's screws: role -> (where, its rule, its tool). Named by thread and
+#: length alone, as CAD libraries and suppliers name them; the cell's name is a
+#: qualifier, so each part name is that and nothing else.
+_STD = {
+    "M3x16": ((-240, 0), {"head": "socket", "size": "M3"}, "hex-key-2.5"),
+    "M5-0.8x12": ((-80, 0), {"head": "button", "size": "M5"}, "hex-key-3"),
+    "M4x0.7x12": ((80, 0), {"head": "phillips", "size": "M4"}, "driver-ph2"),
+    "#10-32x1": ((240, 0), {"head": "socket", "size": "#10"}, "hex-key-5/32in"),
+}
+
+
+@cell(
+    "std",
+    [{"parts": role, "kind": "screw", **rule} for role, (_, rule, _) in _STD.items()],
+    {
+        role: {"verdict": "turns", "tool": tool, "how": "driver straight in"}
+        for role, (_, _, tool) in _STD.items()
+    },
+)
+def std():
+    """Four screws named by thread and length alone (issue #95): ISO 4762's M3x16
+    (a 2.5 key), ISO 7380-1's M5 button head (3), an M4 Phillips pan head (PH2) and
+    ASME B18.3's #10 socket head (5/32 in), each open above. Detection used to pass
+    every one over without a word. Each name is now a screw candidate, taken on the
+    drive its solid shows. Beside them, a stud named M8x60 shows no drive, as a
+    stud or an insert named by its thread doesn't: passed over, saying so. And
+    part7, an M6 socket head screw named nothing a fastener is: not checked, but
+    passed over as a look-alike, so it isn't missed without a word; and part8, an
+    M4 Phillips pan head, and part9, an M8 nut drawn 12.8 across (in ISO 4032's band),
+    the same. In a row along y -120, what no look-alike is: a hex standoff (an M3
+    nut's hex, 10 long), a collet (a 10 hex round a 4 bore), a knob 50 across with a
+    2.5 socket over an M3 shank, a spool (a 2.5 socket in one of its two flanges), a
+    wheel (an M3 head's outline, its socket 4 across), a pin socketed in a collar no
+    wider than a head would be, and two names no screw's: an M4x10 spacer, and an
+    M3x5x4 insert's sizes.
+    """
+    at = {role: where for role, (where, _, _) in _STD.items()}
+    holes = [(*at["M3x16"], 1.6), (*at["M5-0.8x12"], 2.6), (*at["M4x0.7x12"], 2.1)]
+    holes += [(*at["#10-32x1"], 2.5), (-160, 120, 4.1), (160, 120, 3.1)]
+    inch = 25.4
+    d, dk, s = 0.190 * inch, 0.312 * inch, 0.15625 * inch  # ASME B18.3 #10: 5/32 key
+    return [
+        ("plate", plate(w=640, d=360, holes=holes)),
+        ("M3x16", Pos(*at["M3x16"], 0) * vendor_socket_screw("M3", length=16.0)),
+        ("M5-0.8x12", Pos(*at["M5-0.8x12"], 0) * vendor_button_screw("M5", length=12.0)),
+        ("M4x0.7x12", Pos(*at["M4x0.7x12"], 0) * pan_phillips()),
+        ("#10-32x1", Pos(*at["#10-32x1"], 0) * socket_screw(d, inch, dk, d, s, 0.6 * d)),
+        ("M8x60", Pos(-160, 120, 20) * Cylinder(4, 60)),
+        ("part7", Pos(160, 120, 0) * socket_screw()),
+        *((name, Pos(-288 + 64 * i, -120, 0) * shape) for i, (name, shape) in enumerate(_others())),
+    ]
+
+
+def _others():
+    """std's row of parts, each on the plate's top: (name, shape) in its local frame."""
+    knob = (
+        Pos(0, 0, 19) * Cylinder(25, 6)
+        - hex_prism(2.5, 2.01, 20)
+        + Pos(0, 0, 8) * Cylinder(1.5, 16)
+    )
+    spool = Pos(0, 0, 5) * Cylinder(1.5, 10) + Pos(0, 0, 0.75) * Cylinder(5, 1.5)
+    spool = spool + Pos(0, 0, 9.25) * Cylinder(5, 1.5) - hex_prism(2.5, 1.51, 8.5)
+    wheel = Pos(0, 0, 9.5) * Cylinder(2.75, 3) - hex_prism(4.0, 1.31, 9.7)
+    wheel += Pos(0, 0, 4) * Cylinder(1.5, 8)
+    pin = Pos(0, 0, 0.25) * Cone(1.0, 1.5, 0.5) + Pos(0, 0, 8) * Cylinder(1.5, 15)
+    pin = pin + Pos(0, 0, 17) * Cylinder(1.8, 3) - hex_prism(2.5, 1.51, 17)
+    return [
+        ("part8", Pos(0, 0, 12) * pan_phillips()),
+        ("part9", hex_prism(12.8, 6.8) - Cylinder(4, 20)),
+        ("standoff", hex_prism(5.5, 10) - Cylinder(1.5, 25)),
+        ("collet", hex_prism(10, 6) - Cylinder(2, 15)),
+        ("knob", knob),
+        ("spool", spool),
+        ("wheel", wheel),
+        ("pin", pin),
+        ("M4x10 spacer", Pos(0, 0, 5) * (Cylinder(2.5, 10) - Cylinder(2.1, 11))),
+        ("M3x5x4", Pos(0, 0, 2.5) * (Cylinder(2.3, 5) - Cylinder(1.6, 6))),
+    ]

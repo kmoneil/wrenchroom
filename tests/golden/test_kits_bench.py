@@ -59,6 +59,10 @@ PAST_HOME = {
     "small_phillips_screw": "needs driver-ph0, which kit metric-home does not hold (full has it)",
     # Issue #82: a T40 recess on an M8, by its across_flats.
     "pan_t40_torx_screw": "needs torx-key-T40, which kit metric-home does not hold (full has it)",
+    # Issue #95: a #10 socket head named by thread and length.
+    "std_#10-32x1": (
+        "needs hex-key-5/32in, which kit metric-home does not hold (imperial-home and full have it)"
+    ),
 }
 
 #: Cells metric-home holds a tool for but can't turn without full's: the ball end.
@@ -70,7 +74,7 @@ HOME_BLOCKED = {
 }
 
 #: The bench's inch fasteners imperial-home can turn: all but the one past it.
-INCH = {"inch_pair_screw", "inch_pair_nut", "small_inch_socket_screw"}
+INCH = {"inch_pair_screw", "inch_pair_nut", "small_inch_socket_screw", "std_#10-32x1"}
 
 #: An inch fastener whose tool is past imperial-home's 13 keys (issue #83).
 INCH_PAST_HOME = {
@@ -162,5 +166,6 @@ def test_imperial_home_covers_nothing_metric_but_drivers(inch_json, bench_json):
         assert entry["reason"].startswith("needs "), name
         assert "which kit imperial-home does not hold" in entry["reason"], name
         assert "in," not in entry["reason"].split(", which")[0], name  # metric tools named
-    # The carriage bolt, the well nut, the T-nut, the boss insert and the two Phillips screws.
-    assert unsized == 6
+    # The carriage bolt, the well nut, the T-nut, the boss insert and the three Phillips
+    # screws (std's since issue #95).
+    assert unsized == 7
