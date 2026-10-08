@@ -2150,3 +2150,24 @@ def reach_55():
         ("wall", wall),
         ("shelf", slab(2.4 + 10)),
     ]
+
+
+# ---------------------------------------------------------------- issue #101: PH4
+
+
+def _m8_pan_phillips():
+    """ISO 7045 M8x16: a pan head 16 across and 6 high, a PH4 cross 4 deep in its top."""
+    head = Pos(0, 0, 3) * Cylinder(8, 6)
+    cross = Pos(0, 0, 4) * (Box(9.0, 1.8, 4.01) + Box(1.8, 9.0, 4.01))
+    return head - cross + Pos(0, 0, -8) * Cylinder(4, 16)
+
+
+@cell(
+    "ph4",
+    [{"parts": "screw", "kind": "screw", "head": "phillips", "size": "M8"}],
+    {"screw": {"verdict": "turns", "tool": "driver-ph4", "how": "driver straight in"}},
+)
+def ph4():
+    """An M8 Phillips pan head, open above: ISO 7045 gives it PH4, which the full kit's
+    driver, 10 round, fits. It used to take a PH3 (issue #101)."""
+    return [("plate", plate(holes=[(0, 0, 4.5)])), ("screw", _m8_pan_phillips())]

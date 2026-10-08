@@ -274,8 +274,9 @@ A kit says which tools exist, and only those are tried (`--kit`; `wrenchroom too
   sockets running from 3.2 mm (an M1.6 nut's) to 50 mm for large cable glands (an
   M32 gland is commonly 41 across flats). It also has ISO 2936's 1.3 mm key and ASME
   B18.3's 0.035 in, Torx keys T6 to T40 (ISO 10664 sizes, swept like hex keys; a
-  Torx head takes the size ISO 14579 and its kin give its thread, M6 T30), a PH0
-  driver, ball-end keys 3 to 10 mm, and nut drivers 4 to 13 mm.
+  Torx head takes the size ISO 14579 and its kin give its thread, M6 T30), PH0 and PH4
+  drivers (a Phillips head takes the number ISO 7045 and its kin give its thread: M8 and
+  M10 PH4), ball-end keys 3 to 10 mm, and nut drivers 4 to 13 mm.
 
 The tables run from M1.6 and #0: the screws, nuts and drives of printers, electronics
 and small mechanisms. Where a standard has no such head, the reason says so (`ISO

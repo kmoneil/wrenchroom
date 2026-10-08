@@ -112,7 +112,8 @@ def test_every_kit_size_is_a_real_tool():
         ("spanner-22.5", False, False),  # no tool is made in that size
         ("driver-ph2", True, True),
         ("driver-slotted", True, True),
-        ("driver-ph4", False, False),
+        ("driver-ph4", False, True),  # an M8's and M10's (issue #101)
+        ("driver-ph5", False, False),  # no such driver
         ("spanner-ten", False, False),
         ("wrench-10", False, False),
         ("hex-key-7", False, False),  # no ISO 2936 row
