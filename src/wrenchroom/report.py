@@ -211,16 +211,38 @@ class Report:
     #: What the collision engine found of the parts themselves: which wouldn't mesh,
     #: which are invalid B-reps (issue #85). Said, and the run doesn't fail for them.
     engine_notes: tuple[EngineNote, ...] = ()
+    #: The model's parts drawn as surfaces, open shells or loose faces: nothing can
+    #: meet them, so they're left out of the check, and every report says so (#104).
+    surfaces: tuple[str, ...] = ()
 
     @property
     def not_checked(self) -> str:
         """What the run could not see, said in every report (the prototype's lesson)."""
         unseen = ["parts the model doesn't have"]
+        if self.surfaces:
+            unseen.insert(0, self._surfaces_count)
         if self.passed_over:
             unseen.insert(0, _passed_over_count(self.passed_over))
         if not self.hand_room:
             unseen.insert(0, "room for a hand (checks: {hand_room: true} turns it on)")
         return "not checked: " + "; ".join(unseen)
+
+    @property
+    def _surfaces_count(self) -> str:
+        """The surfaces as the not-checked line counts them."""
+        if len(self.surfaces) == 1:
+            return "1 part drawn as a surface, not a solid (left out)"
+        return f"{len(self.surfaces)} parts drawn as surfaces, not solids (left out)"
+
+    @property
+    def surfaces_note(self) -> str:
+        """What the parts drawn as surfaces mean for the check, said once (issue #104)."""
+        if len(self.surfaces) == 1:
+            return "1 part drawn as a surface, not a solid, is left out, as nothing can meet it"
+        count = len(self.surfaces)
+        return (
+            f"{count} parts drawn as surfaces, not solids, are left out, as nothing can meet them"
+        )
 
     def failures(self) -> tuple[FastenerResult, ...]:
         """Everything that did not pass, worst first (not-covered last)."""
@@ -292,6 +314,7 @@ class Report:
                 {"kind": note.kind, "note": note.text, "parts": list(note.parts)}
                 for note in self.engine_notes
             ],
+            "surfaces": list(self.surfaces),
             "hand_room": self.hand_room,
             "passed_over": [
                 {
@@ -339,6 +362,8 @@ class Report:
         lines.extend(f"WARN {warning}" for warning in self.warnings)
         lines.extend(f"NOTE {note}" for note in self.notes)
         lines.extend(f"NOTE {note.text}: {listed(note.parts)}" for note in self.engine_notes)
+        if self.surfaces:
+            lines.append(f"NOTE {self.surfaces_note}: {listed(self.surfaces)}")
         shown = self.passed_over[:PASSED_OVER_SHOWN]
         lines.extend(f"NOTE passed over {part.name}: {part.reason}" for part in shown)
         if len(self.passed_over) > len(shown):
@@ -402,6 +427,11 @@ class Report:
                 f"The engine: {md_text(note.text)}: {_md_names(note.parts)}.\n"
                 for note in self.engine_notes
             ),
+            *(
+                [f"The model: {md_text(self.surfaces_note)}: {_md_names(self.surfaces)}.\n"]
+                if self.surfaces
+                else []
+            ),
             "Not checked: "
             + (
                 ""
@@ -409,6 +439,7 @@ class Report:
                 else "room for a hand (`checks: {hand_room: true}` turns it on); "
             )
             + (f"{md_text(_passed_over_count(self.passed_over))}; " if self.passed_over else "")
+            + (f"{md_text(self._surfaces_count)}; " if self.surfaces else "")
             + "parts the model doesn't have.",
         ]
         groups = _groups(self.results)

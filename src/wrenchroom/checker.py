@@ -258,9 +258,21 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         kit=kit,
         engine=engine,
         results=tuple(results),
-        unmatched_rules=tuple(rule.parts for rule in matches.unmatched_rules),
-        unmatched_ignores=matches.unmatched_ignores,
-        warnings=tuple(only_warnings + pair_warnings + space.warnings),
+        unmatched_rules=tuple(
+            rule.parts
+            for rule in matches.unmatched_rules
+            if not _surfaces_matched(rule.parts, assembly)
+        ),
+        unmatched_ignores=tuple(
+            glob for glob in matches.unmatched_ignores if not _surfaces_matched(glob, assembly)
+        ),
+        surfaces=assembly.surfaces,
+        warnings=tuple(
+            only_warnings
+            + pair_warnings
+            + space.warnings
+            + _surface_warnings(tuple(rule.parts for rule in matches.unmatched_rules), assembly)
+        ),
         notes=(*space.notes, *_unused_tools(fasteners, tools)),
         engine_notes=_engine_notes(space.engine),
         passed_over=passed_over,
@@ -332,6 +344,29 @@ def _frames(
         except NotCovered as exc:
             failures[fastener.name] = str(exc)
     return frames, failures
+
+
+def _surfaces_matched(glob: str, assembly: Assembly) -> tuple[str, ...]:
+    """The parts drawn as surfaces a glob names, which no rule or ignore can reach (#104)."""
+    return tuple(name for name in assembly.surfaces if fnmatchcase(name, glob))
+
+
+def _surface_warnings(rules: tuple[str, ...], assembly: Assembly) -> list[str]:
+    """A rule naming only parts drawn as surfaces, said as that, not as a rename (#104)."""
+    said = []
+    for glob in rules:
+        names = _surfaces_matched(glob, assembly)
+        if len(names) == 1:
+            said.append(
+                f"rule {glob!r} names only {names[0]}, drawn as a surface, not a solid: "
+                "make it a solid to check it"
+            )
+        elif names:
+            said.append(
+                f"rule {glob!r} names only {listed(names)}, drawn as surfaces, not solids: "
+                "make them solids to check them"
+            )
+    return said
 
 
 def _ignored(config: Config, part: Part) -> bool:

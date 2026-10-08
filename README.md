@@ -217,6 +217,7 @@ what is:
 | `drawn into lid (96.1 mm^3): fix the model` | The fastener's solid overlaps another part: a clash in the model. |
 | `drawn twice: M3x8 SHCS is drawn over it (120.8 mm^3 in common): fix the model` | One fastener is drawn twice, in the same place. |
 | `held by its trap in block` | A nut in a hex pocket or a slot its width: the part holds it, so its screw must turn. |
+| `NOTE 2 parts drawn as surfaces, not solids, are left out, ...` | Open shells or loose faces bound nothing a tool can meet. Export them as solids to check against them. |
 | `needs spanner-24, which kit metric-home does not hold (full has it)` | Choose a bigger kit, or add the tool to the sidecar. |
 | `no room for a hand: the hand hits frame on its best arc` | With `--hand-room`: the tool would turn, but the hand on it can't follow. |
 | `cannot tell the nut's free face: both ends are covered` | Say which way the tool comes from with `axis:` in the sidecar. |

@@ -21,7 +21,7 @@ from bd_warehouse.fastener import (
     HexNut,
     SocketHeadCapScrew,
 )
-from build123d import Box, Compound, Cone, Cylinder, Pos, Rot, Torus
+from build123d import Axis, Box, Compound, Cone, Cylinder, Pos, Rot, Shell, Torus
 from parts import (
     VENDOR_FLAT,
     button_screw,
@@ -2171,3 +2171,28 @@ def ph4():
     """An M8 Phillips pan head, open above: ISO 7045 gives it PH4, which the full kit's
     driver, 10 round, fits. It used to take a PH3 (issue #101)."""
     return [("plate", plate(holes=[(0, 0, 4.5)])), ("screw", _m8_pan_phillips())]
+
+
+# ---------------------------------------------------------------- issue #104: surfaces
+
+
+@cell(
+    "shelled",
+    [{"parts": "screw", **M6_SOCKET}],
+    {"screw": {"verdict": "blocked", "tool": "hex-key-5", "blocked_by": ["ceiling"]}},
+)
+def shelled():
+    """key_wall_near's screw and ceiling, the ceiling exported as a closed shell, not a
+    solid, as some exporters write one: taken as the solid it bounds, it stops the key
+    as before (driver 200, short leg 36.1, long 88, all past its 15). The reader used
+    to drop it, and the key turned the screw through it. Beside them a decal drawn as
+    one face, an open shell: nothing can meet it, so it's left out, and the report
+    says so (issue #104).
+    """
+    decal = Pos(60, 0, 0.5) * Box(20, 20, 1)
+    return [
+        ("plate", plate(holes=[(0, 0, 3)])),
+        ("screw", socket_screw()),
+        ("ceiling", Shell(slab(6 + 15).faces())),
+        ("decal", Shell(decal.faces().sort_by(Axis.Z)[-1:])),
+    ]
