@@ -1,10 +1,12 @@
 ### wrenchroom: `bench.step`
 
-**127 fasteners: 98 turn, 8 held, 20 blocked, 1 stuck, 0 not covered**
+**128 fasteners: 98 turn, 8 held, 21 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
-Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts named like a fastener, with no drive or bore in the solid (passed over); 3 parts shaped like fasteners, not named as any (passed over); parts the model doesn't have.
+The model: 1 part drawn as a surface, not a solid, is left out, as nothing can meet it: `shelled_decal`.
+
+Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts named like a fastener, with no drive or bore in the solid (passed over); 3 parts shaped like fasteners, not named as any (passed over); 1 part drawn as a surface, not a solid (left out); parts the model doesn't have.
 
 | Fasteners | Tool | Count | Outcome |
 | --- | --- | ---: | --- |
@@ -51,7 +53,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | M6 shoulder screw | `ball-end-key-4` | 1 | all pass (ball end, 20 deg off the axis) |
 | M6 shoulder screw | `hex-key-4` | 4 | all pass (driver straight in) |
 | M6 socket screw | `ball-end-key-5` | 1 | all pass (ball end, 25 deg off the axis) |
-| M6 socket screw | `hex-key-5` | 13 | 5 of 13 fail |
+| M6 socket screw | `hex-key-5` | 14 | 6 of 14 fail |
 | M6 torx screw | `torx-key-T30` | 1 | all pass (short leg in) |
 | M8 hex screw | `spanner-13` | 8 | 1 of 8 fail |
 | M8 nut | `spanner-13` | 14 | 4 of 14 fail |
@@ -76,6 +78,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | `phillips_shelf_screw` | `driver-ph2` | blocked | `phillips_shelf_shelf` |
 | `post_ring_nut` | `spanner-13` | blocked | `only holds, and it has no nut; best arc between post_ring_post_a and post_ring_post_b` |
 | `reach_55_nut` | `spanner-5.5` | blocked | `reach_55_wall`, `reach_55_shelf` |
+| `shelled_screw` | `hex-key-5` | blocked | `shelled_ceiling` |
 | `sunk_cap_cap_nut` | `spanner-16` | blocked | `sunk_cap_plate`, `sunk_cap_cap_nut` |
 | `tail_too_long_nut` | `spanner-16` | blocked | `tail_too_long_collar`, `tail_too_long_bolt` |
 | `tapped_hold_screw` | `hex-key-5` | blocked | `only holds, and it has no nut; best arc bounded by tapped_hold_slot` |

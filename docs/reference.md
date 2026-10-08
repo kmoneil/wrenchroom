@@ -29,6 +29,14 @@ with it. A part with no name of its own takes its assembly's: the names OCCT mak
 up for one (`=>[0:1:1:32]`, `SOLID`, `ASSEMBLY`) say nothing of what it is. From Python, `Assembly.from_shapes([(name, shape), ...])` takes build123d
 shapes as they are, each pair one part.
 
+A part drawn as a surface, not a solid, is read for what it bounds. A closed shell, as
+some exporters write a solid, is the solid it bounds. An open shell or loose faces
+bound nothing a tool could meet, so the part is left out, and every report says so and
+names it (`NOTE 2 parts drawn as surfaces, not solids, are left out, as nothing can
+meet them: ...`, `surfaces` in the JSON, and the `not checked` line). A sidecar rule
+naming only such a part says that, and fails the run, rather than "renamed part?"; an
+ignore naming one is satisfied (issue #104).
+
 ## Finding fasteners
 
 No sidecar is needed for named parts. Fasteners are found from their part names (ISO

@@ -23,6 +23,11 @@ solid keeps the leaf's name, and each other solid is a piece of it
 (:attr:`Part.piece_of`). A fastener rule and detection see the leaf, never a piece,
 and a fastener's pieces leave its scene with it (issue #28).
 
+A leaf drawn as a surface has no solid. A closed shell bounds a volume as a solid does,
+and is taken as that solid. An open shell or loose faces bound nothing a tool could meet:
+the part is left out, and its name kept in :attr:`Assembly.surfaces`, for every report
+to say (issue #104). It used to be dropped without a word.
+
 Units are millimetres internally. OCP's STEP reader converts from the file's declared
 units on import, so nothing here rescales.
 """
@@ -37,11 +42,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from build123d import Compound, Shape
+from build123d import Compound, Shape, Solid
 from build123d.topology import downcast  # the same table build123d's own importer uses
 from OCP.collections import Sequence_TDF_Label
 from OCP.IFSelect import IFSelect_RetDone
 from OCP.Message import Message, Message_Gravity, Message_PrinterOStream
+from OCP.ShapeAnalysis import ShapeAnalysis_FreeBounds
+from OCP.ShapeFix import ShapeFix_Solid
 from OCP.STEPCAFControl import STEPCAFControl_Reader
 from OCP.TCollection import TCollection_AsciiString, TCollection_ExtendedString
 from OCP.TDataStd import TDataStd_Name
@@ -91,8 +98,12 @@ class Assembly:
     the constructor itself takes already-unique parts and is what the three share.
     """
 
-    def __init__(self, parts: Iterable[Part]) -> None:
+    def __init__(self, parts: Iterable[Part], surfaces: Iterable[str] = ()) -> None:
         self.parts: tuple[Part, ...] = tuple(parts)
+        #: The leaves drawn as surfaces, open shells or loose faces, which bound no
+        #: solid: left out, nothing meeting them, but named for every report to say
+        #: (issue #104).
+        self.surfaces: tuple[str, ...] = tuple(surfaces)
         if not self.parts:
             msg = "an assembly needs at least one part"
             raise ValueError(msg)
@@ -119,22 +130,24 @@ class Assembly:
         Raises:
             ValueError: If the file cannot be read or contains no solids.
         """
-        return cls(_unique(_read_step(Path(path)), source=str(path)))
+        return cls(*_parts(_read_step(Path(path)), source=str(path)))
 
     @classmethod
     def from_shapes(cls, shapes: Iterable[tuple[str, Shape]]) -> Assembly:
         """Build an assembly from ``(name, shape)`` pairs, as from a build script.
 
         Each pair is one part, kept whole even if the shape holds several solids.
-        Repeated names get ``#2``, ``#3`` appended in order, same as the STEP path.
+        Repeated names get ``#2``, ``#3`` appended in order, same as the STEP path. A
+        shape with no solid is taken as the solids its closed shells bound, if any,
+        and is otherwise a surface.
         """
-        named = ((name, shape, None) for name, shape in shapes)
-        return cls(_unique(named, source="from_shapes"))
+        named = (_whole(name, shape) for name, shape in shapes)
+        return cls(*_parts(named, source="from_shapes"))
 
     @classmethod
     def from_compound(cls, compound: Compound) -> Assembly:
         """Build an assembly from a build123d ``Compound`` with labelled children."""
-        return cls(_unique(_leaves(compound), source=compound.label or "compound"))
+        return cls(*_parts(_leaves(compound), source=compound.label or "compound"))
 
     @property
     def names(self) -> tuple[str, ...]:
@@ -160,19 +173,74 @@ class Assembly:
 
 
 #: (name, shape, leaf): a leaf of several solids gives one per solid, all with one
-#: leaf key, so the uniquing pass can mark the pieces; None for a whole part.
+#: leaf key, so the uniquing pass can mark the pieces; None for a whole part, and
+#: :data:`_SURFACE` for a leaf with no solid.
 _Named = tuple[str, Shape, object | None]
+
+#: The leaf key of a leaf drawn as a surface (issue #104).
+_SURFACE = object()
 
 
 def _split(name: str, shape: Shape) -> Iterator[_Named]:
-    """One per solid; a leaf of several solids gives its largest first, keyed together."""
+    """One per solid; a leaf of several solids gives its largest first, keyed together.
+
+    A leaf with no solid gives the solids its closed shells bound, if it has any,
+    and is otherwise a surface (issue #104).
+    """
     solids = shape.solids()
     if len(solids) == 1:
         yield name, shape, None
+        return
+    solids = solids or _bounded(shape)
+    if len(solids) == 1:
+        yield name, solids[0], None
     elif solids:
         leaf = object()
         for solid in sorted(solids, key=lambda solid: -solid.volume):
             yield name, solid, leaf
+    elif shape.faces():
+        yield name, shape, _SURFACE
+
+
+def _whole(name: str, shape: Shape) -> _Named:
+    """A shape kept whole, as from_shapes keeps it; one with no solid as ``_split`` reads it."""
+    if shape.solids():
+        return name, shape, None
+    solids = _bounded(shape)
+    if not solids:
+        return name, shape, _SURFACE
+    return name, solids[0] if len(solids) == 1 else Compound(solids), None
+
+
+def _bounded(shape: Shape) -> list[Solid]:
+    """The solids a shape's closed shells bound: a shell with no free edge is one."""
+    solids = []
+    for shell in shape.shells():
+        bounds = ShapeAnalysis_FreeBounds(shell.wrapped)
+        if bounds.GetClosedWires().NbChildren() or bounds.GetOpenWires().NbChildren():
+            continue
+        solid = Solid(ShapeFix_Solid().SolidFromShell(shell.wrapped))
+        if solid.is_valid and solid.volume > 0:
+            solids.append(solid)
+    return solids
+
+
+def _parts(named: Iterable[_Named], source: str) -> tuple[Iterator[Part], tuple[str, ...]]:
+    """The parts, uniquely named, and the names of the leaves drawn as surfaces."""
+    named = list(named)
+    surfaces = tuple(name for name, _, leaf in named if leaf is _SURFACE)
+    solid = [entry for entry in named if entry[2] is not _SURFACE]
+    if not solid and surfaces:
+        shown = ", ".join(surfaces[:_SURFACES_SHOWN])
+        more = len(surfaces) - _SURFACES_SHOWN
+        shown += f" and {more} more" if more > 0 else ""
+        msg = f"no solids found in {source}: {len(surfaces)} parts are surfaces only ({shown})"
+        raise ValueError(msg)
+    return _unique(solid, source), surfaces
+
+
+#: How many surfaces' names a model of nothing else names before "and N more".
+_SURFACES_SHOWN = 3
 
 
 def _leaves(shape: Shape, inherited: str = "") -> Iterator[_Named]:

@@ -3,10 +3,10 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 127,
+  "fasteners": 128,
   "turns": 98,
   "held": 8,
-  "blocked": 20,
+  "blocked": 21,
   "stuck": 1,
   "not_covered": 0
  },
@@ -14,6 +14,9 @@
  "unmatched_ignores": [],
  "warnings": [],
  "notes": [],
+ "surfaces": [
+  "shelled_decal"
+ ],
  "hand_room": false,
  "passed_over": [
   {
@@ -2488,6 +2491,38 @@
    "notes": []
   },
   {
+   "name": "shelled_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    14000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "shelled_ceiling"
+   ],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "shop_spanner_nut",
    "kind": "nut",
    "head": null,
@@ -3661,7 +3696,7 @@
     1.0
    ],
    "seat": [
-    2900.0,
+    3900.0,
     14000.0,
     6.0
    ],
@@ -3693,7 +3728,7 @@
     1.0
    ],
    "seat": [
-    3100.0,
+    4100.0,
     14000.0,
     6.0
    ],
