@@ -160,6 +160,13 @@ socket the room for its wall round the hex. A part in that first room stops the 
 whatever grips it, which is said once, before any tool is tried (`the nut's corners
 hit block as it turns`).
 
+A nut whose corners, turning, meet one part on two opposite sides sits in a trap: a
+hex pocket, or a slot its own width open to one side, as printed parts hold nuts. No
+tool could turn it, and none needs to: it is held (`held by its trap in block`), as a
+fixed thread is, from whichever end, and its screw must turn (issue #93). One drawn
+into its trap is held all the same, and noted, a press fit being as likely as a
+clash. A part on one side only stops the nut turning, and blocks it, as above.
+
 A tool grips the hex where its flats are, not the part's widest region (a flange, or
 a gland's dome), and a ring, socket or nut driver has to get on over whatever the
 part has past its hex: a dome wider than their bore leaves only the open end, and the

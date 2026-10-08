@@ -398,3 +398,20 @@ def test_a_blocked_nut_names_the_posts_that_decided_it(bench_report, bench_json)
     assert fail.endswith(
         f"only holds, and it has no nut; best arc between {deciding[0]} and {deciding[1]}"
     )
+
+
+def test_a_nut_in_its_trap_is_held_by_it(bench_report, bench_json):
+    """Issue #93: trap's three nuts, in a side slot and in hex pockets, held by their
+    blocks; and the stopped screw's reason, which only its key's hold leaves: its nut
+    never turns, so it must. (Not in the truth table: both name parts, which a copy
+    renames.)"""
+    for where in ("slot", "pocket", "stopped"):
+        entry = bench_json[f"trap_{where}_nut"]
+        assert (entry["how"], entry["tool"]) == (f"held by its trap in trap_{where}_block", None)
+    reason = bench_json["trap_stopped_screw"]["reason"]
+    assert reason.startswith(
+        "only holds, and its nut (trap_stopped_nut) is held by its trap in "
+        "trap_stopped_block, so it must turn; best arc "
+    )
+    (fail,) = [line for line in bench_report.terminal_lines() if "trap_stopped_screw" in line]
+    assert fail == f"FAIL trap_stopped_screw  hex-key-2.5  blocked  {reason}"

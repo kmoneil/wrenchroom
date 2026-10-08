@@ -104,6 +104,7 @@ from wrenchroom.tools.sweep import (
     Probe,
     axial_annulus,
     axial_cylinder,
+    radial_cylinder,
 )
 from wrenchroom.tools.torx_keys import ISO_10664
 
@@ -809,6 +810,8 @@ class _Candidate:
     notes: tuple[str, ...] = ()
     #: Its state's model has no part of its name (issue #74).
     absent: bool = False
+    #: The part a nut sits trapped in, which holds it (issue #93).
+    trapped_in: str | None = None
 
 
 def _check_fastener(
@@ -838,7 +841,7 @@ def _check_fastener(
             return candidate  # not understood; another state won't change that
         if candidate.turns and not candidate.stuck:
             return candidate
-        if fastener.self_holding:
+        if fastener.self_holding or candidate.trapped_in is not None:
             return candidate
     assert first is not None  # noqa: S101  (order always has at least own_state)
     return first
@@ -871,19 +874,38 @@ def _try_in_state(
     )
     pieces = assembly.pieces(fastener.name)  # its other solids, which go with it
     scene = space.scene(assembly, {fastener.name, *mates, *pieces} | removed)
-    try:
-        mount, geometry = _orient(frame, fastener, scene)
-    except _BothEndsCovered as exc:  # a clash in the model, it may be (issue #63)
-        clash = _drawn_into(frame, scene, partner)
-        return _Candidate(fastener, reason=clash or str(exc), state=state_name)
-    except NotCovered as exc:
-        return _Candidate(fastener, reason=str(exc), state=state_name)
+    oriented = _oriented(fastener, frame, scene, state_name, partner)
+    if isinstance(oriented, _Candidate):
+        return oriented
+    mount, geometry = oriented
     candidate = _Candidate(fastener, axis=mount.axis, seat=mount.seat, state=state_name)
     if fastener.self_holding:
         candidate.how = "holds itself"
         return candidate
     _try_tools(candidate, frame, mount, geometry, scene, tools, partner)
     return candidate
+
+
+def _oriented(
+    fastener: Fastener, frame: _Frame, scene: Scene, state_name: str | None, partner: str | None
+) -> tuple[Mount, _Geometry] | _Candidate:
+    """Where a tool comes from, and the geometry it needs; else the fastener's verdict.
+
+    A nut both of whose faces are covered may be in a trap, which holds it (issue
+    #93), or drawn into a part, a clash (issue #63).
+    """
+    try:
+        return _orient(frame, fastener, scene)
+    except _BothEndsCovered as exc:
+        candidate = _Candidate(fastener, axis=frame.direction, state=state_name)
+        trap = _trapped_in(frame, fastener, scene)
+        if trap is not None:
+            _hold_in_trap(candidate, trap, frame, scene, partner)
+            return candidate
+        clash = _drawn_into(frame, scene, partner)
+        return _Candidate(fastener, reason=clash or str(exc), state=state_name)
+    except NotCovered as exc:
+        return _Candidate(fastener, reason=str(exc), state=state_name)
 
 
 def _try_tools(
@@ -901,7 +923,10 @@ def _try_tools(
         attempts_iter = _attempts_for(fastener, mount, geometry, scene, tools)
         _run_attempts(candidate, attempts_iter)
     except NotCovered as exc:  # also any a lazy attempt raises while running
-        candidate.reason = str(exc)
+        if not _in_trap(candidate, frame, scene, partner):  # no tool, and none needed (#93)
+            candidate.reason = str(exc)
+        return
+    if not candidate.turns and _in_trap(candidate, frame, scene, partner):
         return
     if not candidate.turns:  # what stopped it may be drawn into it (issue #63)
         candidate.reason = _drawn_into(frame, scene, partner, candidate.blockers)
@@ -915,6 +940,95 @@ def _try_tools(
         if candidate.turns and candidate.extraction_blocked:
             candidate.stuck = True
             candidate.stuck_on = candidate.extraction_blocked
+
+
+#: Directions round a nut its trap is looked for in, every 30 degrees: a part its
+#: corners meet in two opposite ones holds it (issue #93).
+_TRAP_DIRECTIONS = 12
+
+#: The radius of each direction's probe, mm, at most: thin, to say where round the
+#: nut a part is, and no taller than the hex, to meet only what is beside it.
+_TRAP_PROBE = 0.5
+
+
+def _in_trap(candidate: _Candidate, frame: _Frame, scene: Scene, partner: str | None) -> bool:
+    """Whether a nut nothing turns sits in a trap, which then holds it (issue #93).
+
+    Asked once nothing turns it: its corners' own attempt, which every tool on a
+    hex tries first, says what the ring round it met, where it ran; where it
+    didn't (the kit has no tool for it, a rule named another), the ring is asked.
+    A trap is the model's, whatever the kit.
+    """
+    corners = next((a for a in candidate.attempts if a.way == _CORNERS_WAY), None)
+    met = corners.blockers if corners is not None else None
+    trap = _trapped_in(frame, candidate.fastener, scene, met)
+    if trap is None:
+        return False
+    _hold_in_trap(candidate, trap, frame, scene, partner)
+    return True
+
+
+def _hold_in_trap(
+    candidate: _Candidate, trap: str, frame: _Frame, scene: Scene, partner: str | None
+) -> None:
+    """Held by the part it sits trapped in (issue #93), and noted if drawn into it.
+
+    Drawn into its trap, a nut is in a press fit as often as a clash: said, not failed.
+    """
+    candidate.trapped_in, candidate.tool = trap, None
+    candidate.how = f"held by its trap in {trap}"
+    candidate.blockers = candidate.deciding = ()  # held by it, not blocked: in every kit
+    candidate.notes = tuple(
+        f"drawn {volume:.1f} mm^3 into its trap: a press fit, or a clash to fix"
+        for _, volume in _clashes(frame, scene, partner, (trap,))
+    )
+
+
+def _trapped_in(
+    frame: _Frame, fastener: Fastener, scene: Scene, met: tuple[str, ...] | None = None
+) -> str | None:
+    """The part a nut sits trapped in, if one: a hex pocket, or a slot its width (issue #93).
+
+    A nut's corners, turning, sweep a ring round it from its flats out. A part
+    they meet on two opposite sides stops it turning whatever grips it, and it
+    needn't turn: the part holds it, as a fixed thread holds itself, and its
+    screw must turn. A part on one side only, a rib a corner touches, is no
+    trap: the nut is blocked by its corners, as before. Asked only where a nut's
+    corners are stopped, or both its faces are covered, as a nut's in a side slot
+    are, and then only round it where something is in the ring. ``met`` is what the
+    ring met, where the check has asked already: the corners' own attempt.
+    """
+    if fastener.kind is not Kind.NUT:
+        return None
+    af = fastener.drive_af or (spanner_af(fastener.size) if fastener.size else None)
+    if af is None:
+        return None
+    low, high = _band(frame.projections, frame.radials, frame.flats)
+    mount = Mount(seat=frame.point_at(high), axis=frame.direction)
+    if met is None:
+        met = scene.hits(mount.place(corner_sweep(af, (0.0, low - high))))
+    if not met:
+        return None
+    inner, outer = af / 2, af / math.sqrt(3) + RING_CLEARANCE
+    radius = min(_TRAP_PROBE, (high - low) / 2)
+    sides: dict[str, set[int]] = {}
+    for index in range(_TRAP_DIRECTIONS):
+        phi = index * 360.0 / _TRAP_DIRECTIONS
+        probe = mount.place(radial_cylinder(radius, inner, outer, (low - high) / 2, phi))
+        for name in scene.hits(probe):
+            sides.setdefault(name, set()).add(index)
+    half = _TRAP_DIRECTIONS // 2
+    return next(
+        (
+            name
+            for name in met
+            if any(
+                (index + half) % _TRAP_DIRECTIONS in sides.get(name, ())
+                for index in sides.get(name, ())
+            )
+        ),
+        None,
+    )
 
 
 def _blocked_reason(candidate: _Candidate) -> str | None:
@@ -983,6 +1097,18 @@ def _drawn_into(
     over. A part overlapping the measured region past the thread is a clash, and
     its whole overlap with that region is the volume told.
     """
+    found = _clashes(frame, scene, partner, among)
+    if not found:
+        return None
+    total = sum(volume for _, volume in found)
+    names = tuple(name for name, _ in found)
+    return f"drawn into {listed(names)} ({total:.1f} mm^3): fix the model"
+
+
+def _clashes(
+    frame: _Frame, scene: Scene, partner: str | None, among: tuple[str, ...] | None
+) -> list[tuple[str, float]]:
+    """Each part the fastener is drawn into, past its thread, and by how much (mm^3)."""
     part, engine = frame.part, scene.engine
     box = engine.part_bounds(part)
     region, past_thread = _measured(frame)
@@ -994,11 +1120,7 @@ def _drawn_into(
             continue
         if exact_overlap(past_thread, other.shape) > HIT_MIN_VOLUME:
             found.append((other.name, exact_overlap(region, other.shape)))
-    if not found:
-        return None
-    total = sum(volume for _, volume in found)
-    names = tuple(name for name, _ in found)
-    return f"drawn into {listed(names)} ({total:.1f} mm^3): fix the model"
+    return found
 
 
 def _attempt_notes(
@@ -1140,6 +1262,10 @@ def _alone(partner_name: str | None, partner: _Candidate | None) -> str:
         return f"it screws into a fixed thread ({partner_name}), so it must turn"
     if partner is not None and partner.fastener.head is Head.CARRIAGE:
         return f"its bolt ({partner_name}) holds itself, so it must turn"
+    if partner is not None and partner.trapped_in is not None:
+        return (
+            f"its nut ({partner_name}) is held by its trap in {partner.trapped_in}, so it must turn"
+        )
     return f"its partner {partner_name} does not turn"
 
 
@@ -1153,7 +1279,7 @@ def _finish(
     stuck_on: tuple[str, ...] = ()
     if candidate.reason is not None:
         verdict, how = Verdict.NOT_COVERED, None
-    elif fastener.self_holding:
+    elif fastener.self_holding or candidate.trapped_in is not None:
         verdict, tool = Verdict.HELD, None
     elif candidate.stuck:
         verdict, stuck_on = Verdict.STUCK, candidate.stuck_on

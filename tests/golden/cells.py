@@ -2025,3 +2025,57 @@ def grip():
         ("wing_nut", Pos(240, 0, 1) * wing_nut()),
         ("spacer (ISO 4762 M6 screw)", Pos(0, 120, 5) * (Cylinder(5, 10) - Cylinder(3.2, 11))),
     ]
+
+
+# ---------------------------------------------------------------- issue #93: nut traps
+
+#: An ISO 4762 M3 screw and an ISO 4032 M3 nut, as the issue draws them.
+_M3_SOCKET = {"kind": "screw", "head": "socket", "size": "M3"}
+_M3_NUT = {"kind": "nut", "size": "M3"}
+
+
+@cell(
+    "trap",
+    [
+        *({"parts": f"{where}_screw", **_M3_SOCKET} for where in ("slot", "pocket", "stopped")),
+        *({"parts": f"{where}_nut", **_M3_NUT} for where in ("slot", "pocket", "stopped")),
+    ],
+    {
+        "slot_screw": {"verdict": "turns", "tool": "hex-key-2.5", "pair": "slot_nut"},
+        "slot_nut": {"verdict": "held", "pair": "slot_screw"},
+        "pocket_screw": {"verdict": "turns", "tool": "hex-key-2.5", "pair": "pocket_nut"},
+        "pocket_nut": {"verdict": "held", "pair": "pocket_screw"},
+        "stopped_screw": {"verdict": "blocked", "tool": "hex-key-2.5", "pair": "stopped_nut"},
+        "stopped_nut": {"verdict": "held", "pair": "stopped_screw"},
+    },
+)
+def trap():
+    """Nuts in traps, as printed parts hold them (issue #93): an M3x16 socket head
+    screw down through a 16 deep block into an M3 nut (5.5 across flats, 2.4 thick).
+    In slot, the nut sits in a slot 5.7 wide and 2.6 tall, open on +x, both its faces
+    covered; in pocket, in a hex pocket 5.6 across flats in the block's underside,
+    0.05 off each flat. Turning, the nut's corners (3.18 from its axis) meet the slot's
+    walls, or the pocket's, on opposite sides: the block holds it, and its screw, open
+    above, turns. They used to be not covered (both faces covered) and blocked (the
+    corners hit the block). In stopped, the pocket again, under tee_hold's slotted guide
+    and ceiling at M3's scale: the 2.5 key only holds its screw (the ceiling at 33 stops
+    the driver and the long leg; the slot, 18 degrees each way at 60 out, leaves the
+    short leg's arm, at 23.8, 36 of the 60 it needs). A trapped nut never turns, so
+    the screw must, which its reason says.
+    """
+    screw = socket_screw(d=3, length=16, dk=5.5, k=3, s=2.5, t=1.3)
+    nut = hex_nut(3, 5.5, 2.4)
+    parts = []
+    for where, x in (("slot", -200), ("pocket", 0), ("stopped", 200)):
+        block = Pos(x, 0, -8) * Box(30, 30, 16) - Pos(x, 0, -8) * Cylinder(1.7, 17)
+        if where == "slot":
+            block -= Pos(x + 6.7, 0, -8) * Box(20, 5.7, 2.6)
+            held = Pos(x, 0, -9.2) * nut
+        else:
+            block -= Pos(x, 0, -16) * hex_prism(5.6, 2.6)
+            held = Pos(x, 0, -16) * nut
+        parts += [(f"{where}_block", block), (f"{where}_screw", Pos(x, 0, 0) * screw)]
+        parts.append((f"{where}_nut", held))
+    half_width = 2.82 / 2 + 60 * math.tan(math.radians(18))  # the 2.5 key's shaft, 2.82 round
+    stop = [("guide", Pos(200, 0, 0) * slot_block(15, 30, 8, half_width))]
+    return [*parts, *stop, ("ceiling", Pos(200, 0, 0) * slab(33, w=130, d=130))]

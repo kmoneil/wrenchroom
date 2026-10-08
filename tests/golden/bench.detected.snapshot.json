@@ -3,10 +3,10 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 118,
-  "turns": 91,
-  "held": 5,
-  "blocked": 19,
+  "fasteners": 124,
+  "turns": 93,
+  "held": 8,
+  "blocked": 20,
   "stuck": 1,
   "not_covered": 2
  },
@@ -3382,6 +3382,187 @@
    "notes": []
   },
   {
+   "name": "trap_pocket_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    4000.0,
+    13000.0,
+    -16.0
+   ],
+   "source": "name+geometry",
+   "tool": null,
+   "verdict": "held",
+   "how": "held by its trap in trap_pocket_block",
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "trap_pocket_screw",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "trap_pocket_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4000.0,
+    13000.0,
+    3.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2.5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": "trap_pocket_nut",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "trap_slot_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": null,
+   "source": "name+geometry",
+   "tool": null,
+   "verdict": "held",
+   "how": "held by its trap in trap_slot_block",
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "trap_slot_screw",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "trap_slot_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3800.0,
+    13000.0,
+    3.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2.5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": "trap_slot_nut",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "trap_stopped_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    4200.0,
+    13000.0,
+    -16.0
+   ],
+   "source": "name+geometry",
+   "tool": null,
+   "verdict": "held",
+   "how": "held by its trap in trap_stopped_block",
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "trap_stopped_screw",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "trap_stopped_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4200.0,
+    13000.0,
+    3.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2.5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "trap_stopped_nut",
+   "blocked_by": [
+    "trap_guide",
+    "trap_ceiling"
+   ],
+   "deciding": [
+    "trap_guide"
+   ],
+   "stuck_on": [],
+   "reason": "only holds, and its nut (trap_stopped_nut) is held by its trap in trap_stopped_block, so it must turn; best arc bounded by trap_guide",
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "twins_a_screw",
    "kind": "screw",
    "head": "socket",
@@ -3393,7 +3574,7 @@
     1.0
    ],
    "seat": [
-    3900.0,
+    4900.0,
     13000.0,
     6.0
    ],
@@ -3425,7 +3606,7 @@
     1.0
    ],
    "seat": [
-    4100.0,
+    5100.0,
     13000.0,
     6.0
    ],
