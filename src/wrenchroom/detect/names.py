@@ -13,7 +13,11 @@ Any of them may come with a thread size (``M6``, ``M6x20``, ``M6x1x20``,
 ``1/4-20 x 3/4``, ``#10-32``) and a length.
 
 A name reads as a fastener when the word it is about, its last noun, is a
-fastener noun, or when it carries a standard or a catalogue number. A fastener noun
+fastener noun, or when it carries a standard or a catalogue number. A name that
+is a thread and a length and nothing else (``M3x16``, ``M3-0.5x16``,
+``1/4-20x1``), as CAD libraries and suppliers name screws, is a screw candidate:
+a stud, a rod or an insert is named so as readily, so its solid must show a
+drive, as below (issue #95). A bare size (``M3``) says nothing. A fastener noun
 with ordinary words after it is only a candidate (``needs_drive``): ``box_gland_vent``
 may be a gland or a vent, ``bolt_hole_cover`` is a cover, and ``pair_nut_held_upper``
 is about ``held``. Only its solid can say, by showing a drive (issue #30: such a
@@ -310,8 +314,10 @@ _STANDARD = re.compile(
     r"(?<![A-Za-z])(?:DIN[\s_-]*EN[\s_-]*)?(ISO|DIN)[\s_-]*(\d{2,5})(?![0-9])", re.IGNORECASE
 )
 _MCMASTER = re.compile(r"(?<![0-9A-Za-z])(\d{4,5}A)\d{1,4}(?![0-9A-Za-z])", re.IGNORECASE)
+#: ``M6``, ``M6x20``, ``M6x1x20``, and the pitch after a dash as suppliers write it,
+#: ``M6-1x20``, ``M3-0.5 x 16``.
 _METRIC = re.compile(
-    r"(?<![A-Za-z0-9])M(\d+(?:[.,]\d+)?)"
+    r"(?<![A-Za-z0-9])M(\d+(?:[.,]\d+)?)(?:\s*-\s*(\d(?:[.,]\d{1,2})?)(?![0-9]))?"
     r"(?:\s*x\s*(\d+(?:[.,]\d+)?))?(?:\s*x\s*(\d+(?:[.,]\d+)?))?(?:\s*mm)?(?![0-9])",
     re.IGNORECASE,
 )
@@ -353,7 +359,7 @@ def read_name(name: str) -> NameHint | None:
     else:
         reading = _noun_reading(words, at)
         if reading is None:
-            return None
+            return _designation(cleaned, words, at)
         at, (kind, head, reason, word), needs_drive = reading
         noun, run = words[at], _descriptors(words, at)
         basis = [f"noun {word!r}" + (", words after it" if needs_drive else "")]
@@ -383,6 +389,30 @@ def read_name(name: str) -> NameHint | None:
         needs_drive=needs_drive,
         unless_hex=kind is Kind.INSERT and word not in _INSERT_NOUNS,
         needs_bore=bare and size is None and size_reason is None,
+    )
+
+
+def _designation(text: str, words: list[str], at: int | None) -> NameHint | None:
+    """A name that is a screw's thread and length and nothing else: ``M3x16`` (issue #95).
+
+    Every other word in it describes (``M3x16 button``) or labels (``M3x16 v1``);
+    a name with a word of its own is about that word (``spacer M4x10``, ``M3x16
+    standoff``). A candidate, taken only on a drive in its solid: a stud, a rod
+    or an insert is named by its thread and length as readily as a screw.
+    """
+    size, length, size_text, size_reason = _size_in(text)
+    if at is not None or length is None or size_text is None:
+        return None
+    run = set(words)
+    _, _, reason, _ = _noun_hint("screw", run) or (None, None, None, None)
+    return NameHint(
+        kind=Kind.SCREW,
+        head=_head_from(run, Kind.SCREW),
+        size=size,
+        length_mm=length,
+        basis=f"thread and length {size_text}",
+        not_covered=reason or size_reason,
+        needs_drive=True,
     )
 
 
@@ -586,12 +616,16 @@ def _size_in(text: str) -> tuple[Size | None, float | None, str | None, str | No
 
 def _metric(match: re.Match[str]) -> tuple[Size | None, float | None, str | None, str | None]:
     diameter = match.group(1).replace(",", ".")
-    numbers = [float(g.replace(",", ".")) for g in match.groups()[1:] if g]
+    dashed = match.group(2)
+    pitch = float(dashed.replace(",", ".")) if dashed else None
+    numbers = [float(g.replace(",", ".")) for g in match.groups()[2:] if g]
     length = None
     if len(numbers) == 2:  # noqa: PLR2004  (M6x1x20: pitch then length)
-        length = numbers[1]
+        pitch, length = numbers
     elif numbers and not _is_pitch(numbers[0], float(diameter)):
         length = numbers[0]
+    if pitch is not None and not _is_pitch(pitch, float(diameter)):
+        length = None  # M3x5x4, an insert's sizes: no thread's pitch, so no screw's length
     text = match.group(0).strip()
     designation = f"M{float(diameter):g}"
     try:

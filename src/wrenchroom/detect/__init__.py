@@ -34,7 +34,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
-from wrenchroom.detect.geometry import ShapeReading, read_shape
+from wrenchroom.detect.geometry import ShapeReading, looks_like, read_shape
 from wrenchroom.detect.names import NameHint, ends_in_part_noun, read_name
 from wrenchroom.fasteners import (
     Fastener,
@@ -82,6 +82,9 @@ NO_THREAD = (
     "its solid shows no bore: an inlay, not a fixed thread"
 )
 
+#: Why a part named nothing a fastener is, whose solid looks like one, is listed (issue #95).
+NOT_NAMED = "not named as a fastener, but its solid looks like one"
+
 #: Why a nut whose solid is round isn't given its thread's spanner (issue #29).
 NO_HEX = (
     "named as a nut, but its solid shows no hex for a spanner to grip; a fixed "
@@ -101,13 +104,19 @@ def find(parts: Iterable[Part]) -> Found:
     """Every part whose name says it is a fastener, described from name and solid.
 
     A candidate name (a fastener noun with ordinary words after it) is taken
-    only when its solid shows a drive; otherwise it is passed over, with why.
+    only when its solid shows a drive; otherwise it is passed over, with why. A
+    part named nothing a fastener is isn't checked, but one whose solid plainly
+    looks like a fastener is passed over too, saying so (issue #95).
     """
     fasteners: list[Fastener] = []
     passed: list[PassedOver] = []
     for part in parts:
         hint = read_name(part.name)
         if hint is None:
+            look = looks_like(part.shape)
+            if look is not None:
+                kind, what = look
+                passed.append(PassedOver(part.name, kind, f"{NOT_NAMED}: {what}", named=False))
             continue
         reading = read_shape(part.shape, hint.kind, hint.head)
         missing = _missing(hint, reading)

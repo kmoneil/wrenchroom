@@ -294,7 +294,12 @@ class Report:
             ],
             "hand_room": self.hand_room,
             "passed_over": [
-                {"name": part.name, "kind": part.kind.value, "reason": part.reason}
+                {
+                    "name": part.name,
+                    "kind": part.kind.value,
+                    "reason": part.reason,
+                    "named": part.named,
+                }
                 for part in self.passed_over
             ],
             "fasteners": [_result_json(result) for result in self.results],
@@ -550,11 +555,23 @@ def _marginal_text(result: FastenerResult) -> str:
 
 
 def _passed_over_count(passed: tuple[PassedOver, ...]) -> str:
-    noun = "part" if len(passed) == 1 else "parts"
-    return (
-        f"{len(passed)} {noun} named like a fastener, with no drive or bore in the solid "
-        "(passed over)"
-    )
+    named = sum(part.named for part in passed)
+    alike = len(passed) - named
+    said = []
+    if named:
+        noun = "part" if named == 1 else "parts"
+        said.append(
+            f"{named} {noun} named like a fastener, with no drive or bore in the solid "
+            "(passed over)"
+        )
+    if alike:  # issue #95
+        what = (
+            "part shaped like a fastener, not named as one"
+            if alike == 1
+            else ("parts shaped like fasteners, not named as any")
+        )
+        said.append(f"{alike} {what} (passed over)")
+    return "; ".join(said)
 
 
 def _summary_text(counts: dict[str, int]) -> str:

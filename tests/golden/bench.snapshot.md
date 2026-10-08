@@ -1,15 +1,16 @@
 ### wrenchroom: `bench.step`
 
-**110 fasteners: 86 turn, 5 held, 18 blocked, 1 stuck, 0 not covered**
+**114 fasteners: 90 turn, 5 held, 18 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
-Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 9 parts named like a fastener, with no drive or bore in the solid (passed over); parts the model doesn't have.
+Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts named like a fastener, with no drive or bore in the solid (passed over); 3 parts shaped like fasteners, not named as any (passed over); parts the model doesn't have.
 
 | Fasteners | Tool | Count | Outcome |
 | --- | --- | ---: | --- |
 | #0 button screw | `hex-key-0.035in` | 1 | all pass (driver straight in) |
 | #0 socket screw | `hex-key-0.050in` | 1 | all pass (driver straight in) |
+| #10 socket screw | `hex-key-5/32in` | 1 | all pass (driver straight in) |
 | 1/4 nut | `spanner-7/16in` | 1 | all pass (ring, full length) |
 | 1/4 socket screw | `hex-key-3/16in` | 1 | all pass (driver straight in) |
 | 15 AF gland | `spanner-15` | 3 | 1 of 3 fail |
@@ -27,12 +28,13 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 9 parts 
 | M2.5 nut | `spanner-5` | 1 | all pass (ring, full length) |
 | M24 nut | `spanner-36` | 1 | 1 of 1 fail |
 | M3 button screw | `hex-key-2` | 1 | all pass (driver straight in) |
+| M3 socket screw | `hex-key-2.5` | 1 | all pass (driver straight in) |
 | M4 button screw | `hex-key-2.5` | 6 | 2 of 6 fail |
 | M4 flat screw | `hex-key-2.5` | 2 | all pass (driver straight in) |
 | M4 insert | - | 2 | all pass (holds itself) |
-| M4 phillips screw | `driver-ph2` | 2 | 1 of 2 fail |
+| M4 phillips screw | `driver-ph2` | 3 | 1 of 3 fail |
 | M4 socket screw | `hex-key-3` | 2 | all pass (driver straight in) |
-| M5 button screw | `hex-key-3` | 2 | all pass (driver straight in) |
+| M5 button screw | `hex-key-3` | 3 | all pass (driver straight in) |
 | M5 nut | `spanner-8` | 1 | all pass (ring, full length) |
 | M5 socket screw | `hex-key-4` | 1 | all pass (driver straight in) |
 | M6 button screw | `hex-key-4` | 4 | 1 of 4 fail |
@@ -99,3 +101,5 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 9 parts 
 - `nut_gap_stud`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
 - `flange_nut_stud`: noun 'nut', words after it; its solid shows no hex, hex socket or cross a tool fits
 - `badge_insert`: noun 'insert'; named only as an insert, with no thread size or word such as threaded, and its solid shows no bore: an inlay, not a fixed thread
+- `std_M8x60`: thread and length M8x60; its solid shows no hex, hex socket or cross a tool fits
+- and 3 more (the JSON lists every one)

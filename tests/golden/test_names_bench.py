@@ -50,7 +50,14 @@ def test_the_bench_names_read_as_its_sidecar_says():
         if "gland" in name:
             assert not found.socket_allowed, name
     assert not wrong
-    assert [name for name in candidates if _rule_for(name, rules)] == ["vented_gland_vent"]
+    # vented's gland, and std's four screws named by thread and length alone (#95).
+    assert [name for name in candidates if _rule_for(name, rules)] == [
+        "vented_gland_vent",
+        "std_M3x16",
+        "std_M5-0.8x12",
+        "std_M4x0.7x12",
+        "std_#10-32x1",
+    ]
     # Issue #29: a nut deep in a well reads as a well nut by its name alone; its
     # solid's hex settles it (test_inserts.py, and the detected bench).
     assert by_word == ["nut_deep_well_nut"]

@@ -40,6 +40,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from build123d import GeomType
+from OCP.TopAbs import TopAbs_FACE
+from OCP.TopExp import TopExp_Explorer
 
 from wrenchroom.fasteners import (
     BUTTON_KEY_AF,
@@ -59,6 +61,7 @@ from wrenchroom.fasteners import (
     in_hex_band,
     in_recess_band,
     loosely_fits,
+    standard_hex_afs,
 )
 
 if TYPE_CHECKING:
@@ -119,6 +122,24 @@ _COUNTERSINK_SPAN = 0.6
 
 #: Surfaces a head's top is rounded by: a dome, a fillet.
 _ROUNDED = {GeomType.TORUS, GeomType.SPHERE, GeomType.BSPLINE}
+
+#: No fastener the tables hold is wider about its axis than this, mm: an M24 nut
+#: is 41.6 across its corners. A wider part is no fastener's look-alike.
+_FASTENER_WIDEST = 22.0
+
+#: Nor has one more faces than this: bd_warehouse's M3x16 socket head screw, its
+#: thread modelled, has 277. A printed part has hundreds, and is passed over
+#: before the faces are read.
+_FASTENER_FACES = 400
+
+#: A look-alike nut's bore, as a fraction of its thread: from a thread drawn at its
+#: minor diameter (an M3's 2.46 is 0.82 of it) to one drawn with clearance.
+_NUT_BORE = (0.75, 1.15)
+
+#: A look-alike nut is no thicker than this, as a fraction of its thread: ISO 7040's
+#: nyloc is 1.33 of it at M3; a hex standoff, bored and the same across flats, is
+#: longer.
+_NUT_THICKEST = 1.5
 
 
 @dataclass(frozen=True)
@@ -253,6 +274,90 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
         head_drawn=outline.drawn,
         outline_head=outline.head if disputed else None,
     )
+
+
+def looks_like(shape: Shape) -> tuple[Kind, str] | None:
+    """What a solid looks like, if it is plainly a fastener: (kind, what), else None.
+
+    For a part named nothing a fastener is (``Part7``), which detection doesn't
+    check (named parts only), so a model of unnamed screws doesn't pass without a
+    word (issue #95). Only the plainest count: a screw is a head at one end of a
+    shank of a standard size, with a hex socket its size's key goes into or a
+    cross in the head; a nut is a hex its size's spanner fits, round a bore of
+    that size, no thicker than a nut. A slot, a square or a hex head over a
+    shank show on spacers, fittings and printed parts as readily, and don't
+    count.
+    """
+    if _more_faces_than(shape, _FASTENER_FACES):
+        return None
+    axis = _main_axis(shape)
+    if axis is None:
+        return None
+    origin, direction = axis
+    profile = _Profile.of(shape, origin, direction)
+    if profile.widest > _FASTENER_WIDEST:
+        return None
+    faces = list(shape.faces())
+    rounds = _coaxial_rounds(faces, origin, direction)
+    flats = _flats(faces, origin, direction)
+    screw = _screw_like(rounds, [f for f in flats if not f.outward], profile)
+    if screw is not None:
+        return Kind.SCREW, screw
+    nut = _nut_like(rounds, [f for f in flats if f.outward], profile)
+    return (Kind.NUT, nut) if nut is not None else None
+
+
+def _screw_like(
+    rounds: list[tuple[float, bool]], inner: list[_Flat], profile: _Profile
+) -> str | None:
+    """A screw its solid plainly shows, said in a few words; else None."""
+    shank = _snap([r for r, convex in rounds if convex])
+    if shank is None or wide_end(profile.along, profile.out) == 0:
+        return None
+    if shank.diameter_mm / 2 >= _WIDE * profile.widest:
+        return None  # no head wider than the shank
+    pocket = _regular(inner, 6)
+    keys = {table[d] for table in _KEY_TABLES.values() if (d := shank.designation) in table}
+    if pocket is not None and any(
+        in_recess_band(pocket, key) or loosely_fits(pocket, key) for key in keys
+    ):
+        return f"{shank.designation} screw, a {round(pocket, 2):g} hex socket"
+    if _is_cross(inner):
+        return f"{shank.designation} screw, a cross in its head"
+    return None
+
+
+def _nut_like(
+    rounds: list[tuple[float, bool]], outer: list[_Flat], profile: _Profile
+) -> str | None:
+    """A nut its solid plainly shows, said in a few words; else None."""
+    hexagon = _regular(outer, 6)
+    bores = [2 * r for r, convex in rounds if not convex]
+    if hexagon is None or not bores:
+        return None
+    thick = max(profile.along) - min(profile.along)
+    low, high = _NUT_BORE
+    for designation, diameter in {**METRIC_SIZES, **IMPERIAL_SIZES}.items():
+        fits = any(
+            abs(af - hexagon) <= _SAME_DISTANCE or in_hex_band(hexagon, af)
+            for af in standard_hex_afs(Size(designation, diameter))
+        )
+        bored = low * diameter <= min(bores) <= high * diameter
+        if fits and bored and thick <= _NUT_THICKEST * diameter:
+            return f"{designation} nut, {round(hexagon, 2):g} across flats"
+    return None
+
+
+def _more_faces_than(shape: Shape, most: int) -> bool:
+    """Whether a solid has more than ``most`` faces, counted without reading one."""
+    explorer = TopExp_Explorer(shape.wrapped, TopAbs_FACE)
+    count = 0
+    while explorer.More():
+        count += 1
+        if count > most:
+            return True
+        explorer.Next()
+    return False
 
 
 # ---------------------------------------------------------------------------

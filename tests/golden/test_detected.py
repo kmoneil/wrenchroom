@@ -144,14 +144,33 @@ def test_every_candidate_name_is_taken_on_its_solid_or_passed_over(detected):
     assert len(candidates) > 15  # a vacuity guard: the bench is full of such names
     said = {name for name in candidates if not ends_in_part_noun(name)}
     assert len(candidates - said) > 5  # and of plates and blocks
-    # The two taken on their solids: vented's gland by its hex, badge's boss insert by
-    # its bore (issue #84).
+    # Those taken on their solids: vented's gland by its hex, badge's boss insert by
+    # its bore (issue #84), std's four screws named by thread and length by their
+    # drives (issue #95); std's stud, named M8x60, shows none and is passed over.
     taken_on_solid = {"vented_gland_vent", "badge_boss_insert"}
-    assert {part.name for part in detected.passed_over} == said - taken_on_solid
+    taken_on_solid |= {f"std_{role}" for role in ("M3x16", "M5-0.8x12", "M4x0.7x12", "#10-32x1")}
+    assert "std_M8x60" in said - taken_on_solid
+    named = {part.name for part in detected.passed_over if part.named}
+    assert named == said - taken_on_solid
     taken = {r.fastener.name for r in detected.results}
     assert candidates & taken == taken_on_solid
     (gland,) = [r for r in detected.results if r.fastener.name == "vented_gland_vent"]
     assert (gland.tool, gland.fastener.confidence) == ("spanner-24", "medium")
+
+
+def test_an_unnamed_part_that_looks_like_a_fastener_is_passed_over(detected, bench_report):
+    """Issue #95: std's part7, part8 and part9, an M6 socket head screw, an M4 Phillips
+    pan head and an M8 nut drawn in its band, each named nothing a fastener is, are
+    said in both runs; std's row of standoff, collet, knob, spool, wheel and pin, and
+    nothing else on the bench, looks like one."""
+    said = "not named as a fastener, but its solid looks like one"
+    for report in (detected, bench_report):
+        alike = [(p.name, p.kind.value, p.reason) for p in report.passed_over if not p.named]
+        assert alike == [
+            ("std_part7", "screw", f"{said}: M6 screw, a 5 hex socket"),
+            ("std_part8", "screw", f"{said}: M4 screw, a cross in its head"),
+            ("std_part9", "nut", f"{said}: M8 nut, 12.8 across flats"),
+        ]
 
 
 def test_the_detected_report_matches_its_snapshot(detected):

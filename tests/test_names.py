@@ -152,7 +152,6 @@ def test_a_fastener_the_kit_cannot_check_says_why(name, reason):
         "M",
         "ISO",
         "M6",
-        "M6x20",
     ],
 )
 def test_things_that_are_not_fasteners(name):
