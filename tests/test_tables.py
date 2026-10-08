@@ -1,7 +1,10 @@
 """The dimension tables hold together: spec examples, cross-references, monotony."""
 
+import inspect
+
 import pytest
 
+from wrenchroom import fasteners
 from wrenchroom.fasteners import (
     BUTTON_KEY_AF,
     FLAT_KEY_AF,
@@ -167,3 +170,17 @@ def test_spanner_and_socket_approximations_behave():
     assert spanner_for(10.5).stubby_length is None
     assert socket_for(10.0).outer_radius == pytest.approx(7.2)
     assert socket_for(5.5).length == 25.0  # the floor
+
+
+def test_every_drive_table_row_names_its_source():
+    # Issue #102: no row is left as a supplier's "catalogue" guess, and the two a
+    # standard doesn't hold say whose they are: M18 and M22 socket heads, DIN 912's.
+    source = inspect.getsource(fasteners)
+    assert "# catalogue" not in source
+    assert source.count("# DIN 912's: ISO 4762 has no") == 2
+    rows = {d: fasteners.SOCKET_KEY_AF[d] for d in ("M14", "M16", "M18", "M20", "M22", "M24")}
+    assert rows == {"M14": 12.0, "M16": 14.0, "M18": 14.0, "M20": 17.0, "M22": 17.0, "M24": 19.0}
+    assert (fasteners.HEX_AF["M18"], fasteners.HEX_AF["M22"]) == (27.0, 34.0)  # ISO 4017:2022
+    assert fasteners.BUTTON_KEY_AF["M16"] == 10.0  # ISO 7380-1:2011
+    flat = {d: fasteners.FLAT_KEY_AF[d] for d in ("M14", "M16", "M20")}
+    assert flat == {"M14": 10.0, "M16": 10.0, "M20": 12.0}  # ISO 10642:2004

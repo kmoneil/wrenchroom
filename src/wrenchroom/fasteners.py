@@ -220,13 +220,16 @@ class PassedOver:
 # kit (M6). A size missing from a table is a statement: that head does not
 # come in that size, and the checker says `not-covered` rather than guessing.
 #
-# Values marked "catalogue" are common across supplier catalogues but not yet
-# read out of the standard document itself; replace the marker when checked.
+# Every row is a standard's, named in its table's comment or beside the row; a row a
+# standard doesn't hold, but a withdrawn one or the trade does, says which (issue #102).
 # ---------------------------------------------------------------------------
 
 #: ISO 4762 socket head cap screws: thread -> hexagon socket across-flats, mm.
 #: Checked 2026-10-06 against engineersedge.com's ISO 4762 table; M1.6 to M2.5 read
-#: 2026-10-07 from ISO 4762:2004's own Table 1 (the iTeh preview).
+#: 2026-10-07 from ISO 4762:2004's own Table 1 (the iTeh preview), M12 to M24 from
+#: Fuller Fasteners' copy of it. M18 and M22 are not in ISO 4762 at all: they are
+#: DIN 912's (withdrawn, fasten.it's table, read 2026-10-07), the same keys as M16's
+#: and M20's, and screws of those sizes are still sold to it (issue #102).
 SOCKET_KEY_AF: dict[str, float] = {
     "M1.6": 1.5,
     "M2": 1.5,
@@ -238,18 +241,18 @@ SOCKET_KEY_AF: dict[str, float] = {
     "M8": 6.0,
     "M10": 8.0,
     "M12": 10.0,
-    "M14": 12.0,  # catalogue
+    "M14": 12.0,  # ISO 4762's, bracketed: a non-preferred size
     "M16": 14.0,
-    "M18": 14.0,  # catalogue
+    "M18": 14.0,  # DIN 912's: ISO 4762 has no M18
     "M20": 17.0,
-    "M22": 17.0,  # catalogue
+    "M22": 17.0,  # DIN 912's: ISO 4762 has no M22
     "M24": 19.0,
 }
 
 #: ISO 7380-1 button head screws: thread -> socket across-flats, mm.
-#: Checked 2026-10-06 against trfastenings.com's ISO 7380 table (M3..M12). Every
-#: edition starts at M3 (ISO 7380-1:2011 and 2022, read 2026-10-07): there is no M2
-#: or M2.5 button head.
+#: Checked 2026-10-06 against trfastenings.com's ISO 7380 table (M3..M12), and every
+#: row 2026-10-07 against ISO 7380-1:2011's own table (the iTeh preview). Every
+#: edition starts at M3 (2011 and 2022): there is no M2 or M2.5 button head.
 BUTTON_KEY_AF: dict[str, float] = {
     "M3": 2.0,
     "M4": 2.5,
@@ -258,7 +261,7 @@ BUTTON_KEY_AF: dict[str, float] = {
     "M8": 5.0,
     "M10": 6.0,
     "M12": 8.0,
-    "M16": 10.0,  # catalogue
+    "M16": 10.0,
 }
 
 #: ISO 7379 hexagon socket head shoulder screws: thread -> socket across flats, and
@@ -321,9 +324,9 @@ FLAT_KEY_AF: dict[str, float] = {
     "M8": 5.0,
     "M10": 6.0,
     "M12": 8.0,
-    "M14": 10.0,  # catalogue
-    "M16": 10.0,  # catalogue
-    "M20": 12.0,  # catalogue
+    "M14": 10.0,  # ISO 10642:2004's own table (the iTeh preview), as M16 and M20
+    "M16": 10.0,
+    "M20": 12.0,
 }
 
 
@@ -444,9 +447,9 @@ HEX_AF: dict[str, float] = {
     "M12": 18.0,
     "M14": 21.0,
     "M16": 24.0,
-    "M18": 27.0,  # catalogue
+    "M18": 27.0,  # ISO 4017:2022 Table 1 (iTeh preview, read 2026-10-08), as ISO 4032
     "M20": 30.0,
-    "M22": 34.0,  # catalogue
+    "M22": 34.0,  # the same
     "M24": 36.0,
 }
 
