@@ -654,13 +654,15 @@ def _fingers(
     found: ConnectorResult, body: Body, rule: ConnectorRule, room: Scene
 ) -> ConnectorResult:
     """A plug that comes off, its fingers tried: room to grip it, then to press its latch."""
-    gripped, met = (pinch if rule.grip is Grip.PINCH else fist)(body, room)
-    if not gripped:
-        return replace(found, verdict=ConnectorVerdict.NO_GRIP, blockers=met)
+    held = (pinch if rule.grip is Grip.PINCH else fist)(body, room)
+    found = replace(found, probes=held.probes)
+    if not held.gripped:
+        return replace(found, verdict=ConnectorVerdict.NO_GRIP, blockers=held.met)
     if rule.latch is not None:
         pressed = thumb(body, rule.latch, room)
-        if pressed:
-            return replace(found, verdict=ConnectorVerdict.NO_LATCH, blockers=pressed)
+        found = replace(found, probes=(*held.probes, pressed))
+        if pressed.hits:
+            return replace(found, verdict=ConnectorVerdict.NO_LATCH, blockers=pressed.hits)
     return found
 
 

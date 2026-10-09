@@ -668,8 +668,11 @@ each that doesn't come off; a stuck plug, no grip or no latch access exits 1, a 
 not covered or a `connectors:` glob naming nothing exits 2. The JSON's `connectors`
 has each plug's receptacle, axis, travel, what was in its way, its grip and latch, and
 the parts named like connectors; the Markdown a table of the failures. The 3D view
-doesn't draw plugs yet. A plug's ring turned before it is pulled (M8 and M12 circular
-connectors) waits with those families.
+colours each plug by how it fared and lists them in its panel; choosing one
+(`report.html#plug:0` opens on the first) draws it at the end of its pull, orange
+where it hits something, what stopped it magenta, its receptacle as it is, and, with
+hand room, the fingers and thumb as tried. A plug's ring turned before it is pulled
+(M8 and M12 circular connectors) waits with those families.
 
 ## Collision engines and speed
 

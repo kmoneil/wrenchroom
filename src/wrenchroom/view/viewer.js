@@ -31,6 +31,9 @@
   let isolated = null; // index into the selected fastener's attempts
   let clash = null; // index into data.clashes.found, when a clash is selected
   const CLASH_HASH = /^clash:(\d+)$/; // a clash's hash: #clash:N, where no fastener has the name
+  let plug = null; // index into data.connectors.found, when a plug is selected
+  const PLUG_HASH = /^plug:(\d+)$/; // a plug's hash: #plug:N, where no fastener has the name
+  const plugByName = new Map((data.connectors ? data.connectors.found : []).map((p, i) => [p.name, i]));
 
   // ------------------------------------------------------------------ panel
 
@@ -85,8 +88,23 @@
     });
     for (const line of data.clashes.apart) $("clashes").append(el("li", line, "muted"));
   }
+  if (data.connectors) {
+    $("plug-list").hidden = false;
+    $("plugs-summary").textContent = data.connectors.header;
+    data.connectors.found.forEach((p, index) => {
+      const button = el("button");
+      button.type = "button";
+      button.append(swatch(p.colour), el("span", p.label, "name"), el("span", p.verdict, "verdict"));
+      button.addEventListener("click", () => selectPlug(index));
+      const item = el("li");
+      item.append(button);
+      $("plugs").append(item);
+    });
+    for (const line of data.connectors.apart) $("plugs").append(el("li", line, "muted"));
+  }
   $("back").addEventListener("click", () => select(null));
   $("clash-back").addEventListener("click", () => select(null));
+  $("plug-back").addEventListener("click", () => select(null));
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") select(null);
   });
@@ -102,9 +120,28 @@
     $("clash-hint").textContent = c.hint === null ? "" : "Perhaps: " + c.hint;
   }
 
+  function showPlug(p) {
+    $("plug").hidden = p === null;
+    if (p === null) return;
+    $("plug-name").textContent = p.label;
+    $("plug-verdict").textContent = p.verdict;
+    $("plug-reason").hidden = !p.reason;
+    $("plug-reason").textContent = p.reason ? "Why: " + p.reason : "";
+    const inWay = $("plug-inway");
+    inWay.hidden = p.in_way.length === 0;
+    inWay.replaceChildren();
+    if (p.in_way.length) {
+      const label = p.verdict === "stuck" ? "In its way out: " : "In the fingers' way: ";
+      inWay.append(swatch(C.blocker), el("span", label), el("span", p.in_way.join(", "), "name"));
+    }
+    const view = data.views[p.view];
+    $("plug-state").hidden = view.state === null;
+    $("plug-state").textContent = view.state === null ? "" : "Drawn in state " + view.label + ".";
+  }
+
   function showDetail(f) {
     $("detail").hidden = f === null;
-    $("list").hidden = f !== null || clash !== null;
+    $("list").hidden = f !== null || clash !== null || plug !== null;
     if (f === null) return;
     $("name").textContent = f.label;
     $("headline").textContent = f.headline;
@@ -275,19 +312,24 @@
   function apply(reframe) {
     const f = selected === null ? null : data.fasteners[selected];
     const c = clash === null ? null : data.clashes.found[clash];
-    const viewIndex = f ? f.view : c ? c.view : data.overview;
+    const p = plug === null ? null : data.connectors.found[plug];
+    const viewIndex = f ? f.view : c ? c.view : p ? p.view : data.overview;
     const visible = new Set(data.views[viewIndex].parts);
     let highlight = [];
     if (f) highlight = isolated === null ? f.highlight : f.attempts[isolated].highlight;
     if (c) highlight = c.parts;
+    if (p) highlight = p.highlight;
     const highlighted = new Set(highlight);
+    const receptacle = new Set(p ? p.receptacle : []);
 
     data.parts.forEach((part, index) => {
       const mesh = partMeshes[index];
       if (!mesh) return;
       mesh.visible = visible.has(index);
       const owner = byName.get(part.owner ?? part.name);
+      const pulled = plugByName.get(part.owner ?? part.name);
       let colour = owner === undefined ? C.part : data.fasteners[owner].colour;
+      if (pulled !== undefined) colour = data.connectors.found[pulled].colour;
       let opacity = part.role === "ignored" ? IGNORED : 1;
       if (f) {
         if (highlighted.has(index)) {
@@ -302,6 +344,18 @@
           colour = C.blocker;
           opacity = BLOCKER;
         } else {
+          opacity = GHOST;
+        }
+      } else if (p) {
+        // The plug in its colour, its receptacle as it is, what stopped it in the
+        // blocker's colour, the rest ghosted.
+        if ((part.owner ?? part.name) === p.name) {
+          colour = p.colour;
+          opacity = 1;
+        } else if (highlighted.has(index)) {
+          colour = C.blocker;
+          opacity = BLOCKER;
+        } else if (!receptacle.has(index)) {
           opacity = GHOST;
         }
       }
@@ -320,10 +374,12 @@
       for (const attempt of attempts) for (const probe of attempt.probes) addProbe(probe);
       if (f.way_out && isolated === null) addProbe(f.way_out);
     }
+    if (p) for (const probe of p.probes) addProbe(probe);
 
     showDetail(f);
     showClash(c);
-    if (reframe) frame(f, visible, c);
+    showPlug(p);
+    if (reframe) frame(f, visible, c, p);
     render();
     record(viewIndex);
   }
@@ -331,7 +387,7 @@
   const box = new THREE.Box3();
   const sphere = new THREE.Sphere();
   const direction = new THREE.Vector3(1, -1.4, 0.9).normalize();
-  function frame(f, visible, c) {
+  function frame(f, visible, c, p) {
     scene.updateMatrixWorld(true);
     box.makeEmpty();
     if (f) {
@@ -344,6 +400,12 @@
       const first = c.parts.length ? partMeshes[c.parts[0]] : null;
       if (first) box.expandByObject(first);
       for (const child of overlaps.children) box.expandByObject(child);
+    }
+    if (p) {
+      // The plug, where it comes to, and the fingers round it.
+      const own = p.part === null ? null : partMeshes[p.part];
+      if (own) box.expandByObject(own);
+      for (const child of tools.children) box.expandByObject(child);
     }
     if (box.isEmpty()) {
       partMeshes.forEach((mesh, index) => {
@@ -384,6 +446,7 @@
       selected,
       isolated,
       clash,
+      plug,
       view: viewIndex,
       parts,
       tools: { hit, clear: tools.children.length - hit },
@@ -393,9 +456,31 @@
 
   // ------------------------------------------------------------ selection
 
+  function selectPlug(index) {
+    selected = null;
+    isolated = null;
+    clash = null;
+    plug = index;
+    try {
+      history.replaceState(null, "", "#plug:" + index);
+    } catch (error) {
+      // as for a fastener's hash
+    }
+    status("");
+    apply(true);
+  }
+
+  function plugOf(wanted) {
+    const match = wanted === null || byName.has(wanted) ? null : PLUG_HASH.exec(wanted);
+    if (!match || !data.connectors) return null;
+    const index = Number(match[1]);
+    return index < data.connectors.found.length ? index : null;
+  }
+
   function selectClash(index) {
     selected = null;
     isolated = null;
+    plug = null;
     clash = index;
     try {
       history.replaceState(null, "", "#clash:" + index);
@@ -417,6 +502,7 @@
     selected = index;
     isolated = null;
     clash = null;
+    plug = null;
     try {
       const here = location.pathname + location.search;
       const where = index === null ? here : "#" + encodeURIComponent(data.fasteners[index].name);
@@ -463,7 +549,9 @@
     if (!hit) return;
     const part = data.parts[hit.object.userData.part];
     const owner = byName.get(part.owner ?? part.name);
+    const pulled = plugByName.get(part.owner ?? part.name);
     if (owner !== undefined && owner !== selected) select(owner);
+    else if (pulled !== undefined && pulled !== plug) selectPlug(pulled);
     else status(part.label);
   });
 
@@ -471,6 +559,7 @@
     const wanted = fromHash();
     if (wanted !== null && byName.has(wanted)) select(byName.get(wanted));
     else if (clashOf(wanted) !== null) selectClash(clashOf(wanted));
+    else if (plugOf(wanted) !== null) selectPlug(plugOf(wanted));
   });
 
   resize();
@@ -480,6 +569,9 @@
     apply(true);
   } else if (clashOf(wanted) !== null) {
     clash = clashOf(wanted);
+    apply(true);
+  } else if (plugOf(wanted) !== null) {
+    plug = plugOf(wanted);
     apply(true);
   } else {
     apply(true);

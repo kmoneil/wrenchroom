@@ -198,6 +198,187 @@ def test_a_state_s_clash_is_drawn_in_that_state_s_view(tmp_path):
     assert _vertices(data, raised)[:, 2].max() == pytest.approx(21.0, abs=1e-4)  # up.step's
 
 
+# ---------------------------------------------------------------------------
+# Connectors (M9): each plug, its receptacle, what stopped it, where it went.
+# ---------------------------------------------------------------------------
+
+
+def _shroud(x=0.0):
+    return Pos(x, 0, 5) * Box(20, 12, 10) - Pos(x, 0, 6.5) * Box(16, 8, 7.01)
+
+
+def _plug(x=0.0):
+    return Pos(x, 0, 13) * Box(16, 8, 20)
+
+
+def _plugged(extra=(), names=("jack", "plug"), **checks):
+    """A plug 16 by 8 in its shroud on a board, 7 in: it comes off up, by 10."""
+    jack, plug = names
+    parts = [
+        Part("board", Pos(0, 0, -1) * Box(400, 100, 2)),
+        Part(jack, _shroud()),
+        Part(plug, _plug()),
+        *(Part(name, shape) for name, shape in extra),
+    ]
+    sidecar = {"connectors": [{"parts": plug}], "checks": checks}
+    return view_data(check(Assembly(parts), Config.from_dict(sidecar)))
+
+
+def _placements(probe):
+    return np.frombuffer(base64.b64decode(probe["m"]), "<f4").reshape(-1, 3, 4)
+
+
+def test_no_plug_is_drawn_where_there_are_none():
+    assert view_data(_clashing())["connectors"] is None
+
+
+def test_a_plug_that_comes_off_is_drawn_where_it_comes_to():
+    data = _plugged()
+    connectors = data["connectors"]
+    assert (connectors["header"], connectors["apart"]) == (
+        "1 connector: 1 unplug, 0 stuck, 0 not covered",
+        [],
+    )
+    (entry,) = connectors["found"]
+    assert (entry["label"], entry["verdict"], entry["colour"], entry["reason"]) == (
+        "plug",
+        "unplugs",
+        COLOURS["turns"],
+        None,
+    )
+    assert (entry["in_way"], entry["highlight"]) == ([], [])
+    assert _part_names(data, entry["receptacle"]) == ["jack"]
+    assert data["parts"][entry["part"]]["name"] == "plug"
+    assert entry["view"] == data["overview"]
+    # Its pull: its own mesh, moved up by its travel, 10, clear of everything.
+    (path,) = entry["probes"]
+    assert (path["hit"], path["hits"]) == (False, [])
+    assert path["s"] == [data["parts"][entry["part"]]["shape"]]
+    (placement,) = _placements(path)
+    assert placement == pytest.approx(np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 10]]))
+
+
+def test_a_stuck_plug_hits_what_stopped_it_at_the_end_of_its_pull():
+    data = _plugged([("shelf", Pos(0, 0, 32) * Box(80, 80, 10))])
+    (entry,) = data["connectors"]["found"]
+    assert (entry["verdict"], entry["colour"], entry["in_way"]) == (
+        "stuck",
+        COLOURS["fails"],
+        ["shelf"],
+    )
+    assert _part_names(data, entry["highlight"]) == ["shelf"]
+    (path,) = entry["probes"]
+    assert path["hit"]
+    assert _part_names(data, path["hits"]) == ["shelf"]
+
+
+def test_with_hand_room_the_fingers_are_drawn_as_tried():
+    # Clear: the plug's pull and the pair of fingers that fit. Hemmed in: every pair
+    # tried, each finger hitting, and what they met in the way.
+    gripped = _plugged(hand_room=True)["connectors"]["found"][0]
+    assert [probe["hit"] for probe in gripped["probes"]] == [False, False, False]
+    walls = [
+        ("left", Pos(-15, 0, 15) * Box(10, 12, 30)),
+        ("right", Pos(15, 0, 15) * Box(10, 12, 30)),
+        ("near", Pos(0, -12, 15) * Box(60, 10, 30)),
+        ("far", Pos(0, 12, 15) * Box(60, 10, 30)),
+    ]
+    data = _plugged(walls, hand_room=True)
+    (entry,) = data["connectors"]["found"]
+    assert (entry["verdict"], entry["colour"]) == ("no-grip", COLOURS["fails"])
+    assert sorted(_part_names(data, entry["highlight"])) == ["far", "left", "near", "right"]
+    path, *fingers = entry["probes"]
+    assert not path["hit"]  # it comes off: what fails it is the fingers
+    assert len(fingers) == 24  # 12 positions, every 15 deg, two fingers each
+    assert all(finger["hit"] for finger in fingers)
+
+
+def test_a_plug_not_covered_has_no_pull_to_draw():
+    resting = [("lone_plug", Pos(150, 0, 10) * Box(16, 8, 20))]
+    data = _plugged(resting)
+    lone = next(e for e in data["connectors"]["found"] if e["label"] == "lone_plug")
+    assert (lone["verdict"], lone["colour"], lone["probes"]) == (
+        "not-covered",
+        COLOURS["not-covered"],
+        [],
+    )
+    assert lone["reason"].startswith("it only rests against board")
+    # What needs a person first: the plug not covered before the one that comes off.
+    assert [e["label"] for e in data["connectors"]["found"]] == ["lone_plug", "plug"]
+
+
+def test_the_lines_that_name_no_plug_ride_along():
+    data = _plugged([("xt60_female", Pos(150, 0, 5) * Box(10, 10, 10))])
+    assert data["connectors"]["apart"] == [
+        "NOTE 1 part named like a connector, not checked: xt60_female "
+        "(a name doesn't say which half comes off: list the plugs under connectors:)"
+    ]
+
+
+def test_a_plug_that_comes_off_only_in_another_state_is_amber_and_drawn_there():
+    parts = [
+        Part("board", Pos(0, 0, -1) * Box(400, 100, 2)),
+        Part("jack", _shroud()),
+        Part("plug", _plug()),
+        Part("lid", Pos(0, 0, 32) * Box(80, 80, 10)),
+    ]
+    sidecar = {
+        "connectors": [{"parts": "plug"}],
+        "states": {"lid-off": {"remove": ["lid"]}},
+        "checks": {"try_states": ["lid-off"]},
+    }
+    data = view_data(check(Assembly(parts), Config.from_dict(sidecar)))
+    (entry,) = data["connectors"]["found"]
+    assert (entry["verdict"], entry["colour"]) == ("unplugs", COLOURS["elsewhere"])
+    view = data["views"][entry["view"]]
+    assert view["state"] == "lid-off"
+    assert "lid" not in _part_names(data, view["parts"])
+
+
+def test_a_plug_drawn_as_two_solids_comes_off_whole_in_the_view():
+    parts = [
+        Part("board", Pos(0, 0, -1) * Box(400, 100, 2)),
+        Part("jack", _shroud()),
+        Part("plug", _plug()),
+        Part("plug#2", Pos(0, 4 + 1, 18) * Box(6, 2, 6), piece_of="plug"),
+    ]
+    sidecar = {"connectors": [{"parts": "plug"}]}
+    data = view_data(check(Assembly(parts), Config.from_dict(sidecar)))
+    (entry,) = data["connectors"]["found"]
+    (path,) = entry["probes"]
+    owned = [p["shape"] for p in data["parts"] if p["name"] == "plug" or p["owner"] == "plug"]
+    assert sorted(path["s"]) == sorted(owned)
+    assert len(path["s"]) == 2
+    assert all(
+        m == pytest.approx(np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 10]]))
+        for m in _placements(path)
+    )
+
+
+def test_the_plugs_that_need_a_person_come_first():
+    shelf = Pos(100, 0, 32) * Box(80, 80, 10)
+    parts = [
+        Part("board", Pos(50, 0, -1) * Box(400, 100, 2)),
+        Part("a_jack", _shroud(0)),
+        Part("a_plug", _plug(0)),
+        Part("z_jack", _shroud(100)),
+        Part("z_plug", _plug(100)),
+        Part("shelf", shelf),
+    ]
+    data = view_data(
+        check(Assembly(parts), Config.from_dict({"connectors": [{"parts": "*_plug"}]}))
+    )
+    assert [e["label"] for e in data["connectors"]["found"]] == ["z_plug", "a_plug"]
+
+
+def test_a_plug_s_names_stay_inside_the_data():
+    data = _plugged(names=(f"ja{ESC}[2Jck", f"pl{RLO}ug"))
+    (entry,) = data["connectors"]["found"]
+    assert entry["label"] == "pl\\u202eug"
+    assert not UNSAFE.search(entry["label"])
+    assert not UNSAFE.search(data["connectors"]["header"])
+
+
 def test_a_clash_s_names_stay_inside_the_data():
     data = view_data(_clashing(names=(f"frame{ESC}[2J", f"brack{RLO}et"), clashes=True))
     (entry,) = data["clashes"]["found"]

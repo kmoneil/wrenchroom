@@ -34,7 +34,7 @@ import enum
 import math
 import re
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from build123d import Compound, GeomType, Location
@@ -44,7 +44,7 @@ from wrenchroom.engine.exact import exact_overlap
 from wrenchroom.engine.scene import HIT_MIN_VOLUME, Contact, shape_bounds
 from wrenchroom.report import listed, md_code, md_text, shortlist
 from wrenchroom.tools.fingers import FINGER_REACH
-from wrenchroom.tools.sweep import CONTACT_OFFSET, HAND_LENGTH, axial_cylinder
+from wrenchroom.tools.sweep import CONTACT_OFFSET, HAND_LENGTH, Probe, axial_cylinder
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -126,6 +126,8 @@ class ConnectorResult:
         grip: How the fingers were tried on it, ``pinch`` or ``hand``; None where they
             weren't (hand room off).
         latch: The side its latch is pressed from, where it has one.
+        probes: The fingers and thumb as tried, for the 3D view: the clear grip and
+            thumb, or every position tried where none was clear.
     """
 
     name: str
@@ -139,6 +141,7 @@ class ConnectorResult:
     state: str | None = None
     grip: str | None = None
     latch: Vec | None = None
+    probes: tuple[Probe, ...] = field(default=(), compare=False, repr=False)
 
     @property
     def passed(self) -> bool:
@@ -660,7 +663,22 @@ def body_of(shape: Shape, axis: Vec, exposed: float) -> Body:
     return Body((foot[0], foot[1], foot[2]), axis, high - low, exposed, points)
 
 
-def pinch(body: Body, scene: Scene) -> tuple[bool, tuple[str, ...]]:
+@dataclass(frozen=True)
+class Fingers:
+    """How the fingers fared on a plug: whether they grip it, what they met, where.
+
+    Attributes:
+        gripped: Some position was clear.
+        met: What they met where none was, the part met at the most positions first.
+        probes: Each finger as tried: the clear position's, or every one tried.
+    """
+
+    gripped: bool
+    met: tuple[str, ...]
+    probes: tuple[Probe, ...]
+
+
+def pinch(body: Body, scene: Scene) -> Fingers:
     """Two fingers either side of the plug, tried every :data:`GRIP_STEP_DEG` round it.
 
     Each a cylinder :data:`FINGER_RADIUS` round, along the plug's side, touching it,
@@ -669,23 +687,26 @@ def pinch(body: Body, scene: Scene) -> tuple[bool, tuple[str, ...]]:
     what they met, the part met at the most positions first.
     """
     met: Counter[str] = Counter()
+    tried: list[Probe] = []
     z_from, z_to = body.exposed + CONTACT_OFFSET, body.length + FINGER_REACH
     steps = round(180 / GRIP_STEP_DEG)
     for step in range(steps):
         phi = math.radians(step * GRIP_STEP_DEG)
-        hits: list[str] = []
+        pair: list[Probe] = []
         for side in (phi, phi + math.pi):
             direction = _across(body.axis, side)
             seat = _add(body.foot, _scale(direction, body.reach(direction) + FINGER_RADIUS))
             finger = axial_cylinder(FINGER_RADIUS, z_from, z_to).placed(seat, body.axis)
-            hits += [name for name in scene.hits(finger) if name not in hits]
+            pair.append(Probe(finger, scene.hits(finger)))
+        hits = tuple(dict.fromkeys(name for probe in pair for name in probe.hits))
         if not hits:
-            return True, ()
+            return Fingers(gripped=True, met=(), probes=tuple(pair))
         met.update(hits)
-    return False, tuple(name for name, _ in met.most_common())
+        tried += pair
+    return Fingers(False, tuple(name for name, _ in met.most_common()), tuple(tried))
 
 
-def fist(body: Body, scene: Scene) -> tuple[bool, tuple[str, ...]]:
+def fist(body: Body, scene: Scene) -> Fingers:
     """A fist round the plug: :data:`FIST_REACH` out from it all round, a hand's length.
 
     From just past its receptacle along the axis, the plug and its cable inside, as a
@@ -695,11 +716,11 @@ def fist(body: Body, scene: Scene) -> tuple[bool, tuple[str, ...]]:
     z_from = body.exposed + CONTACT_OFFSET
     hand = axial_cylinder(radius, z_from, z_from + HAND_LENGTH).placed(body.foot, body.axis)
     hits = scene.hits(hand)
-    return not hits, hits
+    return Fingers(not hits, hits, (Probe(hand, hits),))
 
 
-def thumb(body: Body, side: Vec, scene: Scene) -> tuple[str, ...]:
-    """What a thumb pressing the plug's latch from ``side`` meets.
+def thumb(body: Body, side: Vec, scene: Scene) -> Probe:
+    """A thumb pressing the plug's latch from ``side``, and what it meets.
 
     A cylinder :data:`THUMB_RADIUS` round and :data:`THUMB_LENGTH` long, out from the
     plug's surface that way: halfway up what stands out of its receptacle, or, on a
@@ -712,7 +733,8 @@ def thumb(body: Body, side: Vec, scene: Scene) -> tuple[str, ...]:
         _add(body.foot, _scale(body.axis, height)),
         _scale(direction, body.reach(direction) + CONTACT_OFFSET),
     )
-    return scene.hits(axial_cylinder(THUMB_RADIUS, 0.0, THUMB_LENGTH).placed(seat, direction))
+    pressing = axial_cylinder(THUMB_RADIUS, 0.0, THUMB_LENGTH).placed(seat, direction)
+    return Probe(pressing, scene.hits(pressing))
 
 
 def _across(axis: Vec, phi: float) -> Vec:

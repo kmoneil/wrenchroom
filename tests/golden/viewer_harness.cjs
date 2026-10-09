@@ -138,6 +138,19 @@ function state(byId) {
             byId["clash-state"].hidden ? null : byId["clash-state"].textContent,
             byId["clash-hint"].hidden ? null : byId["clash-hint"].textContent,
           ],
+      plug_list_hidden: byId["plug-list"].hidden,
+      plugs_summary: byId["plugs-summary"].textContent,
+      plugs: byId.plugs.children.map((item) => item.textContent),
+      plug_hidden: byId.plug.hidden,
+      plug: byId.plug.hidden
+        ? null
+        : [
+            byId["plug-name"].textContent,
+            byId["plug-verdict"].textContent,
+            byId["plug-reason"].hidden ? null : byId["plug-reason"].textContent,
+            byId["plug-inway"].hidden ? null : byId["plug-inway"].textContent,
+            byId["plug-state"].hidden ? null : byId["plug-state"].textContent,
+          ],
       status: byId.status.textContent,
     },
   };
