@@ -2480,3 +2480,34 @@ def set_core():
     """
     hub = Pos(0, 0, -10) * Box(30, 30, 20) - Pos(0, 0, -10.25) * Cylinder(1.0, 19.5)
     return [("hub", hub), ("screw", Pos(0, 0, -1) * set_screw())]
+
+
+def _cap_nut():
+    """An M8 cap nut, DIN 1587-ish: a 13 hex z 0 to 6.5, a collar 6.25 round to z 9, a
+    dome, a sphere of 6 about z 9, to z 15; bored at M8's minor, blind, to z 12."""
+    dome = Pos(0, 0, 7.75) * Cylinder(6.25, 2.5) + Pos(0, 0, 9.0) * Sphere(6.0)
+    dome = dome - Pos(0, 0, -30) * Box(40, 40, 60)
+    return hex_prism(13, 6.5) + dome - Pos(0, 0, 6) * Cylinder(6.647 / 2, 12)
+
+
+@cell("cap_dome", ignore=["*cap_dome_*"], timed=False)
+def cap_dome():
+    """A nut's clash runs on to its end on the tool's side (issue #123): two M8 cap
+    nuts on bolts up through the plate, their ends at z 5. Clashes are not-covered,
+    so only the edges sidecar keeps them, as drawn_in's.
+
+    dome: a pocket 8 round its hex leaves no spanner on, and a cover from z 13, 2
+    into its dome, a cap of 2 of a sphere of 6: pi 4 16 / 3 = 67.02, which used to
+    block the spanner. buried: a block from z 7, both its ends covered, its bolt
+    saying which is free: the collar from 7 to 9, 245.44, and the half sphere,
+    452.39, less the bore from 7 to 12, 173.50: 524.33, which used to be 176.0.
+    """
+    parts = [("plate", plate(t=10, holes=[(-100, 0, 4.5), (100, 0, 4.5)]))]
+    for tag, x, underside in (("dome", -100, 13.0), ("buried", 100, 7.0)):
+        parts += [
+            (f"{tag}_bolt", Pos(x, 0, -10) * Rot(180, 0, 0) * hex_bolt(8, 15, 13, 5.3)),
+            (f"{tag}_nut", Pos(x, 0, 0) * _cap_nut()),
+            (f"{tag}_cover", Pos(x, 0, 0) * slab(underside, w=60, d=60)),
+        ]
+    parts.append(("dome_pocket", Pos(-100, 0, 4) * (Box(60, 60, 8) - Cylinder(8.0, 8))))
+    return parts

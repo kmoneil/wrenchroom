@@ -224,6 +224,9 @@ def edges_sidecar():
             {"parts": "domed_flat_*_screw", "kind": "screw", "head": "flat", "size": "M6"},
             # set_core's set screw, which the bench's own sidecar ignores too (issue #122).
             {"parts": "set_core_screw", "kind": "screw", "head": "set", "size": "M3"},
+            # cap_dome's cap nuts and their bolts, ignored there too (issue #123).
+            {"parts": "cap_dome_*_nut", "kind": "nut", "size": "M8"},
+            {"parts": "cap_dome_*_bolt", "kind": "screw", "head": "hex", "size": "M8"},
             # wrong_tool's fasteners, each with a tool its rule names (issue #72).
             *(_wrong_tool(role, rule) for role, rule in WRONG_TOOL.items()),
         ],

@@ -1174,12 +1174,15 @@ def _measured(frame: _Frame, fastener: Fastener, toward: Vec | None = None) -> t
     A screw's head, all of it past its shank (:func:`_head_region`), where the
     check has found the end a tool comes from, ``toward``. Else its hex
     and its widest region along the axis, and what lies between: a nut's body,
-    flange and all, a gland's hex and dome. A shank or a gland's stub sits in its
-    hole, often drawn at the nominal diameter in a tapped hole drawn at the minor:
-    a thread, never measured. Nor, for deciding, is the region within
-    :data:`_THREAD_REACH` of a bore. The widest region alone would miss a hex on a
-    flange wider than it by a third, the hex alone a flange. A set screw is all
-    thread: its core (:func:`_set_core`).
+    flange and all, a gland's hex. A nut's, or a gland's, runs on from there to
+    its end on the tool's side, ``toward``: a cap nut's dome, a nyloc's collar, a
+    gland's dome (issue #123). A shank or a gland's stub sits in its hole, often
+    drawn at the nominal diameter in a tapped hole drawn at the minor: a thread,
+    never measured. Nor, for deciding, is what lies within :data:`_THREAD_REACH`
+    of a bore, along the bore's length: a cap nut's bore is blind, and its dome's
+    top is measured. The widest region alone would miss a hex on a flange wider
+    than it by a third, the hex alone a flange. A set screw is all thread: its
+    core (:func:`_set_core`).
     """
     if fastener.kind is Kind.SCREW and fastener.head is Head.SET:
         core = _set_core(frame, fastener)
@@ -1189,6 +1192,11 @@ def _measured(frame: _Frame, fastener: Fastener, toward: Vec | None = None) -> t
     low, high = min(hex_low, wide_low), max(hex_high, wide_high)
     region = _head_region(frame, fastener, (low, high), toward)
     if region is None:
+        if fastener.kind is Kind.NUT and toward is not None:  # to its free end (#123)
+            if _dot(toward, frame.direction) > 0:
+                high = max(frame.projections)
+            else:
+                low = min(frame.projections)
         if high - low < _REGION_MIN:
             low, high = min(frame.projections), max(frame.projections)
         plane = Plane(origin=frame.point_at(low), z_dir=frame.direction)
@@ -1198,9 +1206,35 @@ def _measured(frame: _Frame, fastener: Fastener, toward: Vec | None = None) -> t
         region = frame.part.shape
     if frame.bore <= 0:
         return region, region
-    under = Plane(origin=frame.point_at(low - 1.0), z_dir=frame.direction)
-    thread = Solid.make_cylinder(frame.bore * _THREAD_REACH, high - low + 2.0, under)
+    bore_low, bore_high = _bore_extent(frame) or (low, high)
+    under = Plane(origin=frame.point_at(bore_low - 1.0), z_dir=frame.direction)
+    thread = Solid.make_cylinder(frame.bore * _THREAD_REACH, bore_high - bore_low + 2.0, under)
     return region, region - thread
+
+
+def _bore_extent(frame: _Frame) -> tuple[float, float] | None:
+    """Where along its axis a fastener's bore runs: its faces' extent (issue #123)."""
+    along = [
+        _dot(_sub(tuple(vertex), frame.origin), frame.direction)
+        for face in frame.faces
+        if not face.plane
+        and face.face.radius is not None
+        and abs(face.face.radius - frame.bore) < _ON
+        and _dot(face.normal, _radial_of(face.point, frame)) < 0
+        for vertex in face.face.vertices()
+    ]
+    return (min(along), max(along)) if along else None
+
+
+def _from_its_bolt(frame: _Frame, bolt: Part) -> Vec:
+    """The way out of a nut's free end, away from its bolt's head (issue #123).
+
+    Where no tool has found it, both its ends covered: a bolt's middle lies on its
+    head's side of its nut, which is where the nut bears.
+    """
+    ends = [_dot(_sub(tuple(v), frame.origin), frame.direction) for v in bolt.shape.vertices()]
+    middle = (min(frame.projections) + max(frame.projections)) / 2
+    return frame.direction if (min(ends) + max(ends)) / 2 < middle else _neg(frame.direction)
 
 
 def _set_core(frame: _Frame, fastener: Fastener) -> Shape:
@@ -1295,6 +1329,9 @@ def _clashes(
     """Each part the fastener is drawn into, past its thread, and by how much (mm^3)."""
     part, engine = frame.part, scene.engine
     box = engine.part_bounds(part)
+    if toward is None and fastener.kind is Kind.NUT and partner is not None:
+        bolt = next((p for p in scene.parts if p.name == partner), None)
+        toward = _from_its_bolt(frame, bolt) if bolt is not None else None
     region, past_thread = _measured(frame, fastener, toward)
     found: list[tuple[str, float]] = []
     for other in scene.parts:

@@ -271,6 +271,31 @@ def test_a_set_screw_s_core_is_a_clash_and_its_thread_none(edges_report):
     assert (sunk.verdict.value, sunk.reason, sunk.blockers) == ("blocked", None, ("set_sunk_hub",))
 
 
+def test_a_cap_nut_s_dome_is_measured(edges_report):
+    """Issue #123: cap_dome's cap nuts, which only the edges sidecar keeps. A cover 2
+    into a dome, a cap of 2 of a sphere of 6, 67.02 mm^3, used to block the
+    spanner; a dome buried, both ends covered, its bolt saying which is free,
+    524.33 mm^3, used to be told as 176.0. Their bolts turn from under the plate."""
+    by_name = {r.fastener.name: r for r in edges_report.results}
+    told = {
+        name: (r.verdict.value, r.reason)
+        for name, r in by_name.items()
+        if name.startswith("cap_dome_")
+    }
+    assert told == {
+        "cap_dome_dome_nut": (
+            "not-covered",
+            "drawn into cap_dome_dome_cover (67.0 mm^3): fix the model",
+        ),
+        "cap_dome_buried_nut": (
+            "not-covered",
+            "drawn into cap_dome_buried_cover (524.3 mm^3): fix the model",
+        ),
+        "cap_dome_dome_bolt": ("turns", None),
+        "cap_dome_buried_bolt": ("turns", None),
+    }
+
+
 def test_a_rule_s_tool_that_can_t_drive_its_fastener_is_not_covered(edges_report):
     """Issue #72: wrong_tool's fasteners, which only the edges sidecar keeps. Each
     misfit is not covered and nothing is swept; a tool no table holds says so; the

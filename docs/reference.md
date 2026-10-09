@@ -221,8 +221,12 @@ is a clash in the model, not covered, with the shared volume (`drawn into lid (9
 mm^3): fix the model`), not a reach problem nor an order to take things apart in
 (issue #94). A screw's whole head is measured, from its bearing face to its top,
 whatever its profile: a button head's dome and a pan head's crown, not only the rim
-under them, and a countersunk head's cone (issue #116). Of a nut, its hex and its
-widest region, its body and flange, and of a gland its hex and dome. A set screw is
+under them, and a countersunk head's cone (issue #116). Of a nut or a gland, its hex
+and its widest region, its body and flange, and from there on to its end on the
+tool's side: a cap nut's dome, a nyloc's collar, a gland's dome (issue #123). Where
+no tool found that end, both its ends covered, its bolt says which: its head is on
+the side the nut bears on. A thread in a nut's bore is left out where the bore runs,
+so a cap nut's dome is measured to its top. A set screw is
 all thread: its core, inside its thread's minor diameter, is measured, and the ring
 round it, drawn at the nominal in a hole drawn at the minor, isn't (issue #122). A
 shank (a shoulder's too) or a stub in a tapped hole, or a bolt drawn at its nominal
