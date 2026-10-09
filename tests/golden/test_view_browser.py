@@ -92,7 +92,10 @@ def _assert_drawn_as_decided(record, view, index):
         assert colours[part][1] >= 0.5  # plainly there...
         assert colours[part][1] > 3 * max(ghosted)  # ...and well above the ghosted rest
     assert colours[entry["part"]] == (COLOURS["fails"], 1)
-    assert record["tools"]["hit"] > 0
+    if any(a["probes"] for a in entry["attempts"]) or entry["way_out"] is not None:
+        assert record["tools"]["hit"] > 0
+    else:  # nothing in its joint turns, so no tool was tried (#134): none drawn
+        assert record["tools"] == {"hit": 0, "clear": 0}
 
 
 # ---------------------------------------------------------------------------
@@ -144,8 +147,12 @@ def test_every_failure_is_drawn_red_with_its_blockers_in_node(bench_page):
         assert load["panel"]["detail_hidden"] is False
         assert load["panel"]["list_hidden"] is True
         assert load["panel"]["headline"] == entry["headline"]
-        assert load["panel"]["attempts"] == [a["text"] for a in entry["attempts"]]
-        assert load["panel"]["in_way"].endswith(", ".join(entry["in_way"]))
+        tried = [a["text"] for a in entry["attempts"]] or ["None: nothing was tried."]  # #134's
+        assert load["panel"]["attempts"] == tried
+        if entry["in_way"]:
+            assert load["panel"]["in_way"].endswith(", ".join(entry["in_way"]))
+        else:  # nothing in its joint turns: nothing is in its way, and no line says so
+            assert load["panel"]["in_way"] is None
 
 
 def test_the_panel_lists_the_tools_the_report_needs_in_node(bench_page):
@@ -160,7 +167,7 @@ def test_the_panel_lists_the_tools_the_report_needs_in_node(bench_page):
     ]
     assert load["panel"]["tools"] == [*lines, *tools["apart"]]
     assert len(tools["uses"]) > 30  # a vacuity guard: the bench needs many tools
-    assert "spanner-13 x20 2 at once on a joint" in load["panel"]["tools"]
+    assert "spanner-13 x21 2 at once on a joint" in load["panel"]["tools"]
 
 
 def test_the_overview_colours_every_fastener_by_its_verdict_in_node(bench_page):

@@ -214,6 +214,12 @@ fixed thread is, from whichever end, and its screw must turn (issue #93). One dr
 into its trap is held all the same, and noted, a press fit being as likely as a
 clash. A part on one side only stops the nut turning, and blocks it, as above.
 
+A bolt's hex head in a hex pocket is the same joint the other way round, as printed
+and moulded parts hold a bolt so it can be tightened from one side: the pocket holds
+the head, and its nut must turn (issue #134). A joint whose two halves are both held,
+a trapped head on a trapped nut, or a carriage bolt on one, has nothing in it to
+turn and can never come apart: both fail (`nothing in the joint turns`).
+
 A tool grips the hex where its flats are, not the part's widest region (a flange, or
 a gland's dome), and a ring, socket or nut driver has to get on over whatever the
 part has past its hex: a dome wider than their bore leaves only the open end, and the

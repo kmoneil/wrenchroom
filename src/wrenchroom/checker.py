@@ -904,7 +904,8 @@ class _Candidate:
     notes: tuple[str, ...] = ()
     #: Its state's model has no part of its name (issue #74).
     absent: bool = False
-    #: The part a nut sits trapped in, which holds it (issue #93).
+    #: The part a nut or a bolt's hex head sits trapped in, which holds it (issues
+    #: #93, #134).
     trapped_in: str | None = None
 
 
@@ -1056,7 +1057,7 @@ _TRAP_PROBE = 0.5
 
 
 def _in_trap(candidate: _Candidate, frame: _Frame, scene: Scene, partner: str | None) -> bool:
-    """Whether a nut nothing turns sits in a trap, which then holds it (issue #93).
+    """Whether a nut or hex head nothing turns sits in a trap, which then holds it (#93).
 
     Asked once nothing turns it: its corners' own attempt, which every tool on a
     hex tries first, says what the ring round it met, where it ran; where it
@@ -1077,7 +1078,8 @@ def _hold_in_trap(
 ) -> None:
     """Held by the part it sits trapped in (issue #93), and noted if drawn into it.
 
-    Drawn into its trap, a nut is in a press fit as often as a clash: said, not failed.
+    Drawn into its trap, a nut or a head is in a press fit as often as a clash:
+    said, not failed.
     """
     candidate.trapped_in, candidate.tool = trap, None
     candidate.how = f"held by its trap in {trap}"
@@ -1101,8 +1103,11 @@ def _trapped_in(
     corners are stopped, or both its faces are covered, as a nut's in a side slot
     are, and then only round it where something is in the ring. ``met`` is what the
     ring met, where the check has asked already: the corners' own attempt.
+
+    A bolt's hex head is the same joint the other way round: in a hex pocket, the
+    part holds the head, and its nut must turn (issue #134).
     """
-    if fastener.kind is not Kind.NUT:
+    if fastener.kind is not Kind.NUT and fastener.head is not Head.HEX:
         return None
     af = fastener.drive_af or (spanner_af(fastener.size) if fastener.size else None)
     if af is None:
@@ -1485,10 +1490,22 @@ def _alone(partner_name: str | None, partner: _Candidate | None) -> str:
     if partner is not None and partner.fastener.head is Head.CARRIAGE:
         return f"its bolt ({partner_name}) holds itself, so it must turn"
     if partner is not None and partner.trapped_in is not None:
-        return (
-            f"its nut ({partner_name}) is held by its trap in {partner.trapped_in}, so it must turn"
-        )
+        return f"{_held(partner_name, partner)}, so it must turn"
     return f"its partner {partner_name} does not turn"
+
+
+def _held_by_design(candidate: _Candidate) -> bool:
+    """Whether it is held by itself or its trap: never turned, so its partner must be."""
+    return candidate.fastener.self_holding or candidate.trapped_in is not None
+
+
+def _held(partner_name: str, partner: _Candidate) -> str:
+    """``its nut (n) is held by its trap in block``: a partner that never turns, and why."""
+    kind = partner.fastener.kind
+    word = "nut" if kind is Kind.NUT else "fixed thread" if kind is Kind.INSERT else "bolt"
+    trap = partner.trapped_in
+    held = f"is held by its trap in {trap}" if trap is not None else "holds itself"
+    return f"its {word} ({partner_name}) {held}"
 
 
 def _finish(
@@ -1501,6 +1518,11 @@ def _finish(
     stuck_on: tuple[str, ...] = ()
     if candidate.reason is not None:
         verdict, how = Verdict.NOT_COVERED, None
+    elif partner is not None and _held_by_design(candidate) and _held_by_design(partner):
+        # A trapped head on a trapped nut, or a carriage bolt's: nothing turns (#134).
+        verdict, how = Verdict.BLOCKED, None  # no tool: held, it was given none
+        held = _held(partner.fastener.name, partner)
+        reason = f"{candidate.how}, and {held}: nothing in the joint turns"
     elif fastener.self_holding or candidate.trapped_in is not None:
         verdict, tool = Verdict.HELD, None
     elif candidate.stuck:

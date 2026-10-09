@@ -216,7 +216,8 @@ what is:
 | `the nut's corners hit rib as it turns` | A part sits inside the circle the hex's corners sweep. No tool can turn it. |
 | `drawn into lid (96.1 mm^3): fix the model` | The fastener's solid overlaps another part: a clash in the model. |
 | `drawn twice: M3x8 SHCS is drawn over it (120.8 mm^3 in common): fix the model` | One fastener is drawn twice, in the same place. |
-| `held by its trap in block` | A nut in a hex pocket or a slot its width: the part holds it, so its screw must turn. |
+| `held by its trap in block` | A nut in a hex pocket or a slot its width, or a bolt's hex head in a hex pocket: the part holds it, so the other half of the joint must turn. |
+| `held by its trap in plate, and its nut (nut) is held by its trap in base: nothing in the joint turns` | Both halves of a joint are held (in traps, or a carriage bolt and a trapped nut): nothing can turn to undo it. |
 | `NOTE 2 parts drawn as surfaces, not solids, are left out, ...` | Open shells or loose faces bound nothing a tool can meet. Export them as solids to check against them. |
 | `needs spanner-24, which kit metric-home does not hold (full has it)` | Choose a bigger kit, or add the tool to the sidecar. |
 | `no room for a hand: the hand hits frame on its best arc` | With `--hand-room`: the tool would turn, but the hand on it can't follow. |

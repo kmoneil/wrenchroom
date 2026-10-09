@@ -63,12 +63,15 @@ SLOTS = len(CELLS) + 1
 #: their screws, 125 with #94's renamed (twice's three are the edges sidecar's), 126
 #: with #103's reach_55, 127 with #101's ph4, 128 with #104's shelled, 131 with
 #: #117's misnamed, three M3s under M5 names (its leadscrew nut is passed over),
-#: 134 with #115's cross, three cross recesses drawn as makers draw them.
+#: 134 with #115's cross, three cross recesses drawn as makers draw them, 138 with
+#: #121's ring_way_on, 139 with #122's set_sunk, 141 with #124's lobed_recess, 143
+#: with #125's cross_drawn, 149 with #134's head_trap and carriage_trap, two joints
+#: a trapped head holds and two that nothing in turns.
 FINAL_COUNTS = {
-    "fasteners": 143,
-    "turns": 112,
-    "held": 8,
-    "blocked": 22,
+    "fasteners": 149,
+    "turns": 113,
+    "held": 9,
+    "blocked": 26,
     "stuck": 1,
     "not_covered": 0,
 }

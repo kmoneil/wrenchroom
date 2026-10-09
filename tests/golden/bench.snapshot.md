@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**143 fasteners: 112 turn, 8 held, 22 blocked, 1 stuck, 0 not covered**
+**149 fasteners: 113 turn, 9 held, 26 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -50,9 +50,10 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | M5 phillips screw | `driver-ph2` | 1 | all pass (driver straight in) |
 | M5 socket screw | `hex-key-4` | 1 | all pass (driver straight in) |
 | M6 button screw | `hex-key-4` | 4 | 1 of 4 fail |
-| M6 carriage screw | - | 1 | all pass (holds itself) |
+| M6 carriage screw | - | 2 | 1 of 2 fail |
 | M6 hex screw | `spanner-10` | 5 | all pass (ring, full length) |
 | M6 insert | - | 1 | all pass (holds itself) |
+| M6 nut | - | 1 | 1 of 1 fail |
 | M6 nut | `hand` | 1 | all pass (fingers round it) |
 | M6 nut | `nut-driver-10` | 1 | all pass (nut driver straight in) |
 | M6 nut | `spanner-10` | 6 | all pass (ring, full length) |
@@ -61,8 +62,10 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | M6 socket screw | `ball-end-key-5` | 1 | all pass (ball end, 25 deg off the axis) |
 | M6 socket screw | `hex-key-5` | 14 | 6 of 14 fail |
 | M6 torx screw | `torx-key-T30` | 1 | all pass (short leg in) |
+| M8 hex screw | - | 2 | 1 of 2 fail |
 | M8 hex screw | `spanner-13` | 10 | 1 of 10 fail |
-| M8 nut | `spanner-13` | 16 | 4 of 16 fail |
+| M8 nut | - | 1 | 1 of 1 fail |
+| M8 nut | `spanner-13` | 17 | 4 of 17 fail |
 | M8 phillips screw | `driver-ph4` | 1 | all pass (driver straight in) |
 | M8 socket screw | `stubby-key-6` | 1 | all pass (short leg in) |
 | M8 torx screw | `torx-key-T40` | 1 | all pass (driver straight in) |
@@ -98,7 +101,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | `spanner-10` | 10 | 2 at once on a joint |
 | `spanner-10, stubby` | 1 | no full-length spanner swings at `nut_stubby_box_nut` |
 | `spanner-7/16in` | 1 | not in metric-home; only `inch_pair_nut` |
-| `spanner-13` | 20 | 2 at once on a joint |
+| `spanner-13` | 21 | 2 at once on a joint |
 | `spanner-13, stubby` | 1 | no full-length spanner swings at `reach_13_nut` |
 | `spanner-15` | 2 | only `snug_dome_gland`, `wide_dome_gland` |
 | `spanner-16` | 3 |  |
@@ -114,8 +117,8 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | `short-ring-18` | 1 | not in metric-home; only `shop_spanner_nut` |
 
 - By hand: 3 (`grip_thumb_screw`, `grip_wheel_thumbscrew`, `grip_wing_nut`)
-- No tool needed: 7, held by themselves or a trap
-- No tool yet: 22 blocked (wrenchroom check says why)
+- No tool needed: 8, held by themselves or a trap
+- No tool yet: 26 blocked (wrenchroom check says why)
 
 #### Failures
 
@@ -123,11 +126,15 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | --- | --- | --- | --- |
 | `ball_button_screw` | `hex-key-4` | blocked | `ball_button_ceiling` |
 | `big_tube_gland` | `spanner-36` | blocked | `big_tube_wall` |
+| `carriage_trap_bolt` | - | blocked | `holds itself, and its nut (carriage_trap_nut) is held by its trap in carriage_trap_base: nothing in the joint turns` |
+| `carriage_trap_nut` | - | blocked | `held by its trap in carriage_trap_base, and its bolt (carriage_trap_bolt) holds itself: nothing in the joint turns` |
 | `channel_nut` | `spanner-13` | blocked | `channel_left`, `channel_right` |
 | `corner_touch_nut` | `spanner-13` | blocked | `the nut's corners hit corner_touch_block as it turns` |
 | `dome_rib_gland` | `spanner-15` | blocked | `only holds, and it has no nut; best arc bounded by dome_rib_rib` |
 | `flat_deep_screw` | `hex-key-2.5` | blocked | `flat_deep_under`, `flat_deep_lid` |
 | `gland_rib_gland` | `spanner-24` | blocked | `only holds, and it has no nut; best arc bounded by gland_rib_rib` |
+| `head_trap_both_bolt` | - | blocked | `held by its trap in head_trap_plate, and its nut (head_trap_both_nut) is held by its trap in head_trap_base: nothing in the joint turns` |
+| `head_trap_both_nut` | - | blocked | `held by its trap in head_trap_base, and its bolt (head_trap_both_bolt) is held by its trap in head_trap_plate: nothing in the joint turns` |
 | `key_wall_near_screw` | `hex-key-5` | blocked | `key_wall_near_wall` |
 | `pair_both_hold_bolt` | `spanner-13` | blocked | `only holds, and its partner pair_both_hold_nut does not turn; best arc bounded by pair_both_hold_pocket_high` |
 | `pair_both_hold_nut` | `spanner-13` | blocked | `only holds, and its partner pair_both_hold_bolt does not turn; best arc bounded by pair_both_hold_pocket_low` |
