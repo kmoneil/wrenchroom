@@ -492,6 +492,13 @@ and the 3D view in its panel.
 - **Apart.** Fasteners turned by hand are listed by name; those held by themselves
   or a trap need no tool; those blocked or not covered have no tool yet, and are
   counted, since `check` says why.
+- **Blocked, once reached.** A blocked fastener is often blocked only as the model
+  stands, before anything comes off, and its tool is known: the tools blocked
+  fasteners would need once reached are a line of their own, each with how many need
+  it, not counted as reached (issue #136). One that no fastener reached needs says
+  so, and names them (`hex-key-1.5 x1 (only blocked fasteners need it: grub_screw)`),
+  so it goes in the toolbox too. In the JSON, `blocked_tools`, each with
+  `only_blocked`. A not-covered fastener has no tool to name.
 
 Each tool's JSON entry also gives the states its fasteners were reached in (`null`
 for the model as given).

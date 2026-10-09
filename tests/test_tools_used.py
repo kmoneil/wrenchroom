@@ -85,7 +85,10 @@ def test_a_stuck_fastener_needs_its_tool_and_a_failure_has_none_yet():
     )
     assert by_tool(listing)["hex-key-5"].fasteners == ("stuck",)
     assert listing.without == (("blocked", B), ("covered", N))
-    assert listing.apart() == ["no tool yet: 1 blocked, 1 not-covered (wrenchroom check says why)"]
+    assert listing.apart() == [
+        "no tool yet: 1 blocked, 1 not-covered (wrenchroom check says why)",
+        "blocked, once reached: hex-key-5 x1",
+    ]
 
 
 def test_by_hand_and_held_by_itself_need_no_tool():
@@ -100,6 +103,92 @@ def test_by_hand_and_held_by_itself_need_no_tool():
         "no tool needed: 2, held by themselves or a trap",
     ]
     assert listing.lines()[0] == "0 tools this model needs (kit full): none"
+
+
+# ---------------------------------------------------------------------------
+# Blocked, once reached (issue #136).
+# ---------------------------------------------------------------------------
+
+
+def test_a_blocked_fastener_s_tool_is_listed_apart_and_not_as_reached():
+    listing = used(
+        result("a", tool="hex-key-4"),
+        result("b", B, tool="hex-key-4"),
+        result("c", B, tool="hex-key-1.5"),
+    )
+    assert [(use.tool, use.fasteners) for use in listing.uses] == [("hex-key-4", ("a",))]
+    assert listing.blocked == (("hex-key-1.5", ("c",)), ("hex-key-4", ("b",)))
+    assert listing.apart()[-1] == (
+        "blocked, once reached: hex-key-1.5 x1 (only blocked fasteners need it: c), hex-key-4 x1"
+    )
+    assert listing.lines()[0] == "1 tool this model needs (kit full): 1 hex key"
+
+
+def test_blocked_tools_go_family_by_family_smallest_first_names_shortlisted():
+    listing = used(
+        result("cross", B, tool="driver-ph2"),
+        result("nut", B, tool="spanner-13"),
+        result("big", B, tool="hex-key-10"),
+        *(result(f"pin_{i}", B, tool="hex-key-2.5") for i in range(5)),
+    )
+    # Not by name: driver before hex key, and 10 before 2.5, would be the text's order.
+    assert [tool for tool, _ in listing.blocked] == [
+        "hex-key-2.5",
+        "hex-key-10",
+        "spanner-13",
+        "driver-ph2",
+    ]
+    assert listing.apart()[-1] == (
+        "blocked, once reached: "
+        "hex-key-2.5 x5 (only blocked fasteners need it: pin_0, pin_1, pin_2 and 2 more), "
+        "hex-key-10 x1 (only blocked fasteners need it: big), "
+        "spanner-13 x1 (only blocked fasteners need it: nut), "
+        "driver-ph2 x1 (only blocked fasteners need it: cross)"
+    )
+    said = [(t["tool"], t["count"], t["only_blocked"]) for t in listing.to_json()["blocked_tools"]]
+    assert said == [
+        ("hex-key-2.5", 5, True),
+        ("hex-key-10", 1, True),
+        ("spanner-13", 1, True),
+        ("driver-ph2", 1, True),
+    ]
+
+
+def test_a_blocked_fastener_with_no_tool_to_name_is_only_counted():
+    # Drawn into a part, or a joint nothing in turns: no tool; or fingers, no tool.
+    listing = used(
+        result("clash", B, tool=None),
+        result("thumb", B, tool="hand"),
+        result("covered", N),
+    )
+    assert listing.blocked == ()
+    assert listing.apart() == [
+        "no tool yet: 2 blocked, 1 not-covered (wrenchroom check says why)",
+    ]
+
+
+def test_a_not_covered_fastener_names_no_tool_even_where_its_result_has_one():
+    # A tool the kit lacks, said in its reason: no tool turns it in this kit, blocked
+    # or not, so none is listed once reached.
+    lacking = FastenerResult(
+        Fastener(name="gland", kind=Kind.NUT),
+        N,
+        tool="spanner-24",
+        reason="needs spanner-24, which kit metric-home does not hold (full has it)",
+    )
+    listing = used(lacking, result("b", B, tool="hex-key-4"))
+    assert listing.blocked == (("hex-key-4", ("b",)),)
+
+
+def test_a_tool_reached_as_a_stubby_alone_is_still_only_blocked_fasteners():
+    # The stubby's line is its own tool; the full-length 13 a blocked nut takes isn't.
+    listing = used(
+        result("tight", tool="spanner-13", how="ring, stubby"),
+        result("stopped", B, tool="spanner-13"),
+    )
+    assert listing.apart()[-1] == (
+        "blocked, once reached: spanner-13 x1 (only blocked fasteners need it: stopped)"
+    )
 
 
 def test_every_fastener_is_in_the_list_somewhere():
@@ -214,6 +303,9 @@ def test_the_json_carries_the_list():
         "by_hand": ["c"],
         "no_tool": [],
         "without": [{"name": "b", "verdict": "blocked"}],
+        "blocked_tools": [
+            {"tool": "hex-key-4", "count": 1, "fasteners": ["b"], "only_blocked": True},
+        ],
     }
 
 
@@ -234,6 +326,19 @@ def test_the_markdown_lists_the_tools_after_the_summary_table_names_in_code_span
     assert "- By hand: 1 (`thumb`)" in section
 
 
+def test_the_markdown_says_the_blocked_tools_in_code_spans():
+    report = report_of(
+        result("a", tool="hex-key-4"),
+        result("b|c", B, tool="hex-key-1.5"),
+        result("d", B, tool="hex-key-4"),
+    )
+    section = report.markdown().split("#### Tools")[1]
+    assert (
+        "- Blocked, once reached: `hex-key-1.5` x1 (only blocked fasteners need it: `b|c`), "
+        "`hex-key-4` x1"
+    ) in section
+
+
 def test_no_result_no_tools_section():
     assert "#### Tools" not in report_of().markdown()
 
@@ -252,6 +357,7 @@ def test_tools_used_lists_the_example_s_tools_and_exits_0():
         "  spanner-10             x1      only side_bolt",
         "  spanner-13             x2      only clamp_bolt, clamp_nut; 2 at once on a joint",
         "no tool yet: 1 blocked (wrenchroom check says why)",
+        "blocked, once reached: hex-key-5 x1",
     ]
 
 

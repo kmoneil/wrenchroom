@@ -168,6 +168,7 @@ def test_the_panel_lists_the_tools_the_report_needs_in_node(bench_page):
     assert load["panel"]["tools"] == [*lines, *tools["apart"]]
     assert len(tools["uses"]) > 30  # a vacuity guard: the bench needs many tools
     assert "spanner-13 x21 2 at once on a joint" in load["panel"]["tools"]
+    assert load["panel"]["tools"][-1].startswith("blocked, once reached: hex-key-1.5 x1, ")
 
 
 def test_the_overview_colours_every_fastener_by_its_verdict_in_node(bench_page):
