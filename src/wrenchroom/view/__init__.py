@@ -36,6 +36,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from wrenchroom import __version__
+from wrenchroom.connectors import ConnectorVerdict
 from wrenchroom.engine.mesh import MESH_TOLERANCE, primitive_mesh, shape_triangles
 from wrenchroom.report import Verdict, attempt_text
 from wrenchroom.terminal import printable
@@ -45,6 +46,7 @@ if TYPE_CHECKING:
 
     from wrenchroom.assembly import Part
     from wrenchroom.clashes import Clash
+    from wrenchroom.connectors import ConnectorResult, Connectors
     from wrenchroom.report import FastenerResult, Report, StateModel
     from wrenchroom.tools.sweep import Attempt, Probe
 
@@ -89,6 +91,19 @@ _LIST_ORDER = {"fails": 0, "not-covered": 1, "elsewhere": 2, "held": 3, "turns":
 
 _ESCAPED = {"<": "\\u003c", ">": "\\u003e", "&": "\\u0026"}
 _TOKEN = re.compile(r"@([A-Z_]+)@")
+
+
+def plug_colour_key(result: ConnectorResult, default_state: str | None) -> str:
+    """Which colour a plug gets, as a fastener does.
+
+    Green comes off, amber only in another state, red stuck or no room for fingers,
+    grey not covered.
+    """
+    if result.verdict is ConnectorVerdict.NOT_COVERED:
+        return "not-covered"
+    if not result.passed:
+        return "fails"
+    return "elsewhere" if result.state not in {None, default_state} else "turns"
 
 
 def colour_key(result: FastenerResult, default_state: str | None) -> str:
@@ -230,6 +245,30 @@ def view_data(report: Report, *, select: str | None = None) -> dict[str, object]
             "found": found,
             "apart": clashes.lines()[1 + len(clashes.found) :],
         },
+        # Each plug pulled off its receptacle (M9), where the run checked any.
+        "connectors": _plugs(builder, report.connectors, report.default_state),
+    }
+
+
+def _plugs(
+    builder: _Builder, connectors: Connectors | None, default_state: str | None
+) -> dict[str, object] | None:
+    """The plugs to draw, what needs a person first, and the lines that aren't one."""
+    if connectors is None or not connectors.results:
+        return None
+    ordered = sorted(
+        connectors.results,
+        key=lambda r: (_LIST_ORDER[plug_colour_key(r, default_state)], r.name),
+    )
+    said = {f"FAIL {result.name}" for result in connectors.failures()}
+    return {
+        "header": printable(connectors.headline),
+        "found": [builder.plug(result) for result in ordered],
+        "apart": [
+            printable(line)
+            for line in connectors.lines()[1:]
+            if not any(line.startswith(fail + "  ") for fail in said)
+        ],
     }
 
 
@@ -341,6 +380,67 @@ class _Builder:
             "view": view,
             "parts": _indices((clash.first, clash.second), by_name),
             "overlap": None if arrays is None else self._shape(*arrays),
+        }
+
+    # --------------------------------------------------------- connectors
+
+    def plug(self, result: ConnectorResult) -> dict[str, object]:
+        """One plug: its verdict and colour, its receptacle, what stopped it, where it went.
+
+        Where it went is itself at the end of its pull, and the fingers and thumb as
+        tried.
+        """
+        view = self.view(result.state)
+        by_name = self._view_parts[view]
+        failed = result.verdict in {
+            ConnectorVerdict.STUCK,
+            ConnectorVerdict.NO_GRIP,
+            ConnectorVerdict.NO_LATCH,
+        }
+        path = self._pulled(result, by_name)
+        return {
+            "name": result.name,
+            "label": printable(result.name),
+            "verdict": result.verdict.value,
+            "colour": COLOURS[plug_colour_key(result, self.report.default_state)],
+            "reason": printable(result.reason) if result.reason else None,
+            "in_way": [printable(n) for n in result.blockers] if failed else [],
+            "highlight": _indices(result.blockers, by_name) if failed else [],
+            "receptacle": _indices(result.receptacle, by_name),
+            "view": view,
+            "part": by_name.get(result.name),
+            "probes": [
+                *([path] if path is not None else []),
+                *(self._probe(probe, by_name) for probe in result.probes),
+            ],
+        }
+
+    def _pulled(self, result: ConnectorResult, by_name: dict[str, int]) -> dict[str, object] | None:
+        """The plug at the end of its pull, as a probe; None where it has no axis yet.
+
+        Its own meshes, moved along its axis by its travel, hitting what its pull path
+        hit.
+        """
+        if result.axis is None or result.travel is None:
+            return None
+        own = [
+            index
+            for name, index in by_name.items()
+            if name == result.name or self.parts[index]["owner"] == result.name
+        ]
+        shapes = [
+            self.parts[index]["shape"] for index in own if self.parts[index]["shape"] is not None
+        ]
+        if not shapes:
+            return None
+        offset = [component * result.travel for component in result.axis]
+        moved = [[1.0, 0.0, 0.0, offset[0]], [0.0, 1.0, 0.0, offset[1]], [0.0, 0.0, 1.0, offset[2]]]
+        stuck = result.verdict is ConnectorVerdict.STUCK
+        return {
+            "hit": stuck,
+            "hits": _indices(result.blockers, by_name) if stuck else [],
+            "s": shapes,
+            "m": _b64(np.array([moved] * len(shapes), dtype="<f4")),
         }
 
     # --------------------------------------------------------- fasteners

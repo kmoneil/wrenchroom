@@ -172,6 +172,7 @@ def test_the_panel_lists_the_tools_the_report_needs_in_node(bench_page):
 
 
 def test_the_overview_colours_every_fastener_by_its_verdict_in_node(bench_page):
+    # And each plug by its own (M9): plug_shelf's stuck, red; the rest come off, green.
     page, view = bench_page
     (load,) = _node(page, "")
     record = load["drawn"]
@@ -179,6 +180,11 @@ def test_the_overview_colours_every_fastener_by_its_verdict_in_node(bench_page):
     assert record["view"] == view["overview"]
     by_part = {part: colour for part, colour, _ in record["parts"]}
     colour_of = {f["name"]: f["colour"] for f in view["fasteners"]}
+    colour_of |= {p["name"]: p["colour"] for p in view["connectors"]["found"]}
+    assert {p["name"]: p["colour"] for p in view["connectors"]["found"]} == {
+        "plug_shelf_plug": COLOURS["fails"],
+        **{f"plug_{cell}_plug": COLOURS["turns"] for cell in ("cable", "latch", "open", "tight")},
+    }
     assert set(by_part) == set(view["views"][view["overview"]]["parts"])
     for index, colour in by_part.items():
         part = view["parts"][index]
@@ -314,6 +320,98 @@ def test_a_page_with_no_clashes_looked_for_lists_none_in_node(bench_page):
     (load,) = _node(page, "#clash:0")
     assert load["panel"]["clash_list_hidden"] is True
     assert load["drawn"]["clash"] is None
+
+
+@pytest.fixture(scope="module")
+def plug_page(tmp_path_factory):
+    """Two plugs in their shrouds, checked with hand room (M9): one under a bar 4 over
+    it, stuck; one hemmed in all round, no room for fingers. The bar is narrow, so the
+    plug under it shows from the view's side."""
+    from build123d import Box, Pos  # noqa: PLC0415  (only this fixture builds geometry)
+
+    from wrenchroom.assembly import Assembly, Part  # noqa: PLC0415
+    from wrenchroom.checker import check  # noqa: PLC0415
+    from wrenchroom.config import Config  # noqa: PLC0415
+
+    def shroud(x):
+        return Pos(x, 0, 5) * Box(20, 12, 10) - Pos(x, 0, 6.5) * Box(16, 8, 7.01)
+
+    parts = [
+        Part("board", Pos(50, 0, -1) * Box(300, 100, 2)),
+        Part("a_jack", shroud(0)),
+        Part("a_plug", Pos(0, 0, 13) * Box(16, 8, 20)),
+        Part("bar", Pos(0, 0, 30) * Box(80, 10, 6)),
+        Part("b_jack", shroud(100)),
+        Part("b_plug", Pos(100, 0, 13) * Box(16, 8, 20)),
+        Part("left", Pos(85, 0, 15) * Box(10, 12, 30)),
+        Part("right", Pos(115, 0, 15) * Box(10, 12, 30)),
+        Part("near", Pos(100, -12, 15) * Box(60, 10, 30)),
+        Part("far", Pos(100, 12, 15) * Box(60, 10, 30)),
+    ]
+    sidecar = {"connectors": [{"parts": "*_plug"}], "checks": {"hand_room": True}}
+    report = check(Assembly(parts), Config.from_dict(sidecar))
+    path = tmp_path_factory.mktemp("plug") / "plug.html"
+    path.write_text(html_text(report), encoding="utf-8")
+    _keep(path, "plug.html")
+    return path, view_data(report)
+
+
+def test_the_plugs_are_listed_and_coloured_in_node(plug_page):
+    page, view = plug_page
+    (load,) = _node(page, "")
+    panel, drawn = load["panel"], load["drawn"]
+    assert (panel["plug_list_hidden"], panel["plug_hidden"]) == (False, True)
+    assert panel["plugs_summary"] == (
+        "2 connectors: 0 unplug, 1 stuck, 1 no grip, 0 no latch access, 0 not covered"
+    )
+    assert panel["plugs"] == ["a_plugstuck", "b_plugno-grip"]  # the name, then the verdict
+    assert (drawn["plug"], drawn["tools"]) == (None, {"hit": 0, "clear": 0})
+    # In the overview each plug is drawn in its verdict's colour, as a fastener is.
+    names = [part["name"] for part in view["parts"]]
+    colours = {names[part]: colour for part, colour, _ in drawn["parts"]}
+    assert colours["a_plug"] == colours["b_plug"] == COLOURS["fails"]
+    assert colours["bar"] == COLOURS["part"]
+
+
+def test_a_stuck_plug_is_drawn_where_it_stops_in_node(plug_page):
+    page, view = plug_page
+    (load,) = _node(page, "#plug:0")
+    drawn, panel = load["drawn"], load["panel"]
+    assert (drawn["plug"], drawn["selected"], drawn["clash"]) == (0, None, None)
+    assert drawn["tools"] == {"hit": 1, "clear": 0}  # itself at the end of its pull
+    names = [part["name"] for part in view["parts"]]
+    colours = {names[part]: (colour, opacity) for part, colour, opacity in drawn["parts"]}
+    assert colours["a_plug"] == (COLOURS["fails"], 1)
+    assert colours["bar"] == (COLOURS["blocker"], 0.7)
+    assert colours["a_jack"] == (COLOURS["part"], 1)  # its receptacle, as it is
+    assert colours["b_plug"][1] < 0.5  # ghosted
+    assert (panel["list_hidden"], panel["detail_hidden"], panel["plug_hidden"]) == (
+        True,
+        True,
+        False,
+    )
+    assert panel["plug"] == ["a_plug", "stuck", None, "In its way out: bar", None]
+
+
+def test_a_plug_with_no_room_for_fingers_is_drawn_with_every_finger_tried_in_node(plug_page):
+    page, _ = plug_page
+    (load,) = _node(page, "#plug:1")
+    assert load["drawn"]["tools"] == {"hit": 24, "clear": 1}  # 12 pairs, and its pull
+    assert load["panel"]["plug"][3] == "In the fingers' way: far, near, left, right"
+
+
+def test_a_plug_hash_naming_no_plug_shows_everything_in_node(plug_page):
+    page, _ = plug_page
+    (load,) = _node(page, "#plug:5")
+    assert (load["drawn"]["plug"], load["drawn"]["selected"]) == (None, None)
+    assert load["panel"]["status"] == "No fastener named plug:5."
+
+
+def test_a_page_with_no_plugs_lists_none_in_node(clash_page):
+    page, _ = clash_page
+    (load,) = _node(page, "#plug:0")
+    assert load["panel"]["plug_list_hidden"] is True
+    assert load["drawn"]["plug"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -579,3 +677,16 @@ def test_a_clash_shows_its_overlap_red_and_its_parts_magenta_on_screen(clash_pag
     assert overview == (0, 0), overview
     assert chosen[0] > 160_000, chosen
     assert chosen[1] > 40_000, chosen
+
+
+def test_a_stuck_plug_shows_red_and_what_stops_it_magenta_on_screen(plug_page, tmp_path):
+    # The overview draws the stuck plug red under its bar (the other hides in its
+    # channel) and nothing magenta; chosen, the bar over it is magenta. Under a shelf
+    # instead, both were hidden, and the shelf's magenta tinted the plug (2026-10-09).
+    chrome = _chrome()
+    page, _ = plug_page
+    overview = _screenshot(chrome, tmp_path, page, "")
+    chosen = _screenshot(chrome, tmp_path, page, "#plug:0")
+    assert overview[0] == 0, overview
+    assert overview[1] > 50, overview
+    assert chosen[0] > 2000, chosen
