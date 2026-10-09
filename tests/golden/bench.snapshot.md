@@ -161,6 +161,14 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `build_way_in_under_screw` | `hex-key-5` | stuck | `build_way_in_under` |
 | `stuck_screw_screw` | `hex-key-5` | stuck | `stuck_screw_ceiling` |
 
+#### Connectors
+
+**5 connectors: 4 unplug, 1 stuck, 0 not covered**
+
+| Connector | Verdict | In the way, or why |
+| --- | --- | --- |
+| `plug_shelf_plug` | stuck | `plug_shelf_shelf` |
+
 #### Notes
 
 - `ball_shoulder_screw`: only a ball end turns it (ball end, 20 deg off the axis): a ball end takes much less torque than a straight key, so tightening it to its torque, or breaking it loose, may need a straight key, which can't get in

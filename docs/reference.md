@@ -19,6 +19,7 @@ rules and the figures behind them are written down.
 - [The tools a model needs](#the-tools-a-model-needs)
 - [Clashes](#clashes)
 - [Build order](#build-order)
+- [Connectors](#connectors)
 - [Collision engines and speed](#collision-engines-and-speed)
 - [Standards](#standards)
 - [The golden bench](#the-golden-bench)
@@ -436,6 +437,9 @@ bolt alone; or a fingertip 8 mm across reaching 30 mm out from its rim, level wi
 the grip's middle or resting on what the grip sits on. With hand room, the hand behind
 the fingers must be clear too. These figures are untuned as well.
 
+Hand room covers the fingers on a plug too: room to grip it, and a thumb to press its
+latch ([Connectors](#connectors)).
+
 ## The sidecar's globs
 
 A sidecar glob that matches nothing (a rule's parts or mates, an ignore, a state's
@@ -603,6 +607,69 @@ and the failures; `explain` adds a line (`in the build: added in frame, turns wi
 hex-key-5, driver straight in`). Whether a part itself fits in at its step is not
 checked, which every report with a build says. The 3D view doesn't show the steps
 yet.
+
+## Connectors
+
+A design serviced by unplugging things (a sealed box with leads, a motor on a plug, a
+battery on a quick-disconnect) needs each plug to come off (M9). A plug comes off by a
+straight pull out of its receptacle, not a turn, and `check` checks each one the
+sidecar's `connectors:` names, or whose name is about a plug.
+
+```yaml
+connectors:
+  - parts: "motor_plug_*"
+    axis: auto                 # or +z style, or [x, y, z]: out of its receptacle
+    travel: auto               # or mm: how far it must come to be free
+    receptacle: "motor_jack_*" # optional: what it plugs into, where the geometry can't tell
+    mates: ["motor_cable_*"]   # its cable comes with it
+    grip: pinch                # pinch (two fingers either side) or hand (a fist round it)
+    latch: +y                  # optional: the side its release is pressed from
+```
+
+- **Its receptacle** is the part it plugs into: of the parts it touches, the one that
+  holds it in the most of the directions its faces face (a header's shroud holds it in
+  five; a board it rests on, or a neighbour beside it, in one). Touching nothing, only
+  resting against parts, or held alike by two, it is not covered, and the reason says
+  what to give (`receptacle:`, or `axis:` and `travel:`).
+- **Its pull axis** is the one of those directions its receptacle leaves it free to
+  move in. Free in none, or in several (a slot open at its end as well as its top), it
+  is not covered, naming them, asking for `axis:`; an `axis:` that runs into its
+  receptacle is said too. A plug drawn into its receptacle (pins in their sockets) is
+  free the way moving adds no overlap.
+- **Its travel** is how far it must move along the axis to be clear of its receptacle,
+  plus 3 mm, to 0.1 mm.
+- **Its pull path** is its own solid moved along the axis by its travel, tested against
+  every part but its receptacle, its pieces, its `mates` and the ignored parts: a part
+  in the way leaves it `stuck`, named. A plug already drawn into another part is not
+  covered: its cable, if that is what it is, belongs in its `mates`.
+- **Fingers**, with hand room on (`--hand-room`, `checks: {hand_room: true}`), as the
+  hand on a handle: for `pinch`, two fingers 8 mm round along its sides, from past its
+  receptacle to 25 mm beyond its end, tried every 15 deg round it, any one position
+  clear gripping it; for `hand`, a fist standing 30 mm out from it all round, 90 long.
+  None clear is `no grip`. With `latch:`, a thumb 9 mm round and 40 long, out from the
+  plug's surface on that side, halfway up what stands out of its receptacle or a
+  thumb's radius clear of it, must be clear: else `no latch access`. Untuned figures,
+  off by default, as room for a hand is.
+- **States** apply as for fasteners: a rule's `state:`, the default state, then each
+  of `try_states` until it comes off.
+
+A name is about a plug when "plug" is its last word (`xt60_plug`, `Motor Plug`), and
+nothing says it is turned in (`drain plug`). A connector family's code (XT30, XT60,
+XT90, Deutsch DT and DTP part numbers) or a connector word (connector, header, jack,
+receptacle, JST, Deutsch) says nothing of which half comes off, and most such parts in
+a model are the halves soldered to a board: such a part is listed, not checked, until
+the sidecar names it (`NOTE 62 parts named like connectors, not checked: ...`), and
+every report counts them under not checked. A part that is a checked plug's
+receptacle isn't listed. `socket` is a screw head, never a connector word.
+
+The terminal gives the counts (`3 connectors: 2 unplug, 1 stuck, 0 not covered`, with
+the fingers' counts where they were checked) and a `FAIL name  verdict  what` line for
+each that doesn't come off; a stuck plug, no grip or no latch access exits 1, a plug
+not covered or a `connectors:` glob naming nothing exits 2. The JSON's `connectors`
+has each plug's receptacle, axis, travel, what was in its way, its grip and latch, and
+the parts named like connectors; the Markdown a table of the failures. The 3D view
+doesn't draw plugs yet. A plug's ring turned before it is pulled (M8 and M12 circular
+connectors) waits with those families.
 
 ## Collision engines and speed
 

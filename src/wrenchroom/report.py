@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from wrenchroom.assembly import Assembly
     from wrenchroom.build import Build
     from wrenchroom.clashes import Clashes
+    from wrenchroom.connectors import Connectors
     from wrenchroom.tools.sweep import Attempt, Probe
     from wrenchroom.used import ToolsUsed
 
@@ -225,6 +226,9 @@ class Report:
     #: lists the steps (``build:``); None where it doesn't, which the not-checked line
     #: says.
     build: Build | None = None
+    #: Each plug pulled off its receptacle (M9), where the sidecar names connectors or a
+    #: name is about a plug or a connector; None where there are none.
+    connectors: Connectors | None = None
 
     @property
     def not_checked(self) -> str:
@@ -237,6 +241,8 @@ class Report:
         unseen.append(self._build_unseen)
         if self.passed_over:
             unseen.append(_passed_over_count(self.passed_over))
+        if self.connectors is not None and self.connectors.named:
+            unseen.append(self.connectors.named_count)
         if self.surfaces:
             unseen.append(self._surfaces_count)
         unseen.append("parts the model doesn't have")
@@ -299,9 +305,10 @@ class Report:
         askew = self.unmatched_rules or self.unmatched_ignores or self.warnings
         clashed = self.clashes.exit_code if self.clashes is not None else 0
         built = self.build.exit_code if self.build is not None else 0
-        if self.summary["not_covered"] or askew or 2 in {clashed, built}:  # noqa: PLR2004
+        plugged = self.connectors.exit_code if self.connectors is not None else 0
+        if self.summary["not_covered"] or askew or 2 in {clashed, built, plugged}:  # noqa: PLR2004
             return 2
-        if self.summary["blocked"] or self.summary["stuck"] or clashed or built:
+        if self.summary["blocked"] or self.summary["stuck"] or clashed or built or plugged:
             return 1
         return 0
 
@@ -360,6 +367,7 @@ class Report:
             "tools_used": self.tools_used().to_json(),
             "clashes": self.clashes.to_json() if self.clashes is not None else None,
             "build": self.build.to_json() if self.build is not None else None,
+            "connectors": self.connectors.to_json() if self.connectors is not None else None,
         }
 
     def tools_used(self) -> ToolsUsed:
@@ -395,10 +403,7 @@ class Report:
             what = reason or listed(names, result.attempts) or NO_TOOL
             tool = result.tool or "-"
             lines.append(f"FAIL {result.fastener.name}  {tool}  {result.verdict}  {what}")
-        if self.clashes is not None:
-            lines.extend(self.clashes.lines())
-        if self.build is not None:
-            lines.extend(self.build.lines())
+        lines += self._section_lines()
         for glob in self.unmatched_rules:
             lines.append(f"WARN rule matched nothing: {glob!r} (renamed part?)")
         for glob in self.unmatched_ignores:
@@ -425,6 +430,11 @@ class Report:
             lines.append(f"NOTE and {more} more (the JSON lists every note)")
         lines.append(f"NOTE {self.not_checked}")
         return [printable(line) for line in lines]
+
+    def _section_lines(self) -> list[str]:
+        """The connectors', the clashes' and the build's lines, where the run has them."""
+        sections = (self.connectors, self.clashes, self.build)
+        return [line for section in sections if section is not None for line in section.lines()]
 
     def noted(self) -> tuple[tuple[str, str], ...]:
         """Every result's caveats, as (fastener, note), in result order."""
@@ -493,6 +503,11 @@ class Report:
                 else f"{md_text(self._build_unseen)}; "
             )
             + (f"{md_text(_passed_over_count(self.passed_over))}; " if self.passed_over else "")
+            + (
+                f"{md_text(self.connectors.named_count)}; "
+                if self.connectors is not None and self.connectors.named
+                else ""
+            )
             + (f"{md_text(self._surfaces_count)}; " if self.surfaces else "")
             + "parts the model doesn't have.",
         ]
@@ -527,6 +542,8 @@ class Report:
                     f"| {md_code(result.fastener.name)} | {_md_tool(result.tool)} "
                     f"| {result.verdict} | {what} |"
                 )
+        if self.connectors is not None:
+            lines += self.connectors.markdown()
         if self.clashes is not None:
             lines += self.clashes.markdown()
         if self.build is not None:

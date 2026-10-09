@@ -583,9 +583,18 @@ PART_NOUNS = frozenset(
 
 def ends_in_part_noun(name: str) -> bool:
     """Whether a part name's last word names a part that isn't a fastener."""
-    cleaned = _clean(name)
-    words = _words(_own_phrase(cleaned)) or _words(cleaned)
+    words = name_words(name)
     return bool(words) and words[-1] in PART_NOUNS
+
+
+def name_words(name: str) -> list[str]:
+    """A part name's own words, lower case, the last the one it is about.
+
+    Its own phrase (not what it says it goes with), split at punctuation and camelCase,
+    sizes and instance markers left out: ``Motor Plug (2):1`` is ``motor``, ``plug``.
+    """
+    cleaned = _clean(name)
+    return _words(_own_phrase(cleaned)) or _words(cleaned)
 
 
 def _words(text: str) -> list[str]:

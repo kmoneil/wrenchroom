@@ -37,8 +37,8 @@ EXIT_NOT_COVERED = 2
 STDOUT = "-"
 
 _HAND_ROOM_HELP = (
-    "Also check room for a hand on each handle (as `checks: {hand_room: true}`); "
-    "untuned, so off by default."
+    "Also check room for a hand on each handle, and for fingers on each plug (as "
+    "`checks: {hand_room: true}`); untuned, so off by default."
 )
 
 _CLASHES_HELP = (

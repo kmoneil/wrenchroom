@@ -4654,8 +4654,8 @@
     1.0
    ],
    "seat": [
-    3900.0,
-    17000.0,
+    2900.0,
+    18000.0,
     6.0
    ],
    "source": "name+geometry",
@@ -4686,8 +4686,8 @@
     1.0
    ],
    "seat": [
-    4100.0,
-    17000.0,
+    3100.0,
+    18000.0,
     6.0
    ],
    "source": "name+geometry",
@@ -6011,5 +6011,120 @@
   ]
  },
  "clashes": null,
- "build": null
+ "build": null,
+ "connectors": {
+  "summary": {
+   "connectors": 5,
+   "unplugs": 3,
+   "stuck": 2,
+   "no_grip": 0,
+   "no_latch_access": 0,
+   "not_covered": 0
+  },
+  "grip_checked": false,
+  "results": [
+   {
+    "name": "plug_cable_plug",
+    "source": "name",
+    "verdict": "stuck",
+    "receptacle": [
+     "plug_cable_shroud"
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "travel": 10.0,
+    "blocked_by": [
+     "plug_cable_lead"
+    ],
+    "reason": null,
+    "state": null,
+    "grip": null,
+    "latch": null
+   },
+   {
+    "name": "plug_latch_plug",
+    "source": "name",
+    "verdict": "unplugs",
+    "receptacle": [
+     "plug_latch_shroud"
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "travel": 10.0,
+    "blocked_by": [],
+    "reason": null,
+    "state": null,
+    "grip": null,
+    "latch": null
+   },
+   {
+    "name": "plug_open_plug",
+    "source": "name",
+    "verdict": "unplugs",
+    "receptacle": [
+     "plug_open_shroud"
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "travel": 10.0,
+    "blocked_by": [],
+    "reason": null,
+    "state": null,
+    "grip": null,
+    "latch": null
+   },
+   {
+    "name": "plug_shelf_plug",
+    "source": "name",
+    "verdict": "stuck",
+    "receptacle": [
+     "plug_shelf_shroud"
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "travel": 10.0,
+    "blocked_by": [
+     "plug_shelf_shelf"
+    ],
+    "reason": null,
+    "state": null,
+    "grip": null,
+    "latch": null
+   },
+   {
+    "name": "plug_tight_plug",
+    "source": "name",
+    "verdict": "unplugs",
+    "receptacle": [
+     "plug_tight_shroud"
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "travel": 10.0,
+    "blocked_by": [],
+    "reason": null,
+    "state": null,
+    "grip": null,
+    "latch": null
+   }
+  ],
+  "unmatched_rules": [],
+  "unmatched_mates": [],
+  "named": []
+ }
 }

@@ -105,7 +105,7 @@ def sidecar_and_truth(copies=1, which="all"):
     plus an optional "needs" (the milestone or issue it waits on). ``which``
     picks the cells: "all", or the perf bench's "timed" or "untimed" ones.
     """
-    rules, truth, ignore, lids, allow = [], {}, set(), [], []
+    rules, truth, ignore, lids, allow, connectors = [], {}, set(), [], [], []
     for copy in range(copies):
         prefix = copy_prefix(copy)
         for cell in CELLS:
@@ -113,6 +113,7 @@ def sidecar_and_truth(copies=1, which="all"):
                 continue
             name = f"{prefix}{cell.name}"
             rules += [_named_rule(rule, name) for rule in cell.rules]
+            connectors += [_named_connector(rule, name) for rule in cell.connectors]
             ignore.update(cell.ignore)
             allow += [[f"{name}_{a}", f"{name}_{b}"] for a, b in cell.allow]
             for role, expected in cell.truth.items():
@@ -141,7 +142,36 @@ def sidecar_and_truth(copies=1, which="all"):
     }
     if allow:
         sidecar["allow"] = allow
+    if connectors:
+        sidecar["connectors"] = connectors
     return sidecar, truth
+
+
+def connector_truth(copies=1):
+    """Each connector's truth, keyed by full part name, as its JSON says it (M9)."""
+    truth = {}
+    for copy in range(copies):
+        prefix = copy_prefix(copy)
+        for cell in CELLS:
+            name = f"{prefix}{cell.name}"
+            for role, expected in cell.plugs.items():
+                entry = dict(expected)
+                for key in ("receptacle", "blocked_by"):
+                    if key in entry:
+                        entry[key] = [f"{name}_{part}" for part in entry[key]]
+                truth[f"{name}_{role}"] = entry
+    return truth
+
+
+def _named_connector(rule, name):
+    """A cell's connector rule with its parts, mates and receptacle as full part names."""
+    entry = dict(rule)
+    entry["parts"] = f"{name}_{entry['parts']}"
+    if "mates" in entry:
+        entry["mates"] = [f"{name}_{m}" for m in entry["mates"]]
+    if "receptacle" in entry:
+        entry["receptacle"] = f"{name}_{entry['receptacle']}"
+    return entry
 
 
 #: The step of the bench's build sidecar that adds every part the cells' steps don't.
@@ -358,13 +388,14 @@ def _round_mm(value):
 
 
 def stripped_sidecar():
-    """The bench's sidecar with every fastener rule taken out: the M4 exit case.
+    """The bench's sidecar with every fastener and connector rule taken out: the M4 exit case.
 
     Ignores, states and checks stay; what the rules said (kinds, heads, sizes,
-    mates, a fastener's own state) must now come from names and geometry.
+    mates, a fastener's own state; which parts are plugs) must now come from names
+    and geometry.
     """
     sidecar, _ = sidecar_and_truth()
-    return {key: value for key, value in sidecar.items() if key != "fasteners"}
+    return {key: value for key, value in sidecar.items() if key not in {"fasteners", "connectors"}}
 
 
 def check_detected(directory, engine="mesh"):
