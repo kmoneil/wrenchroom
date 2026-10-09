@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from wrenchroom import __version__
-from wrenchroom.fasteners import Fastener, PassedOver
+from wrenchroom.fasteners import Fastener, Head, PassedOver
 from wrenchroom.terminal import printable
 
 if TYPE_CHECKING:
@@ -676,11 +676,12 @@ def _describe(fastener: Fastener) -> str:
 
     A gland found by its name has no size by design (its thread says nothing of
     the hex a spanner grips), so it is ``24 AF gland``, not ``? nut`` (issue #33).
+    A Torx recess's or a cross's drive size is no across flats (#124, #125).
     """
     kind = fastener.kind.value
     if fastener.size is not None:
         size = fastener.size.designation
-    elif fastener.drive_af is not None:
+    elif fastener.drive_af is not None and fastener.head not in (Head.TORX, Head.PHILLIPS):
         size = f"{fastener.drive_af:g} AF"
         kind = kind if fastener.socket_allowed else "gland"
     else:

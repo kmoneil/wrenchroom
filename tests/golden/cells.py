@@ -2251,7 +2251,10 @@ def misnamed():
     return [
         ("plate", plate(holes=[(-60, 0, 1.6), (-20, 0, 1.6), (nut_x, 0, 1.6), (lead_x, 0, 4)])),
         ("M5x16_screw", Pos(-60, 0, 0) * socket_screw(d=3, length=16, dk=5.5, k=3, s=2.5, t=1.3)),
-        ("M5x12_phillips_screw", Pos(-20, 0, 0) * pan_phillips(d=3, length=12, dk=5.6, k=2.4)),
+        (
+            "M5x12_phillips_screw",
+            Pos(-20, 0, 0) * pan_phillips(d=3, length=12, dk=5.6, k=2.4, span=3.0),
+        ),
         ("stud", Pos(nut_x, 0, 2) * Cylinder(1.5, 8)),
         ("M5_nut", Pos(nut_x, 0, 0) * hex_nut(3, 5.5, 2.4)),
         ("leadscrew_nut", flange + body - Pos(lead_x, 0, 0) * Cylinder(4, 40)),
@@ -2562,4 +2565,40 @@ def lobed_recess():
         ("plate", plate(holes=[(-40, 0, 2.0), (40, 0, 2.0)])),
         ("plain_screw", Pos(-40, 0, 0) * _torx_m4(4.5, flutes=False)),
         ("fluted_screw", Pos(40, 0, 0) * _torx_m4(3.92, flutes=True)),
+    ]
+
+
+def _pan_cross(d, dk, k, span):
+    """A pan head ``dk`` by ``k`` on a shank ``d``, a cross ``span`` across its wings."""
+    cross = Pos(0, 0, k - 0.9) * (Box(span, 0.8, 1.8) + Box(0.8, span, 1.8))
+    return Pos(0, 0, k / 2) * Cylinder(dk / 2, k) - cross + Pos(0, 0, -5) * Cylinder(d / 2, 10)
+
+
+@cell(
+    "cross_drawn",
+    [
+        {
+            "parts": "m4_screw",
+            "kind": "screw",
+            "head": "phillips",
+            "size": "M4",
+            "across_flats": 3.0,
+        },
+        {"parts": "m5_screw", "kind": "screw", "head": "phillips", "size": "M5"},
+    ],
+    {
+        "m4_screw": {"verdict": "turns", "tool": "driver-ph1", "how": "driver straight in"},
+        "m5_screw": {"verdict": "turns", "tool": "driver-ph2", "how": "driver straight in"},
+    },
+)
+def cross_drawn():
+    """A cross's span picks its Phillips number (issue #125), open above. An M4 pan
+    head 8 by 3.1 drawn with a cross 3.0 across its wings, ISO 7045's m for an M3,
+    PH1's (2.5 to 3.2), where an M4 takes PH2: PH1, noted; it took PH2. An M5 pan
+    head 10 by 3.8, its cross 4.9 across, ISO 7045's own for it: PH2, unnoted.
+    """
+    return [
+        ("plate", plate(holes=[(-40, 0, 2.0), (40, 0, 2.5)])),
+        ("m4_screw", Pos(-40, 0, 0) * _pan_cross(4, 8, 3.1, 3.0)),
+        ("m5_screw", Pos(40, 0, 0) * _pan_cross(5, 10, 3.8, 4.9)),
     ]

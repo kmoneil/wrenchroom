@@ -464,7 +464,22 @@ def test_the_undersize_nut_is_noted_in_every_format(bench_report, bench_json):
         "sunk_cap_cap_nut",
         "ball_tilt_screw",
         "ball_shoulder_screw",
+        "cross_drawn_m4_screw",  # a cross drawn for PH1 (issue #125)
     }
+
+
+def test_a_cross_drawn_for_another_number_is_noted(bench_json):
+    """Issue #125: cross_drawn's M4, its cross 3.0 across its wings, PH1's; the M5's
+    is its own PH2's, and says nothing."""
+    m4, m5 = bench_json["cross_drawn_m4_screw"], bench_json["cross_drawn_m5_screw"]
+    assert (m4["tool"], m4["notes"]) == (
+        "driver-ph1",
+        [
+            "cross drawn for PH1 (3.00 across its wings), where an M4's standard gives PH2: "
+            "taken as drawn"
+        ],
+    )
+    assert (m5["tool"], m5["notes"]) == ("driver-ph2", [])
 
 
 def test_a_blocked_nut_names_the_posts_that_decided_it(bench_report, bench_json):
