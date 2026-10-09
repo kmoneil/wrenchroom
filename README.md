@@ -534,9 +534,10 @@ esbuild; `uv run python scripts/lanes.py vendor-check` rebuilds it and compares 
 for byte, and the nightly job does the same.
 
 CI runs the same lanes by the same names; `scripts/lanes.py` is the only spelling of
-how this project runs its checks. `main` is protected: changes land by pull request,
-rebased, with `gates`, every `fast` row and both `perf` rows green, and no new
-high-severity CodeQL alert. The rule lives in `.github/rulesets/main.json`, exported
+how this project runs its checks. Linux runs both Pythons on every pull request and
+every push to `main`; macOS runs 3.13, on pull requests only. `main` is protected:
+changes land by pull request, rebased, with `gates`, every `fast` row and both `perf`
+rows green, and no new high-severity CodeQL alert. The rule lives in `.github/rulesets/main.json`, exported
 from GitHub; change both together. Security reports go through
 [SECURITY.md](https://github.com/kmoneil/wrenchroom/blob/main/SECURITY.md).
 

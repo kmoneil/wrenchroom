@@ -56,10 +56,6 @@
             "integration_id": 15368
           },
           {
-            "context": "fast (macos-latest, 3.14)",
-            "integration_id": 15368
-          },
-          {
             "context": "perf (ubuntu-latest)",
             "integration_id": 15368
           },
