@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 149,
-  "turns": 110,
+  "fasteners": 152,
+  "turns": 113,
   "held": 9,
   "blocked": 27,
   "stuck": 1,
@@ -4344,7 +4344,7 @@
     1.0
    ],
    "seat": [
-    2900.0,
+    3900.0,
     16000.0,
     6.0
    ],
@@ -4376,7 +4376,7 @@
     1.0
    ],
    "seat": [
-    3100.0,
+    4100.0,
     16000.0,
     6.0
    ],
@@ -4454,6 +4454,102 @@
    "grazes": [],
    "notes": [
     "hex drawn undersize: 12.60 across flats, 0.13 under the least its M8 standard allows (12.73); taken as size 13"
+   ]
+  },
+  {
+   "name": "unsized_M5x6_phillips_screw",
+   "kind": "screw",
+   "head": "phillips",
+   "size": "M3",
+   "length": 6.0,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2940.0,
+    16000.0,
+    2.4
+   ],
+   "source": "name+geometry",
+   "tool": "driver-ph1",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "drawn as an M3 (2.90 shank, a PH1 cross), where its name says M5: taken as drawn"
+   ]
+  },
+  {
+   "name": "unsized_M5x6_slotted_screw",
+   "kind": "screw",
+   "head": "slotted",
+   "size": "M5",
+   "length": 6.0,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3060.0,
+    16000.0,
+    2.4
+   ],
+   "source": "name+geometry",
+   "tool": "driver-slotted",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "drawn with a 2.90 shank, no M5's thread (an M3's or an M3.5's): the name's M5 kept"
+   ]
+  },
+  {
+   "name": "unsized_M5x6_torx_screw",
+   "kind": "screw",
+   "head": "torx",
+   "size": "M3",
+   "length": 6.0,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    16000.0,
+    2.07
+   ],
+   "source": "name+geometry",
+   "tool": "torx-key-T10",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "drawn as an M3 (2.90 shank, a T10 recess), where its name says M5: taken as drawn"
    ]
   },
   {
@@ -4915,6 +5011,22 @@
     ]
    },
    {
+    "tool": "torx-key-T10",
+    "count": 1,
+    "fasteners": [
+     "unsized_M5x6_torx_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
     "tool": "torx-key-T20",
     "count": 1,
     "fasteners": [
@@ -5240,12 +5352,28 @@
     ]
    },
    {
+    "tool": "driver-slotted",
+    "count": 1,
+    "fasteners": [
+     "unsized_M5x6_slotted_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
     "tool": "driver-ph1",
-    "count": 3,
+    "count": 4,
     "fasteners": [
      "cross_M3x6_screw",
      "cross_drawn_m4_screw",
-     "misnamed_M5x12_phillips_screw"
+     "misnamed_M5x12_phillips_screw",
+     "unsized_M5x6_phillips_screw"
     ],
     "at_once": 1,
     "in_default_kit": true,

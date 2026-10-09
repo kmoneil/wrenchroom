@@ -924,3 +924,11 @@ def phillips_by_span(span: float) -> int | None:
         (n for n, (least, most) in PHILLIPS_SPAN.items() if least - 1e-6 <= span <= most + 1e-6),
         None,
     )
+
+
+def torx_by_point(point_to_point: float) -> str | None:
+    """The Torx size whose ISO 10664 recess is this point to point, A, if one."""
+    return next(
+        (t for t, (least, most) in TORX_RECESS_A.items() if least <= point_to_point <= most),
+        None,
+    )

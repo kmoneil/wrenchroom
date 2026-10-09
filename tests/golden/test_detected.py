@@ -80,7 +80,12 @@ def test_detection_finds_the_bench_with_no_rules(detected):
         if name in by_name and _right(by_name[name].fastener, _rule(name, rules))
     ]
     assert len(right) / len(described) >= 0.9  # the M4 bar
-    assert sorted(right) == sorted(described)  # what it measured: all of them
+    # What it measured: all of them, but a slotted M3 drawn with a 2.9 shank, on no
+    # size, and named M5: its slot says no size, so the name's stands, and is said
+    # to be no thread its shank could be (issue #135).
+    slotted = "unsized_M5x6_slotted_screw"
+    assert sorted(right) == sorted(name for name in described if name != slotted)
+    assert by_name[slotted].fastener.size.designation == "M5"
 
 
 def test_nothing_found_is_skipped_silently(detected):
@@ -202,6 +207,28 @@ def test_a_name_s_size_the_solid_disagrees_with_is_noted(detected):
     assert by_name["misnamed_M5x12_phillips_screw"].tool == "driver-ph1"
 
 
+def test_a_shank_on_no_size_is_sized_by_its_recess_or_said(detected):
+    """Issue #135: unsized's three M3s under M5 names, their shanks drawn 2.9, on no
+    size. The Phillips's PH1 cross and the Torx's T10 recess each leave the M3 alone,
+    taken as drawn; the slotted screw's slot says no size, so it keeps its name's M5,
+    and says its shank is no M5's thread. Each kept the M5 silently before."""
+    by_name = {r.fastener.name: r for r in detected.results}
+    said = {
+        "unsized_M5x6_phillips_screw": ("M3", "drawn as an M3 (2.90 shank, a PH1 cross)"),
+        "unsized_M5x6_torx_screw": ("M3", "drawn as an M3 (2.90 shank, a T10 recess)"),
+        "unsized_M5x6_slotted_screw": ("M5", "drawn with a 2.90 shank, no M5's thread"),
+    }
+    tails = {
+        "M3": ", where its name says M5: taken as drawn",
+        "M5": " (an M3's or an M3.5's): the name's M5 kept",
+    }
+    for name, (size, note) in said.items():
+        result = by_name[name]
+        assert (result.fastener.size.designation, result.fastener.confidence) == (size, "low")
+        assert result.notes == (note + tails[size],)
+    assert by_name["unsized_M5x6_torx_screw"].tool == "torx-key-T10"
+
+
 def test_a_leadscrew_s_nut_is_passed_over_in_both_runs(detected, bench_report):
     for report in (detected, bench_report):
         motion = [(p.name, p.kind.value) for p in report.passed_over if p.motion]
@@ -253,6 +280,9 @@ def test_a_nut_drawn_small_says_so_and_where_its_size_came_from(detected):
         "misnamed_M5x12_phillips_screw",
         "misnamed_M5_nut",
         "cross_drawn_m4_screw",  # its cross drawn for PH1 (issue #125)
+        "unsized_M5x6_phillips_screw",  # shanks on no size (issue #135)
+        "unsized_M5x6_torx_screw",
+        "unsized_M5x6_slotted_screw",
     }
 
 

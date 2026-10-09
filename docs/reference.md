@@ -273,9 +273,21 @@ by its hex and its bore, and a screw with no hex or socket (a Phillips) by its s
 alone, which used to take its name's size and a driver that doesn't fit its cross. A
 thread is drawn anywhere from its minor diameter (ISO 724's, on its coarse pitch) to
 its nominal, and a nut's bore up to 1.15 of it, with clearance: drawn so, it could be
-the name's size, and is quiet (a 2.9 shank on an M3, an M5 drawn at its minor). So is
-a hex in a nut standard's band alone, a drive that fits two sizes, and an insert's
-bore, which the name outranks as before.
+the name's size, and is quiet (a 2.9 shank on an M3, an M5 drawn at its minor). The
+name still outranks a hex in a nut standard's band alone, a drive that fits two sizes,
+and an insert's bore.
+
+A shank drawn at no size, an M3's at 2.9 (on neither M3's 3 nor #4's 2.845), on a
+screw with no hex gives the solid no size of its own. Where it is no thread of the
+name's size, a Torx or cross recess sizes the screw by its standard, if that leaves one
+size the shank could be the thread of, the name's own system first (issue #135): an M3
+pan head Phillips named M5, its PH1 cross an M2.5's or an M3's, is `drawn as an M3
+(2.90 shank, a PH1 cross), where its name says M5: taken as drawn`, and a T10 recess is
+an M3's alone. Where nothing picks one size (a slot, a plain head, a recess two sizes
+take), the name's is kept and the shank said: `drawn with a 2.90 shank, no M5's thread
+(an M3's or an M3.5's): the name's M5 kept`. The name's own size is given a shank drawn
+loose, up to 0.15 past its nominal (an M3's at 3.1), as a socket drawn loose is its
+key's.
 
 ## Verdicts, and what decided them
 

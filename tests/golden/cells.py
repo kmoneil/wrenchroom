@@ -2517,10 +2517,11 @@ def cap_dome():
     return parts
 
 
-def _torx_m4(a, flutes):
+def _torx_m4(a, flutes, shank=4.0):
     """An M4 with a button-shaped head 7.6 by 2.2, a Torx recess ``a`` point to point
     1.4 deep in its top: a round core and six round lobes, and with ``flutes``, six
-    round flutes between them, as ISO 10664 draws them (lobes 0.1 a, flutes 0.17 a)."""
+    round flutes between them, as ISO 10664 draws them (lobes 0.1 a, flutes 0.17 a).
+    Its shank is ``shank`` across, an M4's 4 unless said."""
     lobe = 0.1 * a if flutes else 0.122 * a
     profile = Circle(a / 2 - lobe if flutes else 0.356 * a)
     for k in range(6):
@@ -2534,7 +2535,7 @@ def _torx_m4(a, flutes):
     head = Pos(0, 0, 0.2) * Cylinder(3.8, 0.4)
     head += (Pos(0, 0, 2.2 - dome_r) * Sphere(dome_r)) & Pos(0, 0, 1.3) * Box(8, 8, 1.8)
     head -= Pos(0, 0, 0.8) * extrude(profile, 1.41)
-    return head + Pos(0, 0, -5) * Cylinder(2, 10)
+    return head + Pos(0, 0, -5) * Cylinder(shank / 2, 10)
 
 
 @cell(
@@ -2671,4 +2672,46 @@ def carriage_trap():
         ("bolt", carriage_bolt()),
         ("nut", Pos(0, 0, -11.2) * hex_nut(6, 10, 5.2)),
         ("base", base - Pos(0, 0, -11.2) * hex_prism(10.1, 5.2)),
+    ]
+
+
+# ---------------------------------------------------------------- issue #135: shanks on no size
+
+#: The unsized cell's screws, each an M3 under an M5 name: its rule and its truth.
+_UNSIZED = {
+    "M5x6_phillips_screw": ({"head": "phillips"}, "driver-ph1"),
+    "M5x6_torx_screw": ({"head": "torx"}, "torx-key-T10"),
+    "M5x6_slotted_screw": ({"head": "slotted"}, "driver-slotted"),
+}
+
+
+@cell(
+    "unsized",
+    [
+        {"parts": name, "kind": "screw", "size": "M3", **rule}
+        for name, (rule, _) in _UNSIZED.items()
+    ],
+    {
+        name: {"verdict": "turns", "tool": tool, "how": "driver straight in"}
+        for name, (_, tool) in _UNSIZED.items()
+    },
+)
+def unsized():
+    """Three M3s under M5 names, their shanks drawn 2.9, open above (issue #135). A
+    2.9 shank sits on no size (M3's 3.0 and #4's 2.845 are each more than 0.05 off),
+    and none has a hex to settle one. A pan head Phillips 5.6 by 2.4, its cross 3.0
+    across, PH1's, an M2.5's or an M3's: of those the 2.9 shank is only an M3's
+    thread. lobed_recess's button head with an ISO 10664 recess 2.80 point to point,
+    T10's, ISO 14583's for an M3 alone. A pan head 5.6 by 2.4 with a slot 0.8 wide,
+    which says no size: the shank could be an M3's thread or an M3.5's. Described as
+    M3s, each turns. Detected, the Phillips and the Torx are taken as M3s and noted;
+    the slotted screw keeps its name's M5, and says its shank is no M5's thread.
+    Each kept its name's M5 silently before.
+    """
+    slotted = Pos(0, 0, 1.2) * Cylinder(2.8, 2.4) - Pos(0, 0, 1.9) * Box(6, 0.8, 1.01)
+    return [
+        ("plate", plate(holes=[(-60, 0, 1.5), (0, 0, 1.5), (60, 0, 1.5)])),
+        ("M5x6_phillips_screw", Pos(-60, 0, 0) * pan_phillips(2.9, 6, 5.6, 2.4, span=3.0)),
+        ("M5x6_torx_screw", Pos(0, 0, 0) * _torx_m4(2.80, flutes=True, shank=2.9)),
+        ("M5x6_slotted_screw", Pos(60, 0, 0) * (slotted + Pos(0, 0, -3) * Cylinder(1.45, 6))),
     ]

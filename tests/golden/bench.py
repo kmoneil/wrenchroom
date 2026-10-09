@@ -66,10 +66,11 @@ SLOTS = len(CELLS) + 1
 #: 134 with #115's cross, three cross recesses drawn as makers draw them, 138 with
 #: #121's ring_way_on, 139 with #122's set_sunk, 141 with #124's lobed_recess, 143
 #: with #125's cross_drawn, 149 with #134's head_trap and carriage_trap, two joints
-#: a trapped head holds and two that nothing in turns.
+#: a trapped head holds and two that nothing in turns, 152 with #135's unsized,
+#: three M3s their shanks drawn on no size, under M5 names.
 FINAL_COUNTS = {
-    "fasteners": 149,
-    "turns": 113,
+    "fasteners": 152,
+    "turns": 116,
     "held": 9,
     "blocked": 26,
     "stuck": 1,

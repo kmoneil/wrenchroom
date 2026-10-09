@@ -64,6 +64,7 @@ from wrenchroom.fasteners import (
     spanner_af,
     standard_hex_afs,
     thread_minor_mm,
+    torx_by_point,
 )
 from wrenchroom.report import (
     EngineNote,
@@ -2149,9 +2150,9 @@ def _torx_size(fastener: Fastener) -> tuple[str, str | None]:
         if torx is None:
             raise NotCovered(no_such_head(Head.TORX, size))
         return torx, None
-    held = [t for t, (least, most) in TORX_RECESS_A.items() if least <= measured <= most]
-    if held:
-        return held[0], None
+    held = torx_by_point(measured)
+    if held is not None:
+        return held, None
     loose = [
         t for t, (_, most) in TORX_RECESS_A.items() if most < measured <= most + RECESS_LOOSE_MM
     ]
