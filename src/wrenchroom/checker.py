@@ -970,6 +970,8 @@ def _try_in_state(
     if isinstance(oriented, _Candidate):
         return oriented
     mount, geometry = oriented
+    if partner is not None and partner in assembly.names and partner not in removed:
+        geometry = replace(geometry, through=_through(mount, assembly[partner]))
     candidate = _Candidate(fastener, axis=mount.axis, seat=mount.seat, state=state_name)
     if fastener.self_holding:
         candidate.how = "holds itself"
@@ -1501,6 +1503,9 @@ class _Geometry:
     #: The drive's across-flats as the solid shows it (a hex, a hex socket), read only
     #: where a rule names a tool, which may fit it (issue #72); None elsewhere.
     drawn_af: float | None = None
+    #: How far past the seat the bolt through it reaches, along the axis: what a
+    #: ring must clear before it comes in from the side (issue #121). 0 for none.
+    through: float = 0.0
 
     @property
     def band_height(self) -> float:
@@ -1529,6 +1534,16 @@ def _orient(frame: _Frame, fastener: Fastener, scene: Scene) -> tuple[Mount, _Ge
             drawn_af=_drawn_af(frame, fastener),
         ),
     )
+
+
+def _through(mount: Mount, bolt: Part) -> float:
+    """How far past the seat a fastener's partner reaches along its axis, 0 if not past.
+
+    A nut's bolt sticks out of its free face, and a ring comes down over its
+    end (issue #121). A hex head's partner, its nut, is on the far side: 0.
+    """
+    ends = [_dot(_sub(tuple(v), mount.seat), mount.axis) for v in bolt.shape.vertices()]
+    return max([0.0, *ends])
 
 
 def _drawn_af(frame: _Frame, fastener: Fastener) -> float | None:
@@ -2149,7 +2164,9 @@ def _spanner_ends(
     band = (geometry.band_top, geometry.band_bottom)
     if "ring" in ends:
         if _gets_over(geometry, af):
-            yield from ring_attempts(mount, spanner, af, band, scene, step, hand)
+            yield from ring_attempts(
+                mount, spanner, af, band, scene, step, hand, through=geometry.through
+            )
         else:  # the ways a ring would try: no stubby where none is made (issue #49)
             ways = _RING_WAYS if spanner.stubby_length is not None else _RING_WAYS[:1]
             yield from _cannot_get_on(mount, af, geometry, spanner.label, ways)
