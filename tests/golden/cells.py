@@ -2448,3 +2448,35 @@ def ring_way_on():
             (f"{tag}_cover", Pos(x, 0, 0) * slab(6.5 + gap, w=60, d=60)),
         ]
     return parts
+
+
+#: M3's minor, ISO 724's d3, 3 - 1.226869 x 0.5: a tapped hole as the bench draws one.
+_M3_MINOR = 2.387
+
+
+@cell(
+    "set_sunk",
+    [{"parts": "screw", "kind": "screw", "head": "set", "size": "M3"}],
+    {"screw": {"verdict": "blocked", "tool": "hex-key-1.5", "blocked_by": ["hub"]}},
+)
+def set_sunk():
+    """A set screw's thread is no clash (issue #122). An M3x4 set screw, its socket
+    up, z -5 to -1, in a hub tapped at the minor (2.387) that stops 0.5 over it: the
+    hub's own skin closes over the screw, and stops the key. The screw is all thread,
+    drawn at its nominal: the hub's ring round it, 10.4 mm^3, used to be told as a
+    clash, "drawn into hub", where the hub blocks the key.
+    """
+    hub = Pos(0, 0, -10) * Box(30, 30, 20) - Pos(0, 0, -10.25) * Cylinder(_M3_MINOR / 2, 19.5)
+    return [("hub", hub), ("screw", Pos(0, 0, -1) * set_screw())]
+
+
+@cell("set_core", ignore=["*set_core_*"], timed=False)
+def set_core():
+    """A set screw's core is a clash (issue #122): an M3x4 set screw, z -5 to -1, in
+    a hub whose hole is drawn 2.0 across, inside the screw's minor, closed 0.5 over
+    it. Its core runs to 1.1434 (the minor's 1.1934, less 0.05): the hub inside it,
+    pi (1.1434^2 - 1) 4 = 3.87 mm^3, is drawn into the screw. Not covered, so only
+    the edges sidecar keeps it, as drawn_in's.
+    """
+    hub = Pos(0, 0, -10) * Box(30, 30, 20) - Pos(0, 0, -10.25) * Cylinder(1.0, 19.5)
+    return [("hub", hub), ("screw", Pos(0, 0, -1) * set_screw())]

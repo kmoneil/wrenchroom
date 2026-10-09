@@ -62,6 +62,7 @@ from wrenchroom.fasteners import (
     no_such_head,
     spanner_af,
     standard_hex_afs,
+    thread_minor_mm,
 )
 from wrenchroom.report import (
     EngineNote,
@@ -1162,6 +1163,10 @@ _REGION_MIN = 0.1
 #: a thread drawn at its nominal in a hole drawn at its minor overlaps inside it.
 _SHANK_SLACK = 0.05
 
+#: A set screw of no stated size is taken as drawn at its nominal, this many times
+#: its minor: no coarse thread's is more (M1.6's 1.37, #0's 1.38; issue #122).
+_NOMINAL_PAST_MINOR = 1.4
+
 
 def _measured(frame: _Frame, fastener: Fastener, toward: Vec | None = None) -> tuple[Shape, Shape]:
     """What of a fastener a clash is measured on, and what of that is past its thread.
@@ -1173,8 +1178,12 @@ def _measured(frame: _Frame, fastener: Fastener, toward: Vec | None = None) -> t
     hole, often drawn at the nominal diameter in a tapped hole drawn at the minor:
     a thread, never measured. Nor, for deciding, is the region within
     :data:`_THREAD_REACH` of a bore. The widest region alone would miss a hex on a
-    flange wider than it by a third, the hex alone a flange.
+    flange wider than it by a third, the hex alone a flange. A set screw is all
+    thread: its core (:func:`_set_core`).
     """
+    if fastener.kind is Kind.SCREW and fastener.head is Head.SET:
+        core = _set_core(frame, fastener)
+        return core, core
     hex_low, hex_high = _band(frame.projections, frame.radials, frame.flats)
     wide_low, wide_high = _band(frame.projections, frame.radials)
     low, high = min(hex_low, wide_low), max(hex_high, wide_high)
@@ -1192,6 +1201,26 @@ def _measured(frame: _Frame, fastener: Fastener, toward: Vec | None = None) -> t
     under = Plane(origin=frame.point_at(low - 1.0), z_dir=frame.direction)
     thread = Solid.make_cylinder(frame.bore * _THREAD_REACH, high - low + 2.0, under)
     return region, region - thread
+
+
+def _set_core(frame: _Frame, fastener: Fastener) -> Shape:
+    """A set screw's core, for a clash: all of it inside its thread (issue #122).
+
+    A set screw has no head and no shank: it is all thread, drawn at its nominal
+    in a hole drawn at its minor, as any thread is. The ring between, its whole
+    length, is the thread, no clash, as a screw's shank isn't (#116); inside its
+    minor diameter is the screw itself, and a part drawn there is drawn into it.
+    """
+    drawn = max(frame.radials)
+    if fastener.size is not None:
+        minor = thread_minor_mm(fastener.size) / 2
+    else:
+        minor = drawn / _NOMINAL_PAST_MINOR
+    low, high = min(frame.projections), max(frame.projections)
+    plane = Plane(origin=frame.point_at(low - 1.0), z_dir=frame.direction)
+    core = Solid.make_cylinder(min(minor, drawn) - _SHANK_SLACK, high - low + 2.0, plane)
+    found = frame.part.shape & core
+    return found if found is not None else core  # for the types: the core is its own
 
 
 def _head_region(
