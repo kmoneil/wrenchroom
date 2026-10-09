@@ -180,8 +180,8 @@ def test_imperial_home_covers_nothing_metric_but_drivers(inch_json, bench_json):
         assert entry["reason"].startswith("needs "), name
         assert "which kit imperial-home does not hold" in entry["reason"], name
         assert "in," not in entry["reason"].split(", which")[0], name  # metric tools named
-    # The carriage bolt, the well nut, the T-nut, the boss insert, the five Phillips
-    # screws (std's since issue #95, misnamed's since #117, cross's M3 since #115),
-    # grip's three turned by hand (issue #96) and trap's three nuts its blocks hold
-    # (issue #93).
-    assert unsized == 15
+    # The carriage bolt, the well nut, the T-nut, the boss insert, the seven Phillips
+    # screws (std's since issue #95, misnamed's since #117, cross's M3 since #115,
+    # cross_drawn's two since #125), grip's three turned by hand (issue #96) and
+    # trap's three nuts its blocks hold (issue #93).
+    assert unsized == 17

@@ -140,6 +140,15 @@ A Torx head takes the size its thread's standard gives (M6 T30), unless its rule
 size whose ISO 10664 recess holds it (an M8 pan head drawn for T40, as some makers
 sell them, where the standards say T45).
 
+A Phillips head likewise takes the number its thread's standard gives (M4 PH2),
+unless its cross's span across its wings, as drawn or as its rule's `across_flats:`,
+sits in another number's range: the recess's m, its diameter at the head's face, in
+ISO 7045, 7046, 7049 and 7050, types H and Z (PH0 1.6 to 2.1, PH1 2.5 to 3.2, PH2 3.9
+to 5.2, PH3 6.2 to 6.9, PH4 8.5 to 10.1). Then the driver fits the cross drawn, and
+the result says so (`cross drawn for PH1 (3.00 across its wings), where an M4's
+standard gives PH2: taken as drawn`). A span between two ranges says nothing, and
+the thread's number stands (issue #125).
+
 A sidecar rule still describes a part outright, `across_flats:` gives a hex its
 measured size, and `checks: {detect: false}` turns detection off. With every
 fastener rule removed, the golden bench's described fasteners are all found with the

@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 141,
-  "turns": 107,
+  "fasteners": 143,
+  "turns": 109,
   "held": 8,
   "blocked": 23,
   "stuck": 1,
@@ -614,6 +614,68 @@
    ],
    "source": "name+geometry",
    "tool": "driver-ph0",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "cross_drawn_m4_screw",
+   "kind": "screw",
+   "head": "phillips",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    -40.0,
+    16000.0,
+    3.1
+   ],
+   "source": "name+geometry",
+   "tool": "driver-ph1",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "cross drawn for PH1 (3.00 across its wings), where an M4's standard gives PH2: taken as drawn"
+   ]
+  },
+  {
+   "name": "cross_drawn_m5_screw",
+   "kind": "screw",
+   "head": "phillips",
+   "size": "M5",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    40.0,
+    16000.0,
+    3.8
+   ],
+   "source": "name+geometry",
+   "tool": "driver-ph2",
    "verdict": "turns",
    "how": "driver straight in",
    "swing_deg": 360.0,
@@ -4110,7 +4172,7 @@
     1.0
    ],
    "seat": [
-    -100.0,
+    900.0,
     16000.0,
     6.0
    ],
@@ -4142,7 +4204,7 @@
     1.0
    ],
    "seat": [
-    100.0,
+    1100.0,
     16000.0,
     6.0
    ],

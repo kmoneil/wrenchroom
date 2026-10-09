@@ -226,8 +226,12 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
         length_mm=length,
         socket_allowed=hint.socket_allowed,
         tool=HAND if hint.by_hand else None,
-        # A Torx recess's point to point decides its key, as a rule's does (#82, #124).
-        drive_af=reading.drive_af if reading.torx_mm is None else reading.torx_mm,
+        # A Torx recess's point to point decides its key, as a rule's does (#82, #124),
+        # and a cross's span its driver (#125).
+        drive_af=next(
+            (af for af in (reading.drive_af, reading.torx_mm, reading.cross_mm) if af),
+            None,
+        ),
         source="name+geometry" if used else "name",
         basis=basis,
         not_covered=not_covered,

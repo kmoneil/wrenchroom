@@ -252,6 +252,7 @@ def test_a_nut_drawn_small_says_so_and_where_its_size_came_from(detected):
         "misnamed_M5x16_screw",  # drawn as M3s (issue #117)
         "misnamed_M5x12_phillips_screw",
         "misnamed_M5_nut",
+        "cross_drawn_m4_screw",  # its cross drawn for PH1 (issue #125)
     }
 
 

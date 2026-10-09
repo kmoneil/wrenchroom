@@ -30,12 +30,13 @@ def button_screw(d=6, length=16, dk=10.5, k=3.3, s=4, t=2.3):
     return head + shank - hex_prism(s, t + 0.01, k - t)
 
 
-def pan_phillips(d=4, length=12, dk=8, k=3.1):
-    """ISO 7045-ish pan head with a PH2 cross recess."""
+def pan_phillips(d=4, length=12, dk=8, k=3.1, span=4.4):
+    """ISO 7045-ish pan head with a cross recess ``span`` across: PH2's, an M4's, unless
+    said (the span picks the driver, issue #125)."""
     head = Pos(0, 0, k / 2) * Cylinder(dk / 2, k)
     head = fillet(head.edges().sort_by(Axis.Z)[-1:], 1.0)
     shank = Pos(0, 0, -length / 2) * Cylinder(d / 2, length)
-    cross = Pos(0, 0, k - 1) * (Box(4.4, 1, 2.01) + Box(1, 4.4, 2.01))
+    cross = Pos(0, 0, k - 1) * (Box(span, 1, 2.01) + Box(1, span, 2.01))
     return head + shank - cross
 
 

@@ -60,6 +60,7 @@ from wrenchroom.fasteners import (
     in_recess_band,
     loosely_fits,
     no_such_head,
+    phillips_by_span,
     spanner_af,
     standard_hex_afs,
     thread_minor_mm,
@@ -1765,13 +1766,7 @@ def _attempts_for(
     if fastener.head in _KEYED_HEADS:
         return _keyed_attempts(fastener, mount, scene, tools)
     if fastener.head is Head.PHILLIPS:
-        size = _known_size(fastener)
-        number = PHILLIPS_NUMBER.get(size.designation)
-        if number is None:
-            raise NotCovered(
-                f"ISO 7045 and ASME B18.6.3 give no Phillips number for {size.designation}"
-            )
-        return _drivers(f"ph{number}", mount, scene, tools)
+        return _drivers(f"ph{_phillips(fastener)[0]}", mount, scene, tools)
     if fastener.head is Head.SLOTTED:
         return _drivers("slotted", mount, scene, tools)
     if fastener.head is Head.TORX:
@@ -1831,6 +1826,38 @@ def _drivers_held(
 def _custom_driver(custom: CustomDriver, mount: Mount, scene: Scene, tools: _Tools) -> Attempt:
     radius, length = custom.shaft_radius, custom.shaft_length
     return driver_attempt(mount, scene, radius, custom.name, tools.hand_room, length)
+
+
+def _phillips(fastener: Fastener) -> tuple[int, str | None]:
+    """The Phillips number a cross takes, and a note where it is drawn for another.
+
+    Its span across its wings, as drawn or as a rule's ``across_flats:`` gives it,
+    decides where it sits in one number's range (:data:`PHILLIPS_SPAN`, issue #125),
+    as a socket's across flats decides its key: the driver must fit the recess
+    drawn. Drawn for another number than its thread's standard gives, it is taken as
+    drawn, and noted. Else, or drawn between two numbers' ranges, the thread's
+    number, by ISO 7045 and ASME B18.6.3.
+    """
+    span, size = fastener.drive_af, fastener.size
+    by_size = PHILLIPS_NUMBER.get(size.designation) if size is not None else None
+    drawn = phillips_by_span(span) if span is not None else None
+    if drawn is not None:
+        if by_size is None or by_size == drawn:
+            return drawn, None
+        assert size is not None  # noqa: S101  (by_size came from it)
+        return drawn, (
+            f"cross drawn for PH{drawn} ({span:.2f} across its wings), where "
+            f"{'an' if size.designation.startswith('M') else 'a'} {size.designation}'s "
+            f"standard gives PH{by_size}: taken as drawn"
+        )
+    if by_size is not None:
+        return by_size, None
+    between = f"a cross {span:.2f} across its wings is no Phillips number's, and " if span else ""
+    if size is None:
+        raise NotCovered(f"{between}size unknown: name it in the sidecar")
+    raise NotCovered(
+        f"{between}ISO 7045 and ASME B18.6.3 give no Phillips number for {size.designation}"
+    )
 
 
 def _known_size(fastener: Fastener) -> Size:
@@ -2004,9 +2031,10 @@ def _drive_notes(fastener: Fastener) -> tuple[str, ...]:
     """
     if fastener.tool is not None or fastener.drive_af is None:
         return ()
-    if fastener.head is Head.TORX:
+    if fastener.head in (Head.TORX, Head.PHILLIPS):
+        sized = _torx_size if fastener.head is Head.TORX else _phillips
         try:
-            note = _torx_size(fastener)[1]
+            note = sized(fastener)[1]
         except NotCovered:
             return ()
         return (note,) if note else ()
@@ -2488,18 +2516,18 @@ def _fastener_drive(fastener: Fastener, tools: _Tools) -> _Drive | None:
 
 def _drive_size(kind: str, fastener: Fastener, tools: _Tools) -> float | str | None:
     """The size the unforced check would choose for a drive; None where it couldn't."""
-    known = fastener.size.designation if fastener.size is not None else ""
     if kind == "flats":
         return _quietly(_flats_af, fastener, tools)
     if kind == "key":
         return _quietly(_key_af, fastener, tools)
-    if kind == "torx":
-        try:
+    if kind not in ("torx", "phillips"):
+        return None
+    try:
+        if kind == "torx":
             return _torx_size(fastener)[0]  # its recess's, where given (issue #82)
-        except NotCovered:
-            return None
-    number = PHILLIPS_NUMBER.get(known) if kind == "phillips" else None
-    return None if number is None else f"ph{number}"
+        return f"ph{_phillips(fastener)[0]}"  # its cross's, where drawn (issue #125)
+    except NotCovered:
+        return None
 
 
 def _called(what: str, size: Size | None) -> str:

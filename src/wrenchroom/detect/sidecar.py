@@ -28,6 +28,7 @@ import yaml
 
 from wrenchroom import __version__
 from wrenchroom.fasteners import (
+    PHILLIPS_NUMBER,
     TORX_RECESS_A,
     TORX_SIZE,
     Fastener,
@@ -35,6 +36,7 @@ from wrenchroom.fasteners import (
     Kind,
     PassedOver,
     hex_key_af,
+    phillips_by_span,
     spanner_af,
 )
 from wrenchroom.terminal import UNSAFE, printable
@@ -134,10 +136,15 @@ def _table_agrees(fastener: Fastener) -> bool:
     """True when the size's table gives the measured across-flats anyway.
 
     A Torx recess's is its point to point (issue #124): the table agrees where its
-    thread's Torx size's ISO 10664 band holds it.
+    thread's Torx size's ISO 10664 band holds it. A cross's is its span across its
+    wings (issue #125): the table agrees where it says its thread's Phillips number,
+    or none.
     """
     if fastener.size is None or fastener.drive_af is None:
         return False
+    if fastener.head is Head.PHILLIPS:
+        drawn = phillips_by_span(fastener.drive_af)
+        return drawn is None or drawn == PHILLIPS_NUMBER.get(fastener.size.designation)
     if fastener.head is Head.TORX:
         torx = TORX_SIZE.get(fastener.size.designation)
         least, most = TORX_RECESS_A[torx] if torx is not None else (math.inf, -math.inf)

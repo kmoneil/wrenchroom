@@ -902,3 +902,25 @@ PHILLIPS_NUMBER: dict[str, int] = {
     "#12": 3,
     "1/4": 3,
 }
+
+#: A cross recess's m, its diameter at the head's face, by Phillips number, mm: the
+#: least and most the cross-recessed product standards give, types H and Z both, read
+#: from fasten.it's copies 2026-10-08 (issue #125): ISO 7045 (pan, M1.6 to M10), ISO
+#: 7046 (countersunk, both head forms, M2 to M10), ISO 7049 and 7050 (pan and
+#: countersunk tapping screws, ST2.2 to ST9.5). The numbers' ranges don't meet: a span
+#: drawn between two is neither's.
+PHILLIPS_SPAN: dict[int, tuple[float, float]] = {
+    0: (1.6, 2.1),
+    1: (2.5, 3.2),
+    2: (3.9, 5.2),
+    3: (6.2, 6.9),
+    4: (8.5, 10.1),
+}
+
+
+def phillips_by_span(span: float) -> int | None:
+    """The Phillips number whose recesses are this span across their wings, if one."""
+    return next(
+        (n for n, (least, most) in PHILLIPS_SPAN.items() if least - 1e-6 <= span <= most + 1e-6),
+        None,
+    )
