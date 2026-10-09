@@ -373,6 +373,11 @@ build:                           # the order it's built in: see below
   - step: rest
     add: ["*"]                   # every part no other step adds
 
+connectors:                      # plugs that must come off: see below
+  - parts: "motor_plug_*"
+    mates: ["motor_cable_*"]     # its cable comes with it
+    latch: +y                    # the side its release is pressed from
+
 tools:                           # tools your kit doesn't have
   - name: stubby-key-5
     type: hex-key
@@ -442,6 +447,31 @@ A joint is checked when its last part arrives: a bolt may go in before its nut, 
 by its tool. A nut put in before its bolt is held by nothing, unless it sits in a
 trap or is a fixed thread, and fails the run as a sidecar mistake does (exit 2), as
 does a part no step adds, or two do. Details are in the [reference](https://github.com/kmoneil/wrenchroom/blob/main/docs/reference.md#build-order).
+
+### Connectors
+
+A plug must come off its receptacle: pulled straight out, far enough to be free, with
+nothing in the way. `check` checks each plug the sidecar's `connectors:` names, and
+each part whose name is about a plug (`motor_plug`). It finds what the plug sits in,
+which way it comes out, and how far, from the geometry, and says so where it can't:
+
+```yaml
+# wrenchroom.yaml
+connectors:
+  - parts: "fan_plug_*"
+    mates: ["fan_cable_*"]       # its cable comes with it, and is in nobody's way
+  - parts: battery_plug
+    axis: +x                     # where the geometry can't tell which way it comes out
+    travel: 12                   # mm
+    latch: +z                    # the side its release is pressed from
+```
+
+A plug with something in its way is `stuck`, naming it. With `--hand-room` the fingers
+must have room to grip it and a thumb to press its latch (`no grip`, `no latch
+access`): untuned figures, off by default, as the hand on a tool's handle is. A part
+named for a connector family or a connector word (XT60, JST, header, jack) is listed,
+not checked: its name doesn't say which half comes off, and in most models it is the
+half on a board. Details are in the [reference](https://github.com/kmoneil/wrenchroom/blob/main/docs/reference.md#connectors).
 
 ## Tool kits
 
@@ -552,7 +582,8 @@ Every rule and figure, with the standards and the reasoning, is in
 ## What it doesn't check
 
 - **Room for a hand** is off by default (`--hand-room` turns it on): its figures
-  aren't yet tuned against real hands. Every report says what it didn't check.
+  aren't yet tuned against real hands. It covers the fingers on a plug as well. Every
+  report says what it didn't check.
 - **Clashes** are off inside `check` by default (`--clashes` turns them on): a model
   drawn with shortcuts (a press fit, a thread drawn into a part that isn't a
   fastener) would fail every run. `wrenchroom clashes` lists them on its own.

@@ -34,7 +34,37 @@ from wrenchroom.assembly import Assembly, Part
 from wrenchroom.build import Build, Placed, Plan
 from wrenchroom.build import plan as plan_build
 from wrenchroom.clashes import Clashes, Measured, scan
-from wrenchroom.config import Config, ConfigError, is_mate
+from wrenchroom.config import (
+    Config,
+    ConfigError,
+    ConnectorMatches,
+    ConnectorRule,
+    Grip,
+    is_mate,
+)
+from wrenchroom.connectors import (
+    TRAVEL_MARGIN,
+    Body,
+    ConnectorResult,
+    Connectors,
+    ConnectorVerdict,
+    Named,
+    Unclear,
+    body_of,
+    engaged_length,
+    face_directions,
+    find_receptacle,
+    fist,
+    holds_in,
+    pinch,
+    plug_shape,
+    pull_axis,
+    pull_path,
+    read_connector_name,
+    said_direction,
+    thumb,
+    touching,
+)
 from wrenchroom.detect import find
 from wrenchroom.detect.geometry import read_shape, wide_end
 from wrenchroom.engine import (
@@ -230,12 +260,17 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     ]
     if only is not None:
         passed_over = tuple(p for p in passed_over if fnmatchcase(p.name, only))
+    plugged, plugs, named = _plugs(assembly, config, {f.name for f in every_fastener})
+    chosen_plugs = {
+        name: found for name, found in plugs.items() if only is None or fnmatchcase(name, only)
+    }
     # A narrowing glob that picks nothing checks nothing: as with a sidecar rule
     # that matches nothing, that is how a renamed part hides, so the run says so
     # and exits 2 rather than passing (issue #20).
+    what = "fastener or connector" if plugs else "fastener"
     only_warnings = (
-        [f"only glob {only!r} matched no fastener (renamed part?)"]
-        if only is not None and not chosen
+        [f"only glob {only!r} matched no {what} (renamed part?)"]
+        if only is not None and not chosen and not chosen_plugs
         else []
     )
     # A mate that names nothing leaves its part in the scene, and the fastener
@@ -269,6 +304,11 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     if config.build:
         steps = plan_build(config.build, assembly, config.is_ignored)
         built = _build_run(space, steps, fasteners, frames, failures, pairs, reported, tools)
+    connected = None
+    if plugs or named or config.connectors:
+        connected = _connector_run(
+            space, config, plugged, chosen_plugs, named, default_state, tools.hand_room
+        )
     clashed = None
     if config.clashes if clashes is None else clashes:
         clashed = _clash_run(space, config, every_fastener, pairs)
@@ -300,6 +340,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         hand_room=tools.hand_room,
         clashes=clashed,
         build=built,
+        connectors=connected,
         models=models,
         ignored=frozenset(
             part.name
@@ -464,6 +505,201 @@ def _measuring(frame: _Frame, fastener: Fastener, bolt: Part | None) -> Callable
 #: Two fasteners sharing more than this fraction of each one's volume are one drawn
 #: twice (issue #94): a screw drawn once for each of two optional parts, say.
 _TWICE = 0.5
+
+
+# ---------------------------------------------------------------------------
+# Connectors (M9): each plug pulled off its receptacle.
+# ---------------------------------------------------------------------------
+
+
+def _plugs(
+    assembly: Assembly, config: Config, fasteners: set[str]
+) -> tuple[ConnectorMatches, dict[str, tuple[ConnectorRule, str]], tuple[str, ...]]:
+    """The plugs to check, with what the sidecar's ``connectors:`` matched.
+
+    Returned with each plug's rule and where it came from, and the parts named like
+    connectors that aren't checked. The sidecar's first; then, with detection on, a
+    part whose name is about a plug. A connector word or a family's code names no half,
+    and is listed. A fastener is no connector.
+    """
+    matches = config.apply_connectors(assembly)
+    found = {name: (rule, "sidecar") for name, rule in matches.rules.items()}
+    named: list[str] = []
+    if config.detect:
+        for part in assembly:
+            if part.piece_of is not None or part.name in found or part.name in fasteners:
+                continue
+            if config.is_ignored(part.name):
+                continue
+            reading = read_connector_name(part.name)
+            if reading is Named.PLUG:
+                found[part.name] = (ConnectorRule(parts=part.name), "name")
+            elif reading is Named.CONNECTOR:
+                named.append(part.name)
+    return matches, found, tuple(named)
+
+
+def _connector_run(
+    space: _StateSpace,
+    config: Config,
+    matches: ConnectorMatches,
+    plugs: dict[str, tuple[ConnectorRule, str]],
+    named: tuple[str, ...],
+    default_state: str | None,
+    hand_room: bool,
+) -> Connectors:
+    """Each plug pulled off its receptacle, in its state, retried in ``try_states``.
+
+    With hand room on, the fingers must have room to grip it, and a thumb its latch.
+    The parts named like connectors are listed, but for the receptacles of the plugs
+    checked: those are accounted for.
+    """
+    results = [
+        _check_connector(name, rule, source, space, config, default_state, hand_room)
+        for name, (rule, source) in sorted(plugs.items())
+    ]
+    held = {part for result in results for part in result.receptacle}
+    return Connectors(
+        tuple(results),
+        matches.unmatched_rules,
+        matches.unmatched_mates,
+        tuple(name for name in named if name not in held),
+        grip_checked=hand_room,
+    )
+
+
+def _check_connector(
+    name: str,
+    rule: ConnectorRule,
+    source: str,
+    space: _StateSpace,
+    config: Config,
+    default_state: str | None,
+    hand_room: bool,
+) -> ConnectorResult:
+    """One plug, in its own state, then each of ``try_states`` until it comes off."""
+    own = rule.state if rule.state is not None else default_state
+    order: list[str | None] = [own, *(s for s in config.try_states if s != own)]
+    first: ConnectorResult | None = None
+    for index, state_name in enumerate(order):
+        where = (state_name, space, config)
+        result = _connector_in_state(name, rule, source, where, hand_room)
+        if first is None:
+            first = result
+        if result.passed or (index == 0 and result.verdict is ConnectorVerdict.NOT_COVERED):
+            return result
+    assert first is not None  # noqa: S101  (order always holds its own state)
+    return first
+
+
+def _connector_in_state(
+    name: str,
+    rule: ConnectorRule,
+    source: str,
+    where: tuple[str | None, _StateSpace, Config],
+    hand_room: bool,
+) -> ConnectorResult:
+    """One plug in one state: its seat, its pull path, then, with hand room, its grip."""
+    state_name, space, config = where
+    assembly, removed, _ = space.resolve(state_name)
+    if name not in assembly.names:
+        reason = f"not in state {state_name!r}, whose model has no part of its name (renamed?)"
+        return ConnectorResult(name, ConnectorVerdict.NOT_COVERED, source, reason=reason)
+    own = {name, *assembly.pieces(name)}
+    mates = {n for n in assembly.names if is_mate(n, rule.mates)} if rule.mates else set()
+    shape = plug_shape([assembly[n] for n in (name, *assembly.pieces(name))])
+    others = [
+        part
+        for part in assembly
+        if part.name not in own | mates | removed and not _ignored(config, part)
+    ]
+    try:
+        receptacle, axis, travel, engaged = _seat(shape, rule, others, space.engine)
+    except Unclear as exc:
+        return ConnectorResult(
+            name, ConnectorVerdict.NOT_COVERED, source, reason=str(exc), state=state_name
+        )
+    held = tuple(part.name for part in receptacle)
+    scene = space.scene(assembly, own | mates | removed | set(held))
+    found = ConnectorResult(
+        name,
+        ConnectorVerdict.UNPLUGS,
+        source,
+        held,
+        axis,
+        travel,
+        state=state_name,
+        grip=rule.grip.value if hand_room else None,
+        latch=rule.latch,
+    )
+    drawn = scene.hits(shape)
+    if drawn:  # a plug drawn into a part as it stands: a cable, or a fault (issue #63)
+        reason = (
+            f"drawn into {listed(drawn)} as it stands: its cable belongs in its mates, "
+            "anything else is a fault in the model to fix"
+        )
+        return replace(found, verdict=ConnectorVerdict.NOT_COVERED, reason=reason)
+    blockers = pull_path(shape, axis, travel, scene)
+    if blockers:
+        return replace(found, verdict=ConnectorVerdict.STUCK, blockers=blockers)
+    if not hand_room:
+        return found
+    # Its receptacle stays: fingers start past it, and meet it only where it stands up
+    # round the plug, where no fingers fit.
+    room = space.scene(assembly, own | mates | removed)
+    return _fingers(found, body_of(shape, axis, engaged), rule, room)
+
+
+def _fingers(
+    found: ConnectorResult, body: Body, rule: ConnectorRule, room: Scene
+) -> ConnectorResult:
+    """A plug that comes off, its fingers tried: room to grip it, then to press its latch."""
+    gripped, met = (pinch if rule.grip is Grip.PINCH else fist)(body, room)
+    if not gripped:
+        return replace(found, verdict=ConnectorVerdict.NO_GRIP, blockers=met)
+    if rule.latch is not None:
+        pressed = thumb(body, rule.latch, room)
+        if pressed:
+            return replace(found, verdict=ConnectorVerdict.NO_LATCH, blockers=pressed)
+    return found
+
+
+def _seat(
+    shape: Shape, rule: ConnectorRule, others: list[Part], engine: Engine
+) -> tuple[tuple[Part, ...], Vec, float, float]:
+    """What a plug is plugged into, which way it comes off, how far, and how far it is in.
+
+    Each given, or found.
+
+    Raises:
+        Unclear: When the geometry can't say, with what the sidecar should give.
+    """
+    directions = face_directions(shape)
+    if rule.receptacle is not None:
+        receptacle = tuple(part for part in others if fnmatchcase(part.name, rule.receptacle))
+        if not receptacle:
+            msg = f"its receptacle glob {rule.receptacle!r} names no part (renamed part?)"
+            raise Unclear(msg)
+        held = set().union(*(holds_in(shape, part, directions, engine) for part in receptacle))
+    else:
+        near = touching(shape, others, engine)
+        if not near and rule.axis is not None and rule.travel_mm is not None:
+            return (), rule.axis, rule.travel_mm, 0.0  # plugged into nothing drawn: as given
+        part, held = find_receptacle(shape, near, directions, engine)
+        receptacle = (part,)
+    names = listed(tuple(part.name for part in receptacle))
+    if rule.axis is None:
+        axis = pull_axis(directions, held, names)
+    else:
+        axis = rule.axis
+        if any(holds_in(shape, part, [axis], engine) for part in receptacle):
+            msg = f"its axis {said_direction(axis)} runs into {names}: which way does it come off?"
+            raise Unclear(msg)
+    engaged = engaged_length(shape, receptacle, axis)
+    travel = rule.travel_mm
+    if travel is None:  # to 0.1 mm: the margin is 3, and a report reads 10.0, not 10.0156
+        travel = round(engaged + TRAVEL_MARGIN, 1)
+    return receptacle, axis, travel, engaged
 
 
 def _with_notes(result: FastenerResult) -> FastenerResult:

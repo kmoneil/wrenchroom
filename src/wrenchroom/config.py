@@ -36,7 +36,18 @@ if TYPE_CHECKING:
 
     from wrenchroom.assembly import Assembly
 
-_SUPPORTED_TOP = {"fasteners", "ignore", "pairs", "states", "checks", "tools", "allow", "build"}
+_SUPPORTED_TOP = {
+    "fasteners",
+    "ignore",
+    "pairs",
+    "states",
+    "checks",
+    "tools",
+    "allow",
+    "build",
+    "connectors",
+}
+_CONNECTOR_KEYS = {"parts", "axis", "travel", "grip", "latch", "mates", "receptacle", "state"}
 _STATE_KEYS = {"remove", "base", "model"}
 _STEP_KEYS = {"step", "add", "model"}
 _CHECKS_KEYS = {"default_state", "try_states", "detect", "hand_room", "clashes"}
@@ -93,6 +104,40 @@ class StateDef:
     model: str | None = None
 
 
+class Grip(enum.StrEnum):
+    """How a plug is gripped to pull it: two fingers either side, or a fist round it."""
+
+    PINCH = "pinch"
+    HAND = "hand"
+
+
+@dataclass(frozen=True)
+class ConnectorRule:
+    """One ``connectors:`` entry: a part glob, and how its plug comes off.
+
+    ``axis`` and ``travel`` are found from the geometry where they are None (``auto``),
+    and so is ``receptacle``, a glob, the part it plugs into.
+    """
+
+    parts: str
+    axis: tuple[float, float, float] | None = None
+    travel_mm: float | None = None
+    grip: Grip = Grip.PINCH
+    latch: tuple[float, float, float] | None = None
+    mates: tuple[str, ...] = ()
+    receptacle: str | None = None
+    state: str | None = None
+
+
+@dataclass(frozen=True)
+class ConnectorMatches:
+    """What the ``connectors:`` rules found in an assembly, and what they didn't."""
+
+    rules: dict[str, ConnectorRule]
+    unmatched_rules: tuple[str, ...] = ()
+    unmatched_mates: tuple[tuple[str, str], ...] = ()
+
+
 @dataclass(frozen=True)
 class BuildStep:
     """One ``build:`` step: the parts it adds, and the model it is checked in.
@@ -134,6 +179,8 @@ class Config:
     #: The build, in order (M8): each fastener is checked in the step that adds it,
     #: among the parts added by then. Empty when the sidecar has none.
     build: tuple[BuildStep, ...] = ()
+    #: The plugs to check come off their receptacles (M9), in file order.
+    connectors: tuple[ConnectorRule, ...] = ()
     source: str = "<none>"
     #: The folder the sidecar was read from, when it was read from a file: where a
     #: state's ``model:`` is looked for first (issue #73). None for a mapping.
@@ -183,6 +230,12 @@ class Config:
         )
         states = _parse_states(raw.get("states", {}), source)
         build = _parse_build(raw["build"], source) if "build" in raw else ()
+        connectors = tuple(
+            _parse_connector(entry, index, source)
+            for index, entry in enumerate(
+                _as_list(raw.get("connectors", []), f"{source}: connectors")
+            )
+        )
         default_state, try_states, detect, hand_room, clashes = _parse_checks(
             raw.get("checks", {}), states, source
         )
@@ -191,7 +244,7 @@ class Config:
         except ValueError as exc:
             raise ConfigError(str(exc)) from exc
         state_names = {state.name for state in states}
-        for rule in rules:
+        for rule in (*rules, *connectors):
             if rule.state is not None and rule.state not in state_names:
                 msg = f"{source}: rule {rule.parts!r} names unknown state {rule.state!r}"
                 raise ConfigError(msg)
@@ -208,6 +261,7 @@ class Config:
             allow=allow,
             tools=tools,
             build=build,
+            connectors=connectors,
             source=source,
         )
 
@@ -287,6 +341,35 @@ class Config:
             unmatched_ignores=unmatched_ignores,
             unmatched_mates=tuple(unmatched_mates),
         )
+
+    def apply_connectors(self, assembly: Assembly) -> ConnectorMatches:
+        """Match the ``connectors:`` rules against an assembly's part names.
+
+        As the fastener rules are matched: a later rule replaces an earlier one, whole,
+        for a part both name; a piece of a part drawn as several solids goes with it;
+        an ignored part is no connector; and a glob that matches nothing, a rule's or
+        its mates', is reported.
+        """
+        names = [
+            part.name
+            for part in assembly
+            if part.piece_of is None and not self.is_ignored(part.name)
+        ]
+        found: dict[str, ConnectorRule] = {}
+        unmatched: list[str] = []
+        mates: list[tuple[str, str]] = []
+        for rule in self.connectors:
+            hits = [name for name in names if fnmatchcase(name, rule.parts)]
+            if not hits:
+                unmatched.append(rule.parts)
+            for name in hits:
+                found[name] = rule
+            mates.extend(
+                (rule.parts, glob)
+                for glob in rule.mates
+                if hits and not any(is_mate(name, (glob,)) for name in assembly.names)
+            )
+        return ConnectorMatches(found, tuple(unmatched), tuple(mates))
 
     def is_ignored(self, name: str) -> bool:
         """True when a part name matches an ignore glob (wires, springs: pushed aside)."""
@@ -373,6 +456,42 @@ def _parse_rule(entry: object, index: int, source: str) -> Rule:
         ),
         state=None if entry.get("state") is None else str(entry["state"]),
         drive_af=_parse_positive(entry.get("across_flats"), f"{where}: across_flats"),
+    )
+
+
+def _parse_connector(entry: object, index: int, source: str) -> ConnectorRule:
+    where = f"{source}: connectors[{index}]"
+    if not isinstance(entry, dict):
+        msg = f"{where}: must be a mapping"
+        raise ConfigError(msg)
+    unknown = set(entry) - _CONNECTOR_KEYS
+    if unknown:
+        msg = f"{where}: unknown key(s) {sorted(unknown)}"
+        raise ConfigError(msg)
+    if "parts" not in entry:
+        msg = f"{where}: 'parts' is required"
+        raise ConfigError(msg)
+    axis = _parse_axis(entry.get("axis", AUTO), where)
+    travel = entry.get("travel", AUTO)
+    latch = entry.get("latch")
+    if latch == AUTO:
+        msg = f"{where}: latch is the side its release is pressed from: +x style, or [x, y, z]"
+        raise ConfigError(msg)
+    latch_side = None if latch is None else _parse_axis(latch, f"{where}: latch")
+    return ConnectorRule(
+        parts=_as_str(entry["parts"], f"{where}: parts"),
+        axis=axis if isinstance(axis, tuple) else None,
+        travel_mm=None if travel == AUTO else _parse_positive(travel, f"{where}: travel"),
+        grip=_parse_enum(entry.get("grip"), Grip, f"{where}: grip") or Grip.PINCH,
+        latch=latch_side if not isinstance(latch_side, str) else None,
+        mates=tuple(
+            _as_str(m, f"{where}: mates[{i}]")
+            for i, m in enumerate(_as_list(entry.get("mates", []), f"{where}: mates"))
+        ),
+        receptacle=None
+        if entry.get("receptacle") is None
+        else _as_str(entry["receptacle"], f"{where}: receptacle"),
+        state=None if entry.get("state") is None else str(entry["state"]),
     )
 
 

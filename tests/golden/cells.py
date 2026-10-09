@@ -86,6 +86,10 @@ class Cell:
     steps: dict = field(default_factory=dict)
     #: The build's truth, as truth's, with each fastener's step and checked_in.
     built: dict = field(default_factory=dict)
+    #: Its ``connectors:`` rules (M9), parts, mates and receptacle as its roles.
+    connectors: tuple = ()
+    #: Each connector's truth, as its JSON says it: {role: {key: value}}.
+    plugs: dict = field(default_factory=dict)
 
 
 M6_SOCKET = {"kind": "screw", "head": "socket", "size": "M6"}
@@ -104,6 +108,8 @@ def cell(  # noqa: PLR0913, PLR0917  (one keyword per Cell field)
     raised=None,
     steps=None,
     built=None,
+    connectors=(),
+    plugs=None,
 ):
     def register(build):
         CELLS.append(
@@ -119,6 +125,8 @@ def cell(  # noqa: PLR0913, PLR0917  (one keyword per Cell field)
                 raised,
                 steps or {},
                 built or {},
+                tuple(connectors),
+                plugs or {},
             )
         )
         return build
@@ -2992,4 +3000,129 @@ def build_behind():
         ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(8, 25, 13, 5.3)),
         ("nut", hex_nut(8, 13, 6.8)),
         ("pocket", _pocket(11, head_face - 12, -10) + floor),
+    ]
+
+
+# ---------------------------------------------------------------- M9: connectors
+
+
+def _shroud():
+    """A receptacle 20 by 12, 10 tall, its top at z = 10, a cavity 16 by 8 sunk 7 in it:
+    a board header's shroud."""
+    return Pos(0, 0, 5) * Box(20, 12, 10) - Pos(0, 0, 10 - 3.5) * Box(16, 8, 7.01)
+
+
+def _plug():
+    """A plug 16 by 8 in the shroud's cavity, 7 in and 13 above it: z 3 to 23."""
+    return Pos(0, 0, 13) * Box(16, 8, 20)
+
+
+@cell(
+    "plug_open",
+    connectors=[{"parts": "plug"}],
+    plugs={
+        "plug": {
+            "verdict": "unplugs",
+            "receptacle": ["shroud"],
+            "axis": [0.0, 0.0, 1.0],
+            "travel": 10.0,
+            "blocked_by": [],
+        }
+    },
+)
+def plug_open():
+    """A plug in its shroud on a board, nothing over it. Its shroud holds it every way
+    but up, so it comes off up; it sits 7 in, so it must come 10 (7, plus 3). The board
+    under the shroud holds it in no way: it doesn't touch it.
+    """
+    return [("board", plate(t=2)), ("shroud", _shroud()), ("plug", _plug())]
+
+
+@cell(
+    "plug_shelf",
+    connectors=[{"parts": "plug"}],
+    plugs={
+        "plug": {
+            "verdict": "stuck",
+            "receptacle": ["shroud"],
+            "travel": 10.0,
+            "blocked_by": ["shelf"],
+        }
+    },
+)
+def plug_shelf():
+    """plug_open under a shelf 8 over the plug's top, closer than the 10 it must come:
+    stuck, naming the shelf. 12 over, it would come off.
+    """
+    return [
+        ("board", plate(t=2)),
+        ("shroud", _shroud()),
+        ("plug", _plug()),
+        ("shelf", slab(23 + 8)),
+    ]
+
+
+@cell(
+    "plug_cable",
+    connectors=[{"parts": "plug", "mates": ["lead"]}],
+    plugs={"plug": {"verdict": "unplugs", "receptacle": ["shroud"], "blocked_by": []}},
+)
+def plug_cable():
+    """plug_open with its cable, its lead, 6 across, running 80 up from its top through a
+    hole 7 across in a panel 25 over it. The lead is its mate: it comes with the plug,
+    and is in nobody's way. Without the mate, the lead would leave it stuck. (A lead,
+    not a cable: the bench ignores every part named a cable.)
+    """
+    panel = slab(48, t=4) - Pos(0, 0, 50) * Cylinder(3.5, 5)
+    return [
+        ("board", plate(t=2)),
+        ("shroud", _shroud()),
+        ("plug", _plug()),
+        ("lead", Pos(0, 0, 23 + 40) * Cylinder(3, 80)),
+        ("panel", panel),
+    ]
+
+
+def _column(x, y, width, depth):
+    """A block 30 tall standing on the board, centred at (x, y)."""
+    return Pos(x, y, 15) * Box(width, depth, 30)
+
+
+@cell(
+    "plug_tight",
+    connectors=[{"parts": "plug"}],
+    plugs={"plug": {"verdict": "unplugs", "receptacle": ["shroud"], "blocked_by": []}},
+)
+def plug_tight():
+    """plug_open in a row and a channel: neighbours 2 off either end, walls 3 off either
+    side, all 30 tall. It comes off: nothing is over it. With hand room on, no grip:
+    two fingers 16 across fit at no angle round it, the channel being 14 wide and the
+    row's gaps 2 (test_hand_room_bench.py).
+    """
+    return [
+        ("board", plate(t=2)),
+        ("shroud", _shroud()),
+        ("plug", _plug()),
+        ("left", _column(-15, 0, 10, 12)),
+        ("right", _column(15, 0, 10, 12)),
+        ("near", _column(0, -12, 60, 10)),
+        ("far", _column(0, 12, 60, 10)),
+    ]
+
+
+@cell(
+    "plug_latch",
+    connectors=[{"parts": "plug", "latch": "+y"}],
+    plugs={"plug": {"verdict": "unplugs", "receptacle": ["shroud"], "latch": [0.0, 1.0, 0.0]}},
+)
+def plug_latch():
+    """plug_open with its latch on its +y side, a wall 5 off that side. It comes off,
+    and fingers pinch it from its ends. With hand room on, no latch access: a thumb 18
+    across, pressing the latch, meets the wall (test_hand_room_bench.py).
+    """
+    return [
+        ("board", plate(t=2)),
+        ("shroud", _shroud()),
+        ("plug", _plug()),
+        ("wall", _column(0, 4 + 5 + 5, 60, 10)),
     ]

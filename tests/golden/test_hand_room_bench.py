@@ -110,3 +110,27 @@ def test_the_note_stops_listing_hand_room(hand_report, bench_report):
         "solid (left out); parts the model doesn't have"
     )
     assert "room for a hand" in bench_report.terminal_lines()[-1]
+
+
+#: What hand room takes from the bench's connectors (M9): fingers don't fit round
+#: plug_tight's plug, nor a thumb on plug_latch's latch. Each comes off without.
+PLUGS = {
+    "plug_tight_plug": (
+        "no-grip",
+        {"plug_tight_left", "plug_tight_right", "plug_tight_near", "plug_tight_far"},
+    ),
+    "plug_latch_plug": ("no-latch-access", {"plug_latch_wall"}),
+}
+
+
+def test_hand_room_takes_the_plugs_fingers_don_t_fit(hand_report, bench_report):
+    hand = {c.name: c for c in hand_report.connectors.results}
+    plain = {c.name: c for c in bench_report.connectors.results}
+    assert hand_report.connectors.grip_checked
+    assert not bench_report.connectors.grip_checked
+    changed = {name for name in hand if hand[name].verdict != plain[name].verdict}
+    assert changed == set(PLUGS)
+    for name, (verdict, met) in PLUGS.items():
+        assert plain[name].verdict.value == "unplugs", name
+        assert (hand[name].verdict.value, set(hand[name].blockers)) == (verdict, met), name
+    assert {c.grip for c in hand.values()} == {"pinch"}

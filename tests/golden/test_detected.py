@@ -310,3 +310,16 @@ def test_shoulder_screws_drawn_plainly_and_a_head_that_fits_nothing(detected):
     # Its name says button: no guess (medium, as its size rests on its shank).
     named = by_name["odd_head_button_screw"]
     assert (named.tool, named.notes, named.fastener.confidence) == ("hex-key-4", (), "medium")
+
+
+def test_each_plug_is_found_by_its_name(detected):
+    # No connectors: in the sidecar: each plug is found by its name (M9), and
+    # plug_cable's lead, no mate now, is in its way.
+    found = {c.name: (c.verdict.value, c.source, c.blockers) for c in detected.connectors.results}
+    assert found == {
+        "plug_cable_plug": ("stuck", "name", ("plug_cable_lead",)),
+        "plug_latch_plug": ("unplugs", "name", ()),
+        "plug_open_plug": ("unplugs", "name", ()),
+        "plug_shelf_plug": ("stuck", "name", ("plug_shelf_shelf",)),
+        "plug_tight_plug": ("unplugs", "name", ()),
+    }
