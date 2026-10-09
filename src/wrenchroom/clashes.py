@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -38,7 +38,7 @@ from wrenchroom.report import md_code, md_text, printable
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
 
-    from build123d import Solid
+    from build123d import Shape, Solid
 
     from wrenchroom.assembly import Part
     from wrenchroom.engine.scene import Engine, PartOverlap
@@ -76,6 +76,8 @@ class Clash:
     point: tuple[float, float, float]
     state: str | None = None
     hint: str | None = None
+    #: The overlap itself, for the 3D view to draw; not in the JSON.
+    overlap: Shape | None = field(default=None, compare=False, repr=False)
 
 
 @dataclass(frozen=True)
@@ -303,6 +305,7 @@ def _made(
         (point[0], point[1], point[2]),
         state,
         _hint(second, overlap, gland=gland),
+        overlap.shape,
     )
 
 

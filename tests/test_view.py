@@ -30,7 +30,7 @@ from wrenchroom.engine import ENGINES
 from wrenchroom.engine.mesh import primitive_mesh
 from wrenchroom.report import Report
 from wrenchroom.terminal import UNSAFE, printable
-from wrenchroom.view import COLOURS, LEGEND, html_text, view_data
+from wrenchroom.view import COLOURS, LEGEND, OVERLAP_LEGEND, html_text, view_data
 
 VIEW = Path(wrenchroom.view.__file__).parent
 REPO = Path(__file__).resolve().parent.parent
@@ -124,10 +124,85 @@ def test_a_screw_that_turns_is_green_and_highlights_nothing(engine):
 
 
 def test_every_verdict_has_its_colour_and_every_colour_its_legend_line():
-    assert {key for key, _ in LEGEND} == set(COLOURS) - {"part", "background"}
+    keys = {key for key, _ in (*LEGEND, OVERLAP_LEGEND)}
+    assert keys == set(COLOURS) - {"part", "background"}
     assert len(set(COLOURS.values())) == len(COLOURS)  # no two meanings share a colour
     for colour in COLOURS.values():
         assert re.fullmatch("#[0-9a-f]{6}", colour)
+
+
+# ---------------------------------------------------------------------------
+# Clashes (M8): each pair, its view, its two parts and its overlap.
+# ---------------------------------------------------------------------------
+
+
+def _clashing(names=("frame", "bracket"), at=(0, 0, 0), **kwargs):
+    """A bracket 10 on a side, 1 into a frame 20 on a side: 100 mm^3 between them."""
+    frame, bracket = names
+    parts = [
+        Part(frame, Pos(*at) * Pos(14, 0, 0) * Box(20, 20, 20)),
+        Part(bracket, Pos(*at) * Box(10, 10, 10)),
+    ]
+    return check(Assembly(parts), Config(), **kwargs)
+
+
+def _vertices(data, shape):
+    return np.frombuffer(base64.b64decode(data["shapes"][shape]["p"]), "<f4").reshape(-1, 3)
+
+
+def test_no_clash_is_drawn_where_none_was_looked_for():
+    data = view_data(_clashing())
+    assert data["clashes"] is None
+    assert "overlap" not in {key for key, _ in data["legend"]}
+
+
+def test_each_clash_is_drawn_with_its_two_parts_and_its_overlap():
+    data = view_data(_clashing(at=(50, 30, 0), clashes=True))  # away from the origin
+    assert data["clashes"]["header"] == "1 clash (overlap over 0.05 mm^3)"
+    assert data["clashes"]["apart"] == []
+    (entry,) = data["clashes"]["found"]
+    assert (entry["label"], entry["volume"], entry["state"], entry["hint"]) == (
+        "bracket into frame",
+        "100.0",
+        None,
+        None,
+    )
+    assert entry["view"] == data["overview"]
+    assert _part_names(data, entry["parts"]) == ["bracket", "frame"]
+    # The overlap as it was measured, near the origin, and drawn back where it is: a
+    # slab 1 by 10 by 10, x 54 to 55.
+    vertices = _vertices(data, entry["overlap"])
+    assert vertices.min(axis=0) == pytest.approx((54, 25, -5), abs=1e-4)
+    assert vertices.max(axis=0) == pytest.approx((55, 35, 5), abs=1e-4)
+    assert ["overlap", "where two parts are drawn into each other"] in data["legend"]
+
+
+def test_a_state_s_clash_is_drawn_in_that_state_s_view(tmp_path):
+    # The lever up 1 into the wall in up.step alone: drawn among that model's parts.
+    wall = Pos(0, 0, 25) * Box(40, 40, 10)
+    for name, lever_z in (("down.step", 5.0), ("up.step", 16.0)):
+        lever = Pos(0, 0, lever_z) * Box(4, 4, 10)
+        wall.label, lever.label = "wall", "lever"
+        export_step(Compound(children=[wall, lever]), tmp_path / name)
+    config = Config.from_dict({"states": {"lever-up": {"model": "up.step"}}})
+    report = check(
+        Assembly.from_step(tmp_path / "down.step"), config, model_dir=tmp_path, clashes=True
+    )
+    data = view_data(report)
+    (entry,) = data["clashes"]["found"]
+    view = data["views"][entry["view"]]
+    assert (entry["state"], view["state"]) == ("lever-up", "lever-up")
+    assert entry["view"] != data["overview"]
+    assert set(entry["parts"]) <= set(view["parts"])
+    raised = data["parts"][entry["parts"][0]]["shape"]
+    assert _vertices(data, raised)[:, 2].max() == pytest.approx(21.0, abs=1e-4)  # up.step's
+
+
+def test_a_clash_s_names_stay_inside_the_data():
+    data = view_data(_clashing(names=(f"frame{ESC}[2J", f"brack{RLO}et"), clashes=True))
+    (entry,) = data["clashes"]["found"]
+    assert entry["label"] == "brack\\u202eet into frame\\x1b[2J"
+    assert not UNSAFE.search(entry["label"])
 
 
 def _lidded():

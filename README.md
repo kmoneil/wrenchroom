@@ -268,7 +268,9 @@ matches no part, say, which is usually a renamed part).
   blue held, amber passes only in another state, red blocked or stuck, grey not
   covered. Click one, or pick it from the list, to see every tool position that was
   tried, drawn where the check put it (orange where it hit something), with the
-  parts in its way in magenta. `report.html#rear_screw` opens on one fastener. The
+  parts in its way in magenta. With `--clashes`, the panel lists the clashes too:
+  choose one to see its two parts and, drawn over them in red, the overlap between
+  them. `report.html#rear_screw` opens on one fastener. The
   page loads nothing and runs nothing but its own scripts, so a report of a private
   model can't send anything anywhere.
 - **The tools it needs**, for a shopping list or a tool roll: each tool the

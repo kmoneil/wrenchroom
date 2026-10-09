@@ -126,6 +126,18 @@ function state(byId) {
       fasteners: byId.fasteners.children.length,
       tools_summary: byId["tools-summary"].textContent,
       tools: byId.tools.children.map((item) => item.textContent),
+      clash_list_hidden: byId["clash-list"].hidden,
+      clashes_summary: byId["clashes-summary"].textContent,
+      clashes: byId.clashes.children.map((item) => item.textContent),
+      clash_hidden: byId.clash.hidden,
+      clash: byId.clash.hidden
+        ? null
+        : [
+            byId["clash-name"].textContent,
+            byId["clash-volume"].textContent,
+            byId["clash-state"].hidden ? null : byId["clash-state"].textContent,
+            byId["clash-hint"].hidden ? null : byId["clash-hint"].textContent,
+          ],
       status: byId.status.textContent,
     },
   };

@@ -193,7 +193,8 @@ def exact_common(a: Shape, b: Shape) -> PartOverlap | None:
     low = tuple(min(c[0][i] for c in corners) + middle[i] for i in range(3))
     high = tuple(max(c[1][i] for c in corners) + middle[i] for i in range(3))
     area = sum(piece.area for piece in solids)
-    return PartOverlap(volume, area, (low[0], low[1], low[2]), (high[0], high[1], high[2]))
+    where = _moved(shared, Location(middle))  # back where the parts are
+    return PartOverlap(volume, area, (low[0], low[1], low[2]), (high[0], high[1], high[2]), where)
 
 
 def _moved(shape: Shape, step: Location) -> Shape:

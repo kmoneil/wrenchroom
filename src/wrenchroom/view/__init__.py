@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from manifold3d import Manifold
 
     from wrenchroom.assembly import Part
+    from wrenchroom.clashes import Clash
     from wrenchroom.report import FastenerResult, Report, StateModel
     from wrenchroom.tools.sweep import Attempt, Probe
 
@@ -64,6 +65,7 @@ COLOURS = {
     "blocker": "#c026d3",  # what stopped the selected fastener's tool
     "probe-hit": "#f26b1d",  # a tool position that ran into something
     "probe-clear": "#19a7b5",  # a tool position that was clear
+    "overlap": "#ff1744",  # where two parts are drawn into each other (M8)
     "background": "#f3f4f6",
 }
 
@@ -78,6 +80,9 @@ LEGEND = (
     ("probe-hit", "a tool position that hit something"),
     ("probe-clear", "a tool position that was clear"),
 )
+
+#: The legend's line for an overlap: only where the run looked for clashes.
+OVERLAP_LEGEND = ("overlap", "where two parts are drawn into each other")
 
 #: The fastener list's order: what needs a person first.
 _LIST_ORDER = {"fails": 0, "not-covered": 1, "elsewhere": 2, "held": 3, "turns": 4}
@@ -183,8 +188,11 @@ def view_data(report: Report, *, select: str | None = None) -> dict[str, object]
         key=lambda r: (_LIST_ORDER[colour_key(r, report.default_state)], r.fastener.name),
     )
     fasteners = [builder.fastener(result) for result in ordered]
+    clashes = report.clashes
+    found = [builder.clash(clash) for clash in clashes.found] if clashes is not None else []
     counts = report.summary
     used = report.tools_used()
+    legend = [*LEGEND, *([OVERLAP_LEGEND] if clashes is not None else [])]
     return {
         "schema": SCHEMA,
         "model": printable(report.model),
@@ -194,7 +202,7 @@ def view_data(report: Report, *, select: str | None = None) -> dict[str, object]
         "summary": counts,
         "summary_text": report.terminal_lines()[0],
         "colours": COLOURS,
-        "legend": [[key, text] for key, text in LEGEND],
+        "legend": [[key, text] for key, text in legend],
         "shapes": builder.shapes,
         "parts": builder.parts,
         "views": builder.views,
@@ -213,6 +221,14 @@ def view_data(report: Report, *, select: str | None = None) -> dict[str, object]
                 for use in used.uses
             ],
             "apart": [printable(line) for line in used.apart()],
+        },
+        # Parts drawn into each other (M8), where the run looked; None where not.
+        "clashes": None
+        if clashes is None
+        else {
+            "header": printable(clashes.headline),
+            "found": found,
+            "apart": clashes.lines()[1 + len(clashes.found) :],
         },
     }
 
@@ -308,6 +324,24 @@ class _Builder:
             cached = (unit, index)  # rides along, as in _part
             self._unit_index[id(unit)] = cached
         return cached[1]
+
+    # ----------------------------------------------------------- clashes
+
+    def clash(self, clash: Clash) -> dict[str, object]:
+        """One clash: its two parts in its state's view, and the overlap itself to draw."""
+        view = self.view(clash.state)
+        by_name = self._view_parts[view]
+        overlap = clash.overlap
+        arrays = shape_triangles(overlap, MESH_TOLERANCE) if overlap is not None else None
+        return {
+            "label": printable(f"{clash.first} into {clash.second}"),
+            "volume": f"{clash.volume:.1f}",
+            "state": printable(clash.state) if clash.state is not None else None,
+            "hint": printable(clash.hint) if clash.hint is not None else None,
+            "view": view,
+            "parts": _indices((clash.first, clash.second), by_name),
+            "overlap": None if arrays is None else self._shape(*arrays),
+        }
 
     # --------------------------------------------------------- fasteners
 
