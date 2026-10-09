@@ -64,7 +64,8 @@ def test_the_bench_names_read_as_its_sidecar_says():
     assert by_word == ["nut_deep_well_nut"]
     # The sidecar's fasteners (FINAL_COUNTS less the torx screw only detection finds),
     # the edges file's torx screw, and drawn_in's six nuts, two screws and bolt,
-    # wrong_tool's nine, twice's four screws (issue #94), domed's six (issue #116) and
-    # set_core's set screw (issue #122), which the sidecar ignores.
-    assert found_count == FINAL_COUNTS["fasteners"] + 9 + len(WRONG_TOOL) + 4 + 6 + 1
+    # wrong_tool's nine, twice's four screws (issue #94), domed's six (issue #116),
+    # set_core's set screw (issue #122) and cap_dome's two nuts and two bolts (issue
+    # #123), which the sidecar ignores.
+    assert found_count == FINAL_COUNTS["fasteners"] + 9 + len(WRONG_TOOL) + 4 + 6 + 1 + 4
     assert len(WRONG_TOOL) == 9
