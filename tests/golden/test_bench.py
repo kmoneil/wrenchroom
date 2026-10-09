@@ -537,3 +537,43 @@ def test_a_screw_drawn_twice_or_into_its_way_out_is_a_fault(edges_report):
         ),
         "twice_clean_screw": ("turns", "hex-key-2.5", None),
     }
+
+
+def test_the_tools_list_counts_each_passing_fastener_s_tool(bench_report, bench_json):
+    """M8: the bench's tools list, each fastener's tool counted as the snapshot's
+    verdicts and tools give it, a stubby spanner apart; the unusual ones as the
+    bench's cells make them."""
+    used = bench_report.tools_used()
+    expected: dict[str, list[str]] = {}
+    for name, entry in bench_json.items():
+        if entry["verdict"] in ("turns", "held", "stuck") and entry["tool"] not in (None, "hand"):
+            stubby = ", stubby" if "stubby" in (entry["how"] or "") else ""
+            expected.setdefault(entry["tool"] + stubby, []).append(name)
+    assert {use.tool: sorted(use.fasteners) for use in used.uses} == {
+        tool: sorted(names) for tool, names in expected.items()
+    }
+    assert len(used.uses) > 30  # a vacuity guard
+    # The bench runs under the full kit; metric-home, the default, lacks these.
+    assert {use.tool for use in used.uses if not use.in_default_kit} == {
+        *("ball-end-key-4", "ball-end-key-5", "driver-ph0", "driver-ph4", "nut-driver-10"),
+        *("hex-key-0.035in", "hex-key-0.050in", "hex-key-1.3", "hex-key-3/16in"),
+        *("hex-key-5/32in", "spanner-24", "spanner-3.2", "spanner-41", "spanner-5"),
+        *("spanner-7/16in", "torx-key-T20", "torx-key-T25", "torx-key-T30", "torx-key-T40"),
+        *("torx-key-T6", "short-ring-18", "stubby-key-6"),  # the sidecar's own
+    }
+    # The only way to some fastener: ball_tilt's and ball_shoulder's ball ends, and
+    # the stubbies nut_stubby and reach_13 need.
+    assert {use.tool: use.only_way for use in used.uses if use.only_way} == {
+        "ball-end-key-4": ("ball_shoulder_screw",),
+        "ball-end-key-5": ("ball_tilt_screw",),
+        "spanner-10, stubby": ("nut_stubby_box_nut",),
+        "spanner-13, stubby": ("reach_13_nut",),
+    }
+    few = {use.tool for use in used.uses if "few" in use.unusual}
+    assert few >= {"hex-key-1.5", "hex-key-2", "socket-16", "spanner-15", "spanner-8"}
+    assert all(len(use.fasteners) <= 2 for use in used.uses if use.tool in few)
+    # Joints with a bolt and a nut on one size: the pairs' cells.
+    assert {use.tool for use in used.uses if use.at_once == 2} == {"spanner-10", "spanner-13"}
+    assert used.by_hand == ("grip_thumb_screw", "grip_wheel_thumbscrew", "grip_wing_nut")
+    assert len(used.no_tool) == 7  # 4 hold themselves, 3 in traps
+    assert len(used.without) == FINAL_COUNTS["blocked"] + FINAL_COUNTS["not_covered"]

@@ -184,6 +184,7 @@ def view_data(report: Report, *, select: str | None = None) -> dict[str, object]
     )
     fasteners = [builder.fastener(result) for result in ordered]
     counts = report.summary
+    used = report.tools_used()
     return {
         "schema": SCHEMA,
         "model": printable(report.model),
@@ -200,6 +201,19 @@ def view_data(report: Report, *, select: str | None = None) -> dict[str, object]
         "overview": overview,
         "fasteners": fasteners,
         "select": select,
+        # The tools the fasteners need (M8), names made safe as everywhere here.
+        "tools": {
+            "header": printable(used.lines()[0]),
+            "uses": [
+                {
+                    "tool": printable(use.tool),
+                    "count": len(use.fasteners),
+                    "said": [printable(clause) for clause in use.said()],
+                }
+                for use in used.uses
+            ],
+            "apart": [printable(line) for line in used.apart()],
+        },
     }
 
 

@@ -61,6 +61,14 @@
     item.append(button);
     $("fasteners").append(item);
   });
+  $("tools-summary").textContent = data.tools.header;
+  for (const use of data.tools.uses) {
+    const item = el("li");
+    item.append(el("span", use.tool, "name"), el("span", " x" + use.count, "count"));
+    if (use.said.length) item.append(el("span", " " + use.said.join("; "), "muted"));
+    $("tools").append(item);
+  }
+  for (const line of data.tools.apart) $("tools").append(el("li", line, "muted"));
   $("back").addEventListener("click", () => select(null));
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") select(null);

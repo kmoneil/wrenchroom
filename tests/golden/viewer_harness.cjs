@@ -124,6 +124,8 @@ function state(byId) {
       in_way: byId.inway.hidden ? null : byId.inway.textContent,
       attempts: byId.attempts.children.map((item) => item.textContent),
       fasteners: byId.fasteners.children.length,
+      tools_summary: byId["tools-summary"].textContent,
+      tools: byId.tools.children.map((item) => item.textContent),
       status: byId.status.textContent,
     },
   };

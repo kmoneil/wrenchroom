@@ -67,6 +67,56 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | M8 socket screw | `stubby-key-6` | 1 | all pass (short leg in) |
 | M8 torx screw | `torx-key-T40` | 1 | all pass (driver straight in) |
 
+#### Tools
+
+39 tools this model needs (kit full): 11 hex keys, 2 ball-end keys, 5 Torx keys, 13 spanners, 1 socket, 1 nut driver, 4 drivers, 2 others.
+
+| Tool | Fasteners | |
+| --- | ---: | --- |
+| `hex-key-0.035in` | 1 | not in metric-home; only `small_inch_button_screw` |
+| `hex-key-0.050in` | 1 | not in metric-home; only `small_inch_socket_screw` |
+| `hex-key-1.3` | 1 | not in metric-home; only `small_flat_screw` |
+| `hex-key-1.5` | 2 | only `grip_set_screw`, `small_socket_screw` |
+| `hex-key-2` | 1 | only `dome_tip_screw` |
+| `hex-key-2.5` | 11 |  |
+| `hex-key-3` | 5 |  |
+| `hex-key-5/32in` | 1 | not in metric-home; only `std_#10-32x1` |
+| `hex-key-4` | 8 |  |
+| `hex-key-3/16in` | 1 | not in metric-home; only `inch_pair_screw` |
+| `hex-key-5` | 9 |  |
+| `ball-end-key-4` | 1 | not in metric-home; no straight key gets in at `ball_shoulder_screw` |
+| `ball-end-key-5` | 1 | not in metric-home; no straight key gets in at `ball_tilt_screw` |
+| `torx-key-T6` | 1 | not in metric-home; only `small_torx_screw` |
+| `torx-key-T20` | 1 | not in metric-home; only `lobed_recess_fluted_screw` |
+| `torx-key-T25` | 1 | not in metric-home; only `lobed_recess_plain_screw` |
+| `torx-key-T30` | 1 | not in metric-home; only `torx_wall_screw` |
+| `torx-key-T40` | 1 | not in metric-home; only `pan_t40_torx_screw` |
+| `spanner-3.2` | 1 | not in metric-home; only `small_tiny_nut` |
+| `spanner-5` | 1 | not in metric-home; only `small_little_nut` |
+| `spanner-5.5` | 1 | only `misnamed_M5_nut` |
+| `spanner-8` | 1 | only `w4032_nut` |
+| `spanner-10` | 10 | 2 at once on a joint |
+| `spanner-10, stubby` | 1 | no full-length spanner swings at `nut_stubby_box_nut` |
+| `spanner-7/16in` | 1 | not in metric-home; only `inch_pair_nut` |
+| `spanner-13` | 20 | 2 at once on a joint |
+| `spanner-13, stubby` | 1 | no full-length spanner swings at `reach_13_nut` |
+| `spanner-15` | 2 | only `snug_dome_gland`, `wide_dome_gland` |
+| `spanner-16` | 3 |  |
+| `spanner-24` | 5 | not in metric-home |
+| `spanner-41` | 1 | not in metric-home; only `big_gland_gland` |
+| `socket-16` | 2 | only `nut_deep_well_nut`, `tail_in_socket_nut` |
+| `nut-driver-10` | 1 | not in metric-home; only `nut_tube_nut` |
+| `driver-ph0` | 3 | not in metric-home |
+| `driver-ph1` | 3 |  |
+| `driver-ph2` | 3 |  |
+| `driver-ph4` | 1 | not in metric-home; only `ph4_screw` |
+| `stubby-key-6` | 1 | not in metric-home; only `short_key_screw` |
+| `short-ring-18` | 1 | not in metric-home; only `shop_spanner_nut` |
+
+- By hand: 3 (`grip_thumb_screw`, `grip_wheel_thumbscrew`, `grip_wing_nut`)
+- No tool needed: 7, held by themselves or a trap
+- No tool yet: 22 blocked (wrenchroom check says why)
+
 #### Failures
 
 | Fastener | Tool | Verdict | In the way, or why |

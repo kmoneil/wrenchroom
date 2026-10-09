@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
     from wrenchroom.assembly import Assembly
     from wrenchroom.tools.sweep import Attempt, Probe
+    from wrenchroom.used import ToolsUsed
 
 
 class Verdict(enum.StrEnum):
@@ -326,7 +327,14 @@ class Report:
                 for part in self.passed_over
             ],
             "fasteners": [_result_json(result) for result in self.results],
+            "tools_used": self.tools_used().to_json(),
         }
+
+    def tools_used(self) -> ToolsUsed:
+        """The tools this run's fasteners were turned or held with: see :mod:`wrenchroom.used`."""
+        from wrenchroom.used import tools_used  # noqa: PLC0415  (it reads this module)
+
+        return tools_used(self)
 
     def json_text(self) -> str:
         """The JSON document as text, as :meth:`to_json` writes it."""
@@ -450,6 +458,7 @@ class Report:
                 f"| {md_text(group.outcome)} |"
                 for group in groups
             )
+            lines += self.tools_used().markdown()
         failures = self.failures()
         if failures:
             lines += [

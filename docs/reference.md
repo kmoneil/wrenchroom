@@ -16,6 +16,7 @@ rules and the figures behind them are written down.
 - [Room for a hand](#room-for-a-hand)
 - [The sidecar's globs](#the-sidecars-globs)
 - [Reports](#reports)
+- [The tools a model needs](#the-tools-a-model-needs)
 - [Collision engines and speed](#collision-engines-and-speed)
 - [Standards](#standards)
 - [The golden bench](#the-golden-bench)
@@ -447,6 +448,35 @@ reached in another state is drawn in that state. `wrenchroom explain model.step 
 opens any fastener directly. The page embeds three.js (r186, MIT) and its content
 security policy lets it load nothing and run nothing but its own two scripts, so a
 report of a private model can't send anything anywhere.
+
+## The tools a model needs
+
+`wrenchroom tools --used model.step` checks the model, with `--kit`, `--config` and
+`--state` as `check` takes them, and lists each tool its fasteners were turned or held
+with: one line per tool, how many fasteners need it, and why an unusual one is. It
+exits 0 once the check has run; `check` is the one that fails a build. The JSON report
+carries the same list as `tools_used`, the Markdown as a Tools section after its table,
+and the 3D view in its panel.
+
+- **One line per tool**, family by family (hex keys, ball-end keys, Torx keys,
+  spanners, sockets, nut drivers, drivers, then the sidecar's own), smallest first. A
+  stubby spanner is a line of its own: it is the tool a person reaches for.
+- **Who counts.** A fastener that turns counts its tool, and so does one held (the
+  nut of a joint whose bolt turns) and one stuck (a tool turns it; only its way out is
+  in the way). A joint whose bolt and nut take the same tool needs two of it at once,
+  and its line says so (`2 at once on a joint`).
+- **Unusual** is defined, not guessed. A tool the default kit (`metric-home`) doesn't
+  hold is `not in metric-home`. A tool only one or two fasteners need names them
+  (`only clamp_bolt, clamp_nut`). A tool that is the only way to reach a fastener, where
+  the kit's ordinary tool can't, names those: a ball end (`no straight key gets in at
+  arm_pin`) and a stubby (`no full-length spanner swings at side_nut`). In the JSON
+  these are `outside_default_kit`, `few` and `only_way`.
+- **Apart.** Fasteners turned by hand are listed by name; those held by themselves
+  or a trap need no tool; those blocked or not covered have no tool yet, and are
+  counted, since `check` says why.
+
+Each tool's JSON entry also gives the states its fasteners were reached in (`null`
+for the model as given).
 
 ## Collision engines and speed
 

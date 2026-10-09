@@ -270,6 +270,24 @@ matches no part, say, which is usually a renamed part).
   parts in its way in magenta. `report.html#rear_screw` opens on one fastener. The
   page loads nothing and runs nothing but its own scripts, so a report of a private
   model can't send anything anywhere.
+- **The tools it needs**, for a shopping list or a tool roll: each tool the
+  fasteners were turned or held with, how many need it, and why an unusual one is.
+  A tool is unusual when the default kit lacks it, when one or two fasteners need
+  it, or when it is the only tool reaching one (a ball end, a stubby). The JSON
+  (`tools_used`), the Markdown and the 3D view's panel list them too.
+
+  ```console
+  $ wrenchroom tools --used examples/bracket.step
+  3 tools this model needs (kit metric-home): 1 hex key, 2 spanners
+    hex-key-5              x1      only front_screw
+    spanner-10             x1      only side_bolt
+    spanner-13             x2      only clamp_bolt, clamp_nut; 2 at once on a joint
+  no tool yet: 1 blocked (wrenchroom check says why)
+  ```
+
+  The clamp's bolt and nut both take a 13 mm spanner, one turning while the other
+  holds, so that joint needs two at once. The side bolt is stuck, but a spanner still
+  turns it, so its spanner is listed.
 
 `-` for a file writes that report to stdout and moves the table to stderr, so it can
 be piped: `--json - | jq`, `--md - >> "$GITHUB_STEP_SUMMARY"`.
