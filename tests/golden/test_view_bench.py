@@ -53,6 +53,9 @@ def test_every_blocked_and_stuck_cell_is_red_with_its_blockers(bench_view, bench
             probes.append(entry["way_out"])
         hit = {index for probe in probes for index in probe["hits"]}
         assert set(entry["highlight"]) <= hit, name
+        if not probes:  # nothing in its joint turns, so no tool was tried (#134)
+            assert bench_json[name]["reason"].endswith(": nothing in the joint turns"), name
+            continue
         assert any(probe["hit"] for probe in probes), name
 
 

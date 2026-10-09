@@ -512,6 +512,30 @@ def test_a_nut_in_its_trap_is_held_by_it(bench_report, bench_json):
     assert fail == f"FAIL trap_stopped_screw  hex-key-2.5  blocked  {reason}"
 
 
+def test_a_bolt_head_in_its_pocket_is_held_by_it(bench_report, bench_json):
+    """Issue #134: head_trap's held bolt, its head in the plate's pocket, held by the
+    plate, its nut turning; both's bolt and nut, each held by its trap, and
+    carriage_trap's bolt and nut, each held, fail: nothing in the joint turns. (Not in
+    the truth table: each names parts, which a copy renames.)"""
+    entry = bench_json["head_trap_held_bolt"]
+    assert (entry["how"], entry["tool"]) == ("held by its trap in head_trap_plate", None)
+    both = "nothing in the joint turns"
+    reasons = {
+        "head_trap_both_bolt": "held by its trap in head_trap_plate, and its nut "
+        f"(head_trap_both_nut) is held by its trap in head_trap_base: {both}",
+        "head_trap_both_nut": "held by its trap in head_trap_base, and its bolt "
+        f"(head_trap_both_bolt) is held by its trap in head_trap_plate: {both}",
+        "carriage_trap_bolt": "holds itself, and its nut (carriage_trap_nut) is held by its "
+        f"trap in carriage_trap_base: {both}",
+        "carriage_trap_nut": "held by its trap in carriage_trap_base, and its bolt "
+        f"(carriage_trap_bolt) holds itself: {both}",
+    }
+    for name, reason in reasons.items():
+        assert bench_json[name]["reason"] == reason
+        (fail,) = [line for line in bench_report.terminal_lines() if f"FAIL {name} " in line]
+        assert fail == f"FAIL {name}  -  blocked  {reason}"
+
+
 def test_a_screw_drawn_twice_or_into_its_way_out_is_a_fault(edges_report):
     """Issue #94: twice's screws, which only the edges sidecar keeps, as drawn_in's.
     side's box, drawn 8.9 mm^3 into its head's side and in its way out, is a clash,
@@ -575,5 +599,5 @@ def test_the_tools_list_counts_each_passing_fastener_s_tool(bench_report, bench_
     # Joints with a bolt and a nut on one size: the pairs' cells.
     assert {use.tool for use in used.uses if use.at_once == 2} == {"spanner-10", "spanner-13"}
     assert used.by_hand == ("grip_thumb_screw", "grip_wheel_thumbscrew", "grip_wing_nut")
-    assert len(used.no_tool) == 7  # 4 hold themselves, 3 in traps
+    assert len(used.no_tool) == 8  # 4 hold themselves, 4 in traps
     assert len(used.without) == FINAL_COUNTS["blocked"] + FINAL_COUNTS["not_covered"]

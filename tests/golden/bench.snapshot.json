@@ -3,10 +3,10 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 143,
-  "turns": 112,
-  "held": 8,
-  "blocked": 22,
+  "fasteners": 149,
+  "turns": 113,
+  "held": 9,
+  "blocked": 26,
   "stuck": 1,
   "not_covered": 0
  },
@@ -436,6 +436,62 @@
    "deciding": [],
    "stuck_on": [],
    "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "carriage_trap_bolt",
+   "kind": "screw",
+   "head": "carriage",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    16000.0,
+    3.9
+   ],
+   "source": "sidecar",
+   "tool": null,
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "carriage_trap_nut",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": "holds itself, and its nut (carriage_trap_nut) is held by its trap in carriage_trap_base: nothing in the joint turns",
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "carriage_trap_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": null,
+   "source": "sidecar",
+   "tool": null,
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "carriage_trap_bolt",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": "held by its trap in carriage_trap_base, and its bolt (carriage_trap_bolt) holds itself: nothing in the joint turns",
    "grazes": [],
    "notes": []
   },
@@ -1266,6 +1322,122 @@
    "swing_deg": 30.0,
    "state": null,
    "pair": "hand_tight_bolt",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "head_trap_both_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1150.0,
+    16000.0,
+    0.0
+   ],
+   "source": "sidecar",
+   "tool": null,
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "head_trap_both_nut",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": "held by its trap in head_trap_plate, and its nut (head_trap_both_nut) is held by its trap in head_trap_base: nothing in the joint turns",
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "head_trap_both_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": null,
+   "source": "sidecar",
+   "tool": null,
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "head_trap_both_bolt",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": "held by its trap in head_trap_base, and its bolt (head_trap_both_bolt) is held by its trap in head_trap_plate: nothing in the joint turns",
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "head_trap_held_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    850.0,
+    16000.0,
+    0.0
+   ],
+   "source": "sidecar",
+   "tool": null,
+   "verdict": "held",
+   "how": "held by its trap in head_trap_plate",
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "head_trap_held_nut",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "head_trap_held_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    850.0,
+    16000.0,
+    -16.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "head_trap_held_bolt",
    "blocked_by": [],
    "deciding": [],
    "stuck_on": [],
@@ -4158,7 +4330,7 @@
     1.0
    ],
    "seat": [
-    900.0,
+    2900.0,
     16000.0,
     6.0
    ],
@@ -4190,7 +4362,7 @@
     1.0
    ],
    "seat": [
-    1100.0,
+    3100.0,
     16000.0,
     6.0
    ],
@@ -4911,13 +5083,14 @@
    },
    {
     "tool": "spanner-13",
-    "count": 20,
+    "count": 21,
     "fasteners": [
      "band_agrees_bolt",
      "band_agrees_nut",
      "flange_nut_nut",
      "guessed_bolt",
      "guessed_nut",
+     "head_trap_held_nut",
      "hex_band_bolt",
      "hex_band_nut",
      "hex_side_wall_bolt",
@@ -5158,6 +5331,7 @@
   "no_tool": [
    "badge_boss_insert",
    "carriage_boxed_bolt",
+   "head_trap_held_bolt",
    "rubber_well_nut",
    "tee_hold_tnut",
    "trap_pocket_nut",
@@ -5171,6 +5345,14 @@
    },
    {
     "name": "big_tube_gland",
+    "verdict": "blocked"
+   },
+   {
+    "name": "carriage_trap_bolt",
+    "verdict": "blocked"
+   },
+   {
+    "name": "carriage_trap_nut",
     "verdict": "blocked"
    },
    {
@@ -5191,6 +5373,14 @@
    },
    {
     "name": "gland_rib_gland",
+    "verdict": "blocked"
+   },
+   {
+    "name": "head_trap_both_bolt",
+    "verdict": "blocked"
+   },
+   {
+    "name": "head_trap_both_nut",
     "verdict": "blocked"
    },
    {

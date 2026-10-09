@@ -2602,3 +2602,73 @@ def cross_drawn():
         ("m4_screw", Pos(-40, 0, 0) * _pan_cross(4, 8, 3.1, 3.0)),
         ("m5_screw", Pos(40, 0, 0) * _pan_cross(5, 10, 3.8, 4.9)),
     ]
+
+
+# ---------------------------------------------------------------- issue #134: head traps
+
+
+@cell(
+    "head_trap",
+    [
+        {"parts": "*_bolt", "kind": "screw", "head": "hex", "size": "M8"},
+        {"parts": "*_nut", "kind": "nut", "size": "M8"},
+    ],
+    {
+        "held_bolt": {"verdict": "held", "tool": None, "pair": "held_nut"},
+        "held_nut": {
+            "verdict": "turns",
+            "tool": "spanner-13",
+            "how": "ring, full length",
+            "pair": "held_bolt",
+        },
+        "both_bolt": {"verdict": "blocked", "tool": None, "pair": "both_nut"},
+        "both_nut": {"verdict": "blocked", "tool": None, "pair": "both_bolt"},
+    },
+)
+def head_trap():
+    """A bolt's hex head in a hex pocket, held by it as a nut is by its trap (issue
+    #134). Two M8x30 joints: a 13 hex head 5.3 high in a pocket 13.1 across flats and
+    5.3 deep in the plate's top, a 13 nut 6.8 thick under the 10 plate. Turning, the
+    head's corners, 7.51 out, meet the pocket's flats, 6.55 out, on every side: the
+    plate holds it, and its nut must turn. In held, the nut is open below, and the
+    ring gets on over the bolt's end and turns it. In both, the nut sits in a pocket
+    13.1 across in a base under the plate too: nothing in the joint turns, and both
+    fail. Each head used to be blocked, its corners hitting the plate, and both's
+    nut, held by its trap, passed. The joints stand 300 apart, past a 13's reach.
+    """
+    pockets = [Pos(x, 0, -5.3) * hex_prism(13.1, 5.3) for x in (-150, 150)]
+    parts = [("plate", plate(w=400, t=10, holes=[(-150, 0, 4.2), (150, 0, 4.2)]) - pockets)]
+    for tag, x in (("held", -150), ("both", 150)):
+        parts += [
+            (f"{tag}_bolt", Pos(x, 0, -5.3) * hex_bolt(8, 30, 13, 5.3)),
+            (f"{tag}_nut", Pos(x, 0, -16.8) * hex_nut(8, 13, 6.8)),
+        ]
+    base = Pos(150, 0, -20) * Box(60, 60, 20) - Pos(150, 0, -20) * Cylinder(4.2, 21)
+    return [*parts, ("base", base - Pos(150, 0, -16.8) * hex_prism(13.1, 6.8))]
+
+
+@cell(
+    "carriage_trap",
+    [
+        {"parts": "bolt", "head": "carriage", "size": "M6"},
+        {"parts": "nut", "kind": "nut", "size": "M6"},
+    ],
+    {
+        "bolt": {"verdict": "blocked", "tool": None, "pair": "nut"},
+        "nut": {"verdict": "blocked", "tool": None, "pair": "bolt"},
+    },
+)
+def carriage_trap():
+    """A carriage bolt on a trapped nut: each holds, so nothing in the joint turns
+    (issue #134). carriage_boxed's M6 bolt, its square neck in the plate, and an M6
+    nut 10 across flats under it, in a pocket 10.1 across in a base below. Each
+    used to pass, held, and the joint could never come apart.
+    """
+    pl = plate(t=6) - Pos(0, 0, -3) * Box(6, 6, 7) - Pos(0, 0, -3) * Cylinder(3, 7)
+    base = Pos(0, 0, -16) * Box(60, 60, 20) - Pos(0, 0, -16) * Cylinder(3.2, 21)
+    return [
+        ("plate", pl),
+        ("bolt", carriage_bolt()),
+        ("nut", Pos(0, 0, -11.2) * hex_nut(6, 10, 5.2)),
+        ("base", base - Pos(0, 0, -11.2) * hex_prism(10.1, 5.2)),
+    ]
