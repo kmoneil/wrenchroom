@@ -3,10 +3,10 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 138,
+  "fasteners": 139,
   "turns": 105,
   "held": 8,
-  "blocked": 22,
+  "blocked": 23,
   "stuck": 1,
   "not_covered": 2
  },
@@ -2809,6 +2809,38 @@
    "notes": []
   },
   {
+   "name": "set_sunk_screw",
+   "kind": "screw",
+   "head": "set",
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    15000.0,
+    -1.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-1.5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "set_sunk_hub"
+   ],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "shelled_screw",
    "kind": "screw",
    "head": "socket",
@@ -4018,7 +4050,7 @@
     1.0
    ],
    "seat": [
-    1900.0,
+    3900.0,
     15000.0,
     6.0
    ],
@@ -4050,7 +4082,7 @@
     1.0
    ],
    "seat": [
-    2100.0,
+    4100.0,
     15000.0,
     6.0
    ],

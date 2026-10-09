@@ -257,6 +257,20 @@ def test_a_clash_is_measured_on_all_of_a_head(edges_report):
     }
 
 
+def test_a_set_screw_s_core_is_a_clash_and_its_thread_none(edges_report):
+    """Issue #122: set_core's set screw, which only the edges sidecar keeps, its hub's
+    hole drawn inside its minor: pi (1.1434^2 - 1) 4 = 3.87 mm^3 of its core. Its
+    thread is no clash: set_sunk's, in a hole tapped at the minor, is blocked."""
+    by_name = {r.fastener.name: r for r in edges_report.results}
+    core = by_name["set_core_screw"]
+    assert (core.verdict.value, core.reason) == (
+        "not-covered",
+        "drawn into set_core_hub (3.9 mm^3): fix the model",
+    )
+    sunk = by_name["set_sunk_screw"]
+    assert (sunk.verdict.value, sunk.reason, sunk.blockers) == ("blocked", None, ("set_sunk_hub",))
+
+
 def test_a_rule_s_tool_that_can_t_drive_its_fastener_is_not_covered(edges_report):
     """Issue #72: wrong_tool's fasteners, which only the edges sidecar keeps. Each
     misfit is not covered and nothing is swept; a tool no table holds says so; the

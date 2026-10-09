@@ -65,10 +65,10 @@ SLOTS = len(CELLS) + 1
 #: #117's misnamed, three M3s under M5 names (its leadscrew nut is passed over),
 #: 134 with #115's cross, three cross recesses drawn as makers draw them.
 FINAL_COUNTS = {
-    "fasteners": 138,
+    "fasteners": 139,
     "turns": 108,
     "held": 8,
-    "blocked": 21,
+    "blocked": 22,
     "stuck": 1,
     "not_covered": 0,
 }
@@ -222,6 +222,8 @@ def edges_sidecar():
             {"parts": "domed_button_*_screw", "kind": "screw", "head": "button", "size": "M4"},
             {"parts": "domed_pan_screw", "kind": "screw", "head": "phillips", "size": "M4"},
             {"parts": "domed_flat_*_screw", "kind": "screw", "head": "flat", "size": "M6"},
+            # set_core's set screw, which the bench's own sidecar ignores too (issue #122).
+            {"parts": "set_core_screw", "kind": "screw", "head": "set", "size": "M3"},
             # wrong_tool's fasteners, each with a tool its rule names (issue #72).
             *(_wrong_tool(role, rule) for role, rule in WRONG_TOOL.items()),
         ],
