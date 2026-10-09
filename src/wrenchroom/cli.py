@@ -315,13 +315,36 @@ def explain(
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help="A sidecar whose own tools (its tools: list) join the kit, listed after it.",
 )
-def tools(kit: str, config_path: Path | None) -> None:
+@click.option(
+    "--used",
+    "model",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Check this model, and list the tools its fasteners need instead.",
+)
+@click.option("--state", help="With --used: check in this state instead of the config's default.")
+@click.option("--exact", is_flag=True, help="With --used: use the exact OCP boolean engine.")
+def tools(
+    kit: str, config_path: Path | None, model: Path | None, state: str | None, exact: bool
+) -> None:
     """List the kit's tools and their dimensions, citations and approximations.
 
     Exactly the tools a check with this kit tries, from the same tables the
     sweeps read: a fastener needing anything not listed is not covered. With
     --config, a sidecar's own tools too, which a check tries after the kit's.
+
+    With --used MODEL, the tools MODEL's fasteners need, as a check with this
+    kit finds them: one line per tool, how many fasteners need it, and why an
+    unusual one is (outside the default kit, needed by one or two fasteners, or
+    the only tool reaching one). It exits 0 once the check has run: `wrenchroom
+    check` is the one that fails a build.
     """
+    if model is not None:
+        report = _run(model, config_path, kit=kit, state=state, exact=exact)
+        for line in report.tools_used().lines():
+            _say(line)
+        return
+    if state is not None or exact:
+        raise click.UsageError("--state and --exact go with --used MODEL: they say how to check it")
     from wrenchroom.config import Config, ConfigError
     from wrenchroom.tools import custom
     from wrenchroom.tools.kits import kit_named, listing

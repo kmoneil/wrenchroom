@@ -4498,5 +4498,768 @@
    "grazes": [],
    "notes": []
   }
- ]
+ ],
+ "tools_used": {
+  "default_kit": "metric-home",
+  "tools": [
+   {
+    "tool": "hex-key-0.035in",
+    "count": 1,
+    "fasteners": [
+     "small_inch_button_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "hex-key-0.050in",
+    "count": 1,
+    "fasteners": [
+     "small_inch_socket_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "hex-key-1.3",
+    "count": 1,
+    "fasteners": [
+     "small_flat_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "hex-key-1.5",
+    "count": 2,
+    "fasteners": [
+     "grip_set_screw",
+     "small_socket_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "hex-key-2",
+    "count": 1,
+    "fasteners": [
+     "dome_tip_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "hex-key-2.5",
+    "count": 11,
+    "fasteners": [
+     "flat_graze_screw",
+     "misnamed_M5x16_screw",
+     "named_head_bhcs",
+     "renamed_M3x12_screw",
+     "rubber_screw",
+     "std_M3x16",
+     "sunk_tip_screw",
+     "torus_graze_screw",
+     "trap_pocket_screw",
+     "trap_slot_screw",
+     "w10642_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "hex-key-3",
+    "count": 5,
+    "fasteners": [
+     "badge_screw",
+     "chamfers_screw",
+     "low_head_screw",
+     "std_M5-0.8x12",
+     "w7380_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "hex-key-5/32in",
+    "count": 1,
+    "fasteners": [
+     "std_#10-32x1"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "hex-key-4",
+    "count": 8,
+    "fasteners": [
+     "key_long_leg_screw",
+     "minor_pin_bolt",
+     "odd_head_button_screw",
+     "odd_head_screw",
+     "pivot_shoulder_screw",
+     "plain_pin_bolt",
+     "stepped_pin_bolt",
+     "w4762_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "hex-key-3/16in",
+    "count": 1,
+    "fasteners": [
+     "inch_pair_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "hex-key-5",
+    "count": 8,
+    "fasteners": [
+     "free_screw_screw",
+     "key_open_screw",
+     "key_wall_far_screw",
+     "state_lever_screw",
+     "stuck_screw_screw",
+     "torx_open_screw",
+     "twins_b_screw",
+     "wire_across_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [],
+    "states": [
+     null,
+     "lever-up"
+    ]
+   },
+   {
+    "tool": "ball-end-key-4",
+    "count": 1,
+    "fasteners": [
+     "ball_shoulder_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "only_way"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "ball-end-key-5",
+    "count": 1,
+    "fasteners": [
+     "ball_tilt_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "only_way"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "torx-key-T6",
+    "count": 1,
+    "fasteners": [
+     "small_torx_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "torx-key-T20",
+    "count": 1,
+    "fasteners": [
+     "lobed_recess_fluted_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "torx-key-T25",
+    "count": 1,
+    "fasteners": [
+     "lobed_recess_plain_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "torx-key-T30",
+    "count": 1,
+    "fasteners": [
+     "torx_wall_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-3.2",
+    "count": 1,
+    "fasteners": [
+     "small_tiny_nut"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-5",
+    "count": 1,
+    "fasteners": [
+     "small_little_nut"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-5.5",
+    "count": 1,
+    "fasteners": [
+     "misnamed_M5_nut"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-8",
+    "count": 1,
+    "fasteners": [
+     "w4032_nut"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-10",
+    "count": 9,
+    "fasteners": [
+     "carriage_boxed_nut",
+     "hand_tight_bolt",
+     "hand_tight_nut",
+     "nut_stubby_box_bolt",
+     "nut_tube_bolt",
+     "nyloc_two_bodies_bolt",
+     "one_part_lock_bolt",
+     "one_part_lock_nut",
+     "run_in_hexnut"
+    ],
+    "at_once": 2,
+    "in_default_kit": true,
+    "unusual": [],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-10, stubby",
+    "count": 1,
+    "fasteners": [
+     "nut_stubby_box_nut"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [
+     "only_way"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-7/16in",
+    "count": 1,
+    "fasteners": [
+     "inch_pair_nut"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-13",
+    "count": 20,
+    "fasteners": [
+     "band_agrees_bolt",
+     "band_agrees_nut",
+     "flange_nut_nut",
+     "guessed_bolt",
+     "guessed_nut",
+     "hex_band_bolt",
+     "hex_band_nut",
+     "hex_side_wall_bolt",
+     "minor_bore_bolt",
+     "minor_bore_nut",
+     "named_size_m8_nut",
+     "nut_gap_nut",
+     "pair_nut_held_bolt",
+     "pair_nut_held_nut",
+     "ring_way_on_roomy_bolt",
+     "ring_way_on_roomy_nut",
+     "ring_way_on_tight_bolt",
+     "ring_way_on_tight_nut",
+     "undersize_bolt",
+     "undersize_nut"
+    ],
+    "at_once": 2,
+    "in_default_kit": true,
+    "unusual": [],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-13, stubby",
+    "count": 1,
+    "fasteners": [
+     "reach_13_nut"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [
+     "only_way"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-15",
+    "count": 2,
+    "fasteners": [
+     "snug_dome_gland",
+     "wide_dome_gland"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-16",
+    "count": 3,
+    "fasteners": [
+     "nut_deep_well_bolt",
+     "tail_in_socket_bolt",
+     "tail_too_long_bolt"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-24",
+    "count": 5,
+    "fasteners": [
+     "glands_apart_a_gland",
+     "glands_apart_b_gland",
+     "glands_close_a_gland",
+     "glands_close_b_gland",
+     "vented_gland_vent"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-41",
+    "count": 1,
+    "fasteners": [
+     "big_gland_gland"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "socket-16",
+    "count": 2,
+    "fasteners": [
+     "nut_deep_well_nut",
+     "tail_in_socket_nut"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "nut-driver-10",
+    "count": 1,
+    "fasteners": [
+     "nut_tube_nut"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "driver-ph0",
+    "count": 3,
+    "fasteners": [
+     "cross_M2_self_tapping_screw",
+     "cross_Type I Cross Recessed Fillister Head Tapping Screw ANSI B18.6.4 1-42 x 0.1875 Type AB",
+     "small_phillips_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "driver-ph1",
+    "count": 3,
+    "fasteners": [
+     "cross_M3x6_screw",
+     "cross_drawn_m4_screw",
+     "misnamed_M5x12_phillips_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "driver-ph2",
+    "count": 3,
+    "fasteners": [
+     "cross_drawn_m5_screw",
+     "phillips_open_screw",
+     "std_M4x0.7x12"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "driver-ph4",
+    "count": 1,
+    "fasteners": [
+     "ph4_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "stubby-key-6",
+    "count": 1,
+    "fasteners": [
+     "short_key_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "short-ring-18",
+    "count": 1,
+    "fasteners": [
+     "shop_spanner_nut"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   }
+  ],
+  "by_hand": [
+   "grip_thumb_screw",
+   "grip_wheel_thumbscrew",
+   "grip_wing_nut"
+  ],
+  "no_tool": [
+   "badge_boss_insert",
+   "carriage_boxed_bolt",
+   "rubber_well_nut",
+   "tee_hold_tnut",
+   "trap_pocket_nut",
+   "trap_slot_nut",
+   "trap_stopped_nut"
+  ],
+  "without": [
+   {
+    "name": "ball_button_screw",
+    "verdict": "blocked"
+   },
+   {
+    "name": "big_tube_gland",
+    "verdict": "blocked"
+   },
+   {
+    "name": "channel_nut",
+    "verdict": "blocked"
+   },
+   {
+    "name": "corner_touch_nut",
+    "verdict": "blocked"
+   },
+   {
+    "name": "dome_rib_gland",
+    "verdict": "blocked"
+   },
+   {
+    "name": "flat_deep_screw",
+    "verdict": "blocked"
+   },
+   {
+    "name": "gland_rib_gland",
+    "verdict": "blocked"
+   },
+   {
+    "name": "key_wall_near_screw",
+    "verdict": "blocked"
+   },
+   {
+    "name": "nyloc_two_bodies_nut",
+    "verdict": "not-covered"
+   },
+   {
+    "name": "pair_both_hold_bolt",
+    "verdict": "blocked"
+   },
+   {
+    "name": "pair_both_hold_nut",
+    "verdict": "blocked"
+   },
+   {
+    "name": "pan_t40_torx_screw",
+    "verdict": "not-covered"
+   },
+   {
+    "name": "phillips_shelf_screw",
+    "verdict": "blocked"
+   },
+   {
+    "name": "post_ring_nut",
+    "verdict": "blocked"
+   },
+   {
+    "name": "reach_55_nut",
+    "verdict": "blocked"
+   },
+   {
+    "name": "set_sunk_screw",
+    "verdict": "blocked"
+   },
+   {
+    "name": "shelled_screw",
+    "verdict": "blocked"
+   },
+   {
+    "name": "state_lid_screw",
+    "verdict": "blocked"
+   },
+   {
+    "name": "sunk_cap_cap_nut",
+    "verdict": "blocked"
+   },
+   {
+    "name": "tail_too_long_nut",
+    "verdict": "blocked"
+   },
+   {
+    "name": "tapped_hold_screw",
+    "verdict": "blocked"
+   },
+   {
+    "name": "tee_hold_screw",
+    "verdict": "blocked"
+   },
+   {
+    "name": "torus_deep_screw",
+    "verdict": "blocked"
+   },
+   {
+    "name": "trap_stopped_screw",
+    "verdict": "blocked"
+   },
+   {
+    "name": "twins_a_screw",
+    "verdict": "blocked"
+   }
+  ]
+ }
 }

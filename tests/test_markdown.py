@@ -32,17 +32,20 @@ GFM = MarkdownIt("gfm-like")
 INJECTED = re.compile(r"<(a|img|em|strong|script|del|h\d|li|ul|ol|blockquote|pre|iframe)\b")
 
 #: The same, less what a whole report legitimately has (its heading, bold summary,
-#: and warning list), which `_assert_report_structure` counts instead.
+#: warning list and the Tools section's list), which `_assert_report_structure`
+#: counts instead.
 INJECTED_IN_REPORT = re.compile(r"<(a|img|em|script|del|ol|blockquote|pre|iframe)\b")
 
 
-def _assert_report_structure(rendered, warnings):
+def _assert_report_structure(rendered, warnings, tools_apart=0):
+    """``tools_apart``: the Tools section's lines under its table (M8): by hand, no
+    tool needed, no tool yet."""
     assert not INJECTED_IN_REPORT.search(rendered), rendered
     assert len(re.findall(r"<h3\b", rendered)) == 1
     assert len(re.findall(r"<h[1256]\b", rendered)) == 0
     assert len(re.findall(r"<strong\b", rendered)) == 1
-    assert len(re.findall(r"<li\b", rendered)) == warnings
-    assert len(re.findall(r"<ul\b", rendered)) == (1 if warnings else 0)
+    assert len(re.findall(r"<li\b", rendered)) == warnings + tools_apart
+    assert len(re.findall(r"<ul\b", rendered)) == (warnings > 0) + (tools_apart > 0)
 
 
 ESC = chr(0x1B)
@@ -246,8 +249,8 @@ def hostile_report():
 
 def test_the_hostile_report_renders_without_injection(hostile_report):
     rendered = GFM.render(hostile_report.markdown())
-    _assert_report_structure(rendered, warnings=3)
-    assert re.findall(r"<h4>(.*?)</h4>", rendered) == ["Failures", "Warnings"]
+    _assert_report_structure(rendered, warnings=3, tools_apart=1)  # no tool yet: 2
+    assert re.findall(r"<h4>(.*?)</h4>", rendered) == ["Tools", "Failures", "Warnings"]
 
 
 def test_every_failure_is_one_row_of_four_cells_naming_it_exactly(hostile_report):
@@ -392,7 +395,7 @@ def test_check_md_writes_the_report_and_keeps_the_exit_code(hostile_step, tmp_pa
     assert not any(UNSAFE.search(line) for line in text.splitlines())
     assert text.startswith("### wrenchroom: `model.step`\n")
     rendered = GFM.render(text)
-    _assert_report_structure(rendered, warnings=2)
+    _assert_report_structure(rendered, warnings=2, tools_apart=1)  # no tool yet: 2
     summary = re.search(r"<p><strong>(.*?)</strong></p>", rendered)
     assert summary is not None
     assert summary.group(1) == result.output.splitlines()[0]
