@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 134,
-  "turns": 101,
+  "fasteners": 138,
+  "turns": 105,
   "held": 8,
   "blocked": 22,
   "stuck": 1,
@@ -2271,7 +2271,7 @@
    "source": "name+geometry",
    "tool": "spanner-13",
    "verdict": "held",
-   "how": "ring, full length",
+   "how": "open end, full length",
    "swing_deg": 0.0,
    "state": null,
    "pair": "pair_nut_held_bolt",
@@ -2601,6 +2601,126 @@
    "notes": [
     "drawn 8.00 long under its head, where its name says 12: taken as drawn"
    ]
+  },
+  {
+   "name": "ring_way_on_roomy_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    1150.0,
+    15000.0,
+    -15.3
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "ring_way_on_roomy_nut",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "ring_way_on_roomy_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1150.0,
+    15000.0,
+    6.5
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "ring_way_on_roomy_bolt",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "ring_way_on_tight_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    850.0,
+    15000.0,
+    -15.3
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "ring_way_on_tight_nut",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "ring_way_on_tight_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    850.0,
+    15000.0,
+    6.5
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "open end, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "ring_way_on_tight_bolt",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
   },
   {
    "name": "rubber_screw",
@@ -3898,7 +4018,7 @@
     1.0
    ],
    "seat": [
-    900.0,
+    1900.0,
     15000.0,
     6.0
    ],
@@ -3930,7 +4050,7 @@
     1.0
    ],
    "seat": [
-    1100.0,
+    2100.0,
     15000.0,
     6.0
    ],

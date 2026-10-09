@@ -2415,3 +2415,36 @@ def cross():
         ),
         (FUSION_TAPPING, Pos(60, 0, 0) * _cross_screw(1.854, 3.3, 1.5, 1.6, 0.31, 0.8, 4)),
     ]
+
+
+@cell(
+    "ring_way_on",
+    [
+        {"parts": "*_bolt", "kind": "screw", "head": "hex", "size": "M8"},
+        {"parts": "*_nut", "kind": "nut", "size": "M8"},
+    ],
+    {
+        "tight_nut": {"verdict": "turns", "tool": "spanner-13", "how": "open end, full length"},
+        "roomy_nut": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
+        "tight_bolt": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
+        "roomy_bolt": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
+    },
+)
+def ring_way_on():
+    """A ring gets on along the axis, over the bolt's end (issue #121). Two M8 joints,
+    each a bolt up through the plate, its head under it, and a 13 nut 6.5 high on top,
+    the bolt's end 1.5 past it, at z 8. A 13 ring, 5.4 thick, clears the bolt's end at
+    13.4. Over the tight nut a cover's underside is 3 above it, at 9.5: no ring gets
+    on, and the open end turns it from the side, under the cover. Over the roomy nut
+    it is 10 above, at 16.5: the ring turns it. The tight nut used to turn with the
+    ring too. Each bolt's ring comes up from under the plate, its nut on the far side.
+    The joints stand 300 apart, past a 13 spanner's reach.
+    """
+    parts = [("plate", plate(w=400, t=10, holes=[(-150, 0, 4.5), (150, 0, 4.5)]))]
+    for tag, x, gap in (("tight", -150, 3.0), ("roomy", 150, 10.0)):
+        parts += [
+            (f"{tag}_bolt", Pos(x, 0, -10) * Rot(180, 0, 0) * hex_bolt(8, 18, 13, 5.3)),
+            (f"{tag}_nut", Pos(x, 0, 0) * hex_nut(8, 13, 6.5)),
+            (f"{tag}_cover", Pos(x, 0, 0) * slab(6.5 + gap, w=60, d=60)),
+        ]
+    return parts

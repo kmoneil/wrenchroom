@@ -173,7 +173,12 @@ Real tools against the real parts:
 - **Combination spanners**: the ring, then the open end from the side, each at full
   length and then stubby, in the sizes stubbies are sold: 6 to 32 mm and 1/4 to
   1-1/4 in. The lengths are makers', the longest of a few makers' standard series at
-  each size. Each needs 30 degrees of free swing.
+  each size. Each needs 30 degrees of free swing. A ring is closed, so it gets on
+  along the axis: its way down, the ring's annulus from the hex up to its own
+  thickness past the fastener's end and the end of the bolt through it, must be clear
+  (issue #121). A cover over a nut closer than that leaves the ring off, and the open
+  end, from the side, is tried. The bolt is the nut's pair; a stud no rule names isn't
+  measured, and the ring clears the nut's own end.
 - **Sockets** on a ratchet, then on each stock extension.
 - **Phillips and slotted drivers**.
 - **Nut drivers** (in the `full` kit), tried last, straight in, where nothing that

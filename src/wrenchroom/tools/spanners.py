@@ -23,6 +23,7 @@ from wrenchroom.tools.sweep import (
     DEFAULT_STEP_DEG,
     Attempt,
     Mount,
+    Probe,
     axial_annulus,
     hand_on_handle,
     radial_box,
@@ -289,12 +290,21 @@ def ring_attempts(
     scene: Scene,
     step_deg: float = DEFAULT_STEP_DEG,
     hand_room: bool = False,
+    *,
+    through: float = 0.0,
 ) -> Iterator[Attempt]:
     """The ring end at full length, then the stubby if there is one, lazily (and the hand).
 
     The ring is an annulus around the hex, centred on the hex band's mid-plane;
     the handle a box from the ring's edge out to 0.85 of the spanner's length.
     Turns over 30 degrees, holds at any one angle.
+
+    A ring is closed, so it gets on along the axis, down over the fastener's end
+    and the end of the bolt through it, ``through`` past the seat: its way on,
+    the ring's annulus from where it grips up to its own full thickness past
+    that end, where it can come in from the side, must be clear too (issue
+    #121). A part over a nut's end stops the ring at any gap less: where the
+    ring's grip is clear, the attempt fails on its way on, which it draws.
 
     ``hex_band`` is ``(top, bottom)`` in the local frame (seat at 0, both <= 0):
     where the hex actually is, which on a cable gland is below a dome nothing
@@ -308,13 +318,20 @@ def ring_attempts(
     thickness = min(spanner.head_thickness, (band_top - band_bottom) - _MIN_GRIP)
     mid_z = (band_top + band_bottom) / 2
     ring = axial_annulus(inner, spanner.ring_outer_radius, mid_z - thickness / 2, thickness)
-    engagement = ring + corner_sweep(hex_af, hex_band)
+    top = mid_z + thickness / 2
+    height = through + spanner.head_thickness - top
+    way_on = mount.place(axial_annulus(inner, spanner.ring_outer_radius, top, height))
+    engagement = mount.place(ring + corner_sweep(hex_af, hex_band))
+    stopped = _stopped_on_its_way(scene, engagement, way_on)
     for way, length in _lengths("ring", spanner):
+        if stopped is not None:
+            yield Attempt(tool, way, False, False, 0.0, stopped[1].hits, stopped)
+            continue
         yield swing_attempt(
             tool=tool,
             way=way,
             scene=scene,
-            engagement=mount.place(engagement),
+            engagement=engagement,
             arm_at=lambda phi, reach=0.85 * length: mount.place(
                 radial_box(
                     spanner.handle_width,
@@ -337,6 +354,21 @@ def ring_attempts(
                 else None
             ),
         )
+
+
+def _stopped_on_its_way(
+    scene: Scene, grip: ToolSolid, way_on: ToolSolid
+) -> tuple[Probe, Probe] | None:
+    """A ring's grip, clear, and its way on down the axis, stopped: else None (#121).
+
+    Its way on is drawn only where it stops the ring: drawn under every ring that
+    gets on, it would hide the fastener. A grip stopped too is the swing's to say,
+    as it was.
+    """
+    hits, grazes = scene.contacts(way_on)
+    if not hits or scene.hits(grip):
+        return None
+    return Probe(grip, ()), Probe(way_on, hits, grazes)
 
 
 # ---------------------------------------------------------------------------
