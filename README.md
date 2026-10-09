@@ -446,8 +446,8 @@ reads a sidecar to pass as `check`'s second argument, and a report writes itself
 2. **Find the fasteners.** From their names (ISO, DIN and ASME designations, McMaster-Carr
    numbers, descriptions like `M6x20 SHCS` or `hex nut M8`, a thread and length alone
    like `M3x16`, code-CAD names like `lift_link_bolt`) and their solids: the drive the
-   model shows, a hex, a hex socket, a cross or a slot, and the size it or the shank
-   gives. Sidecar rules outrank both. A part that looks like a fastener but isn't
+   model shows, a hex, a hex socket, a Torx recess, a cross or a slot, and the size it
+   or the shank gives. Sidecar rules outrank both. A part that looks like a fastener but isn't
    named as one is listed, not checked.
 3. **Orient each one.** Its axis from its geometry, and the end a tool comes from: a
    screw's head, a nut's free face (the end nothing sits against).

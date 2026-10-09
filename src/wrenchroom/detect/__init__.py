@@ -99,8 +99,8 @@ NOT_NAMED = "not named as a fastener, but its solid looks like one"
 
 #: Why a screw whose solid shows a recess no tool here fits has no head (issue #115).
 NO_RECESS_READ = (
-    "its head shows a recess that is no hex socket, cross or slot; say head: in the "
-    "sidecar, or name its drive"
+    "its head shows a recess that is no hex socket, Torx, cross or slot; say head: in "
+    "the sidecar, or name its drive"
 )
 
 #: Why a nut whose solid is round isn't given its thread's spanner (issue #29).
@@ -170,10 +170,10 @@ def shows_drive(reading: ShapeReading) -> bool:
     """Whether a solid shows a drive a tool fits: what a candidate name is taken on.
 
     A hex a spanner fits (a nut, a gland, a hex head), a hex pocket a key fits,
-    or a cross. Not a slot or a square, which a slotted block or a plain plate
-    shows as readily as a fastener does.
+    a cross or a Torx recess. Not a slot or a square, which a slotted block or a
+    plain plate shows as readily as a fastener does.
     """
-    if reading.head is Head.PHILLIPS:
+    if reading.head in (Head.PHILLIPS, Head.TORX):
         return True
     af = reading.drive_af
     if af is None:
@@ -226,7 +226,8 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
         length_mm=length,
         socket_allowed=hint.socket_allowed,
         tool=HAND if hint.by_hand else None,
-        drive_af=reading.drive_af,
+        # A Torx recess's point to point decides its key, as a rule's does (#82, #124).
+        drive_af=reading.drive_af if reading.torx_mm is None else reading.torx_mm,
         source="name+geometry" if used else "name",
         basis=basis,
         not_covered=not_covered,
@@ -245,6 +246,8 @@ def _drive_said(hint: NameHint, reading: ShapeReading, head_note: str | None) ->
         used.append(f"{reading.drive_af:g} across flats")
     if reading.cross_mm is not None:  # its size (issue #115)
         used.append(f"a cross {reading.cross_mm:.2f} across its wings")
+    if reading.torx_mm is not None:  # its size (issue #124)
+        used.append(f"a Torx recess {reading.torx_mm:.2f} point to point")
     return used
 
 

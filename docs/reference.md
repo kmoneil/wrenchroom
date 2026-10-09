@@ -43,18 +43,22 @@ No sidecar is needed for named parts. Fasteners are found from their part names 
 and DIN designations, ASME's (`ANSI B18.6.3`, `ASME B18.3`), McMaster-Carr numbers,
 descriptions such as `M6x20 SHCS` or `hex nut M8`, `M3 Hexnut` with the words run
 together, code-CAD names such as `lift_link_bolt`) and completed from their
-solids: the drive the model shows (a hex, a hex socket, a cross, a slot, a carriage
-bolt's square neck) and the size that drive or the shank gives.
+solids: the drive the model shows (a hex, a hex socket, a Torx recess, a cross, a
+slot, a carriage bolt's square neck) and the size that drive or the shank gives.
 
 A cross recess is read as makers draw one (issue #115): four wings at right angles
 round the axis, each a pair of walls facing each other at one offset, out along the
 wing, the walls leaning up to 10 degrees off the axis. Whatever closes the wings' ends
 (square, or sloping in to the centre) or fills between them (V faces) doesn't matter,
 and its size is the wings' span, which the comment `detect` writes gives (`a cross
-3.20 across its wings`). A head whose solid shows a recess with walls that is no hex
-socket, cross or slot (a square's) isn't guessed from its outline, as a button or
-socket head a hex key would turn: unless its name says the head, it is not covered,
-and says so.
+3.20 across its wings`). A Torx recess is read from its lobes (issue #124): six round
+walls along the axis, the recess inside them, of one radius, their own axes at one
+offset and 60 degrees apart. Its point to point (`a Torx recess 4.50 point to
+point`) is twice the offset and the radius, and decides its size as a rule's
+`across_flats:` does (below). A head whose solid shows a recess with walls that is no
+hex socket, Torx, cross or slot (a square's, a pin spanner's holes, lobes drawn as
+splines) isn't guessed from its outline, as a button or socket head a hex key would
+turn: unless its name says the head, it is not covered, and says so.
 
 A head drawn as a plain cylinder is held to the standards' outlines for its size (an
 M5 head 9.5 across and 2.75 high is ISO 7380-1's button head, not ISO 4762's socket
@@ -132,9 +136,9 @@ loose: ...`). Where no tool takes a hex, the reason names the one that fits near
 the smallest spanner that goes over it, or the largest key that goes into it.
 
 A Torx head takes the size its thread's standard gives (M6 T30), unless its rule's
-`across_flats:` gives the recess's point to point: then the size whose ISO 10664
-recess holds it (an M8 pan head drawn for T40, as some makers sell them, where the
-standards say T45).
+`across_flats:`, or its recess as drawn, gives the recess's point to point: then the
+size whose ISO 10664 recess holds it (an M8 pan head drawn for T40, as some makers
+sell them, where the standards say T45).
 
 A sidecar rule still describes a part outright, `across_flats:` gives a hex its
 measured size, and `checks: {detect: false}` turns detection off. With every

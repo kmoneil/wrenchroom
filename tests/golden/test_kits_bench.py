@@ -70,6 +70,13 @@ PAST_HOME = {
     # Issue #115: an M2 and a #1 cross recess, drawn as makers draw them, take PH0.
     "cross_M2_self_tapping_screw": _PH0,
     f"cross_{FUSION_TAPPING}": _PH0,
+    # Issue #124: Torx recesses drawn round, read from their lobes.
+    "lobed_recess_plain_screw": (
+        "needs torx-key-T25, which kit metric-home does not hold (full has it)"
+    ),
+    "lobed_recess_fluted_screw": (
+        "needs torx-key-T20, which kit metric-home does not hold (full has it)"
+    ),
 }
 
 #: Cells metric-home holds a tool for but can't turn without full's: the ball end.

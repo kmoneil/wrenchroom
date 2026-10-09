@@ -24,6 +24,7 @@ from bd_warehouse.fastener import (
 from build123d import (
     Axis,
     Box,
+    Circle,
     Compound,
     Cone,
     Cylinder,
@@ -2511,3 +2512,54 @@ def cap_dome():
         ]
     parts.append(("dome_pocket", Pos(-100, 0, 4) * (Box(60, 60, 8) - Cylinder(8.0, 8))))
     return parts
+
+
+def _torx_m4(a, flutes):
+    """An M4 with a button-shaped head 7.6 by 2.2, a Torx recess ``a`` point to point
+    1.4 deep in its top: a round core and six round lobes, and with ``flutes``, six
+    round flutes between them, as ISO 10664 draws them (lobes 0.1 a, flutes 0.17 a)."""
+    lobe = 0.1 * a if flutes else 0.122 * a
+    profile = Circle(a / 2 - lobe if flutes else 0.356 * a)
+    for k in range(6):
+        turn = math.radians(60 * k)
+        centre = a / 2 - lobe
+        profile += Pos(centre * math.cos(turn), centre * math.sin(turn)) * Circle(lobe)
+    for k in range(6 if flutes else 0):
+        turn, at = math.radians(60 * k + 30), 0.54 * a
+        profile -= Pos(at * math.cos(turn), at * math.sin(turn)) * Circle(0.17 * a)
+    dome_r = (3.8**2 + 1.8**2) / (2 * 1.8)
+    head = Pos(0, 0, 0.2) * Cylinder(3.8, 0.4)
+    head += (Pos(0, 0, 2.2 - dome_r) * Sphere(dome_r)) & Pos(0, 0, 1.3) * Box(8, 8, 1.8)
+    head -= Pos(0, 0, 0.8) * extrude(profile, 1.41)
+    return head + Pos(0, 0, -5) * Cylinder(2, 10)
+
+
+@cell(
+    "lobed_recess",
+    [
+        {
+            "parts": "plain_screw",
+            "kind": "screw",
+            "head": "torx",
+            "size": "M4",
+            "across_flats": 4.5,
+        },
+        {"parts": "fluted_screw", "kind": "screw", "head": "torx", "size": "M4"},
+    ],
+    {
+        "plain_screw": {"verdict": "turns", "tool": "torx-key-T25"},
+        "fluted_screw": {"verdict": "turns", "tool": "torx-key-T20"},
+    },
+)
+def lobed_recess():
+    """Torx recesses drawn round, as makers draw them (issue #124), open above. The
+    plain screw, the issue's: a round core and six round lobes, 4.50 point to point,
+    T25's (its band 4.451 to 4.566), where an M4's standard says T20. The fluted screw:
+    lobes and flutes, 3.92, T20's (3.879 to 3.970). Described, each takes its key.
+    Detected, each used to be guessed a button head, turned with a 2.5 hex key.
+    """
+    return [
+        ("plate", plate(holes=[(-40, 0, 2.0), (40, 0, 2.0)])),
+        ("plain_screw", Pos(-40, 0, 0) * _torx_m4(4.5, flutes=False)),
+        ("fluted_screw", Pos(40, 0, 0) * _torx_m4(3.92, flutes=True)),
+    ]

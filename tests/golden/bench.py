@@ -65,8 +65,8 @@ SLOTS = len(CELLS) + 1
 #: #117's misnamed, three M3s under M5 names (its leadscrew nut is passed over),
 #: 134 with #115's cross, three cross recesses drawn as makers draw them.
 FINAL_COUNTS = {
-    "fasteners": 139,
-    "turns": 108,
+    "fasteners": 141,
+    "turns": 110,
     "held": 8,
     "blocked": 22,
     "stuck": 1,
