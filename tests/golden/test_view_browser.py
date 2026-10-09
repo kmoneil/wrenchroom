@@ -253,6 +253,69 @@ def test_clicking_through_the_list_selects_each_in_turn_in_node(bench_page):
     assert walk[-1]["drawn"]["selected"] is None
 
 
+@pytest.fixture(scope="module")
+def clash_page(tmp_path_factory):
+    """A bracket 10 on a side, 1 into a frame 20 on a side, and a block apart: checked
+    for clashes, 100 mm^3 between the two (M8)."""
+    from build123d import Box, Pos  # noqa: PLC0415  (only this fixture builds geometry)
+
+    from wrenchroom.assembly import Assembly, Part  # noqa: PLC0415
+    from wrenchroom.checker import check  # noqa: PLC0415
+    from wrenchroom.config import Config  # noqa: PLC0415
+
+    parts = [
+        Part("frame", Pos(14, 0, 0) * Box(20, 20, 20)),
+        Part("bracket", Box(10, 10, 10)),
+        Part("apart", Pos(0, 60, 0) * Box(10, 10, 10)),
+    ]
+    report = check(Assembly(parts), Config(), clashes=True)
+    path = tmp_path_factory.mktemp("clash") / "clash.html"
+    path.write_text(html_text(report), encoding="utf-8")
+    _keep(path, "clash.html")
+    return path, view_data(report)
+
+
+def test_the_clashes_are_listed_in_node(clash_page):
+    page, _ = clash_page
+    (load,) = _node(page, "")
+    panel = load["panel"]
+    assert (panel["clash_list_hidden"], panel["clash_hidden"]) == (False, True)
+    assert panel["clashes_summary"] == "1 clash (overlap over 0.05 mm^3)"
+    assert panel["clashes"] == ["bracket into frame100.0 mm^3"]  # the name, then the volume
+    assert (load["drawn"]["clash"], load["drawn"]["overlaps"]) == (None, 0)
+
+
+def test_a_clash_is_drawn_with_its_two_parts_and_its_overlap_in_node(clash_page):
+    page, view = clash_page
+    (load,) = _node(page, "#clash:0")
+    drawn, panel = load["drawn"], load["panel"]
+    assert (drawn["clash"], drawn["selected"], drawn["overlaps"]) == (0, None, 1)
+    names = [part["name"] for part in view["parts"]]
+    colours = {names[part]: (colour, opacity) for part, colour, opacity in drawn["parts"]}
+    assert colours["bracket"] == colours["frame"] == (COLOURS["blocker"], 0.7)
+    assert colours["apart"][1] < 0.5  # ghosted
+    assert (panel["list_hidden"], panel["detail_hidden"], panel["clash_hidden"]) == (
+        True,
+        True,
+        False,
+    )
+    assert panel["clash"] == ["bracket into frame", "100.0 mm^3 drawn into each other.", None, None]
+
+
+def test_a_clash_hash_naming_no_clash_shows_everything_in_node(clash_page):
+    page, _ = clash_page
+    (load,) = _node(page, "#clash:7")
+    assert (load["drawn"]["clash"], load["drawn"]["selected"]) == (None, None)
+    assert load["panel"]["status"] == "No fastener named clash:7."
+
+
+def test_a_page_with_no_clashes_looked_for_lists_none_in_node(bench_page):
+    page, _ = bench_page
+    (load,) = _node(page, "#clash:0")
+    assert load["panel"]["clash_list_hidden"] is True
+    assert load["drawn"]["clash"] is None
+
+
 # ---------------------------------------------------------------------------
 # Chrome: the page opened from disk and drawn with WebGL.
 # ---------------------------------------------------------------------------
@@ -475,7 +538,9 @@ def _screenshot(chrome, tmp_path, page, hash_):
     )
     if not done:
         _unavailable(f"Chrome would not take a screenshot: {stderr[-2000:]}")
-    _keep(shot, f"{hash_.lstrip('#') or 'overview'}.png")
+    # Kept under a name an artifact can carry (no colon: #clash:0), each page's apart.
+    name = re.sub(r'[":<>|*?\r\n]', "-", hash_.lstrip("#")) or "overview"
+    _keep(shot, f"{name}.png" if page.stem == "bench" else f"{page.stem}-{name}.png")
     return _magenta_and_red(shot)
 
 
@@ -499,3 +564,18 @@ def test_failures_show_red_and_their_blockers_magenta_on_screen(bench_page, tmp_
     # about 2.5 times margin under those.
     assert shots["#gland_rib_gland"][0] > 15, shots
     assert shots["#gland_rib_gland"][1] > 150, shots
+
+
+def test_a_clash_shows_its_overlap_red_and_its_parts_magenta_on_screen(clash_page, tmp_path):
+    # The bracket and frame see-through magenta, the overlap between them red and
+    # drawn over them; the overview has neither until a clash is chosen. CI measured
+    # 412608 magenta and 101941 red pixels on Linux and macOS alike (2026-10-09); drawn
+    # first, under the parts, the overlap was 5 red pixels. The floors keep about 2.5
+    # times margin under those.
+    chrome = _chrome()
+    page, _ = clash_page
+    overview = _screenshot(chrome, tmp_path, page, "")
+    chosen = _screenshot(chrome, tmp_path, page, "#clash:0")
+    assert overview == (0, 0), overview
+    assert chosen[0] > 160_000, chosen
+    assert chosen[1] > 40_000, chosen

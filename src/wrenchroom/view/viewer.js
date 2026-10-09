@@ -29,6 +29,8 @@
 
   let selected = null; // index into data.fasteners
   let isolated = null; // index into the selected fastener's attempts
+  let clash = null; // index into data.clashes.found, when a clash is selected
+  const CLASH_HASH = /^clash:(\d+)$/; // a clash's hash: #clash:N, where no fastener has the name
 
   // ------------------------------------------------------------------ panel
 
@@ -69,14 +71,40 @@
     $("tools").append(item);
   }
   for (const line of data.tools.apart) $("tools").append(el("li", line, "muted"));
+  if (data.clashes) {
+    $("clash-list").hidden = false;
+    $("clashes-summary").textContent = data.clashes.header;
+    data.clashes.found.forEach((c, index) => {
+      const button = el("button");
+      button.type = "button";
+      button.append(swatch(C.overlap), el("span", c.label, "name"), el("span", c.volume + " mm^3", "verdict"));
+      button.addEventListener("click", () => selectClash(index));
+      const item = el("li");
+      item.append(button);
+      $("clashes").append(item);
+    });
+    for (const line of data.clashes.apart) $("clashes").append(el("li", line, "muted"));
+  }
   $("back").addEventListener("click", () => select(null));
+  $("clash-back").addEventListener("click", () => select(null));
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") select(null);
   });
 
+  function showClash(c) {
+    $("clash").hidden = c === null;
+    if (c === null) return;
+    $("clash-name").textContent = c.label;
+    $("clash-volume").textContent = c.volume + " mm^3 drawn into each other.";
+    $("clash-state").hidden = c.state === null;
+    $("clash-state").textContent = c.state === null ? "" : "In state " + c.state + "'s model.";
+    $("clash-hint").hidden = c.hint === null;
+    $("clash-hint").textContent = c.hint === null ? "" : "Perhaps: " + c.hint;
+  }
+
   function showDetail(f) {
     $("detail").hidden = f === null;
-    $("list").hidden = f !== null;
+    $("list").hidden = f !== null || clash !== null;
     if (f === null) return;
     $("name").textContent = f.label;
     $("headline").textContent = f.headline;
@@ -171,6 +199,20 @@
 
   const tools = new THREE.Group();
   scene.add(tools);
+  const overlaps = new THREE.Group();
+  scene.add(overlaps);
+  // Drawn last and over everything: it lies inside both parts, which are see-through.
+  // Three draws every opaque object before any see-through one, whatever its render
+  // order, so the overlap is a see-through one too, barely: then it is drawn after
+  // the parts, not under them, where their magenta would tint it.
+  const overlapMaterial = new THREE.MeshLambertMaterial({
+    color: C.overlap,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.95,
+    depthTest: false,
+    depthWrite: false,
+  });
   function toolMaterial(colour, opacity) {
     return new THREE.MeshLambertMaterial({
       color: colour,
@@ -232,10 +274,12 @@
 
   function apply(reframe) {
     const f = selected === null ? null : data.fasteners[selected];
-    const viewIndex = f ? f.view : data.overview;
+    const c = clash === null ? null : data.clashes.found[clash];
+    const viewIndex = f ? f.view : c ? c.view : data.overview;
     const visible = new Set(data.views[viewIndex].parts);
     let highlight = [];
     if (f) highlight = isolated === null ? f.highlight : f.attempts[isolated].highlight;
+    if (c) highlight = c.parts;
     const highlighted = new Set(highlight);
 
     data.parts.forEach((part, index) => {
@@ -252,9 +296,23 @@
         } else if ((part.owner ?? part.name) !== f.name) {
           opacity = owner === undefined ? GHOST : OTHER_FASTENER;
         }
+      } else if (c) {
+        // The two parts, see-through, the overlap inside them; the rest ghosted.
+        if (highlighted.has(index)) {
+          colour = C.blocker;
+          opacity = BLOCKER;
+        } else {
+          opacity = GHOST;
+        }
       }
       paint(mesh, colour, opacity);
     });
+    overlaps.clear();
+    if (c && c.overlap !== null) {
+      const mesh = new THREE.Mesh(geometry(c.overlap), overlapMaterial);
+      mesh.renderOrder = 10;
+      overlaps.add(mesh);
+    }
 
     tools.clear();
     if (f) {
@@ -264,7 +322,8 @@
     }
 
     showDetail(f);
-    if (reframe) frame(f, visible);
+    showClash(c);
+    if (reframe) frame(f, visible, c);
     render();
     record(viewIndex);
   }
@@ -272,13 +331,19 @@
   const box = new THREE.Box3();
   const sphere = new THREE.Sphere();
   const direction = new THREE.Vector3(1, -1.4, 0.9).normalize();
-  function frame(f, visible) {
+  function frame(f, visible, c) {
     scene.updateMatrixWorld(true);
     box.makeEmpty();
     if (f) {
       const own = f.part === null ? null : partMeshes[f.part];
       if (own) box.expandByObject(own);
       for (const child of tools.children) box.expandByObject(child);
+    }
+    if (c) {
+      // The part drawn into the other, and the overlap: the other may be a frame.
+      const first = c.parts.length ? partMeshes[c.parts[0]] : null;
+      if (first) box.expandByObject(first);
+      for (const child of overlaps.children) box.expandByObject(child);
     }
     if (box.isEmpty()) {
       partMeshes.forEach((mesh, index) => {
@@ -318,17 +383,40 @@
       error: webglError,
       selected,
       isolated,
+      clash,
       view: viewIndex,
       parts,
       tools: { hit, clear: tools.children.length - hit },
+      overlaps: overlaps.children.length,
     });
   }
 
   // ------------------------------------------------------------ selection
 
+  function selectClash(index) {
+    selected = null;
+    isolated = null;
+    clash = index;
+    try {
+      history.replaceState(null, "", "#clash:" + index);
+    } catch (error) {
+      // as for a fastener's hash
+    }
+    status("");
+    apply(true);
+  }
+
+  function clashOf(wanted) {
+    const match = wanted === null || byName.has(wanted) ? null : CLASH_HASH.exec(wanted);
+    if (!match || !data.clashes) return null;
+    const index = Number(match[1]);
+    return index < data.clashes.found.length ? index : null;
+  }
+
   function select(index) {
     selected = index;
     isolated = null;
+    clash = null;
     try {
       const here = location.pathname + location.search;
       const where = index === null ? here : "#" + encodeURIComponent(data.fasteners[index].name);
@@ -382,12 +470,16 @@
   window.addEventListener("hashchange", () => {
     const wanted = fromHash();
     if (wanted !== null && byName.has(wanted)) select(byName.get(wanted));
+    else if (clashOf(wanted) !== null) selectClash(clashOf(wanted));
   });
 
   resize();
   const wanted = fromHash() ?? data.select;
   if (wanted !== null && byName.has(wanted)) {
     selected = byName.get(wanted);
+    apply(true);
+  } else if (clashOf(wanted) !== null) {
+    clash = clashOf(wanted);
     apply(true);
   } else {
     apply(true);

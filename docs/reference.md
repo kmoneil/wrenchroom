@@ -539,7 +539,10 @@ every run, and every report says it wasn't looked for.
 The terminal says each as `CLASH first into second  volume`, the first the part
 drawn into the other: a fastener, else the smaller. The JSON's `clashes` gives the
 pairs, their volumes, a point in each overlap (the middle of its box), the state and
-the hint; `wrenchroom clashes --json` and `--md` write the same alone.
+the hint; `wrenchroom clashes --json` and `--md` write the same alone. The 3D view
+(`check --clashes --html`) lists them in its panel: choosing one draws its two parts
+see-through and the overlap itself in red, over them, in the state's own model where
+it has one (`report.html#clash:0` opens on the first).
 
 ## Collision engines and speed
 

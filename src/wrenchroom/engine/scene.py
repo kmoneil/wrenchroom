@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import enum
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, Protocol
 
 import numpy as np
@@ -49,12 +49,14 @@ GRAZE_MIN_VOLUME = 1e-4
 
 @dataclass(frozen=True)
 class PartOverlap:
-    """Two parts' overlap, as an engine measured it: volume (mm^3), surface (mm^2), box."""
+    """Two parts' overlap, as measured: volume (mm^3), surface (mm^2), box, and solid."""
 
     volume: float
     area: float
     low: tuple[float, float, float]
     high: tuple[float, float, float]
+    #: The overlap itself, where the parts are, for a view to draw.
+    shape: Shape | None = field(default=None, compare=False, repr=False)
 
 
 class Contact(enum.Enum):
