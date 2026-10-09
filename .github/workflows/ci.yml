@@ -12,6 +12,12 @@
 # Both Pythons the project claims (3.13 the floor, 3.14 current) and both platforms the
 # CAD stack has wheels for in CI (Linux x86_64, macOS arm64). The OCP wheel is the
 # headless `cadquery-ocp-novtk`, which is what lets this run on a runner at all.
+#
+# macOS runs on the floor only, and on pull requests, not on the push to main that
+# merges one: a macOS minute costs about ten Linux ones in GitHub's usage, and the PR
+# has already run the change there. Main's run is Linux, both Pythons, which still
+# catches what a merge breaks by meeting another. A manual run (workflow_dispatch)
+# runs what a PR does.
 
 name: ci
 
@@ -43,17 +49,20 @@ jobs:
       - run: uv sync --frozen
       - run: uv run --frozen python scripts/lanes.py gates
 
-  # The unit suite on every platform and Python the project claims. The HTML view's
-  # tests use the Node and Chrome the runner images come with; under CI a missing
-  # one fails the run instead of skipping (tests/golden/test_view_browser.py).
+  # The unit suite on every platform and Python the project claims, macOS as above.
+  # The HTML view's tests use the Node and Chrome the runner images come with; under
+  # CI a missing one fails the run instead of skipping (tests/golden/test_view_browser.py).
   fast:
     timeout-minutes: 20
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: ${{ fromJSON(github.event_name == 'push' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }}
         python: ["3.13", "3.14"]
+        exclude:
+          - os: macos-latest
+            python: "3.14"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
@@ -80,14 +89,14 @@ jobs:
   # noisier than the laptop the target is set for. The verdict counts DO gate,
   # so this is also a 500-fastener correctness run on every push. Once a few
   # weeks of numbers show where the runners sit, switch to the gating perf lane
-  # with the budget those numbers support.
+  # with the budget those numbers support. macOS as above.
   perf:
     timeout-minutes: 20
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: ${{ fromJSON(github.event_name == 'push' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
