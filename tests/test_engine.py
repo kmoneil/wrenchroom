@@ -7,8 +7,9 @@ the two engines are allowed to differ, said out loud.
 """
 
 import pytest
-from build123d import Box, Cylinder, Pos, Rectangle, Rot, Shape
+from build123d import Box, Cylinder, Pos, Rectangle, Rot
 
+import wrenchroom.engine.exact as exact_module
 import wrenchroom.engine.mesh as mesh_module
 from wrenchroom.assembly import Assembly, Part
 from wrenchroom.checker import check
@@ -302,13 +303,13 @@ def test_an_overlap_is_measured_next_to_the_origin(monkeypatch):
     far = Pos(3000, 35000, 0)
     ring, arm = far * ring, far * arm
     seen = []
-    intersect = Shape.intersect
+    common = exact_module.common
 
-    def spy(self, *others, **kwargs):
-        seen.extend((self, *others))
-        return intersect(self, *others, **kwargs)
+    def spy(a, b):
+        seen.extend((a, b))
+        return common(a, b)
 
-    monkeypatch.setattr(Shape, "intersect", spy)
+    monkeypatch.setattr(exact_module, "common", spy)
     assert exact_overlap(ring, arm) == pytest.approx(near, rel=1e-9)
     assert len(seen) == 2
     for shape, was in zip(seen, (ring, arm), strict=True):

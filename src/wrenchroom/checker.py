@@ -41,7 +41,7 @@ from wrenchroom.engine import (
     Scene,
     make_engine,
 )
-from wrenchroom.engine.exact import exact_overlap
+from wrenchroom.engine.exact import common, cut, exact_overlap
 from wrenchroom.engine.scene import boxes_overlap
 from wrenchroom.fasteners import (
     HEX_AF_MIN,
@@ -1208,7 +1208,7 @@ def _measured(frame: _Frame, fastener: Fastener, toward: Vec | None = None) -> t
             low, high = min(frame.projections), max(frame.projections)
         plane = Plane(origin=frame.point_at(low), z_dir=frame.direction)
         cylinder = Solid.make_cylinder(max(frame.radials) + 1.0, high - low, plane)
-        region = frame.part.shape & cylinder
+        region = common(frame.part.shape, cylinder)
     if region is None:  # the region is the part's own, so never empty; for the types
         region = frame.part.shape
     if frame.bore <= 0:
@@ -1216,7 +1216,7 @@ def _measured(frame: _Frame, fastener: Fastener, toward: Vec | None = None) -> t
     bore_low, bore_high = _bore_extent(frame) or (low, high)
     under = Plane(origin=frame.point_at(bore_low - 1.0), z_dir=frame.direction)
     thread = Solid.make_cylinder(frame.bore * _THREAD_REACH, bore_high - bore_low + 2.0, under)
-    return region, region - thread
+    return region, cut(region, thread) or region
 
 
 def _bore_extent(frame: _Frame) -> tuple[float, float] | None:
@@ -1260,7 +1260,7 @@ def _set_core(frame: _Frame, fastener: Fastener) -> Shape:
     low, high = min(frame.projections), max(frame.projections)
     plane = Plane(origin=frame.point_at(low - 1.0), z_dir=frame.direction)
     core = Solid.make_cylinder(min(minor, drawn) - _SHANK_SLACK, high - low + 2.0, plane)
-    found = frame.part.shape & core
+    found = common(frame.part.shape, core)
     return found if found is not None else core  # for the types: the core is its own
 
 
@@ -1294,7 +1294,7 @@ def _head_region(
     start = tip - 1.0 if end > 0 else bearing  # from past the tip to the bearing face
     plane = Plane(origin=frame.point_at(start), z_dir=frame.direction)
     rod = Solid.make_cylinder(max(shank) + _SHANK_SLACK, abs(bearing - tip) + 1.0, plane)
-    return frame.part.shape - rod
+    return cut(frame.part.shape, rod) or frame.part.shape
 
 
 def _drawn_into(
