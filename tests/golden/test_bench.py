@@ -601,3 +601,10 @@ def test_the_tools_list_counts_each_passing_fastener_s_tool(bench_report, bench_
     assert used.by_hand == ("grip_thumb_screw", "grip_wheel_thumbscrew", "grip_wing_nut")
     assert len(used.no_tool) == 8  # 4 hold themselves, 4 in traps
     assert len(used.without) == FINAL_COUNTS["blocked"] + FINAL_COUNTS["not_covered"]
+    # Issue #136: each blocked fastener's tool, once reached, apart from the reached:
+    # all 26 but the four in joints nothing turns, which no tool was tried on; and the
+    # one tool only a blocked fastener needs, big_tube's 36.
+    assert sum(len(names) for _, names in used.blocked) == FINAL_COUNTS["blocked"] - 4
+    assert {tool for tool, _ in used.blocked if not used.reached(tool)} == {"spanner-36"}
+    assert dict(used.blocked)["spanner-36"] == ("big_tube_gland",)
+    assert dict(used.blocked)["hex-key-5"][0] == "key_wall_near_screw"

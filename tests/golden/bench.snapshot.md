@@ -123,6 +123,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 - By hand: 3 (`grip_thumb_screw`, `grip_wheel_thumbscrew`, `grip_wing_nut`)
 - No tool needed: 8, held by themselves or a trap
 - No tool yet: 26 blocked (wrenchroom check says why)
+- Blocked, once reached: `hex-key-1.5` x1, `hex-key-2.5` x3, `hex-key-4` x1, `hex-key-5` x5, `spanner-5.5` x1, `spanner-13` x5, `spanner-15` x1, `spanner-16` x2, `spanner-24` x1, `spanner-36` x1 (only blocked fasteners need it: `big_tube_gland`), `driver-ph2` x1
 
 #### Failures
 

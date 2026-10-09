@@ -249,7 +249,8 @@ def hostile_report():
 
 def test_the_hostile_report_renders_without_injection(hostile_report):
     rendered = GFM.render(hostile_report.markdown())
-    _assert_report_structure(rendered, warnings=3, tools_apart=1)  # no tool yet: 2
+    # No tool yet: 2; and the blocked one's tool, once reached (#136), its name a span.
+    _assert_report_structure(rendered, warnings=3, tools_apart=2)
     assert re.findall(r"<h4>(.*?)</h4>", rendered) == ["Tools", "Failures", "Warnings"]
 
 
@@ -395,7 +396,7 @@ def test_check_md_writes_the_report_and_keeps_the_exit_code(hostile_step, tmp_pa
     assert not any(UNSAFE.search(line) for line in text.splitlines())
     assert text.startswith("### wrenchroom: `model.step`\n")
     rendered = GFM.render(text)
-    _assert_report_structure(rendered, warnings=2, tools_apart=1)  # no tool yet: 2
+    _assert_report_structure(rendered, warnings=2, tools_apart=2)  # no tool yet; once reached
     summary = re.search(r"<p><strong>(.*?)</strong></p>", rendered)
     assert summary is not None
     assert summary.group(1) == result.output.splitlines()[0]

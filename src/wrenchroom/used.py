@@ -15,6 +15,11 @@ counts its holding tool, and a joint whose bolt and nut take the same tool needs
 of it at once, which the line says. A fastener turned by hand, or held by itself or
 its trap, needs no tool; a blocked or not-covered one has none yet. Each is counted
 apart, so every fastener is in the list somewhere.
+
+A blocked fastener is often blocked only as the model stands, before anything comes
+off, and its tool is known: the tools blocked fasteners would need once reached are
+listed apart (issue #136), not counted as reached, and one that only they need is
+said, so a person packing from the list has it. A not-covered one has no tool to name.
 """
 
 from __future__ import annotations
@@ -124,6 +129,8 @@ class ToolsUsed:
         no_tool: Fasteners held by themselves or their traps.
         without: Fasteners with no tool yet: blocked or not covered, by name, with
             their verdicts.
+        blocked: The tools blocked fasteners would need once reached, each with its
+            fasteners, family by family, smallest first (issue #136).
     """
 
     kit: str
@@ -131,6 +138,7 @@ class ToolsUsed:
     by_hand: tuple[str, ...] = ()
     no_tool: tuple[str, ...] = ()
     without: tuple[tuple[str, Verdict], ...] = ()
+    blocked: tuple[tuple[str, tuple[str, ...]], ...] = ()
 
     @property
     def families(self) -> str:
@@ -169,13 +177,21 @@ class ToolsUsed:
                 f"| {md_code(use.tool)} | {len(use.fasteners)} | {'; '.join(use.said(_md))} |"
                 for use in self.uses
             )
-        apart = self.apart(lambda names: _md(names, in_table=False))
+        apart = self.apart(
+            lambda names: _md(names, in_table=False), lambda tool: md_code(tool, in_table=False)
+        )
         if apart:
             lines += ["", *(f"- {line[0].upper()}{line[1:]}" for line in apart)]
         return lines
 
-    def apart(self, names: Callable[[tuple[str, ...]], str] = listed) -> list[str]:
-        """The fasteners that need no tool, or have none yet, a line each kind."""
+    def apart(
+        self, names: Callable[[tuple[str, ...]], str] = listed, tool: Callable[[str], str] = str
+    ) -> list[str]:
+        """The fasteners that need no tool, or have none yet, a line each kind.
+
+        Then the tools blocked ones would need once reached, each with how many need
+        it, and those no fastener reached needs named: only blocked fasteners need it.
+        """
         lines = []
         if self.by_hand:
             lines.append(f"by hand: {len(self.by_hand)} ({names(self.by_hand)})")
@@ -187,7 +203,17 @@ class ToolsUsed:
                 counts[verdict.value] = counts.get(verdict.value, 0) + 1
             said = ", ".join(f"{count} {verdict}" for verdict, count in counts.items())
             lines.append(f"no tool yet: {said} (wrenchroom check says why)")
+        if self.blocked:
+            once = []
+            for each, fasteners in self.blocked:
+                only = f" (only blocked fasteners need it: {names(fasteners)})"
+                once.append(f"{tool(each)} x{len(fasteners)}{'' if self.reached(each) else only}")
+            lines.append(f"blocked, once reached: {', '.join(once)}")
         return lines
+
+    def reached(self, tool: str) -> bool:
+        """Whether a fastener the check reached needs this tool, as its line names it."""
+        return any(use.tool == tool for use in self.uses)
 
     def to_json(self) -> dict[str, object]:
         """The list as the JSON report's ``tools_used``."""
@@ -208,6 +234,15 @@ class ToolsUsed:
             "by_hand": list(self.by_hand),
             "no_tool": list(self.no_tool),
             "without": [{"name": name, "verdict": v.value} for name, v in self.without],
+            "blocked_tools": [
+                {
+                    "tool": tool,
+                    "count": len(fasteners),
+                    "fasteners": list(fasteners),
+                    "only_blocked": not self.reached(tool),
+                }
+                for tool, fasteners in self.blocked
+            ],
         }
 
 
@@ -216,10 +251,13 @@ def tools_used(report: Report) -> ToolsUsed:
     default = kit_named(DEFAULT_KIT)
     by_tool: dict[str, list[FastenerResult]] = {}
     by_hand, no_tool, without = [], [], []
+    blocked: dict[str, list[str]] = {}
     for result in report.results:
         name = result.fastener.name
         if result.verdict not in _WITH_A_TOOL:
             without.append((name, result.verdict))
+            if result.verdict is Verdict.BLOCKED and result.tool not in (None, HAND):
+                blocked.setdefault(result.tool or "", []).append(name)
         elif result.tool == HAND:
             by_hand.append(name)
         elif result.tool is None:
@@ -241,7 +279,12 @@ def tools_used(report: Report) -> ToolsUsed:
             )
         )
     uses.sort(key=lambda use: _order(use.tool))
-    return ToolsUsed(report.kit, tuple(uses), tuple(by_hand), tuple(no_tool), tuple(without))
+    once = sorted(
+        ((tool, tuple(names)) for tool, names in blocked.items()), key=lambda t: _order(t[0])
+    )
+    return ToolsUsed(
+        report.kit, tuple(uses), tuple(by_hand), tuple(no_tool), tuple(without), tuple(once)
+    )
 
 
 def _md(names: tuple[str, ...], *, in_table: bool = True) -> str:

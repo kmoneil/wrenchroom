@@ -5578,6 +5578,108 @@
     "name": "twins_a_screw",
     "verdict": "blocked"
    }
+  ],
+  "blocked_tools": [
+   {
+    "tool": "hex-key-1.5",
+    "count": 1,
+    "fasteners": [
+     "set_sunk_screw"
+    ],
+    "only_blocked": false
+   },
+   {
+    "tool": "hex-key-2.5",
+    "count": 3,
+    "fasteners": [
+     "flat_deep_screw",
+     "torus_deep_screw",
+     "trap_stopped_screw"
+    ],
+    "only_blocked": false
+   },
+   {
+    "tool": "hex-key-4",
+    "count": 1,
+    "fasteners": [
+     "ball_button_screw"
+    ],
+    "only_blocked": false
+   },
+   {
+    "tool": "hex-key-5",
+    "count": 6,
+    "fasteners": [
+     "key_wall_near_screw",
+     "shelled_screw",
+     "state_lid_screw",
+     "tapped_hold_screw",
+     "tee_hold_screw",
+     "twins_a_screw"
+    ],
+    "only_blocked": false
+   },
+   {
+    "tool": "spanner-5.5",
+    "count": 1,
+    "fasteners": [
+     "reach_55_nut"
+    ],
+    "only_blocked": false
+   },
+   {
+    "tool": "spanner-13",
+    "count": 5,
+    "fasteners": [
+     "channel_nut",
+     "corner_touch_nut",
+     "pair_both_hold_bolt",
+     "pair_both_hold_nut",
+     "post_ring_nut"
+    ],
+    "only_blocked": false
+   },
+   {
+    "tool": "spanner-15",
+    "count": 1,
+    "fasteners": [
+     "dome_rib_gland"
+    ],
+    "only_blocked": false
+   },
+   {
+    "tool": "spanner-16",
+    "count": 2,
+    "fasteners": [
+     "sunk_cap_cap_nut",
+     "tail_too_long_nut"
+    ],
+    "only_blocked": false
+   },
+   {
+    "tool": "spanner-24",
+    "count": 1,
+    "fasteners": [
+     "gland_rib_gland"
+    ],
+    "only_blocked": false
+   },
+   {
+    "tool": "spanner-36",
+    "count": 1,
+    "fasteners": [
+     "big_tube_gland"
+    ],
+    "only_blocked": true
+   },
+   {
+    "tool": "driver-ph2",
+    "count": 1,
+    "fasteners": [
+     "phillips_shelf_screw"
+    ],
+    "only_blocked": false
+   }
   ]
  }
 }

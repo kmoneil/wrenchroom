@@ -284,11 +284,14 @@ matches no part, say, which is usually a renamed part).
     spanner-10             x1      only side_bolt
     spanner-13             x2      only clamp_bolt, clamp_nut; 2 at once on a joint
   no tool yet: 1 blocked (wrenchroom check says why)
+  blocked, once reached: hex-key-5 x1
   ```
 
   The clamp's bolt and nut both take a 13 mm spanner, one turning while the other
   holds, so that joint needs two at once. The side bolt is stuck, but a spanner still
-  turns it, so its spanner is listed.
+  turns it, so its spanner is listed. The rear screw is blocked by the shelf, and once
+  it is reached it takes the 5 mm key the front screw does; a tool only blocked
+  fasteners need would say so.
 
 `-` for a file writes that report to stdout and moves the table to stderr, so it can
 be piped: `--json - | jq`, `--md - >> "$GITHUB_STEP_SUMMARY"`.
