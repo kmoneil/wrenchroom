@@ -7,6 +7,12 @@ they decide; a piece whose box misses the part's is never tested. A tool's piece
 never overlap one another (solids.py), so the sum is the whole tool's overlap,
 the same number fusing the pieces first would give, without the fuse, which for a
 four-piece open-end spanner cost more than the tests themselves.
+
+Every boolean wrenchroom runs goes through :func:`common` and :func:`cut`, in
+OCCT's non-destructive mode: in its default mode a boolean may raise the
+tolerances of its inputs in place, and a STEP model's instances of one part share
+one underlying shape, so measuring one instance changed what its twin measured
+next, and a result depended on what was measured before it (issue #146).
 """
 
 from __future__ import annotations
@@ -16,6 +22,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
 from build123d import Location, Shape
+from OCP.BRepAlgoAPI import BRepAlgoAPI_Common, BRepAlgoAPI_Cut
+from OCP.collections import List_TopoDS_Shape
 
 from wrenchroom.engine.scene import (
     HIT_MIN_VOLUME,
@@ -134,10 +142,35 @@ def exact_overlap(a: Shape, b: Shape) -> float:
     """
     low, high = shape_bounds(b)
     step = Location(tuple(-(lo + hi) / 2 for lo, hi in zip(low, high, strict=True)))
-    pieces = _moved(a, step).intersect(_moved(b, step))
-    if pieces is None:
-        return 0.0
-    return sum(piece.volume for piece in pieces)
+    shared = common(_moved(a, step), _moved(b, step))
+    return 0.0 if shared is None else sum(solid.volume for solid in shared.solids())
+
+
+def common(a: Shape, b: Shape) -> Shape | None:
+    """What two shapes share, leaving both as they were; None where OCCT fails."""
+    return _boolean(BRepAlgoAPI_Common(), a, b)
+
+
+def cut(a: Shape, b: Shape) -> Shape | None:
+    """``a`` less ``b``, leaving both as they were; None where OCCT fails."""
+    return _boolean(BRepAlgoAPI_Cut(), a, b)
+
+
+def _boolean(operation: BRepAlgoAPI_Common | BRepAlgoAPI_Cut, a: Shape, b: Shape) -> Shape | None:
+    """One OCCT boolean in its non-destructive mode, which copies what it must change.
+
+    Its result as OCCT gives it: build123d's cleaning, which only merges faces on
+    one surface, would change no volume measured here.
+    """
+    arguments, tools = List_TopoDS_Shape(), List_TopoDS_Shape()
+    arguments.Append(a.wrapped)
+    tools.Append(b.wrapped)
+    operation.SetArguments(arguments)
+    operation.SetTools(tools)
+    operation.SetNonDestructive(True)
+    operation.SetRunParallel(True)
+    operation.Build()
+    return Shape.cast(operation.Shape()) if operation.IsDone() else None
 
 
 def _moved(shape: Shape, step: Location) -> Shape:

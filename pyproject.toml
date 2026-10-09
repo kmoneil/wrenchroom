@@ -198,7 +198,7 @@ python = ".venv"
 [tool.ty.rules]
 deprecated = "error"
 
-# assembly.py (the XCAF STEP walk), the engine (tessellation, quick boxes) and
+# assembly.py (the XCAF STEP walk), the engine (tessellation, quick boxes, booleans) and
 # detect/geometry.py (counting a part's faces) talk
 # to OCP (OpenCascade) directly, and the cadquery-ocp wheel is compiled modules
 # with no stubs, so ty cannot resolve any member of them. Not fixable at the
@@ -209,6 +209,7 @@ deprecated = "error"
 include = [
   "src/wrenchroom/assembly.py",
   "src/wrenchroom/detect/geometry.py",
+  "src/wrenchroom/engine/exact.py",
   "src/wrenchroom/engine/mesh.py",
   "src/wrenchroom/engine/scene.py",
 ]
