@@ -1,9 +1,9 @@
 """The command line interface.
 
-Four commands: check, explain, detect (writes the sidecar) and tools.
+Five commands: check, explain, detect (writes the sidecar), tools and clashes.
 
-Exit codes, fixed: 0 every fastener passes, 1 a fastener fails, 2 something not covered
-or a config error.
+Exit codes, fixed: 0 every fastener passes, 1 a fastener fails (or two parts clash), 2
+something not covered or a config error.
 
 A report's FILE may be ``-``, for stdout: the report can then be piped, and what
 would have been printed for a person goes to stderr instead, out of its way. Only one
@@ -39,6 +39,12 @@ STDOUT = "-"
 _HAND_ROOM_HELP = (
     "Also check room for a hand on each handle (as `checks: {hand_room: true}`); "
     "untuned, so off by default."
+)
+
+_CLASHES_HELP = (
+    "Also look for parts drawn into each other over the whole model (as "
+    "`checks: {clashes: true}`); off by default, since models drawn with shortcuts "
+    "have many."
 )
 
 
@@ -124,6 +130,7 @@ def main() -> None:
     help="Use the exact OCP boolean engine: slow, the referee for borderline results.",
 )
 @click.option("--hand-room", is_flag=True, default=None, help=_HAND_ROOM_HELP)
+@click.option("--clashes", is_flag=True, default=None, help=_CLASHES_HELP)
 def check(  # noqa: PLR0913, PLR0917  (Click passes one parameter per option)
     model: Path,
     config_path: Path | None,
@@ -136,6 +143,7 @@ def check(  # noqa: PLR0913, PLR0917  (Click passes one parameter per option)
     state: str | None,
     exact: bool,
     hand_room: bool | None,
+    clashes: bool | None,
 ) -> None:
     """Check every fastener in MODEL and report the verdicts.
 
@@ -152,6 +160,7 @@ def check(  # noqa: PLR0913, PLR0917  (Click passes one parameter per option)
         state=state,
         exact=exact,
         hand_room=hand_room,
+        clashes=clashes,
     )
     for line in report.terminal_lines():
         _say(line, err=to_stdout)
@@ -166,7 +175,7 @@ def check(  # noqa: PLR0913, PLR0917  (Click passes one parameter per option)
     sys.exit(report.exit_code)
 
 
-def _run(
+def _run(  # noqa: PLR0913  (one keyword per check option, as check takes them)
     model: Path,
     config_path: Path | None,
     *,
@@ -176,15 +185,14 @@ def _run(
     state: str | None = None,
     exact: bool = False,
     hand_room: bool | None = None,
+    clashes: bool | None = None,
 ) -> Report:
     """Load, check, and turn config mistakes into exit 2; shared by check and explain."""
     from wrenchroom.assembly import Assembly
     from wrenchroom.checker import check as run_check
     from wrenchroom.config import Config, ConfigError
 
-    if config_path is None:
-        beside = model.parent / "wrenchroom.yaml"
-        config_path = beside if beside.exists() else None
+    config_path = _beside(model, config_path)
     try:
         config = Config.load(config_path) if config_path else None
         return run_check(
@@ -198,10 +206,99 @@ def _run(
             model_dir=model.parent,
             engine="exact" if exact else "mesh",
             hand_room=hand_room,
+            clashes=clashes,
         )
     except (ConfigError, ValueError) as exc:
         _say(f"error: {exc}", err=True)
         sys.exit(EXIT_NOT_COVERED)
+
+
+def _beside(model: Path, config_path: Path | None) -> Path | None:
+    """The sidecar: the one named, else wrenchroom.yaml beside the model, if present."""
+    if config_path is not None:
+        return config_path
+    beside = model.parent / "wrenchroom.yaml"
+    return beside if beside.exists() else None
+
+
+@main.command(name="clashes")
+@click.argument("model", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Sidecar YAML; default: wrenchroom.yaml beside the model, if present.",
+)
+@click.option(
+    "--json",
+    "json_path",
+    type=click.Path(dir_okay=False, allow_dash=True),
+    help="Also write the clashes as JSON here; - for stdout.",
+)
+@click.option(
+    "--md",
+    "md_path",
+    type=click.Path(dir_okay=False, allow_dash=True),
+    help="Also write the clashes as Markdown here; - for stdout.",
+)
+@click.option(
+    "--exact",
+    is_flag=True,
+    help="Use the exact OCP boolean engine: slow, the referee for borderline results.",
+)
+@click.option(
+    "--with-ignored",
+    is_flag=True,
+    help="Also measure the parts the sidecar ignores (cables, hoses), which a clash leaves out.",
+)
+def clashes_command(
+    model: Path,
+    config_path: Path | None,
+    json_path: str | None,
+    md_path: str | None,
+    exact: bool,
+    with_ignored: bool,
+) -> None:
+    """List every pair of parts in MODEL drawn into each other, in every state's model.
+
+    A fastener is measured past its thread, so a screw in a hole drawn at its tap
+    drill is no clash; nor is a fastener with its pair or its mates, an ignored
+    part, or two parts the sidecar's allow: names. Exits 1 for a clash, 2 for a
+    config error or an allow glob that names no part.
+    """
+    from wrenchroom.assembly import Assembly
+    from wrenchroom.checker import find_clashes
+    from wrenchroom.config import Config, ConfigError
+
+    to_stdout = _wants_stdout(json=json_path, md=md_path)
+    config_path = _beside(model, config_path)
+    try:
+        config = Config.load(config_path) if config_path else None
+        found = find_clashes(
+            Assembly.from_step(model),
+            config,
+            model_dir=model.parent,
+            engine="exact" if exact else "mesh",
+            with_ignored=with_ignored,
+        )
+    except (ConfigError, ValueError) as exc:
+        _say(f"error: {exc}", err=True)
+        sys.exit(EXIT_NOT_COVERED)
+    for line in found.lines():
+        _say(line, err=to_stdout)
+    engine = "exact" if exact else "mesh"
+    if json_path is not None:
+        document = partial(found.json_text, model.name, engine)
+        _write(json_path, document, partial(_save, document))
+    if md_path is not None:
+        page = partial(found.markdown_text, model.name)
+        _write(md_path, page, partial(_save, page))
+    sys.exit(found.exit_code)
+
+
+def _save(document: Callable[[], str], path: str) -> None:
+    """Write a document to its file, as UTF-8."""
+    Path(path).write_text(document(), encoding="utf-8")
 
 
 @main.command()

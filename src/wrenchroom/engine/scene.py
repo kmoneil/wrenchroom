@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import enum
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Protocol
 
 import numpy as np
@@ -44,6 +45,16 @@ HIT_MIN_VOLUME = 0.05
 #: Overlap volume in mm^3 above which an overlap at or under the hit floor is a
 #: graze, not numerical noise: a tangent touch measures zero, or near it.
 GRAZE_MIN_VOLUME = 1e-4
+
+
+@dataclass(frozen=True)
+class PartOverlap:
+    """Two parts' overlap, as an engine measured it: volume (mm^3), surface (mm^2), box."""
+
+    volume: float
+    area: float
+    low: tuple[float, float, float]
+    high: tuple[float, float, float]
 
 
 class Contact(enum.Enum):
@@ -151,6 +162,14 @@ class Engine(ABC):
     @abstractmethod
     def query(self, tool: Tool) -> Query:
         """Prepare one tool solid for testing against the scene's parts."""
+
+    def parts_apart(self, first: Part, second: Part) -> bool:
+        """Whether two parts surely overlap by no more than the floor (M8): sure, or False.
+
+        An engine that can only be sure by measuring says False, and the overlap is
+        measured exactly.
+        """
+        return False
 
 
 class Scene:

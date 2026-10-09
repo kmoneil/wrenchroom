@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from wrenchroom.assembly import Assembly
+    from wrenchroom.clashes import Clashes
     from wrenchroom.tools.sweep import Attempt, Probe
     from wrenchroom.used import ToolsUsed
 
@@ -215,6 +216,10 @@ class Report:
     #: The model's parts drawn as surfaces, open shells or loose faces: nothing can
     #: meet them, so they're left out of the check, and every report says so (#104).
     surfaces: tuple[str, ...] = ()
+    #: Parts drawn into each other over the whole model (M8), where the run looked
+    #: (``checks: {clashes: true}``, ``--clashes``); None where it didn't, which the
+    #: not-checked line says.
+    clashes: Clashes | None = None
 
     @property
     def not_checked(self) -> str:
@@ -224,6 +229,8 @@ class Report:
             unseen.insert(0, self._surfaces_count)
         if self.passed_over:
             unseen.insert(0, _passed_over_count(self.passed_over))
+        if self.clashes is None:
+            unseen.insert(0, "parts drawn into each other (checks: {clashes: true} turns it on)")
         if not self.hand_room:
             unseen.insert(0, "room for a hand (checks: {hand_room: true} turns it on)")
         return "not checked: " + "; ".join(unseen)
@@ -268,11 +275,12 @@ class Report:
 
     @property
     def exit_code(self) -> int:
-        """0 all pass; 1 a fastener fails; 2 not covered or a config problem."""
+        """0 all pass; 1 a fastener fails, or two parts clash; 2 not covered or a config problem."""
         askew = self.unmatched_rules or self.unmatched_ignores or self.warnings
-        if self.summary["not_covered"] or askew:
+        clashed = self.clashes.exit_code if self.clashes is not None else 0
+        if self.summary["not_covered"] or askew or clashed == 2:  # noqa: PLR2004
             return 2
-        if self.summary["blocked"] or self.summary["stuck"]:
+        if self.summary["blocked"] or self.summary["stuck"] or clashed:
             return 1
         return 0
 
@@ -290,7 +298,8 @@ class Report:
         if self.exit_code == 0:
             return
         lines = self.terminal_lines()
-        problems = [lines[0], *(line for line in lines if line.startswith(("FAIL ", "WARN ")))]
+        failing = ("FAIL ", "CLASH ", "WARN ")
+        problems = [lines[0], *(line for line in lines if line.startswith(failing))]
         raise AssertionError("\n".join(problems))
 
     # ------------------------------------------------------------------ JSON
@@ -328,6 +337,7 @@ class Report:
             ],
             "fasteners": [_result_json(result) for result in self.results],
             "tools_used": self.tools_used().to_json(),
+            "clashes": self.clashes.to_json() if self.clashes is not None else None,
         }
 
     def tools_used(self) -> ToolsUsed:
@@ -363,6 +373,8 @@ class Report:
             what = reason or listed(names, result.attempts) or NO_TOOL
             tool = result.tool or "-"
             lines.append(f"FAIL {result.fastener.name}  {tool}  {result.verdict}  {what}")
+        if self.clashes is not None:
+            lines.extend(self.clashes.lines())
         for glob in self.unmatched_rules:
             lines.append(f"WARN rule matched nothing: {glob!r} (renamed part?)")
         for glob in self.unmatched_ignores:
@@ -446,6 +458,11 @@ class Report:
                 if self.hand_room
                 else "room for a hand (`checks: {hand_room: true}` turns it on); "
             )
+            + (
+                "parts drawn into each other (`checks: {clashes: true}` turns it on); "
+                if self.clashes is None
+                else ""
+            )
             + (f"{md_text(_passed_over_count(self.passed_over))}; " if self.passed_over else "")
             + (f"{md_text(self._surfaces_count)}; " if self.surfaces else "")
             + "parts the model doesn't have.",
@@ -481,6 +498,8 @@ class Report:
                     f"| {md_code(result.fastener.name)} | {_md_tool(result.tool)} "
                     f"| {result.verdict} | {what} |"
                 )
+        if self.clashes is not None:
+            lines += self.clashes.markdown()
         warnings = [
             *(
                 f"rule matched nothing: {md_code(glob, in_table=False)} (renamed part?)"

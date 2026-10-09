@@ -100,6 +100,7 @@ def test_every_report_says_the_surfaces(model):
     assert f"NOTE {note}: open shell, one face" in lines
     assert lines[-1] == (
         "NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); "
+        "parts drawn into each other (checks: {clashes: true} turns it on); "
         "2 parts drawn as surfaces, not solids (left out); parts the model doesn't have"
     )
     assert json.loads(report.json_text())["surfaces"] == ["open shell", "one face"]

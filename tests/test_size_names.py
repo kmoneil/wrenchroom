@@ -353,6 +353,7 @@ def test_the_terminal_says_the_look_alike_and_counts_it(report):
     assert f"NOTE passed over Part7: {NOT_NAMED}: M3 screw, a 2.5 hex socket" in lines
     assert lines[-1] == (
         "NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); "
+        "parts drawn into each other (checks: {clashes: true} turns it on); "
         "1 part shaped like a fastener, not named as one (passed over); "
         "parts the model doesn't have"
     )

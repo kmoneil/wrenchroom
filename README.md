@@ -23,7 +23,7 @@ $ wrenchroom check examples/bracket.step
   M8 nut                   spanner-13     x1    all pass (ring, full length)
 FAIL rear_screw  hex-key-5  blocked  shelf
 FAIL side_bolt  spanner-10  stuck  cover
-NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts the model doesn't have
+NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts drawn into each other (checks: {clashes: true} turns it on); parts the model doesn't have
 ```
 
 The same check as a 3D view (`--html report.html`), opened on the rear screw: the
@@ -137,7 +137,7 @@ $ wrenchroom check examples/bracket.step
   M8 nut                   spanner-13     x1    all pass (ring, full length)
 FAIL rear_screw  hex-key-5  blocked  shelf
 FAIL side_bolt  spanner-10  stuck  cover
-NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts the model doesn't have
+NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts drawn into each other (checks: {clashes: true} turns it on); parts the model doesn't have
 ```
 
 There's no sidecar here. The names say screw, bolt and nut, and the solids give the
@@ -188,7 +188,7 @@ $ wrenchroom check examples/bracket.step
   M6 socket screw          hex-key-5      x2    all pass (driver straight in)
   M8 hex screw             spanner-13     x1    all pass (ring, full length)
   M8 nut                   spanner-13     x1    all pass (ring, full length)
-NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts the model doesn't have
+NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts drawn into each other (checks: {clashes: true} turns it on); parts the model doesn't have
 ```
 
 Everything passes, and the exit code is 0.
@@ -292,6 +292,17 @@ matches no part, say, which is usually a renamed part).
   turns it, so its spanner is listed. The rear screw is blocked by the shelf, and once
   it is reached it takes the 5 mm key the front screw does; a tool only blocked
   fasteners need would say so.
+- **Clashes**: parts drawn into each other anywhere in the model, which a model's own
+  collision check misses when it tests only some pairs (a bracket against its own
+  nut). `wrenchroom clashes` lists them; `--clashes` (or `checks: {clashes: true}`)
+  adds them to `check`'s report, where each fails the run. A fastener is measured
+  past its thread, so a screw in its tapped hole is no clash, and the sidecar's
+  `allow:` names pairs meant to overlap (a press fit, a shaft in its bearing).
+
+  ```console
+  $ wrenchroom clashes examples/bracket.step
+  no clashes (overlap over 0.05 mm^3)
+  ```
 
 `-` for a file writes that report to stdout and moves the table to stderr, so it can
 be piped: `--json - | jq`, `--md - >> "$GITHUB_STEP_SUMMARY"`.
@@ -492,6 +503,9 @@ Every rule and figure, with the standards and the reasoning, is in
 
 - **Room for a hand** is off by default (`--hand-room` turns it on): its figures
   aren't yet tuned against real hands. Every report says what it didn't check.
+- **Clashes** are off inside `check` by default (`--clashes` turns them on): a model
+  drawn with shortcuts (a press fit, a thread drawn into a part that isn't a
+  fastener) would fail every run. `wrenchroom clashes` lists them on its own.
 - **Parts the model doesn't have.** Cables, hoses and anything not drawn aren't in
   the way. Neither is a part you `ignore`.
 - **Torque.** Whether a tool reaches and turns is checked, not whether it can apply

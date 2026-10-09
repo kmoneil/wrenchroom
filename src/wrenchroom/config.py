@@ -32,11 +32,13 @@ from wrenchroom.fasteners import AUTO, Fastener, Head, Kind, Size
 from wrenchroom.tools.custom import CustomTools, parse_tools
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from wrenchroom.assembly import Assembly
 
-_SUPPORTED_TOP = {"fasteners", "ignore", "pairs", "states", "checks", "tools"}
+_SUPPORTED_TOP = {"fasteners", "ignore", "pairs", "states", "checks", "tools", "allow"}
 _STATE_KEYS = {"remove", "base", "model"}
-_CHECKS_KEYS = {"default_state", "try_states", "detect", "hand_room"}
+_CHECKS_KEYS = {"default_state", "try_states", "detect", "hand_room", "clashes"}
 _RULE_KEYS = {
     "parts",
     "kind",
@@ -103,6 +105,13 @@ class Config:
     #: Check room for the hand round each handle (spec 6.4); off until tuned,
     #: so ``checks: {hand_room: true}`` (or ``--hand-room``) asks for it.
     hand_room: bool = False
+    #: Look for parts drawn into each other over the whole model inside ``check``
+    #: (M8); off at first, as a model drawn with shortcuts would fail every run, so
+    #: ``checks: {clashes: true}`` (or ``--clashes``) asks for it.
+    clashes: bool = False
+    #: Pairs of part globs meant to overlap, never a clash: a press fit, a shaft in
+    #: its bearing, a belt round its pulley.
+    allow: tuple[tuple[str, str], ...] = ()
     #: The sidecar's own tools (spec 5.3), which join whatever kit is used.
     tools: CustomTools = field(default_factory=CustomTools)
     source: str = "<none>"
@@ -148,8 +157,12 @@ class Config:
             _parse_pair(entry, index, source)
             for index, entry in enumerate(_as_list(raw.get("pairs", []), f"{source}: pairs"))
         )
+        allow = tuple(
+            _parse_allow(entry, index, source)
+            for index, entry in enumerate(_as_list(raw.get("allow", []), f"{source}: allow"))
+        )
         states = _parse_states(raw.get("states", {}), source)
-        default_state, try_states, detect, hand_room = _parse_checks(
+        default_state, try_states, detect, hand_room, clashes = _parse_checks(
             raw.get("checks", {}), states, source
         )
         try:
@@ -170,6 +183,8 @@ class Config:
             try_states=try_states,
             detect=detect,
             hand_room=hand_room,
+            clashes=clashes,
+            allow=allow,
             tools=tools,
             source=source,
         )
@@ -255,6 +270,20 @@ class Config:
         """True when a part name matches an ignore glob (wires, springs: pushed aside)."""
         return any(fnmatchcase(name, glob) for glob in self.ignore)
 
+    def allows(self, first: str, second: str) -> bool:
+        """Whether an ``allow:`` pair lets these two parts overlap, either way round."""
+        return any(
+            (fnmatchcase(first, a) and fnmatchcase(second, b))
+            or (fnmatchcase(first, b) and fnmatchcase(second, a))
+            for a, b in self.allow
+        )
+
+    def unmatched_allows(self, names: Iterable[str]) -> tuple[str, ...]:
+        """Each ``allow:`` glob that names no part: a renamed part, as for a rule."""
+        names = tuple(names)
+        globs = dict.fromkeys(glob for pair in self.allow for glob in pair)
+        return tuple(g for g in globs if not any(fnmatchcase(name, g) for name in names))
+
 
 @dataclass(frozen=True)
 class Matches:
@@ -323,6 +352,16 @@ def _parse_rule(entry: object, index: int, source: str) -> Rule:
         state=None if entry.get("state") is None else str(entry["state"]),
         drive_af=_parse_positive(entry.get("across_flats"), f"{where}: across_flats"),
     )
+
+
+def _parse_allow(entry: object, index: int, source: str) -> tuple[str, str]:
+    where = f"{source}: allow[{index}]"
+    match entry:
+        case [str() as first, str() as second]:
+            return (first, second)
+        case _:
+            msg = f"{where}: an allowed overlap is a two-item list of part globs [a, b]"
+            raise ConfigError(msg)
 
 
 def _parse_pair(entry: object, index: int, source: str) -> tuple[str, str]:
@@ -472,7 +511,7 @@ def _reject_base_cycles(states: list[StateDef], where: str) -> None:
 
 def _parse_checks(
     raw: object, states: tuple[StateDef, ...], source: str
-) -> tuple[str | None, tuple[str, ...], bool, bool]:
+) -> tuple[str | None, tuple[str, ...], bool, bool, bool]:
     where = f"{source}: checks"
     if not isinstance(raw, dict):
         msg = f"{where} must be a mapping"
@@ -496,4 +535,5 @@ def _parse_checks(
             raise ConfigError(msg)
     detect = _parse_bool(raw.get("detect", True), f"{where}: detect")
     hand_room = _parse_bool(raw.get("hand_room", False), f"{where}: hand_room")
-    return default_state, try_states, detect, hand_room
+    clashes = _parse_bool(raw.get("clashes", False), f"{where}: clashes")
+    return default_state, try_states, detect, hand_room, clashes

@@ -257,10 +257,17 @@ def test_the_report_says_whether_the_hand_was_checked():
     assert on.to_json_dict()["hand_room"] is True
     assert off.terminal_lines()[-1] == (
         "NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); "
+        "parts drawn into each other (checks: {clashes: true} turns it on); "
         "parts the model doesn't have"
     )
-    assert on.terminal_lines()[-1] == "NOTE not checked: parts the model doesn't have"
-    assert "Not checked: parts the model doesn't have." in on.markdown().splitlines()
+    assert on.terminal_lines()[-1] == (
+        "NOTE not checked: parts drawn into each other (checks: {clashes: true} turns it on); "
+        "parts the model doesn't have"
+    )
+    assert (
+        "Not checked: parts drawn into each other (`checks: {clashes: true}` turns it on); "
+        "parts the model doesn't have."
+    ) in on.markdown().splitlines()
     assert "Not checked: room for a hand" not in on.markdown()
     assert "Not checked: room for a hand" in off.markdown()
     with pytest.raises(AssertionError, match="no room for a hand"):

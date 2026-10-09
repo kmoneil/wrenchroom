@@ -503,6 +503,44 @@ and the 3D view in its panel.
 Each tool's JSON entry also gives the states its fasteners were reached in (`null`
 for the model as given).
 
+## Clashes
+
+`wrenchroom clashes model.step` lists every pair of parts drawn into each other,
+anywhere in the model (M8). A model's own collision check often tests some pairs
+only, the moving parts against the rest, and never a bracket against its own nut;
+this tests them all. `check --clashes`, or `checks: {clashes: true}` in the sidecar,
+adds the same list to `check`'s report, where each clash fails the run (exit 1). It
+is off by default, as room for a hand is: a model drawn with shortcuts would fail
+every run, and every report says it wasn't looked for.
+
+- **A clash** is an overlap past the hit floor, 0.05 mm^3, the floor a tool's hit
+  is held to. Every pair of parts whose boxes overlap is measured, and every clash
+  told is measured exactly, so both engines tell the same ones to the same volume.
+  The mesh engine rules out first the pairs its meshes are sure of.
+- **A fastener is measured past its thread**, as a fastener drawn into a part is
+  (issue #63): a screw's head, a nut's body less its bore's thread. A screw in a
+  hole drawn at its tap drill or its minor diameter, a bolt in a nut bored at its
+  minor, is no clash. Nor is a fastener with its pair, its `mates` or its own
+  pieces, or an ignored part (`--with-ignored` measures those too). A fastener not
+  understood (no axis) can't be measured past its thread, so it is left out, and
+  said.
+- **`allow:`** in the sidecar names pairs meant to overlap, as pairs of part globs,
+  either way round: `allow: [[shaft_*, bearing_*], [hub_*, tire_*]]`. A glob that
+  names no part fails the run (exit 2), as a rule's does.
+- **Hints**, not verdicts, for two shortcuts: a gland or grommet drawn into a part
+  named like a cable (`a gland and its cable: drawn without a bore?`), and a press
+  fit, an overlap a few hundredths thick (`a press fit, 0.03 deep? allow it in the
+  sidecar`: its volume over half its surface, which is how thick a thin shell is).
+- **States.** A state with a model of its own (a lever raised) is looked in too,
+  and a clash the model as given doesn't have is said with its state
+  (`CLASH lever into wall  16.0 mm^3  in state lever-up`). A state that only takes
+  parts away can't add one.
+
+The terminal says each as `CLASH first into second  volume`, the first the part
+drawn into the other: a fastener, else the smaller. The JSON's `clashes` gives the
+pairs, their volumes, a point in each overlap (the middle of its box), the state and
+the hint; `wrenchroom clashes --json` and `--md` write the same alone.
+
 ## Collision engines and speed
 
 Collision checks run on meshes: each part tessellated once (0.2 mm), tools meshed

@@ -51,6 +51,7 @@ from parts import (
     slab,
     slot_block,
     socket_screw,
+    state_lever_raised,
     thumb_screw,
     vendor_button_screw,
     vendor_flat_screw,
@@ -75,6 +76,10 @@ class Cell:
     #: The sidecar's own tools the cell needs (spec 5.3): the bench's sidecar holds
     #: each once, and like any custom tool it joins the kit for every cell.
     tools: tuple = ()
+    #: Pairs of its roles meant to overlap, which the bench's sidecar allows (M8).
+    allow: tuple = ()
+    #: Its parts as bench_lever-up.step has them, where they differ: () -> {role: shape}.
+    raised: object = None
 
 
 M6_SOCKET = {"kind": "screw", "head": "socket", "size": "M6"}
@@ -82,10 +87,20 @@ M6_SOCKET = {"kind": "screw", "head": "socket", "size": "M6"}
 CELLS = []
 
 
-def cell(name, rules=(), truth=None, ignore=(), timed=True, tools=()):
+def cell(name, rules=(), truth=None, ignore=(), timed=True, tools=(), allow=(), raised=None):
     def register(build):
         CELLS.append(
-            Cell(name, build, tuple(rules), truth or {}, tuple(ignore), timed, tuple(tools))
+            Cell(
+                name,
+                build,
+                tuple(rules),
+                truth or {},
+                tuple(ignore),
+                timed,
+                tuple(tools),
+                tuple(allow),
+                raised,
+            )
         )
         return build
 
@@ -528,6 +543,7 @@ def state_lid():
             "state": "lever-up",
         }
     },
+    raised=lambda: {"lever": state_lever_raised()},
 )
 def state_lever():
     """A bar lies 15 over the screw; bench_lever-up.step has it swung 80 deg up.
@@ -1832,7 +1848,7 @@ def small():
     holes += [(*at["phillips_screw"], 1.2)]
     d, dk, _, _ = VENDOR_FLAT["M2"]
     sunk = (dk - d) / 2 + 0.05 * dk  # the countersink and the rim band
-    countersink = Pos(*at["flat_screw"], 0) * (_countersunk_plate(d, dk) - plate())
+    countersink = Pos(*at["flat_screw"], 0) * (plate() - _countersunk_plate(d, dk))
     board = plate(w=640, d=360, holes=holes) - countersink
     head = Pos(0, 0, 1) * Cylinder(1.9, 2) - Pos(0, 0, 1.5) * Cylinder(0.875, 1.01)
     pan = Pos(0, 0, 0.8) * Cylinder(2.0, 1.6)
@@ -2714,4 +2730,37 @@ def unsized():
         ("M5x6_phillips_screw", Pos(-60, 0, 0) * pan_phillips(2.9, 6, 5.6, 2.4, span=3.0)),
         ("M5x6_torx_screw", Pos(0, 0, 0) * _torx_m4(2.80, flutes=True, shank=2.9)),
         ("M5x6_slotted_screw", Pos(60, 0, 0) * (slotted + Pos(0, 0, -3) * Cylinder(1.45, 6))),
+    ]
+
+
+# ---------------------------------------------------------------- M8: clashes
+
+
+@cell("press_fit", allow=[("allowed_rod", "block")])
+def press_fit():
+    """Two rods 4.06 across pressed into holes 4 across, 10 deep, in a block (M8's
+    clashes): each a shell 0.03 thick, 2 pi 2.015 0.03 10 = 3.8 mm^3, a clash past
+    the floor. The bench's sidecar allows one, which no clash then says; the other
+    is said, with a press fit's hint: its volume over half its surface, 0.03 deep.
+    No fastener: nothing here is checked for a tool.
+    """
+    block = Pos(0, 0, -5) * Box(60, 30, 10)
+    for x in (-15, 15):
+        block -= Pos(x, 0, -5) * Cylinder(2, 11)
+    return [
+        ("block", block),
+        ("allowed_rod", Pos(-15, 0, -5) * Cylinder(2.03, 10)),
+        ("pressed_rod", Pos(15, 0, -5) * Cylinder(2.03, 10)),
+    ]
+
+
+@cell("state_clash", raised=lambda: {"slider": Pos(1, 0, 5) * Box(10, 20, 10)})
+def state_clash():
+    """A slider 1 clear of a wall, which bench_lever-up.step has slid 2 along, 1 into
+    the wall: 1 by 20 by 10, 200 mm^3, a clash in that state's model alone (M8's
+    clashes), said with its state. No fastener.
+    """
+    return [
+        ("wall", Pos(10, 0, 10) * Box(10, 40, 20)),  # x 5 to 15
+        ("slider", Pos(-1, 0, 5) * Box(10, 20, 10)),  # x -6 to 4
     ]
