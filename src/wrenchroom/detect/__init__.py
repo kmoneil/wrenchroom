@@ -23,7 +23,11 @@ How a detected fastener is put together, field by field:
   can fool). Where the solid is drawn as another size, its drive and its shank
   or bore both saying so, or its shank alone with no drive, and no thread of
   the name's size could be drawn so, the solid's is taken, and noted, at low
-  confidence (issue #117). A gland takes no size at all: its hex is not its
+  confidence (issue #117). A screw whose shank sits on no size (an M3's drawn
+  2.9), with no hex to settle one, is sized so by its Torx or cross recess's
+  standard, where that leaves one size the shank could be the thread of; where
+  nothing does, and the shank is no thread of the name's size, that is said and
+  the name's kept (issue #135). A gland takes no size at all: its hex is not its
   thread's nut.
 - **across flats**: measured, when the solid shows a hex or a socket.
 - **length**: the name's, when it gives one.
@@ -41,14 +45,21 @@ from typing import TYPE_CHECKING
 from wrenchroom.detect.geometry import SIZE_SNAP_MM, ShapeReading, looks_like, read_shape
 from wrenchroom.detect.names import NameHint, ends_in_part_noun, read_name
 from wrenchroom.fasteners import (
+    IMPERIAL_SIZES,
+    METRIC_SIZES,
+    PHILLIPS_NUMBER,
+    TORX_SIZE,
     Fastener,
     Head,
     Kind,
     PassedOver,
+    Size,
     in_hex_band,
     in_recess_band,
     loosely_fits,
+    phillips_by_span,
     thread_minor_mm,
+    torx_by_point,
 )
 from wrenchroom.tools.fingers import HAND
 from wrenchroom.tools.hex_keys import HEX_KEYS
@@ -58,7 +69,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
     from wrenchroom.assembly import Part
-    from wrenchroom.fasteners import Size
 
 __all__ = [
     "Found",
@@ -211,7 +221,7 @@ def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) ->
         used.append(f"{size.designation} by its socket alone, drawn past its standard's most")
     elif guessed:
         used.append(f"{size.designation} by its hex's tolerance band alone")
-    elif size is not None and size_note and hint.size is not None:
+    elif size is not None and size_note and hint.size is not None and size != hint.size:
         used.append(f"{size.designation} measured (the name says {hint.size.designation})")
     elif size is not None and (reading.size_from_drive or hint.size is None):
         used.append(f"{size.designation} measured")
@@ -380,6 +390,12 @@ def _size(hint: NameHint, reading: ShapeReading) -> tuple[Size | None, str | Non
 #: clearance, as printed parts' nuts are (an M3's at 3.4).
 NUT_BORE_OVER = 1.15
 
+#: A shank with no hex to size it may be drawn this much past its name's nominal, mm,
+#: loosely, and be the name's: as a socket drawn loose past its key's most is still
+#: its key's (``RECESS_LOOSE_MM``, issue #82). An M3's drawn 3.1 (issue #135). The
+#: name's size alone is given it: another must be drawn within its own thread.
+SHANK_LOOSE_MM = 0.15
+
 
 def _drawn_as(hint: NameHint, reading: ShapeReading) -> tuple[Size, str] | None:
     """The size the solid is drawn as, where it isn't the name's, and the note (#117).
@@ -392,18 +408,19 @@ def _drawn_as(hint: NameHint, reading: ShapeReading) -> tuple[Size, str] | None:
     minor diameter to its nominal (a nut's bore with clearance over it), so a
     2.9 shank on an M3, or an M5's drawn at its minor that sits on #8, is the
     name's, and quiet. Taken as drawn, as a length is: the solid is what the
-    check's tools and way out meet.
+    check's tools and way out meet. A shank on no size is :func:`_unsized`'s.
     """
     named, solid = hint.size, reading.size
-    if named is None or solid is None or solid == named or hint.kind is Kind.INSERT:
+    if named is None or hint.kind is Kind.INSERT:
         return None
-    if reading.drive_af is not None and not reading.size_from_drive:
-        return None  # a drive that settled nothing, or a band's guess, which a name outranks
+    if solid is None:
+        return _unsized(named, reading)
+    if solid == named or (reading.drive_af is not None and not reading.size_from_drive):
+        return None  # or a drive that settled nothing, or a band's guess, which a name outranks
     nut = hint.kind is Kind.NUT
     thread = reading.bore_mm if nut else reading.shank_mm
     if thread is not None:
-        most = named.diameter_mm * NUT_BORE_OVER if nut else named.diameter_mm
-        could_be = thread_minor_mm(named) - SIZE_SNAP_MM <= thread <= most + SIZE_SNAP_MM
+        could_be = _could_be(named, thread, nut=nut)
         drawn_so = abs(thread - solid.diameter_mm) <= SIZE_SNAP_MM
         if could_be and not (reading.size_from_drive and drawn_so):
             return None
@@ -418,6 +435,71 @@ def _drawn_as(hint: NameHint, reading: ShapeReading) -> tuple[Size, str] | None:
         f"{named.designation}: taken as drawn"
     )
     return solid, note
+
+
+def _could_be(size: Size, thread: float, *, nut: bool = False, loose: bool = False) -> bool:
+    """Whether a shank, or a nut's bore, drawn ``thread`` across could be ``size``'s.
+
+    A thread is drawn anywhere from its minor diameter to its nominal, a nut's bore
+    with clearance over it (:data:`NUT_BORE_OVER`), and with ``loose``, a shank up
+    to :data:`SHANK_LOOSE_MM` past it.
+    """
+    most = size.diameter_mm * NUT_BORE_OVER if nut else size.diameter_mm
+    over = SHANK_LOOSE_MM if loose else SIZE_SNAP_MM
+    return thread_minor_mm(size) - SIZE_SNAP_MM <= thread <= most + over
+
+
+def _unsized(named: Size, reading: ShapeReading) -> tuple[Size, str] | None:
+    """A screw with no hex, its shank on no size: sized by its recess, or said (#135).
+
+    A shank drawn 2.9 sits on neither M3's 3.0 nor #4's 2.845, and a Phillips, Torx,
+    slotted or plain head has no hex to settle a size, so the solid gives none to set
+    against the name's. Where the shank is no thread of the name's size, drawn even
+    loosely, a Torx or cross recess's standard sizes it, if that leaves one size the
+    shank could be the thread of, the name's own system first: ISO 14583's T10 is an
+    M3's alone, ISO 7045's PH1 an M2.5's or an M3's, and a 2.9 shank no M2.5's. Taken
+    as drawn, and noted. Else nothing in the solid picks a size, a slot or a plain
+    head saying none: the name's is kept, and the shank's disagreeing with it said.
+    A hex that settles nothing (a key two sizes take) says nothing, as before (#117):
+    a name outranks it.
+    """
+    shank = reading.shank_mm  # a screw's: a nut's reading has a bore, no shank
+    if shank is None or reading.drive_af is not None or _could_be(named, shank, loose=True):
+        return None
+    sizes, recess = _recess_sizes(reading)
+    fits = _own_system_first([size for size in sizes if _could_be(size, shank)], named)
+    if len(fits) == 1:
+        (drawn,) = fits
+        return drawn, (
+            f"drawn as {_an(drawn.designation)} ({shank:.2f} shank, {recess}), where its "
+            f"name says {named.designation}: taken as drawn"
+        )
+    every = [Size(d, nominal) for d, nominal in {**METRIC_SIZES, **IMPERIAL_SIZES}.items()]
+    could = _own_system_first([size for size in every if _could_be(size, shank)], named)
+    whose = " or ".join(f"{_an(size.designation)}'s" for size in could)
+    return named, (
+        f"drawn with a {shank:.2f} shank, no {named.designation}'s thread"
+        f"{f' ({whose})' if whose else ''}: the name's {named.designation} kept"
+    )
+
+
+def _recess_sizes(reading: ShapeReading) -> tuple[list[Size], str]:
+    """The sizes a Torx or cross recess's standard gives it, and the recess, said."""
+    torx = torx_by_point(reading.torx_mm) if reading.torx_mm is not None else None
+    if torx is not None:
+        return [Size.parse(d) for d, t in TORX_SIZE.items() if t == torx], f"a {torx} recess"
+    number = phillips_by_span(reading.cross_mm) if reading.cross_mm is not None else None
+    if number is not None:
+        sizes = [Size.parse(d) for d, n in PHILLIPS_NUMBER.items() if n == number]
+        return sizes, f"a PH{number} cross"
+    return [], ""
+
+
+def _own_system_first(sizes: list[Size], named: Size) -> list[Size]:
+    """Those in the name's own system, metric or inch, if any are; else all of them."""
+    metric = named.designation.startswith("M")
+    own = [size for size in sizes if size.designation.startswith("M") == metric]
+    return own or sizes
 
 
 def _an(designation: str) -> str:

@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**149 fasteners: 113 turn, 9 held, 26 blocked, 1 stuck, 0 not covered**
+**152 fasteners: 116 turn, 9 held, 26 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -33,10 +33,12 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | M3 button screw | `hex-key-2` | 1 | all pass (driver straight in) |
 | M3 nut | - | 3 | all pass (held by its trap in trap\_stopped\_block) |
 | M3 nut | `spanner-5.5` | 2 | 1 of 2 fail |
-| M3 phillips screw | `driver-ph1` | 2 | all pass (driver straight in) |
+| M3 phillips screw | `driver-ph1` | 3 | all pass (driver straight in) |
 | M3 screw | `hand` | 2 | all pass (fingers round its head) |
 | M3 set screw | `hex-key-1.5` | 2 | 1 of 2 fail |
+| M3 slotted screw | `driver-slotted` | 1 | all pass (driver straight in) |
 | M3 socket screw | `hex-key-2.5` | 6 | 1 of 6 fail |
+| M3 torx screw | `torx-key-T10` | 1 | all pass (driver straight in) |
 | M4 button screw | `hex-key-2.5` | 6 | 2 of 6 fail |
 | M4 flat screw | `hex-key-2.5` | 2 | all pass (driver straight in) |
 | M4 insert | - | 2 | all pass (holds itself) |
@@ -72,7 +74,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 
 #### Tools
 
-39 tools this model needs (kit full): 11 hex keys, 2 ball-end keys, 5 Torx keys, 13 spanners, 1 socket, 1 nut driver, 4 drivers, 2 others.
+41 tools this model needs (kit full): 11 hex keys, 2 ball-end keys, 6 Torx keys, 13 spanners, 1 socket, 1 nut driver, 5 drivers, 2 others.
 
 | Tool | Fasteners | |
 | --- | ---: | --- |
@@ -90,6 +92,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | `ball-end-key-4` | 1 | not in metric-home; no straight key gets in at `ball_shoulder_screw` |
 | `ball-end-key-5` | 1 | not in metric-home; no straight key gets in at `ball_tilt_screw` |
 | `torx-key-T6` | 1 | not in metric-home; only `small_torx_screw` |
+| `torx-key-T10` | 1 | not in metric-home; only `unsized_M5x6_torx_screw` |
 | `torx-key-T20` | 1 | not in metric-home; only `lobed_recess_fluted_screw` |
 | `torx-key-T25` | 1 | not in metric-home; only `lobed_recess_plain_screw` |
 | `torx-key-T30` | 1 | not in metric-home; only `torx_wall_screw` |
@@ -110,7 +113,8 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | `socket-16` | 2 | only `nut_deep_well_nut`, `tail_in_socket_nut` |
 | `nut-driver-10` | 1 | not in metric-home; only `nut_tube_nut` |
 | `driver-ph0` | 3 | not in metric-home |
-| `driver-ph1` | 3 |  |
+| `driver-slotted` | 1 | only `unsized_M5x6_slotted_screw` |
+| `driver-ph1` | 4 |  |
 | `driver-ph2` | 3 |  |
 | `driver-ph4` | 1 | not in metric-home; only `ph4_screw` |
 | `stubby-key-6` | 1 | not in metric-home; only `short_key_screw` |

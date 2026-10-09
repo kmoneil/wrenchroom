@@ -77,6 +77,10 @@ PAST_HOME = {
     "lobed_recess_fluted_screw": (
         "needs torx-key-T20, which kit metric-home does not hold (full has it)"
     ),
+    # Issue #135: an M3 drawn with a 2.9 shank, its T10 recess an M3's.
+    "unsized_M5x6_torx_screw": (
+        "needs torx-key-T10, which kit metric-home does not hold (full has it)"
+    ),
 }
 
 #: Cells metric-home holds a tool for but can't turn without full's: the ball end.
@@ -183,7 +187,7 @@ def test_imperial_home_covers_nothing_metric_but_drivers(inch_json, bench_json):
     # The carriage bolt, the well nut, the T-nut, the boss insert, the seven Phillips
     # screws (std's since issue #95, misnamed's since #117, cross's M3 since #115,
     # cross_drawn's two since #125), grip's three turned by hand (issue #96),
-    # trap's three nuts its blocks hold (issue #93), and head_trap's head its plate
-    # holds and the two joints head_trap and carriage_trap have that nothing in
-    # turns (issue #134).
-    assert unsized == 22
+    # trap's three nuts its blocks hold (issue #93), head_trap's head its plate holds
+    # and the two joints head_trap and carriage_trap have that nothing in turns (issue
+    # #134), and unsized's Phillips and slotted screws (issue #135).
+    assert unsized == 24

@@ -18,6 +18,7 @@ its name, never its solid (torx_wall), and only its size is held to the solid.
 """
 
 import fnmatch
+from dataclasses import replace
 
 import pytest
 from bench import sidecar_and_truth
@@ -57,6 +58,7 @@ def bench_parts(bench_dir):
 
 def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
     wrong, banded, outlined, guessed, unmatched, bored = [], [], [], [], [], []
+    unsized = []
     for name, rule in _described(bench_parts):
         kind = Kind(rule.get("kind", "screw"))
         size = Size.parse(rule["size"]) if "size" in rule else None  # a gland may give none
@@ -64,7 +66,7 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
         # A shoulder screw's head is the one only its name can tell (issue #40), and
         # named_head's outline is a socket head's, the name's button standing (#81).
         named = head if head is Head.SHOULDER or name in _BY_NAME else None
-        reading = read_shape(bench_parts[name].shape, kind, named)
+        reading = _read(bench_parts[name], kind, named, size, unsized)
         expected_af = _expected_af(rule, kind, size, head)
         got = (reading.head, reading.drive_af and round(reading.drive_af, 6), reading.size)
         want = (head, expected_af and round(expected_af, 6), size)  # inch sizes in mm
@@ -109,6 +111,18 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
     assert outlined == ["low_head_screw", "rubber_screw", *graze_screws, *pins, *odd]
     assert unmatched == odd
     assert bored == ["badge_boss_insert", "tee_hold_tnut"]
+    # Issue #135: three M3s drawn with 2.9 shanks, on neither M3's 3 nor #4's 2.845.
+    assert unsized == [f"unsized_M5x6_{head}_screw" for head in ("phillips", "torx", "slotted")]
+
+
+def _read(part, kind, named, size, unsized):
+    """The part's reading; one whose shank is on no size takes the rule's, and is
+    listed in ``unsized``: a recess, or a name, sizes it (issue #135)."""
+    reading = read_shape(part.shape, kind, named)
+    if reading.size is None and size is not None and reading.shank_mm is not None:
+        unsized.append(part.name)
+        return replace(reading, size=size)
+    return reading
 
 
 _STANDARD = {Head.BUTTON: "ISO 7380-1", Head.SHOULDER: "ISO 7379"}
