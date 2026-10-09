@@ -1,0 +1,34 @@
+# The unit suite on macOS and Python 3.14, weekly.
+#
+# ci.yml runs macOS on the floor (3.13) only, and on pull requests only, since a macOS
+# minute costs about ten Linux ones in GitHub's usage. That leaves one pair the project
+# claims and nothing runs: macOS on 3.14. This runs it once a week against the lock, as
+# ci.yml's lanes do, and again on a pull request that changes this file. It opens
+# nothing and pushes nothing; a failure is just a red run for a person to read.
+#
+# Same SHA-pinning rule as ci.yml.
+
+name: weekly
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  pull_request:
+    paths: [".github/workflows/weekly.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fast-macos-314:
+    timeout-minutes: 20
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+      - run: uv python install 3.14
+      - run: uv sync --frozen --python 3.14
+      - run: uv run --frozen python scripts/lanes.py fast
