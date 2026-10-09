@@ -3,11 +3,11 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 152,
-  "turns": 116,
-  "held": 9,
-  "blocked": 26,
-  "stuck": 1,
+  "fasteners": 162,
+  "turns": 120,
+  "held": 11,
+  "blocked": 28,
+  "stuck": 3,
   "not_covered": 0
  },
  "unmatched_rules": [],
@@ -375,6 +375,316 @@
    ],
    "deciding": [],
    "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "build_ahead_loose_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1950.0,
+    17000.0,
+    5.3
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "build_ahead_loose_nut",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "build_ahead_loose_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    1950.0,
+    17000.0,
+    -16.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "build_ahead_loose_bolt",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "build_ahead_trapped_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    2150.0,
+    17000.0,
+    -16.0
+   ],
+   "source": "sidecar",
+   "tool": null,
+   "verdict": "held",
+   "how": "held by its trap in build_ahead_block",
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "build_ahead_trapped_screw",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "build_ahead_trapped_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2150.0,
+    17000.0,
+    3.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-2.5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": "build_ahead_trapped_nut",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "build_behind_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    3000.0,
+    17000.0,
+    -15.3
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "held",
+   "how": "ring, full length",
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "build_behind_nut",
+   "blocked_by": [
+    "build_behind_pocket"
+   ],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "build_behind_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    17000.0,
+    6.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "build_behind_bolt",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "build_buried_early_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    -50.0,
+    17000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "build_buried_cover"
+   ],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "build_buried_late_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    50.0,
+    17000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "build_buried_cover"
+   ],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "build_way_in_over_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1150.0,
+    17000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "stuck",
+   "how": "short leg in",
+   "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [
+    "build_way_in_over"
+   ],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "build_way_in_under_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    850.0,
+    17000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "stuck",
+   "how": "short leg in",
+   "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [
+    "build_way_in_under"
+   ],
    "reason": null,
    "grazes": [],
    "notes": []
@@ -4330,7 +4640,7 @@
     1.0
    ],
    "seat": [
-    -100.0,
+    3900.0,
     17000.0,
     6.0
    ],
@@ -4362,7 +4672,7 @@
     1.0
    ],
    "seat": [
-    100.0,
+    4100.0,
     17000.0,
     6.0
    ],
@@ -4831,8 +5141,9 @@
    },
    {
     "tool": "hex-key-2.5",
-    "count": 11,
+    "count": 12,
     "fasteners": [
+     "build_ahead_trapped_screw",
      "flat_graze_screw",
      "misnamed_M5x16_screw",
      "named_head_bhcs",
@@ -4923,8 +5234,10 @@
    },
    {
     "tool": "hex-key-5",
-    "count": 9,
+    "count": 11,
     "fasteners": [
+     "build_way_in_over_screw",
+     "build_way_in_under_screw",
      "free_screw_screw",
      "key_open_screw",
      "key_wall_far_screw",
@@ -5189,10 +5502,14 @@
    },
    {
     "tool": "spanner-13",
-    "count": 21,
+    "count": 25,
     "fasteners": [
      "band_agrees_bolt",
      "band_agrees_nut",
+     "build_ahead_loose_bolt",
+     "build_ahead_loose_nut",
+     "build_behind_bolt",
+     "build_behind_nut",
      "flange_nut_nut",
      "guessed_bolt",
      "guessed_nut",
@@ -5452,6 +5769,7 @@
   ],
   "no_tool": [
    "badge_boss_insert",
+   "build_ahead_trapped_nut",
    "carriage_boxed_bolt",
    "head_trap_held_bolt",
    "rubber_well_nut",
@@ -5467,6 +5785,14 @@
    },
    {
     "name": "big_tube_gland",
+    "verdict": "blocked"
+   },
+   {
+    "name": "build_buried_early_screw",
+    "verdict": "blocked"
+   },
+   {
+    "name": "build_buried_late_screw",
     "verdict": "blocked"
    },
    {
@@ -5595,8 +5921,10 @@
    },
    {
     "tool": "hex-key-5",
-    "count": 5,
+    "count": 7,
     "fasteners": [
+     "build_buried_early_screw",
+     "build_buried_late_screw",
      "key_wall_near_screw",
      "shelled_screw",
      "tapped_hold_screw",
@@ -5668,5 +5996,6 @@
    }
   ]
  },
- "clashes": null
+ "clashes": null,
+ "build": null
 }

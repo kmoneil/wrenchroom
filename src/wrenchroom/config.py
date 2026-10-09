@@ -36,8 +36,9 @@ if TYPE_CHECKING:
 
     from wrenchroom.assembly import Assembly
 
-_SUPPORTED_TOP = {"fasteners", "ignore", "pairs", "states", "checks", "tools", "allow"}
+_SUPPORTED_TOP = {"fasteners", "ignore", "pairs", "states", "checks", "tools", "allow", "build"}
 _STATE_KEYS = {"remove", "base", "model"}
+_STEP_KEYS = {"step", "add", "model"}
 _CHECKS_KEYS = {"default_state", "try_states", "detect", "hand_room", "clashes"}
 _RULE_KEYS = {
     "parts",
@@ -52,6 +53,9 @@ _RULE_KEYS = {
     "state",
     "across_flats",
 }
+
+#: The ``add:`` glob that takes every part no other step adds, in whichever step has it.
+CATCH_ALL = "*"
 
 
 class ConfigError(ValueError):
@@ -90,6 +94,19 @@ class StateDef:
 
 
 @dataclass(frozen=True)
+class BuildStep:
+    """One ``build:`` step: the parts it adds, and the model it is checked in.
+
+    ``model`` is the mechanism as it sits during the step, as a state's is: None for
+    the model as given.
+    """
+
+    name: str
+    add: tuple[str, ...]
+    model: str | None = None
+
+
+@dataclass(frozen=True)
 class Config:
     """A parsed sidecar: rules in file order, ignore globs, forced pairs."""
 
@@ -114,6 +131,9 @@ class Config:
     allow: tuple[tuple[str, str], ...] = ()
     #: The sidecar's own tools (spec 5.3), which join whatever kit is used.
     tools: CustomTools = field(default_factory=CustomTools)
+    #: The build, in order (M8): each fastener is checked in the step that adds it,
+    #: among the parts added by then. Empty when the sidecar has none.
+    build: tuple[BuildStep, ...] = ()
     source: str = "<none>"
     #: The folder the sidecar was read from, when it was read from a file: where a
     #: state's ``model:`` is looked for first (issue #73). None for a mapping.
@@ -162,6 +182,7 @@ class Config:
             for index, entry in enumerate(_as_list(raw.get("allow", []), f"{source}: allow"))
         )
         states = _parse_states(raw.get("states", {}), source)
+        build = _parse_build(raw["build"], source) if "build" in raw else ()
         default_state, try_states, detect, hand_room, clashes = _parse_checks(
             raw.get("checks", {}), states, source
         )
@@ -186,6 +207,7 @@ class Config:
             clashes=clashes,
             allow=allow,
             tools=tools,
+            build=build,
             source=source,
         )
 
@@ -494,6 +516,62 @@ def _parse_states(raw: object, source: str) -> tuple[StateDef, ...]:
             raise ConfigError(msg)
     _reject_base_cycles(states, where)
     return tuple(states)
+
+
+def _parse_build(raw: object, source: str) -> tuple[BuildStep, ...]:
+    """The ``build:`` steps, in order: each named once, each adding parts.
+
+    Which parts each adds is the model's business, so it is checked against the model
+    (:func:`wrenchroom.build.plan`); here, only that the list says something.
+    """
+    where = f"{source}: build"
+    entries = _as_list(raw, where)
+    if not entries:
+        msg = f"{where}: lists no steps (leave it out for no build)"
+        raise ConfigError(msg)
+    steps: list[BuildStep] = []
+    for index, entry in enumerate(entries):
+        step = _parse_step(entry, f"{where}[{index}]")
+        if any(earlier.name == step.name for earlier in steps):
+            msg = f"{where}[{index}]: step {step.name!r} is named twice"
+            raise ConfigError(msg)
+        steps.append(step)
+    catching = [step.name for step in steps if CATCH_ALL in step.add]
+    if len(catching) > 1:
+        msg = (
+            f"{where}: steps {catching[0]!r} and {catching[1]!r} both add {CATCH_ALL!r}, "
+            "the parts no other step adds: one step can"
+        )
+        raise ConfigError(msg)
+    return tuple(steps)
+
+
+def _parse_step(entry: object, where: str) -> BuildStep:
+    """One ``build:`` step: a name, the globs of the parts it adds, maybe a model."""
+    if not isinstance(entry, dict):
+        msg = f"{where}: must be a mapping"
+        raise ConfigError(msg)
+    unknown = set(entry) - _STEP_KEYS
+    if unknown:
+        msg = f"{where}: unknown key(s) {sorted(unknown)}"
+        raise ConfigError(msg)
+    for key in ("step", "add"):
+        if key not in entry:
+            msg = f"{where}: {key!r} is required"
+            raise ConfigError(msg)
+    name = _as_str(entry["step"], f"{where}: step")
+    if not name.strip():
+        msg = f"{where}: step needs a name"
+        raise ConfigError(msg)
+    add = tuple(
+        _as_str(glob, f"{where}: add[{i}]")
+        for i, glob in enumerate(_as_list(entry["add"], f"{where}: add"))
+    )
+    if not add:
+        msg = f"{where}: step {name!r} adds nothing"
+        raise ConfigError(msg)
+    model = entry.get("model")
+    return BuildStep(name, add, None if model is None else str(model))
 
 
 def _reject_base_cycles(states: list[StateDef], where: str) -> None:

@@ -21,7 +21,7 @@ from pathlib import Path
 
 import yaml
 from build123d import Compound, Location, Pos, export_step
-from cells import CELLS
+from cells import BUILD_STEPS, CELLS
 from parts import plate, slab, socket_screw
 
 from wrenchroom import __version__
@@ -67,13 +67,14 @@ SLOTS = len(CELLS) + 1
 #: #121's ring_way_on, 139 with #122's set_sunk, 141 with #124's lobed_recess, 143
 #: with #125's cross_drawn, 149 with #134's head_trap and carriage_trap, two joints
 #: a trapped head holds and two that nothing in turns, 152 with #135's unsized,
-#: three M3s their shanks drawn on no size, under M5 names.
+#: three M3s their shanks drawn on no size, under M5 names, 162 with M8's build_buried,
+#: build_way_in, build_ahead and build_behind, whose verdicts in service are any cell's.
 FINAL_COUNTS = {
-    "fasteners": 152,
-    "turns": 116,
-    "held": 9,
-    "blocked": 26,
-    "stuck": 1,
+    "fasteners": 162,
+    "turns": 120,
+    "held": 11,
+    "blocked": 28,
+    "stuck": 3,
     "not_covered": 0,
 }
 
@@ -140,6 +141,30 @@ def sidecar_and_truth(copies=1, which="all"):
     }
     if allow:
         sidecar["allow"] = allow
+    return sidecar, truth
+
+
+#: The step of the bench's build sidecar that adds every part the cells' steps don't.
+REST = "rest"
+
+
+def build_sidecar():
+    """The bench's sidecar with a build (M8), and the build's truth.
+
+    The cells' steps, in BUILD_STEPS' order, each adding its cells' roles; then REST,
+    adding every other part, with the model as given: every other fastener is checked
+    there among every part, its verdict in the build its own in the model as given.
+    """
+    sidecar, _ = sidecar_and_truth()
+    adds = {step: [] for step in BUILD_STEPS}
+    truth = {}
+    for cell in CELLS:
+        for step, roles in cell.steps.items():
+            adds[step] += [f"{cell.name}_{role}" for role in roles]
+        for role, expected in cell.built.items():
+            truth[f"{cell.name}_{role}"] = _named_truth(expected, cell.name)
+    steps = [{"step": step, "add": adds[step]} for step in BUILD_STEPS]
+    sidecar["build"] = [*steps, {"step": REST, "add": ["*"]}]
     return sidecar, truth
 
 
@@ -281,6 +306,9 @@ def write(directory, copies=1, which="all"):
     export_step(raised, str(directory / "bench_lever-up.step"))
     (directory / "wrenchroom.yaml").write_text(yaml.safe_dump(sidecar, sort_keys=False))
     (directory / "bench_edges.yaml").write_text(yaml.safe_dump(edges_sidecar(), sort_keys=False))
+    if which == "all" and copies == 1:
+        built, _ = build_sidecar()
+        (directory / "bench_build.yaml").write_text(yaml.safe_dump(built, sort_keys=False))
     return truth
 
 

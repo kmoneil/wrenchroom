@@ -399,6 +399,9 @@ def explain(
     lines.extend(f"  tried {attempt_text(attempt)}" for attempt in result.attempts)
     if result.stuck_on:
         lines.append(f"  cannot come out: {', '.join(result.stuck_on)} in the way")
+    told = report.build.told(result.name) if report.build is not None else None
+    if told is not None:
+        lines.append(f"  in the build: {told}")
     for line in lines:
         _say(line, err=html_path == STDOUT)
     sys.exit(report.exit_code)

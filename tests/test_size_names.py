@@ -354,6 +354,7 @@ def test_the_terminal_says_the_look_alike_and_counts_it(report):
     assert lines[-1] == (
         "NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); "
         "parts drawn into each other (checks: {clashes: true} turns it on); "
+        "the build order (a build: list in the sidecar turns it on); "
         "1 part shaped like a fastener, not named as one (passed over); "
         "parts the model doesn't have"
     )

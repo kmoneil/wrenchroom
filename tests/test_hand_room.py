@@ -258,14 +258,17 @@ def test_the_report_says_whether_the_hand_was_checked():
     assert off.terminal_lines()[-1] == (
         "NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); "
         "parts drawn into each other (checks: {clashes: true} turns it on); "
+        "the build order (a build: list in the sidecar turns it on); "
         "parts the model doesn't have"
     )
     assert on.terminal_lines()[-1] == (
         "NOTE not checked: parts drawn into each other (checks: {clashes: true} turns it on); "
+        "the build order (a build: list in the sidecar turns it on); "
         "parts the model doesn't have"
     )
     assert (
         "Not checked: parts drawn into each other (`checks: {clashes: true}` turns it on); "
+        "the build order (a `build:` list in the sidecar turns it on); "
         "parts the model doesn't have."
     ) in on.markdown().splitlines()
     assert "Not checked: room for a hand" not in on.markdown()

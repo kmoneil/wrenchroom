@@ -102,6 +102,7 @@ def test_the_note_stops_listing_hand_room(hand_report, bench_report):
     assert hand_report.surfaces == ("shelled_decal",)  # issue #104
     assert hand_report.terminal_lines()[-1] == (
         "NOTE not checked: parts drawn into each other (checks: {clashes: true} turns it on); "
+        "the build order (a build: list in the sidecar turns it on); "
         f"{named} parts named like a fastener, "
         "with no drive or bore in the solid (passed over); 1 part named for a leadscrew "
         f"or a ball screw, which no tool turns (passed over); {alike} parts shaped like "

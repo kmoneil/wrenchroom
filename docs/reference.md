@@ -17,6 +17,8 @@ rules and the figures behind them are written down.
 - [The sidecar's globs](#the-sidecars-globs)
 - [Reports](#reports)
 - [The tools a model needs](#the-tools-a-model-needs)
+- [Clashes](#clashes)
+- [Build order](#build-order)
 - [Collision engines and speed](#collision-engines-and-speed)
 - [Standards](#standards)
 - [The golden bench](#the-golden-bench)
@@ -543,6 +545,64 @@ the hint; `wrenchroom clashes --json` and `--md` write the same alone. The 3D vi
 (`check --clashes --html`) lists them in its panel: choosing one draws its two parts
 see-through and the overlap itself in red, over them, in the state's own model where
 it has one (`report.html#clash:0` opens on the first).
+
+## Build order
+
+`check` answers whether the finished machine can be serviced: every fastener in the
+model as drawn, or in a state with parts off. A sidecar's `build:` asks whether it can
+be built (M8): the steps in order, each adding parts, and each fastener checked in the
+step that adds it, among the parts added by then.
+
+```yaml
+build:
+  - step: frame
+    add: ["frame_*", "rail_*", "frame_bolt_*", "frame_nut_*"]
+  - step: motors
+    add: ["motor_*"]
+  - step: cover
+    add: [cover, "cover_screw_*"]
+    model: build_lever-up.step     # the mechanism as it sits during this step
+  - step: rest
+    add: ["*"]                     # every part no other step adds
+```
+
+- **The steps.** Every part is added by one step exactly, a part drawn as several
+  solids with its first. A part no step adds, or one two steps add, is a sidecar
+  mistake: the run says which (`WARN build: no step adds 2 parts: ...`, `WARN build:
+  steps frame and motors each add 1 part: ...`), doesn't check the build, and exits
+  2. `add: ["*"]`, in one step only, takes every part no other step adds. An ignored
+  part need not be added. An `add:` glob that names no part is a renamed part, as an
+  unmatched rule is, and fails the run too.
+- **A step's scene** is every part added by then, the step's own included, as they
+  go on before their fasteners, and none of the later steps'. A step's `model:` is
+  read as a state's is (beside the sidecar, then beside the model) and matched by
+  name: in it, the later steps' parts are left out, and a part only it has (a jig)
+  stays. One it lacks of the parts added by then is noted.
+- **Goes in, and turns.** A fastener passes in its step when a tool turns it, or
+  holds it while its partner turns, as in `check`, and a screw's way in is clear: a
+  screw whose way out is blocked by a part added by then can't have gone in, and is
+  `stuck` in the build (`its way in is blocked: rail_b (added in frame)`). Its way
+  out in service is the states' to answer.
+- **Joints** are checked in the step their last member arrives in. A bolt put in
+  before its nut need only go in then: its tool holds it, at least, and its way in is
+  clear; once the nut is in, the joint is checked as in `check`, and a FAIL line says
+  both steps (`FAIL cover: frame_bolt_2 (added in frame) ...`). A nut put in before its
+  bolt is held by nothing till then, unless it sits in a trap (issue #93) or is a
+  fixed thread: it is not covered (`put in before its bolt frame_bolt_2 (added in
+  cover), held by nothing till then`), which fails the run as a sidecar mistake does.
+
+The build and the service check are independent, and the report says both: a screw
+buried by a part put on after it passes the build and fails service, unless a state
+takes that part off; one put in after the part over it, which a state takes off for
+service, passes service and fails the build. A failure in the build fails the run
+(exit 1). The terminal gives a line per step, counting the fasteners it adds by how
+they fared, and a `FAIL step: name` line for each that fails; the JSON's `build` has
+the steps, the parts each adds, and each fastener's result with `step` (the step that
+adds it) and `checked_in` (where its verdict was reached); the Markdown a row per step
+and the failures; `explain` adds a line (`in the build: added in frame, turns with
+hex-key-5, driver straight in`). Whether a part itself fits in at its step is not
+checked, which every report with a build says. The 3D view doesn't show the steps
+yet.
 
 ## Collision engines and speed
 

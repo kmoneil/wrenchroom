@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from wrenchroom.assembly import Assembly
+    from wrenchroom.build import Build
     from wrenchroom.clashes import Clashes
     from wrenchroom.tools.sweep import Attempt, Probe
     from wrenchroom.used import ToolsUsed
@@ -220,20 +221,35 @@ class Report:
     #: (``checks: {clashes: true}``, ``--clashes``); None where it didn't, which the
     #: not-checked line says.
     clashes: Clashes | None = None
+    #: Each fastener in the step of the build that adds it (M8), where the sidecar
+    #: lists the steps (``build:``); None where it doesn't, which the not-checked line
+    #: says.
+    build: Build | None = None
 
     @property
     def not_checked(self) -> str:
         """What the run could not see, said in every report (the prototype's lesson)."""
-        unseen = ["parts the model doesn't have"]
-        if self.surfaces:
-            unseen.insert(0, self._surfaces_count)
-        if self.passed_over:
-            unseen.insert(0, _passed_over_count(self.passed_over))
-        if self.clashes is None:
-            unseen.insert(0, "parts drawn into each other (checks: {clashes: true} turns it on)")
+        unseen = []
         if not self.hand_room:
-            unseen.insert(0, "room for a hand (checks: {hand_room: true} turns it on)")
+            unseen.append("room for a hand (checks: {hand_room: true} turns it on)")
+        if self.clashes is None:
+            unseen.append("parts drawn into each other (checks: {clashes: true} turns it on)")
+        unseen.append(self._build_unseen)
+        if self.passed_over:
+            unseen.append(_passed_over_count(self.passed_over))
+        if self.surfaces:
+            unseen.append(self._surfaces_count)
+        unseen.append("parts the model doesn't have")
         return "not checked: " + "; ".join(unseen)
+
+    @property
+    def _build_unseen(self) -> str:
+        """What of the build the run didn't see: all of it, or whether parts fit in."""
+        if self.build is None:
+            return "the build order (a build: list in the sidecar turns it on)"
+        if not self.build.plan.sound:
+            return "the build order (its steps must add every part once)"
+        return "whether each part fits in at its build step"
 
     @property
     def _surfaces_count(self) -> str:
@@ -275,12 +291,17 @@ class Report:
 
     @property
     def exit_code(self) -> int:
-        """0 all pass; 1 a fastener fails, or two parts clash; 2 not covered or a config problem."""
+        """0 all pass; 1 a fastener fails, or two parts clash; 2 not covered or a config problem.
+
+        A fastener fails in service or in the build; a problem with the build's steps is
+        a config problem.
+        """
         askew = self.unmatched_rules or self.unmatched_ignores or self.warnings
         clashed = self.clashes.exit_code if self.clashes is not None else 0
-        if self.summary["not_covered"] or askew or clashed == 2:  # noqa: PLR2004
+        built = self.build.exit_code if self.build is not None else 0
+        if self.summary["not_covered"] or askew or 2 in {clashed, built}:  # noqa: PLR2004
             return 2
-        if self.summary["blocked"] or self.summary["stuck"] or clashed:
+        if self.summary["blocked"] or self.summary["stuck"] or clashed or built:
             return 1
         return 0
 
@@ -335,9 +356,10 @@ class Report:
                 }
                 for part in self.passed_over
             ],
-            "fasteners": [_result_json(result) for result in self.results],
+            "fasteners": [result_json(result) for result in self.results],
             "tools_used": self.tools_used().to_json(),
             "clashes": self.clashes.to_json() if self.clashes is not None else None,
+            "build": self.build.to_json() if self.build is not None else None,
         }
 
     def tools_used(self) -> ToolsUsed:
@@ -375,6 +397,8 @@ class Report:
             lines.append(f"FAIL {result.fastener.name}  {tool}  {result.verdict}  {what}")
         if self.clashes is not None:
             lines.extend(self.clashes.lines())
+        if self.build is not None:
+            lines.extend(self.build.lines())
         for glob in self.unmatched_rules:
             lines.append(f"WARN rule matched nothing: {glob!r} (renamed part?)")
         for glob in self.unmatched_ignores:
@@ -463,6 +487,11 @@ class Report:
                 if self.clashes is None
                 else ""
             )
+            + (
+                "the build order (a `build:` list in the sidecar turns it on); "
+                if self.build is None
+                else f"{md_text(self._build_unseen)}; "
+            )
             + (f"{md_text(_passed_over_count(self.passed_over))}; " if self.passed_over else "")
             + (f"{md_text(self._surfaces_count)}; " if self.surfaces else "")
             + "parts the model doesn't have.",
@@ -500,6 +529,8 @@ class Report:
                 )
         if self.clashes is not None:
             lines += self.clashes.markdown()
+        if self.build is not None:
+            lines += self.build.markdown()
         warnings = [
             *(
                 f"rule matched nothing: {md_code(glob, in_table=False)} (renamed part?)"
@@ -562,7 +593,8 @@ class Report:
         write_html(self, path, select=select)
 
 
-def _result_json(result: FastenerResult) -> dict[str, object]:
+def result_json(result: FastenerResult) -> dict[str, object]:
+    """One fastener's result as the JSON report has it: in service, or in the build."""
     fastener = result.fastener
     return {
         "name": fastener.name,
