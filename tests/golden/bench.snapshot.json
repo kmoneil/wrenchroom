@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 139,
-  "turns": 108,
+  "fasteners": 141,
+  "turns": 110,
   "held": 8,
   "blocked": 22,
   "stuck": 1,
@@ -1479,6 +1479,66 @@
    "blocked_by": [
     "key_wall_near_wall"
    ],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "lobed_recess_fluted_screw",
+   "kind": "screw",
+   "head": "torx",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    5040.0,
+    15000.0,
+    1.94
+   ],
+   "source": "sidecar",
+   "tool": "torx-key-T20",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "lobed_recess_plain_screw",
+   "kind": "screw",
+   "head": "torx",
+   "size": "M4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4960.0,
+    15000.0,
+    1.93
+   ],
+   "source": "sidecar",
+   "tool": "torx-key-T25",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
    "deciding": [],
    "stuck_on": [],
    "reason": null,
@@ -4036,8 +4096,8 @@
     1.0
    ],
    "seat": [
-    4900.0,
-    15000.0,
+    -100.0,
+    16000.0,
     6.0
    ],
    "source": "sidecar",
@@ -4068,8 +4128,8 @@
     1.0
    ],
    "seat": [
-    5100.0,
-    15000.0,
+    100.0,
+    16000.0,
     6.0
    ],
    "source": "sidecar",

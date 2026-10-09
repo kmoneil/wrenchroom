@@ -231,8 +231,8 @@ def test_a_recess_no_tool_fits_is_not_covered_not_guessed():
         NO_RECESS_READ,
     )
     assert NO_RECESS_READ == (
-        "its head shows a recess that is no hex socket, cross or slot; say head: in the "
-        "sidecar, or name its drive"
+        "its head shows a recess that is no hex socket, Torx, cross or slot; say head: in "
+        "the sidecar, or name its drive"
     )
     assert result.fastener.confidence == "low"
 

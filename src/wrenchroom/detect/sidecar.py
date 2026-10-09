@@ -20,13 +20,23 @@ check), and has its glob characters escaped so the rule matches that part alone.
 
 from __future__ import annotations
 
+import math
 import re
 from typing import TYPE_CHECKING
 
 import yaml
 
 from wrenchroom import __version__
-from wrenchroom.fasteners import Fastener, Head, Kind, PassedOver, hex_key_af, spanner_af
+from wrenchroom.fasteners import (
+    TORX_RECESS_A,
+    TORX_SIZE,
+    Fastener,
+    Head,
+    Kind,
+    PassedOver,
+    hex_key_af,
+    spanner_af,
+)
 from wrenchroom.terminal import UNSAFE, printable
 
 if TYPE_CHECKING:
@@ -121,9 +131,17 @@ def _passed_block(part: PassedOver) -> str:
 
 
 def _table_agrees(fastener: Fastener) -> bool:
-    """True when the size's table gives the measured across-flats anyway."""
+    """True when the size's table gives the measured across-flats anyway.
+
+    A Torx recess's is its point to point (issue #124): the table agrees where its
+    thread's Torx size's ISO 10664 band holds it.
+    """
     if fastener.size is None or fastener.drive_af is None:
         return False
+    if fastener.head is Head.TORX:
+        torx = TORX_SIZE.get(fastener.size.designation)
+        least, most = TORX_RECESS_A[torx] if torx is not None else (math.inf, -math.inf)
+        return least - _SAME_AF <= fastener.drive_af <= most + _SAME_AF
     if fastener.kind is Kind.NUT or fastener.head is Head.HEX:
         expected = spanner_af(fastener.size)
     elif fastener.head is not None:

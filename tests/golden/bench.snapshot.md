@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**139 fasteners: 108 turn, 8 held, 22 blocked, 1 stuck, 0 not covered**
+**141 fasteners: 110 turn, 8 held, 22 blocked, 1 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -42,6 +42,8 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts
 | M4 insert | - | 2 | all pass (holds itself) |
 | M4 phillips screw | `driver-ph2` | 3 | 1 of 3 fail |
 | M4 socket screw | `hex-key-3` | 2 | all pass (driver straight in) |
+| M4 torx screw | `torx-key-T20` | 1 | all pass (driver straight in) |
+| M4 torx screw | `torx-key-T25` | 1 | all pass (driver straight in) |
 | M5 button screw | `hex-key-3` | 3 | all pass (driver straight in) |
 | M5 nut | `spanner-8` | 1 | all pass (ring, full length) |
 | M5 socket screw | `hex-key-4` | 1 | all pass (driver straight in) |

@@ -35,9 +35,12 @@ face split by other features still counts.
 A cross recess is read from its wings (issue #115): four at right angles round
 the axis, each a pair of walls facing each other at one offset, out along the
 wing. Makers taper the walls a few degrees and slope the wings' ends, and some
-fill between the wings with V faces; none of that matters. A recess with walls
-that is no hex socket, cross or slot (a square's) is ``unread_recess``, and the
-head isn't guessed from its outline: a hex key fits none of them.
+fill between the wings with V faces; none of that matters. A Torx recess is read
+from its lobes (issue #124): six round walls along the axis, of one radius, their
+own axes at one offset and 60 degrees apart, the recess inside them. A recess with
+walls that is no hex socket, Torx, cross or slot (a square's, or any round or
+B-spline wall facing the axis) is ``unread_recess``, and the head isn't guessed
+from its outline: a hex key fits none of them.
 """
 
 from __future__ import annotations
@@ -47,6 +50,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from build123d import GeomType
+from OCP.BRepAdaptor import BRepAdaptor_Surface
 from OCP.TopAbs import TopAbs_FACE
 from OCP.TopExp import TopExp_Explorer
 
@@ -103,6 +107,9 @@ _SAME_ANGLE_DEG = 1.0
 
 #: A coaxial face's axis may sit this far off the part's axis, mm.
 _COAXIAL_MM = 0.05
+
+#: A recess's round walls that aren't cylinders: a spline drawn and swept.
+_SPLINES = {GeomType.BSPLINE, GeomType.BEZIER, GeomType.EXTRUSION, GeomType.OFFSET}
 
 #: Which table names the sizes a keyed head's socket fits.
 _KEY_TABLES: dict[Head, dict[str, float]] = {
@@ -203,8 +210,11 @@ class ShapeReading:
             countersunk Phillips or Torx head looking alike to a drive (issue #94).
         cross_mm: A cross recess's span across its wings, as drawn, mm: its
             size (issue #115).
+        torx_mm: A Torx recess's point to point, A, as drawn, mm: the size its
+            ISO 10664 band names (issue #124).
         unread_recess: True when the solid shows a recess with walls that is no
-            hex socket, cross or slot (a square's): no head is guessed for it.
+            hex socket, Torx, cross or slot (a square's, a round or spline wall's
+            facing the axis): no head is guessed for it.
     """
 
     axis: Vec | None = None
@@ -222,7 +232,17 @@ class ShapeReading:
     length_mm: float | None = None
     shank_mm: float | None = None
     cross_mm: float | None = None
+    torx_mm: float | None = None
     unread_recess: bool = False
+
+
+@dataclass(frozen=True)
+class _Lobe:
+    """A round wall of a recess: a cylinder along the axis, off it, the recess inside it."""
+
+    angle_deg: float  # where its own axis lies round the main one, 0..360
+    offset: float  # its own axis's distance from the main one
+    radius: float
 
 
 @dataclass(frozen=True)
@@ -282,11 +302,12 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
         )
     convex = [r for r, outside in rounds if outside]
     walls = _walls(faces, origin, direction)
-    span: float | None = None
+    span = torx = None
     shank = _snap(convex)  # the thinnest
     shoulder = named is Head.SHOULDER
     pocket = _regular(inner, 6)
     profile = _Profile.of(shape, origin, direction)
+    lobes, splined = _round_walls(faces, (origin, direction), profile.widest)
     outline = _Outline(None)
     if hex_outer is not None and (pocket is None or hex_outer > pocket):
         head, drive_af = Head.HEX, hex_outer
@@ -295,11 +316,10 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
     elif pocket is not None:
         head, outline = _socket_head(faces, (origin, direction), convex, profile, shank, named)
         drive_af = pocket
-    elif (span := _cross_span(walls)) is not None:
-        head = Head.PHILLIPS
-    elif _is_slot(inner):
-        head = Head.SLOTTED
-    unread = head is None and bool(walls)  # a recess a hex key fits no better (#115)
+    else:
+        head, span, torx = _recess(walls, inner, lobes)
+    # A recess a hex key fits no better (#115), its walls flat or round (#124).
+    unread = head is None and (bool(walls) or bool(lobes) or splined)
     if head is None and not unread:
         outline = _keyed_head(faces, origin, direction, convex, profile, shank)
     if shoulder or outline.head is Head.SHOULDER:  # by its name, or by its outline
@@ -325,8 +345,26 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
         length_mm=_length(profile, head),
         shank_mm=_shank(convex, profile, head),
         cross_mm=span,
+        torx_mm=torx,
         unread_recess=unread,
     )
+
+
+def _recess(
+    walls: list[_Wall], inner: list[_Flat], lobes: list[_Lobe]
+) -> tuple[Head | None, float | None, float | None]:
+    """A drive recessed in a head that is no hex socket: (head, cross span, Torx A).
+
+    A cross, read from its wings (issue #115); a slot; a Torx recess, read from its
+    lobes (issue #124). None when it is none of them.
+    """
+    if (span := _cross_span(walls)) is not None:
+        return Head.PHILLIPS, span, None
+    if _is_slot(inner):
+        return Head.SLOTTED, None, None
+    if (torx := _torx_point(lobes)) is not None:
+        return Head.TORX, None, torx
+    return None, None, None
 
 
 #: Heads whose standard's length is the screw's under them, and overall (issue #94).
@@ -735,6 +773,72 @@ def _walls(faces: list[Face], origin: Vec, direction: Vec) -> list[_Wall]:
         angle = math.degrees(math.atan2(_dot(across, y_dir), _dot(across, x_dir))) % 360
         found.append(_Wall(angle, -signed, _dot(middle, along), reach))
     return found
+
+
+def _round_walls(
+    faces: list[Face], axis: tuple[Vec, Vec], widest: float
+) -> tuple[list[_Lobe], bool]:
+    """A recess's round walls along the axis: its cylinders, and whether any spline.
+
+    A cylinder whose own axis lies along the main one and off it, the recess inside
+    it, and inside the part's widest radius, is a round wall of a recess: a Torx
+    recess's lobe, a pin hole. Not the flute between two lobes, outside it, nor a
+    scallop in a knurled rim, whose middle is past the rim. A spline face along the
+    axis, looking at it where it is, is a round wall drawn some other way (``True``).
+    """
+    origin, direction = axis
+    x_dir = _any_perpendicular(direction)
+    y_dir = _cross(direction, x_dir)
+    most = math.sin(math.radians(_WALL_TAPER_DEG))
+    lobes, splined = [], False
+    for face in faces:
+        kind = face.geom_type
+        if kind in _SPLINES:
+            point = _vec(face.position_at(0.5, 0.5))
+            normal = _unit(_vec(face.normal_at(0.5, 0.5)))
+            looks = _dot(normal, _radial_from(point, origin, direction)) < 0
+            splined = splined or (abs(_dot(normal, direction)) <= most and looks)
+            continue
+        own_axis = face.axis_of_rotation if kind is GeomType.CYLINDER else None
+        if own_axis is None or abs(_dot(_unit(_vec(own_axis.direction)), direction)) < _PARALLEL:
+            continue
+        own = _radial_from(_vec(own_axis.position), origin, direction)
+        offset = math.sqrt(_dot(own, own))
+        # Read through the surface: build123d's radius is None for a trimmed cylinder,
+        # as a boolean leaves a lobe cut into a head.
+        radius = BRepAdaptor_Surface(face.wrapped).Cylinder().Radius()
+        if offset <= _COAXIAL_MM or offset + radius > widest:
+            continue  # on the axis (a bore, a counterbore), or in the part's rim
+        point = _vec(face.position_at(0.5, 0.5))
+        out = _sub(_radial_from(point, origin, direction), own)  # from its own axis
+        if _dot(_vec(face.normal_at(0.5, 0.5)), out) >= 0:
+            continue  # the part inside it: a flute, a boss
+        angle = math.degrees(math.atan2(_dot(own, y_dir), _dot(own, x_dir))) % 360
+        lobes.append(_Lobe(angle, offset, radius))
+    return lobes, splined
+
+
+def _torx_point(lobes: list[_Lobe]) -> float | None:
+    """A Torx recess's point to point, A, if its six lobes are there; else None.
+
+    Six round walls, the recess inside them, of one radius, their axes at one offset
+    from the main one and 60 degrees apart: A is twice the offset and the radius.
+    The flutes between them, and a core drawn round the axis, don't matter.
+    """
+    for anchor in lobes:
+        ring = [
+            lobe
+            for lobe in lobes
+            if abs(lobe.offset - anchor.offset) <= _SAME_DISTANCE
+            and abs(lobe.radius - anchor.radius) <= _SAME_DISTANCE
+        ]
+        angles = _distinct_angles([lobe.angle_deg for lobe in ring])
+        if len(angles) == 6 and all(  # noqa: PLR2004  (a Torx recess's six lobes)
+            min(_angle_gap(a, angles[0]) % 60, 60 - _angle_gap(a, angles[0]) % 60) < _SAME_ANGLE_DEG
+            for a in angles
+        ):
+            return 2 * (anchor.offset + anchor.radius)
+    return None
 
 
 def _cross_span(walls: list[_Wall]) -> float | None:
