@@ -22,7 +22,7 @@ from pathlib import Path
 import yaml
 from build123d import Compound, Location, Pos, export_step
 from cells import CELLS
-from parts import plate, slab, socket_screw, state_lever_raised
+from parts import plate, slab, socket_screw
 
 from wrenchroom import __version__
 from wrenchroom.assembly import Assembly
@@ -104,20 +104,16 @@ def sidecar_and_truth(copies=1, which="all"):
     plus an optional "needs" (the milestone or issue it waits on). ``which``
     picks the cells: "all", or the perf bench's "timed" or "untimed" ones.
     """
-    rules, truth, ignore, lids = [], {}, set(), []
+    rules, truth, ignore, lids, allow = [], {}, set(), [], []
     for copy in range(copies):
         prefix = copy_prefix(copy)
         for cell in CELLS:
             if not _chosen(cell, which):
                 continue
             name = f"{prefix}{cell.name}"
-            for rule in cell.rules:
-                entry = dict(rule)
-                entry["parts"] = f"{name}_{entry['parts']}"
-                if "mates" in entry:
-                    entry["mates"] = [f"{name}_{m}" for m in entry["mates"]]
-                rules.append(entry)
+            rules += [_named_rule(rule, name) for rule in cell.rules]
             ignore.update(cell.ignore)
+            allow += [[f"{name}_{a}", f"{name}_{b}"] for a, b in cell.allow]
             for role, expected in cell.truth.items():
                 truth[f"{name}_{role}"] = _named_truth(expected, name)
         if which != "untimed":  # the twins are ordinary: timed with the rest
@@ -142,7 +138,18 @@ def sidecar_and_truth(copies=1, which="all"):
         "checks": {"try_states": ["lever-up"]},
         "tools": _bench_tools(which),
     }
+    if allow:
+        sidecar["allow"] = allow
     return sidecar, truth
+
+
+def _named_rule(rule, name):
+    """A cell's rule with its parts and mates turned into full part names."""
+    entry = dict(rule)
+    entry["parts"] = f"{name}_{entry['parts']}"
+    if "mates" in entry:
+        entry["mates"] = [f"{name}_{m}" for m in entry["mates"]]
+    return entry
 
 
 def _bench_tools(which):
@@ -171,9 +178,9 @@ def build(raised=False, copies=1, which="all"):
             if not _chosen(cell, which):
                 continue
             at = _slot(copy * SLOTS + index)
+            moved = cell.raised() if raised and cell.raised is not None else {}
             for role, shape in cell.build():
-                raised_lever = raised and cell.name == "state_lever" and role == "lever"
-                placed = at * (state_lever_raised() if raised_lever else shape)
+                placed = at * moved.get(role, shape)
                 placed.label = f"{prefix}{cell.name}_{role}"
                 shapes.append(placed)
         if which != "untimed":

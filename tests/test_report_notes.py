@@ -122,7 +122,7 @@ UNDER = "hex drawn undersize: 9.60 across flats, 0.18 under the least its M6 sta
 def test_one_note_many_share_is_one_line():
     report = noted(*((f"frame_nut_{i}", UNDER) for i in range(20)), ("lid_nut", "other"))
     lines = [
-        line for line in report.terminal_lines() if line.startswith("NOTE frame") or "other" in line
+        line for line in report.terminal_lines() if line.startswith(("NOTE frame", "NOTE lid"))
     ]
     assert lines == [
         f"NOTE frame_nut_0, frame_nut_1, frame_nut_2 and 17 more: {UNDER}",

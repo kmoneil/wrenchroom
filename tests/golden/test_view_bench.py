@@ -86,8 +86,10 @@ def test_the_lever_screw_is_drawn_with_the_lever_raised(bench_view):
         return index
 
     assert lever(lever_view) != lever(overview)  # the raised lever is its own part
-    # Everything else in the lever-up model is the same part, drawn once.
-    assert len(set(lever_view["parts"]) - set(overview["parts"])) == 1
+    # Everything else in the lever-up model is the same part, drawn once, but the
+    # slider state_clash slides into its wall there (M8's clashes).
+    own = {names[i] for i in set(lever_view["parts"]) - set(overview["parts"])}
+    assert own == {"state_lever_lever", "state_clash_slider"}
 
 
 def test_the_lid_screw_is_drawn_with_the_lid_off(bench_view):

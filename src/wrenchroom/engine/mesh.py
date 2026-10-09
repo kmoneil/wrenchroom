@@ -139,6 +139,9 @@ class MeshEngine(Engine):
         #: extension, a ring's for the stubby). Keyed by the piece and its
         #: placement, and the part's identity (its mesh is kept, so is the part).
         self.measured: dict[tuple[object, ...], _Measure] = {}
+        #: Each pair of parts' verdict for a clash (M8), measured once: whether surely
+        #: apart. The parts ride along.
+        self._pairs: dict[tuple[int, int], tuple[Part, Part, bool]] = {}
 
     @property
     def meshed(self) -> tuple[str, ...]:
@@ -152,6 +155,42 @@ class MeshEngine(Engine):
     def part_mesh(self, part: Part) -> Manifold | None:
         """The part as a closed mesh, built once; None when it won't close."""
         return self._cached(part)[1]
+
+    def parts_apart(self, first: Part, second: Part) -> bool:
+        """Whether two parts surely overlap by no more than the floor, for a clash (M8).
+
+        Sure when their meshes don't overlap, nor come closer than both true
+        surfaces could stand off their meshes near each other (:class:`Strays`); or
+        when they do, but by so little that the true overlap, the meshes' plus all
+        both true surfaces could stand out over its whole surface, is under the floor.
+        A pair the meshes overlap on by more is measured exactly, however sure the
+        meshes look: a face's achieved deflection, which its strays are, can be
+        short of how far its mesh stands off (two arcs on the public Voron Legacy
+        model overlapped 0.2 deep on their meshes, and in truth not at all).
+        """
+        key = (id(first), id(second))
+        cached = self._pairs.get(key)
+        if cached is None:
+            cached = (first, second, self._apart(first, second))
+            self._pairs[key] = cached
+        return cached[2]
+
+    def _apart(self, first: Part, second: Part) -> bool:
+        mesh_a, mesh_b = self.part_mesh(first), self.part_mesh(second)
+        if mesh_a is None or mesh_b is None:
+            return False  # a part that wouldn't close: measured exactly
+        box_a, box_b = self.part_box(first), self.part_box(second)
+        low = np.maximum(box_a[0], box_b[0]) - BOX_MARGIN
+        high = np.minimum(box_a[1], box_b[1]) + BOX_MARGIN
+        out_a, _ = self.part_strays(first).within(low, high)
+        out_b, _ = self.part_strays(second).within(low, high)
+        overlap = mesh_a ^ mesh_b
+        volume = overlap.volume()
+        if volume <= 0:
+            reach = out_a + out_b
+            return reach <= 0 or mesh_a.min_gap(mesh_b, reach) >= reach
+        # At most a graze, however the true surfaces lie near it.
+        return volume + (out_a + out_b) * overlap.surface_area() <= HIT_MIN_VOLUME
 
     def part_strays(self, part: Part) -> Strays:
         """How far the part may stand outside its mesh, and inside it, face by face (Strays)."""

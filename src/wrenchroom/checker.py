@@ -30,6 +30,7 @@ import numpy as np
 from build123d import GeomType, Plane, Solid
 
 from wrenchroom.assembly import Assembly, Part
+from wrenchroom.clashes import Clashes, Measured, scan
 from wrenchroom.config import Config, ConfigError, is_mate
 from wrenchroom.detect import find
 from wrenchroom.detect.geometry import read_shape, wide_end
@@ -166,6 +167,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     model_dir: str | Path | None = None,
     engine: str = DEFAULT_ENGINE,
     hand_room: bool | None = None,
+    clashes: bool | None = None,
 ) -> Report:
     """Check every fastener the config names against the assembly.
 
@@ -186,6 +188,9 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         hand_room: Check room for the hand round each handle (spec 6.4);
             ``None`` takes the sidecar's ``checks: {hand_room: ...}``, off by
             default.
+        clashes: Look for parts drawn into each other over the whole model (M8,
+            :func:`find_clashes`), whatever ``only`` narrows; ``None`` takes the
+            sidecar's ``checks: {clashes: ...}``, off by default.
 
     Raises:
         ValueError: On a kit, state or engine that doesn't exist (a typo, not a
@@ -202,6 +207,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         config.state(default_state)  # raises on a typo
     matches = config.apply(assembly)
     fasteners, passed_over = _fasteners(assembly, config, matches.fasteners)
+    every_fastener = list(fasteners)  # a clash measures both of one drawn twice
     # One fastener drawn twice, over itself, is a fault in the model, said once on
     # the first by name; the other isn't checked again (issue #94).
     space = _StateSpace(assembly, config, model_dir, make_engine(engine))
@@ -255,6 +261,9 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         for r in _resolve_joints(candidates, pairs)
         if r.fastener.name in reported
     ]
+    clashed = None
+    if config.clashes if clashes is None else clashes:
+        clashed = _clash_run(space, config, every_fastener, pairs)
     models = {None: StateModel(assembly), **space.models}
     return Report(
         model=model,
@@ -281,6 +290,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         passed_over=passed_over,
         default_state=default_state,
         hand_room=tools.hand_room,
+        clashes=clashed,
         models=models,
         ignored=frozenset(
             part.name
@@ -289,6 +299,157 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
             if _ignored(config, part)
         ),
     )
+
+
+def find_clashes(
+    assembly: Assembly,
+    config: Config | None = None,
+    *,
+    model_dir: str | Path | None = None,
+    engine: str = DEFAULT_ENGINE,
+    with_ignored: bool = False,
+) -> Clashes:
+    """Every pair of parts drawn into each other, in the model and its states' models (M8).
+
+    The fasteners are found as :func:`check` finds them, and each is measured past
+    its thread (:mod:`wrenchroom.clashes`); no tool is tried.
+
+    Args:
+        assembly: The parts in their assembled positions.
+        config: The sidecar: its fasteners, pairs, mates, ignores, states and
+            ``allow:`` pairs.
+        model_dir: Where a state's alternate model files live.
+        engine: Which collision engine measures: ``mesh`` or ``exact``.
+        with_ignored: Measure the ignored parts too.
+
+    Raises:
+        ValueError: On an engine that doesn't exist.
+    """
+    config = config or Config()
+    if engine not in ENGINES:
+        msg = f"unknown engine {engine!r}; available: {', '.join(ENGINES)}"
+        raise ValueError(msg)
+    matches = config.apply(assembly)
+    fasteners, _ = _fasteners(assembly, config, matches.fasteners)
+    space = _StateSpace(assembly, config, model_dir, make_engine(engine))
+    frames, _ = _frames(fasteners, assembly, {})
+    pairs, _ = _find_pairs(fasteners, frames, config)
+    return _clash_run(space, config, fasteners, pairs, with_ignored=with_ignored)
+
+
+def _clash_run(
+    space: _StateSpace,
+    config: Config,
+    fasteners: list[Fastener],
+    pairs: dict[str, str],
+    *,
+    with_ignored: bool = False,
+) -> Clashes:
+    """The clashes in the model as given, then those each state's own model adds.
+
+    A state that only takes parts away can't add one; a state with a model of its
+    own (a lever raised into a wall) can, and its clashes the model as given doesn't
+    have are said with it, each pair once.
+    """
+    model, _, _ = space.resolve(None)
+    found, unmeasured = _clashes_in(
+        model, frozenset(), None, space, config, fasteners, pairs, with_ignored
+    )
+    seen = {frozenset((clash.first, clash.second)) for clash in found}
+    names = set(model.names)
+    for state in config.states:
+        assembly, removed, same_model = space.resolve(state.name)
+        if same_model:
+            continue
+        names |= set(assembly.names)
+        more, _ = _clashes_in(
+            assembly, removed, state.name, space, config, fasteners, pairs, with_ignored
+        )
+        for clash in more:
+            if frozenset((clash.first, clash.second)) not in seen:
+                seen.add(frozenset((clash.first, clash.second)))
+                found.append(clash)
+    return Clashes(tuple(found), config.unmatched_allows(names), unmeasured)
+
+
+def _clashes_in(
+    assembly: Assembly,
+    removed: frozenset[str],
+    state: str | None,
+    space: _StateSpace,
+    config: Config,
+    fasteners: list[Fastener],
+    pairs: dict[str, str],
+    with_ignored: bool,
+) -> tuple[list, tuple[str, ...]]:
+    """One model's clashes, and the fasteners in it not understood, which aren't measured.
+
+    Each fastener is measured on this model's own copy of it, past its thread; a
+    nut's thread runs from its bolt's side (:func:`_from_its_bolt`). One with no
+    frame can't be measured past its thread, and measured whole, its thread in its
+    hole would be a clash: it is left out, and said.
+    """
+    measured: dict[str, Callable[[], Measured]] = {}
+    unmeasured: list[str] = []
+    for fastener in fasteners:
+        name = fastener.name
+        if name not in assembly.names or name in removed:
+            continue
+        try:
+            frame = _frame(assembly[name], fastener, _pieces(assembly, name))
+        except NotCovered:
+            unmeasured.append(name)
+            continue
+        partner = pairs.get(name)
+        bolt = assembly[partner] if partner is not None and partner in assembly.names else None
+        measured[name] = _measuring(frame, fastener, bolt)
+    leaf = {part.name: part.piece_of or part.name for part in assembly}
+    mates = {fastener.name: fastener.mates for fastener in fasteners if fastener.mates}
+
+    def meant(first: str, second: str) -> bool:
+        """A pair, a fastener and its mate or its own piece, or an ``allow:`` pair."""
+        return (
+            pairs.get(first) == second
+            or pairs.get(second) == first
+            or leaf[first] == leaf[second]
+            or is_mate(second, mates.get(leaf[first], ()))
+            or is_mate(first, mates.get(leaf[second], ()))
+            or config.allows(first, second)
+        )
+
+    parts = [
+        part
+        for part in assembly
+        if part.name not in removed
+        and (part.piece_of or part.name) not in unmeasured
+        and (with_ignored or not _ignored(config, part))
+    ]
+    return scan(parts, space.engine, measured, meant, state), tuple(unmeasured)
+
+
+def _measuring(frame: _Frame, fastener: Fastener, bolt: Part | None) -> Callable[[], Measured]:
+    """A fastener measured past its thread for a clash, on first need, then kept.
+
+    Its regions are parts of their own, which the engine meshes and keeps as it does
+    any part. A nut's thread runs from its bolt's side (:func:`_from_its_bolt`).
+    """
+    kept: list[Measured] = []
+
+    def measure() -> Measured:
+        if not kept:
+            nut = fastener.kind is Kind.NUT and bolt is not None
+            toward = _from_its_bolt(frame, bolt) if nut and bolt is not None else None
+            region, past_thread = _measured(frame, fastener, toward)
+            kept.append(
+                Measured(
+                    Part(fastener.name, region),
+                    Part(fastener.name, past_thread),
+                    gland=not fastener.socket_allowed,
+                )
+            )
+        return kept[0]
+
+    return measure
 
 
 #: Two fasteners sharing more than this fraction of each one's volume are one drawn

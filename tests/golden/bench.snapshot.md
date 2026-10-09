@@ -6,7 +6,7 @@ Kit `full`, ENGINE engine, wrenchroom VERSION.
 
 The model: 1 part drawn as a surface, not a solid, is left out, as nothing can meet it: `shelled_decal`.
 
-Not checked: room for a hand (`checks: {hand_room: true}` turns it on); 10 parts named like a fastener, with no drive or bore in the solid (passed over); 1 part named for a leadscrew or a ball screw, which no tool turns (passed over); 3 parts shaped like fasteners, not named as any (passed over); 1 part drawn as a surface, not a solid (left out); parts the model doesn't have.
+Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts drawn into each other (`checks: {clashes: true}` turns it on); 10 parts named like a fastener, with no drive or bore in the solid (passed over); 1 part named for a leadscrew or a ball screw, which no tool turns (passed over); 3 parts shaped like fasteners, not named as any (passed over); 1 part drawn as a surface, not a solid (left out); parts the model doesn't have.
 
 | Fasteners | Tool | Count | Outcome |
 | --- | --- | ---: | --- |
