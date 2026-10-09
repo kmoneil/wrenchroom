@@ -358,6 +358,7 @@ def test_an_empty_report_is_just_its_summary():
     assert lines[6] == (
         "Not checked: room for a hand (`checks: {hand_room: true}` turns it on); "
         "parts drawn into each other (`checks: {clashes: true}` turns it on); "
+        "the build order (a `build:` list in the sidecar turns it on); "
         "parts the model doesn't have."
     )
     assert "<table>" not in GFM.render(report.markdown())

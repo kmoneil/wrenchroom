@@ -160,6 +160,7 @@ def test_the_terminal_names_each_and_counts_them_under_not_checked(report):
     assert lines[-1] == (
         "NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); "
         "parts drawn into each other (checks: {clashes: true} turns it on); "
+        "the build order (a build: list in the sidecar turns it on); "
         "2 parts named like a fastener, with no drive or bore in the solid (passed over); "
         "parts the model doesn't have"
     )

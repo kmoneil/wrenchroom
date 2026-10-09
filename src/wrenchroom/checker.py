@@ -4,10 +4,11 @@ The run is phased. First every fastener gets a frame (its unsigned axis and the
 measurements around it); then screws and nuts are paired, forced pairs first,
 coaxial ones found; then each fastener is tried in its state, retried in the
 ``try_states`` when it fails, with extraction checked on every screw that would
-otherwise pass; last, joints are resolved: a fastener that only holds passes as
-``held`` when its partner turns, and fails when it doesn't. Nothing is skipped
-silently: whatever can't be resolved or has no tool in the kit is `not-covered`
-with the reason in the report.
+otherwise pass; then joints are resolved: a fastener that only holds passes as
+``held`` when its partner turns, and fails when it doesn't. Last, where the sidecar
+lists a build, each fastener is tried again in the step that adds it, among the parts
+added by then (:mod:`wrenchroom.build`). Nothing is skipped silently: whatever can't
+be resolved or has no tool in the kit is `not-covered` with the reason in the report.
 
 One deliberate divergence from the spec's scene rule: the pair partner STAYS in
 the scene. It is physically there, and the bench's tail_too_long cell shows why
@@ -30,6 +31,8 @@ import numpy as np
 from build123d import GeomType, Plane, Solid
 
 from wrenchroom.assembly import Assembly, Part
+from wrenchroom.build import Build, Placed, Plan
+from wrenchroom.build import plan as plan_build
 from wrenchroom.clashes import Clashes, Measured, scan
 from wrenchroom.config import Config, ConfigError, is_mate
 from wrenchroom.detect import find
@@ -171,6 +174,9 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
 ) -> Report:
     """Check every fastener the config names against the assembly.
 
+    Where the sidecar lists a build (``build:``), each fastener is checked in the step
+    that adds it too, and the report says both (:mod:`wrenchroom.build`).
+
     Args:
         assembly: The parts in their assembled positions.
         config: The sidecar; ``None`` means no fasteners, which still yields a
@@ -257,10 +263,12 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
             _check_fastener(fastener, frame, space, config, default_state, tools, partner)
         )
     results = [
-        replace(r, notes=(*r.fastener.notes, *_drive_notes(r.fastener), *r.notes))
-        for r in _resolve_joints(candidates, pairs)
-        if r.fastener.name in reported
+        _with_notes(r) for r in _resolve_joints(candidates, pairs) if r.fastener.name in reported
     ]
+    built = None
+    if config.build:
+        steps = plan_build(config.build, assembly, config.is_ignored)
+        built = _build_run(space, steps, fasteners, frames, failures, pairs, reported, tools)
     clashed = None
     if config.clashes if clashes is None else clashes:
         clashed = _clash_run(space, config, every_fastener, pairs)
@@ -291,6 +299,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         default_state=default_state,
         hand_room=tools.hand_room,
         clashes=clashed,
+        build=built,
         models=models,
         ignored=frozenset(
             part.name
@@ -455,6 +464,119 @@ def _measuring(frame: _Frame, fastener: Fastener, bolt: Part | None) -> Callable
 #: Two fasteners sharing more than this fraction of each one's volume are one drawn
 #: twice (issue #94): a screw drawn once for each of two optional parts, say.
 _TWICE = 0.5
+
+
+def _with_notes(result: FastenerResult) -> FastenerResult:
+    """A result with what its fastener's reading and drive say first, then its own."""
+    fastener = result.fastener
+    return replace(result, notes=(*fastener.notes, *_drive_notes(fastener), *result.notes))
+
+
+# ---------------------------------------------------------------------------
+# The build (M8): each fastener in the step that adds it.
+# ---------------------------------------------------------------------------
+
+
+def _build_run(
+    space: _StateSpace,
+    steps: Plan,
+    fasteners: list[Fastener],
+    frames: dict[str, _Frame],
+    failures: dict[str, str],
+    pairs: dict[str, str],
+    reported: set[str],
+    tools: _Tools,
+) -> Build:
+    """Each reported fastener in the step that adds it, its joint in its last member's.
+
+    A step's scene is every part added by then, as the step's model has them: the
+    step's own, the earlier steps', not the later ones' (:meth:`_StateSpace.resolve_step`).
+    Each fastener is tried once in each step it is checked in. Steps that don't add
+    every part once aren't a build to check: the plan says why, and nothing is tried.
+    """
+    if not steps.sound:
+        return Build(steps)
+    by_name = {fastener.name: fastener for fastener in fasteners}
+    tried: dict[tuple[str, int], _Candidate] = {}
+
+    def candidate(name: str, index: int) -> _Candidate:
+        if (name, index) not in tried:
+            fastener, partner = by_name[name], pairs.get(name)
+            if name in failures:
+                found = _Candidate(fastener, reason=failures[name])
+            else:
+                found = _try_in_step(fastener, frames[name], index, steps, space, tools, partner)
+            if steps.added_in[name] < index:  # in already: its way in was its own step's
+                found = replace(found, stuck=False, stuck_on=(), extraction_blocked=())
+            tried[name, index] = found
+        return tried[name, index]
+
+    placed = [
+        _placed(fastener, steps, pairs.get(fastener.name), candidate)
+        for fastener in fasteners
+        if fastener.name in reported
+    ]
+    order = {fastener.name: index for index, fastener in enumerate(fasteners)}
+    placed.sort(key=lambda p: (steps.added_in[p.result.name], order[p.result.name]))
+    return Build(steps, tuple(placed))
+
+
+def _placed(
+    fastener: Fastener,
+    steps: Plan,
+    partner: str | None,
+    candidate: Callable[[str, int], _Candidate],
+) -> Placed:
+    """One fastener's verdict in the build, in the step it is reached in.
+
+    Its joint is checked in the step its last member arrives in. Arriving before its
+    partner, it need only go in then: a tool holds it, at least, and a screw's way in is
+    clear. A nut can't wait for its bolt, held by nothing, unless its trap holds it.
+    """
+    name = fastener.name
+    added = steps.added_in[name]
+    joint = added if partner is None else max(added, steps.added_in[partner])
+    step, last = steps.steps[added].name, steps.steps[joint].name
+    if partner is None or added == joint:
+        alongside = candidate(partner, added) if partner is not None else None
+        return Placed(_with_notes(_finish(candidate(name, added), partner, alongside)), step, step)
+    early = candidate(name, added)
+    other = candidate(partner, joint).fastener
+    if early.reason is None and fastener.kind is Kind.NUT and other.kind is Kind.SCREW:
+        if not _held_by_design(candidate(name, joint)):
+            reason = (
+                f"put in before its bolt {partner} (added in {last}), held by nothing till then"
+            )
+            loose = _Candidate(fastener, reason=reason, axis=early.axis, seat=early.seat)
+            return Placed(_with_notes(_finish(loose, partner, None)), step, step)
+    else:
+        # Going in, it need only be held: its partner, still to come, is taken as one
+        # that turns. Whether it is turned or held is its joint's to say, once whole.
+        went = _finish(early, partner, _Candidate(other, turns=True))
+        if not went.passed:
+            return Placed(_with_notes(went), step, step)
+    whole = _finish(candidate(name, joint), partner, candidate(partner, joint))
+    return Placed(_with_notes(whole), step, last)
+
+
+def _try_in_step(
+    fastener: Fastener,
+    frame: _Frame,
+    index: int,
+    steps: Plan,
+    space: _StateSpace,
+    tools: _Tools,
+    partner: str | None,
+) -> _Candidate:
+    """A fastener tried in a build step: among the parts added by then, in its model."""
+    if fastener.kind is Kind.INSERT:  # a fixed thread holds itself, as in check (#29)
+        return _Candidate(fastener, how="holds itself", axis=frame.direction)
+    seen = space.resolve_step(index, steps)
+    if fastener.name not in seen[0].names:
+        step = steps.steps[index]
+        reason = f"not in step {step.name!r}, whose model {step.model} has no part of its name"
+        return _Candidate(fastener, reason=f"{reason} (renamed?)", absent=True)
+    return _try_in(fastener, frame, seen, None, space, tools, partner)
 
 
 def _drawn_twice(
@@ -877,6 +999,9 @@ class _StateSpace:
             ],
         ] = {}
         self.engine = engine
+        #: Each build step resolved so far: its assembly, the parts still to come, and
+        #: whether it is the model as given.
+        self._steps: dict[int, tuple[Assembly, frozenset[str], bool]] = {}
         self.warnings: list[str] = []
         #: What the state models differ in from the main model (issue #74).
         self.notes: list[str] = []
@@ -926,7 +1051,11 @@ class _StateSpace:
         if state_name is None:
             return self._default, frozenset(), True
         model = self._config.state_model(state_name)
-        assembly = self._default if model is None else self._load(state_name, model)
+        assembly = (
+            self._default
+            if model is None
+            else self._load(model, f"state {state_name!r}", self._state_spot(state_name))
+        )
         if model is not None and state_name not in self.models:
             self._compare(state_name, model, assembly)
         removed: set[str] = set()
@@ -940,6 +1069,60 @@ class _StateSpace:
             removed |= hits
         self.models[state_name] = StateModel(assembly, frozenset(removed))
         return assembly, frozenset(removed), model is None
+
+    def resolve_step(self, index: int, steps: Plan) -> tuple[Assembly, frozenset[str], bool]:
+        """The assembly a build step sees, the parts still to come, and whether it is the default.
+
+        The parts still to come are the ones a later step adds; a part only the step's
+        model has, a jig, say, no step adds, and it stays.
+        """
+        if index not in self._steps:
+            step = steps.steps[index]
+            assembly = self._default
+            if step.model is not None:
+                assembly = self._load(step.model, f"build step {step.name!r}", f"build[{index}]")
+                self._compare_step(index, steps, assembly)
+            later = frozenset(
+                name for name in assembly.names if steps.added_in.get(name, index) > index
+            )
+            self._steps[index] = (assembly, later, step.model is None)
+        return self._steps[index]
+
+    def _compare_step(self, index: int, steps: Plan, assembly: Assembly) -> None:
+        """Note a step's model missing a part added by then, or with parts no step adds.
+
+        A step's model may well lack the later steps' parts: it is the machine half
+        built. One it lacks of its own step's or an earlier one's is a renamed or
+        dropped part, more often than not; one the main model hasn't is a jig as often
+        as a rename. Said, as a state's model's are, and not failed for.
+        """
+        step = steps.steps[index]
+        theirs = set(assembly.names)
+        missing = tuple(
+            name
+            for name in self._default.names
+            if steps.added_in.get(name, index + 1) <= index and name not in theirs
+        )
+        main = set(self._default.names)
+        new = tuple(
+            name
+            for name in assembly.names
+            if name not in main and not self._config.is_ignored(name)
+        )
+        said = []
+        if missing:
+            said.append(f"lacks {_count(missing, 'part')} added by then: {listed(missing)}")
+        if new:
+            said.append(f"has {_count(new, 'part')} the main model doesn't: {listed(new)}")
+        if said:
+            self.notes.append(f"build step {step.name!r}: its model {step.model} {'; '.join(said)}")
+
+    def _state_spot(self, state_name: str) -> str:
+        """Where in the sidecar a state's model is named: its own, or up its chain."""
+        owner = self._config.state(state_name)
+        while owner.model is None and owner.base is not None:  # the state that names it
+            owner = self._config.state(owner.base)
+        return f"states.{owner.name}"
 
     def model_of(self, state_name: str) -> str | None:
         """The model file a state uses, its own or up its chain; None for the main model."""
@@ -976,36 +1159,38 @@ class _StateSpace:
         if said:
             self.notes.append(f"state {state_name!r}: its model {model} {'; '.join(said)}")
 
-    def _load(self, state_name: str, filename: str) -> Assembly:
+    def _load(self, filename: str, who: str, spot: str) -> Assembly:
         if filename not in self._models:
-            self._models[filename] = Assembly.from_step(self._locate(state_name, filename))
+            self._models[filename] = Assembly.from_step(self._locate(filename, who, spot))
         return self._models[filename]
 
-    def _locate(self, state_name: str, filename: str) -> Path:
-        """Where a state's model is: beside the sidecar, else beside the model (#73).
+    def _locate(self, filename: str, who: str, spot: str) -> Path:
+        """Where a state's or a build step's model is: beside the sidecar, else the model (#73).
 
         A path in a config file is read as one beside it, as the pytest plugin's
         paths are; beside the model is where the CLI looked before, and still
         does when the sidecar's folder hasn't the file. An absolute path is taken
         as it is. A file found nowhere is said to be missing, apart from one found
         and not readable as STEP, which says that instead.
+
+        Args:
+            filename: The model, as the sidecar names it.
+            who: What names it, for a message: ``state 'lid-off'``.
+            spot: Where in the sidecar, to which ``.model`` is added: ``states.lid-off``.
         """
         path = Path(filename)
         folders = [self._config.directory, self._model_dir]
         found = [path] if path.is_absolute() else [d / path for d in folders if d is not None]
         if not found:
-            msg = f"state model {filename!r} needs a model directory to load from"
+            msg = f"{who}: its model {filename!r} needs a model directory to load from"
             raise ConfigError(msg)
         for candidate in dict.fromkeys(found):
             if candidate.exists():
                 return candidate
         where = ", ".join(str(c.parent) for c in dict.fromkeys(found))
-        owner = self._config.state(state_name)
-        while owner.model is None and owner.base is not None:  # the state that names it
-            owner = self._config.state(owner.base)
         msg = (
-            f"state {state_name!r}: its model {filename} not found "
-            f"({self._config.source}, states.{owner.name}.model; looked in {where})"
+            f"{who}: its model {filename} not found "
+            f"({self._config.source}, {spot}.model; looked in {where})"
         )
         raise ConfigError(msg)
 
@@ -1112,12 +1297,30 @@ def _try_in_state(
     tools: _Tools,
     partner: str | None = None,
 ) -> _Candidate:
-    assembly, removed, same_model = space.resolve(state_name)
-    if fastener.name not in assembly.names:
+    seen = space.resolve(state_name)
+    if fastener.name not in seen[0].names:
         model = space.model_of(state_name) if state_name is not None else None
         whose = f", whose model {model} has no part of its name (renamed?)" if model else ""
         reason = f"not in state {state_name!r}{whose}"
         return _Candidate(fastener, reason=reason, state=state_name, absent=True)
+    return _try_in(fastener, default_frame, seen, state_name, space, tools, partner)
+
+
+def _try_in(
+    fastener: Fastener,
+    default_frame: _Frame,
+    seen: tuple[Assembly, frozenset[str], bool],
+    state_name: str | None,
+    space: _StateSpace,
+    tools: _Tools,
+    partner: str | None,
+) -> _Candidate:
+    """A fastener tried in one scene: a state's, or a build step's.
+
+    ``seen`` is what the scene is made of: the assembly, the parts taken out of it,
+    and whether it is the model as given (else the fastener is measured again).
+    """
+    assembly, removed, same_model = seen
     frame = default_frame
     if not same_model:  # parts may have moved: measure this model's own copy
         try:

@@ -23,7 +23,7 @@ $ wrenchroom check examples/bracket.step
   M8 nut                   spanner-13     x1    all pass (ring, full length)
 FAIL rear_screw  hex-key-5  blocked  shelf
 FAIL side_bolt  spanner-10  stuck  cover
-NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts drawn into each other (checks: {clashes: true} turns it on); parts the model doesn't have
+NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts drawn into each other (checks: {clashes: true} turns it on); the build order (a build: list in the sidecar turns it on); parts the model doesn't have
 ```
 
 The same check as a 3D view (`--html report.html`), opened on the rear screw: the
@@ -137,7 +137,7 @@ $ wrenchroom check examples/bracket.step
   M8 nut                   spanner-13     x1    all pass (ring, full length)
 FAIL rear_screw  hex-key-5  blocked  shelf
 FAIL side_bolt  spanner-10  stuck  cover
-NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts drawn into each other (checks: {clashes: true} turns it on); parts the model doesn't have
+NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts drawn into each other (checks: {clashes: true} turns it on); the build order (a build: list in the sidecar turns it on); parts the model doesn't have
 ```
 
 There's no sidecar here. The names say screw, bolt and nut, and the solids give the
@@ -188,7 +188,7 @@ $ wrenchroom check examples/bracket.step
   M6 socket screw          hex-key-5      x2    all pass (driver straight in)
   M8 hex screw             spanner-13     x1    all pass (ring, full length)
   M8 nut                   spanner-13     x1    all pass (ring, full length)
-NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts drawn into each other (checks: {clashes: true} turns it on); parts the model doesn't have
+NOTE not checked: room for a hand (checks: {hand_room: true} turns it on); parts drawn into each other (checks: {clashes: true} turns it on); the build order (a build: list in the sidecar turns it on); parts the model doesn't have
 ```
 
 Everything passes, and the exit code is 0.
@@ -222,6 +222,8 @@ what is:
 | `needs spanner-24, which kit metric-home does not hold (full has it)` | Choose a bigger kit, or add the tool to the sidecar. |
 | `no room for a hand: the hand hits frame on its best arc` | With `--hand-room`: the tool would turn, but the hand on it can't follow. |
 | `cannot tell the nut's free face: both ends are covered` | Say which way the tool comes from with `axis:` in the sidecar. |
+| `its way in is blocked: rail_b (added in frame)` | In the build: a part added by then is over the screw's way in, so it can't be put in. |
+| `put in before its bolt frame_bolt_2 (added in cover), held by nothing till then` | In the build: a nut comes a step before its bolt, with nothing holding it. Add it with its bolt, or after. |
 
 Exit codes are for scripts and CI: **0** every fastener passes, **1** a fastener
 fails, **2** a fastener is not covered, or the sidecar has a problem (a rule that
@@ -350,6 +352,9 @@ ignore: ["*_cable", "*_hose"]    # not solid obstacles: left out of every check
 pairs:
   - [axle_bolt, axle_nut]        # pair these, where geometry wouldn't
 
+allow:
+  - [axle, "bearing_*"]          # meant to overlap: never a clash
+
 states:
   lid-off:
     remove: [lid, "lid_screw_*"] # parts taken off
@@ -359,7 +364,14 @@ states:
 checks:
   try_states: [lid-off]          # retry each failure in these states
   hand_room: false               # also check room for a hand (untuned, off)
+  clashes: false                 # also look for parts drawn into each other (off)
   detect: true                   # find fasteners the rules don't name
+
+build:                           # the order it's built in: see below
+  - step: frame
+    add: ["frame_*", "axle_*"]
+  - step: rest
+    add: ["*"]                   # every part no other step adds
 
 tools:                           # tools your kit doesn't have
   - name: stubby-key-5
@@ -394,6 +406,42 @@ tools:
 
 `wrenchroom tools --config wrenchroom.yaml` lists them after the kit's own. The
 kinds and their numbers, all in mm, are in the [reference](https://github.com/kmoneil/wrenchroom/blob/main/docs/reference.md#your-own-tools).
+
+### The build order
+
+A screw easy to reach on the finished machine can be impossible to put in, because
+the part over it went on first; with a state taking that part off for service, the
+check alone passes it. A `build:` list says the order the machine is built in, and
+`check` then checks each fastener in the step that adds it, among the parts added by
+then:
+
+```yaml
+# wrenchroom.yaml
+build:
+  - step: frame
+    add: ["frame_*", "rail_*"]   # globs, as everywhere
+  - step: lid
+    add: [lid, "lid_screw_*"]
+    model: robot_lid-open.step   # optional: the mechanism as it sits in this step
+  - step: rest
+    add: ["*"]                   # every part no other step adds
+```
+
+The report says each step's fasteners and fails the run for one that can't be put
+in and turned in its step, naming the step that added what's in its way:
+
+```text
+build: 3 steps, 38 fasteners; the first failure is in lid
+  frame  12 fasteners: 12 turn
+  lid    4 fasteners: 3 turn, 1 blocked, in robot_lid-open.step
+  rest   22 fasteners: 22 turn
+FAIL lid: lid_screw_3  hex-key-4  blocked  rail_b (added in frame)
+```
+
+A joint is checked when its last part arrives: a bolt may go in before its nut, held
+by its tool. A nut put in before its bolt is held by nothing, unless it sits in a
+trap or is a fixed thread, and fails the run as a sidecar mistake does (exit 2), as
+does a part no step adds, or two do. Details are in the [reference](https://github.com/kmoneil/wrenchroom/blob/main/docs/reference.md#build-order).
 
 ## Tool kits
 
@@ -513,8 +561,10 @@ Every rule and figure, with the standards and the reasoning, is in
 - **Torque.** Whether a tool reaches and turns is checked, not whether it can apply
   the torque the joint needs. A pass that only a ball-end key reaches says so, as a
   ball end takes much less torque than a straight key.
-- **Assembly order.** Each fastener is checked in the model as drawn, or in a state
-  you name, not in the order the parts would be fitted.
+- **The build order**, unless the sidecar lists it (`build:`): each fastener is
+  checked in the model as drawn, or in a state you name, not in the order the parts
+  are fitted. With a build, whether each part itself fits in at its step isn't
+  checked, only its fasteners.
 
 ## Development
 

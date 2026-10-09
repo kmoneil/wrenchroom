@@ -80,6 +80,12 @@ class Cell:
     allow: tuple = ()
     #: Its parts as bench_lever-up.step has them, where they differ: () -> {role: shape}.
     raised: object = None
+    #: The build steps its roles are added in (M8): {step: [role glob, ...]}, the
+    #: bench's build sidecar adding them in BUILD_STEPS' order; every other part
+    #: comes in its last step, which adds the rest.
+    steps: dict = field(default_factory=dict)
+    #: The build's truth, as truth's, with each fastener's step and checked_in.
+    built: dict = field(default_factory=dict)
 
 
 M6_SOCKET = {"kind": "screw", "head": "socket", "size": "M6"}
@@ -87,7 +93,18 @@ M6_SOCKET = {"kind": "screw", "head": "socket", "size": "M6"}
 CELLS = []
 
 
-def cell(name, rules=(), truth=None, ignore=(), timed=True, tools=(), allow=(), raised=None):
+def cell(  # noqa: PLR0913, PLR0917  (one keyword per Cell field)
+    name,
+    rules=(),
+    truth=None,
+    ignore=(),
+    timed=True,
+    tools=(),
+    allow=(),
+    raised=None,
+    steps=None,
+    built=None,
+):
     def register(build):
         CELLS.append(
             Cell(
@@ -100,11 +117,18 @@ def cell(name, rules=(), truth=None, ignore=(), timed=True, tools=(), allow=(), 
                 tuple(tools),
                 tuple(allow),
                 raised,
+                steps or {},
+                built or {},
             )
         )
         return build
 
     return register
+
+
+#: The build steps the bench's build sidecar has, in order, before the one adding the
+#: rest (M8).
+BUILD_STEPS = ("first", "second", "third")
 
 
 # ---------------------------------------------------------------- 5.1 keys, drivers, spanners
@@ -2763,4 +2787,209 @@ def state_clash():
     return [
         ("wall", Pos(10, 0, 10) * Box(10, 40, 20)),  # x 5 to 15
         ("slider", Pos(-1, 0, 5) * Box(10, 20, 10)),  # x -6 to 4
+    ]
+
+
+# ---------------------------------------------------------------- M8: build order
+
+#: An M8 hex bolt, ISO 4017's 13 across flats and 5.3 thick, and its ISO 4032 nut.
+_M8_HEX = {"kind": "screw", "head": "hex", "size": "M8"}
+_M8_NUT = {"kind": "nut", "size": "M8"}
+
+
+@cell(
+    "build_buried",
+    [{"parts": "*_screw", **M6_SOCKET}],
+    {
+        "early_screw": {"verdict": "blocked", "tool": "hex-key-5", "blocked_by": ["cover"]},
+        "late_screw": {"verdict": "blocked", "tool": "hex-key-5", "blocked_by": ["cover"]},
+    },
+    steps={"first": ["plate", "early_screw"], "second": ["cover"], "third": ["late_screw"]},
+    built={
+        "early_screw": {
+            "verdict": "turns",
+            "tool": "hex-key-5",
+            "how": "driver straight in",
+            "step": "first",
+            "checked_in": "first",
+        },
+        "late_screw": {
+            "verdict": "blocked",
+            "tool": "hex-key-5",
+            "blocked_by": ["cover"],
+            "step": "third",
+            "checked_in": "third",
+        },
+    },
+)
+def build_buried():
+    """key_wall_near's cover, 15 over two M6 socket heads: in service no key gets on
+    either (the driver needs 200, the short leg tops out at 36.1). In the build, the
+    early screw goes in before the cover, nothing over it, and the driver turns it:
+    reachable in its own step, buried by a later one, which passes. The late one goes
+    in after it, blocked by the cover, which the build says was added in second.
+    """
+    return [
+        ("plate", plate(holes=[(-50, 0, 3), (50, 0, 3)])),
+        ("early_screw", Pos(-50, 0, 0) * socket_screw()),
+        ("late_screw", Pos(50, 0, 0) * socket_screw()),
+        ("cover", slab(6 + 15)),
+    ]
+
+
+@cell(
+    "build_way_in",
+    [{"parts": "*_screw", **M6_SOCKET}],
+    {
+        "under_screw": {"verdict": "stuck", "tool": "hex-key-5", "stuck_on": ["under"]},
+        "over_screw": {"verdict": "stuck", "tool": "hex-key-5", "stuck_on": ["over"]},
+    },
+    steps={"first": ["plate", "under", "under_screw", "over_screw"], "second": ["over"]},
+    built={
+        "under_screw": {
+            "verdict": "stuck",
+            "tool": "hex-key-5",
+            "stuck_on": ["under"],
+            "step": "first",
+            "checked_in": "first",
+        },
+        "over_screw": {
+            "verdict": "turns",
+            "tool": "hex-key-5",
+            "how": "driver straight in",
+            "step": "first",
+            "checked_in": "first",
+        },
+    },
+)
+def build_way_in():
+    """stuck_screw twice, 300 apart: an M6x50 socket screw, a ceiling 45 over its
+    seat, which the short leg turns it under (36.1 < 45) and it can't come out past.
+    The under screw goes in after its ceiling, which is in its way in: stuck in the
+    build as in service, its way in blocked. The over screw goes in first and its
+    ceiling after it: nothing over it, the driver turns it, and it passes the build,
+    stuck in service.
+    """
+    return [
+        ("plate", plate(w=500, holes=[(-150, 0, 3), (150, 0, 3)])),
+        ("under_screw", Pos(-150, 0, 0) * socket_screw(length=50)),
+        ("over_screw", Pos(150, 0, 0) * socket_screw(length=50)),
+        ("under", Pos(-150, 0, 0) * slab(6 + 45, w=200, d=200)),
+        ("over", Pos(150, 0, 0) * slab(6 + 45, w=200, d=200)),
+    ]
+
+
+@cell(
+    "build_ahead",
+    [
+        {"parts": "loose_bolt", **_M8_HEX},
+        {"parts": "loose_nut", **_M8_NUT},
+        {"parts": "trapped_screw", **_M3_SOCKET},
+        {"parts": "trapped_nut", **_M3_NUT},
+    ],
+    {
+        "loose_bolt": {"verdict": "turns", "tool": "spanner-13", "pair": "loose_nut"},
+        "loose_nut": {"verdict": "turns", "tool": "spanner-13", "pair": "loose_bolt"},
+        "trapped_screw": {"verdict": "turns", "tool": "hex-key-2.5", "pair": "trapped_nut"},
+        "trapped_nut": {"verdict": "held", "pair": "trapped_screw"},
+    },
+    steps={
+        "first": ["plate", "loose_nut", "block", "trapped_nut"],
+        "second": ["loose_bolt", "trapped_screw"],
+    },
+    built={
+        "loose_bolt": {
+            "verdict": "turns",
+            "tool": "spanner-13",
+            "pair": "loose_nut",
+            "step": "second",
+            "checked_in": "second",
+        },
+        "loose_nut": {
+            "verdict": "not-covered",
+            "pair": "loose_bolt",
+            "reason": "put in before its bolt build_ahead_loose_bolt (added in second), "
+            "held by nothing till then",
+            "step": "first",
+            "checked_in": "first",
+        },
+        "trapped_screw": {
+            "verdict": "turns",
+            "tool": "hex-key-2.5",
+            "pair": "trapped_nut",
+            "step": "second",
+            "checked_in": "second",
+        },
+        "trapped_nut": {
+            "verdict": "held",
+            "pair": "trapped_screw",
+            "step": "first",
+            "checked_in": "second",
+        },
+    },
+)
+def build_ahead():
+    """Two nuts put in a step before their bolts. The loose one, an M8 under a plate,
+    has nothing to hold it till its bolt comes: the build's steps are wrong, as a
+    sidecar's can be, and it is not covered, its bolt checked as ever. The trapped
+    one, trap's pocket nut, M3 in a hex pocket in its block, is held by the block, as
+    a fixed thread holds itself: its joint is checked once its screw is in, the screw
+    turning, the nut held by its trap. In service, all four are open: the M8 joint
+    turns from either end.
+    """
+    nut = hex_nut(3, 5.5, 2.4)
+    block = Pos(150, 0, -8) * Box(30, 30, 16) - Pos(150, 0, -8) * Cylinder(1.7, 17)
+    block -= Pos(150, 0, -16) * hex_prism(5.6, 2.6)
+    return [
+        ("plate", Pos(-50, 0, 0) * plate(holes=[(0, 0, 4)])),
+        ("loose_bolt", Pos(-50, 0, 0) * hex_bolt(8, 40, 13, 5.3)),
+        ("loose_nut", Pos(-50, 0, -10 - 6.8) * hex_nut(8, 13, 6.8)),
+        ("block", block),
+        ("trapped_screw", Pos(150, 0, 0) * socket_screw(d=3, length=16, dk=5.5, k=3, s=2.5, t=1.3)),
+        ("trapped_nut", Pos(150, 0, -16) * nut),
+    ]
+
+
+@cell(
+    "build_behind",
+    [{"parts": "bolt", **_M8_HEX}, {"parts": "nut", **_M8_NUT}],
+    {
+        "bolt": {"verdict": "held", "tool": "spanner-13", "pair": "nut"},
+        "nut": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
+    },
+    steps={"first": ["upper", "lower", "pocket", "bolt"], "second": ["nut"]},
+    built={
+        "bolt": {
+            "verdict": "held",
+            "tool": "spanner-13",
+            "pair": "nut",
+            "step": "first",
+            "checked_in": "second",
+        },
+        "nut": {
+            "verdict": "turns",
+            "tool": "spanner-13",
+            "how": "ring, full length",
+            "step": "second",
+            "checked_in": "second",
+        },
+    },
+)
+def build_behind():
+    """pair_nut_held the other way up: the M8 bolt's head in the slotted pocket, which
+    leaves a spanner 22 deg (it holds, never turns), the floor 12 under it ruling out
+    every socket, with a hole 17 across for the head's way out (15.0 across corners);
+    its nut on top, open. The bolt goes in first, held, and its nut comes in second:
+    the joint is checked then, the nut turning, the bolt held. Checked alone in its
+    own step, the bolt would only hold, with no nut to turn.
+    """
+    head_face = -10 - 5.3
+    floor = Pos(0, 0, head_face - 12 - 5) * Box(120, 120, 10)
+    floor -= Pos(0, 0, head_face - 12 - 5) * Cylinder(8.5, 11)
+    return [
+        ("upper", plate(t=5, holes=[(0, 0, 4)])),
+        ("lower", plate(t=5, z_top=-5, holes=[(0, 0, 4)])),
+        ("bolt", Pos(0, 0, -10) * Rot(180, 0, 0) * hex_bolt(8, 25, 13, 5.3)),
+        ("nut", hex_nut(8, 13, 6.8)),
+        ("pocket", _pocket(11, head_face - 12, -10) + floor),
     ]

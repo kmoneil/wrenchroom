@@ -1,12 +1,12 @@
 ### wrenchroom: `bench.step`
 
-**152 fasteners: 116 turn, 9 held, 26 blocked, 1 stuck, 0 not covered**
+**162 fasteners: 120 turn, 11 held, 28 blocked, 3 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
 The model: 1 part drawn as a surface, not a solid, is left out, as nothing can meet it: `shelled_decal`.
 
-Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts drawn into each other (`checks: {clashes: true}` turns it on); 10 parts named like a fastener, with no drive or bore in the solid (passed over); 1 part named for a leadscrew or a ball screw, which no tool turns (passed over); 3 parts shaped like fasteners, not named as any (passed over); 1 part drawn as a surface, not a solid (left out); parts the model doesn't have.
+Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts drawn into each other (`checks: {clashes: true}` turns it on); the build order (a `build:` list in the sidecar turns it on); 10 parts named like a fastener, with no drive or bore in the solid (passed over); 1 part named for a leadscrew or a ball screw, which no tool turns (passed over); 3 parts shaped like fasteners, not named as any (passed over); 1 part drawn as a surface, not a solid (left out); parts the model doesn't have.
 
 | Fasteners | Tool | Count | Outcome |
 | --- | --- | ---: | --- |
@@ -31,13 +31,13 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | M2.5 nut | `spanner-5` | 1 | all pass (ring, full length) |
 | M24 nut | `spanner-36` | 1 | 1 of 1 fail |
 | M3 button screw | `hex-key-2` | 1 | all pass (driver straight in) |
-| M3 nut | - | 3 | all pass (held by its trap in trap\_stopped\_block) |
+| M3 nut | - | 4 | all pass (held by its trap in trap\_stopped\_block) |
 | M3 nut | `spanner-5.5` | 2 | 1 of 2 fail |
 | M3 phillips screw | `driver-ph1` | 3 | all pass (driver straight in) |
 | M3 screw | `hand` | 2 | all pass (fingers round its head) |
 | M3 set screw | `hex-key-1.5` | 2 | 1 of 2 fail |
 | M3 slotted screw | `driver-slotted` | 1 | all pass (driver straight in) |
-| M3 socket screw | `hex-key-2.5` | 6 | 1 of 6 fail |
+| M3 socket screw | `hex-key-2.5` | 7 | 1 of 7 fail |
 | M3 torx screw | `torx-key-T10` | 1 | all pass (driver straight in) |
 | M4 button screw | `hex-key-2.5` | 6 | 2 of 6 fail |
 | M4 flat screw | `hex-key-2.5` | 2 | all pass (driver straight in) |
@@ -62,12 +62,12 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | M6 shoulder screw | `ball-end-key-4` | 1 | all pass (ball end, 20 deg off the axis) |
 | M6 shoulder screw | `hex-key-4` | 4 | all pass (driver straight in) |
 | M6 socket screw | `ball-end-key-5` | 1 | all pass (ball end, 25 deg off the axis) |
-| M6 socket screw | `hex-key-5` | 14 | 6 of 14 fail |
+| M6 socket screw | `hex-key-5` | 18 | 10 of 18 fail |
 | M6 torx screw | `torx-key-T30` | 1 | all pass (short leg in) |
 | M8 hex screw | - | 2 | 1 of 2 fail |
-| M8 hex screw | `spanner-13` | 10 | 1 of 10 fail |
+| M8 hex screw | `spanner-13` | 12 | 1 of 12 fail |
 | M8 nut | - | 1 | 1 of 1 fail |
-| M8 nut | `spanner-13` | 17 | 4 of 17 fail |
+| M8 nut | `spanner-13` | 19 | 4 of 19 fail |
 | M8 phillips screw | `driver-ph4` | 1 | all pass (driver straight in) |
 | M8 socket screw | `stubby-key-6` | 1 | all pass (short leg in) |
 | M8 torx screw | `torx-key-T40` | 1 | all pass (driver straight in) |
@@ -83,12 +83,12 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `hex-key-1.3` | 1 | not in metric-home; only `small_flat_screw` |
 | `hex-key-1.5` | 2 | only `grip_set_screw`, `small_socket_screw` |
 | `hex-key-2` | 1 | only `dome_tip_screw` |
-| `hex-key-2.5` | 11 |  |
+| `hex-key-2.5` | 12 |  |
 | `hex-key-3` | 5 |  |
 | `hex-key-5/32in` | 1 | not in metric-home; only `std_#10-32x1` |
 | `hex-key-4` | 8 |  |
 | `hex-key-3/16in` | 1 | not in metric-home; only `inch_pair_screw` |
-| `hex-key-5` | 9 |  |
+| `hex-key-5` | 11 |  |
 | `ball-end-key-4` | 1 | not in metric-home; no straight key gets in at `ball_shoulder_screw` |
 | `ball-end-key-5` | 1 | not in metric-home; no straight key gets in at `ball_tilt_screw` |
 | `torx-key-T6` | 1 | not in metric-home; only `small_torx_screw` |
@@ -104,7 +104,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `spanner-10` | 10 | 2 at once on a joint |
 | `spanner-10, stubby` | 1 | no full-length spanner swings at `nut_stubby_box_nut` |
 | `spanner-7/16in` | 1 | not in metric-home; only `inch_pair_nut` |
-| `spanner-13` | 21 | 2 at once on a joint |
+| `spanner-13` | 25 | 2 at once on a joint |
 | `spanner-13, stubby` | 1 | no full-length spanner swings at `reach_13_nut` |
 | `spanner-15` | 2 | only `snug_dome_gland`, `wide_dome_gland` |
 | `spanner-16` | 3 |  |
@@ -121,9 +121,9 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `short-ring-18` | 1 | not in metric-home; only `shop_spanner_nut` |
 
 - By hand: 3 (`grip_thumb_screw`, `grip_wheel_thumbscrew`, `grip_wing_nut`)
-- No tool needed: 8, held by themselves or a trap
-- No tool yet: 26 blocked (wrenchroom check says why)
-- Blocked, once reached: `hex-key-1.5` x1, `hex-key-2.5` x3, `hex-key-4` x1, `hex-key-5` x5, `spanner-5.5` x1, `spanner-13` x5, `spanner-15` x1, `spanner-16` x2, `spanner-24` x1, `spanner-36` x1 (only blocked fasteners need it: `big_tube_gland`), `driver-ph2` x1
+- No tool needed: 9, held by themselves or a trap
+- No tool yet: 28 blocked (wrenchroom check says why)
+- Blocked, once reached: `hex-key-1.5` x1, `hex-key-2.5` x3, `hex-key-4` x1, `hex-key-5` x7, `spanner-5.5` x1, `spanner-13` x5, `spanner-15` x1, `spanner-16` x2, `spanner-24` x1, `spanner-36` x1 (only blocked fasteners need it: `big_tube_gland`), `driver-ph2` x1
 
 #### Failures
 
@@ -131,6 +131,8 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | --- | --- | --- | --- |
 | `ball_button_screw` | `hex-key-4` | blocked | `ball_button_ceiling` |
 | `big_tube_gland` | `spanner-36` | blocked | `big_tube_wall` |
+| `build_buried_early_screw` | `hex-key-5` | blocked | `build_buried_cover` |
+| `build_buried_late_screw` | `hex-key-5` | blocked | `build_buried_cover` |
 | `carriage_trap_bolt` | - | blocked | `holds itself, and its nut (carriage_trap_nut) is held by its trap in carriage_trap_base: nothing in the joint turns` |
 | `carriage_trap_nut` | - | blocked | `held by its trap in carriage_trap_base, and its bolt (carriage_trap_bolt) holds itself: nothing in the joint turns` |
 | `channel_nut` | `spanner-13` | blocked | `channel_left`, `channel_right` |
@@ -155,6 +157,8 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `torus_deep_screw` | `hex-key-2.5` | blocked | `torus_deep_under`, `torus_deep_lid` |
 | `trap_stopped_screw` | `hex-key-2.5` | blocked | `only holds, and its nut (trap_stopped_nut) is held by its trap in trap_stopped_block, so it must turn; best arc bounded by trap_guide` |
 | `twins_a_screw` | `hex-key-5` | blocked | `twins_wall` |
+| `build_way_in_over_screw` | `hex-key-5` | stuck | `build_way_in_over` |
+| `build_way_in_under_screw` | `hex-key-5` | stuck | `build_way_in_under` |
 | `stuck_screw_screw` | `hex-key-5` | stuck | `stuck_screw_ceiling` |
 
 #### Notes
