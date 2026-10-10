@@ -48,7 +48,7 @@ import re
 from dataclasses import dataclass
 from fractions import Fraction
 
-from wrenchroom.fasteners import Head, Kind, Size
+from wrenchroom.fasteners import TAPPING_FOR, TAPPING_SIZES, Head, Kind, Size
 
 _MM_PER_INCH = 25.4
 
@@ -87,6 +87,8 @@ class NameHint:
         motion: A leadscrew, a ball screw or the nut that runs on one: a motion
             part, which no tool turns, passed over whatever its solid shows
             (issue #117).
+        tapping: A tapping screw, by a word in its name or its ST size: its thread
+            is ISO 1478's, whatever machine size a seller named it for (issue #142).
     """
 
     kind: Kind
@@ -101,6 +103,7 @@ class NameHint:
     needs_bore: bool = False
     by_hand: bool = False
     motion: bool = False
+    tapping: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -394,8 +397,27 @@ _IMPERIAL = re.compile(
     r"(?:\s*x\s*(\d+(?:\s*-\s*\d+/\d+|/\d+|\.\d+)?|\.\d+)\s*(?:\"|in\b|inch\b)?)?",
     re.IGNORECASE,
 )
+#: A tapping screw's own size, and its length: ``ST2.2``, ``ST 2,9 x 13``, ``ST4.2x16``.
+_TAPPING_SIZE = re.compile(
+    r"(?<![A-Za-z0-9])ST\s?(\d+(?:[.,]\d)?)(?:\s*x\s*(\d+(?:[.,]\d+)?))?(?:\s*mm)?(?![0-9])",
+    re.IGNORECASE,
+)
 _CAMEL = re.compile(r"(?<=[a-z])(?=[A-Z])")
 _TOKEN_SPLIT = re.compile(r"[^0-9A-Za-z]+")
+
+#: Words that say a screw is a tapping screw (issue #142): alone, and one after
+#: another. ISO 1478 calls them tapping screws and sheet metal screws; ASME B18.6.4
+#: gives their thread its type, AB. "Type A" and "Type B" are B18.6.4's too, and
+#: anything's: a name's own variants, as often.
+_TAPPING_WORDS = frozenset({"tapping", "selftapping", "selftapper"})
+_TAPPING_RUNS = (
+    ("self", "tapper"),
+    ("thread", "forming"),
+    ("type", "ab"),
+    ("sheet", "metal", "screw"),
+    ("sheet", "metal", "screws"),
+    ("sheetmetal", "screw"),
+)
 
 #: Thread pitches (ISO 261, coarse and common fine), used only to tell "M6x1"
 #: (a pitch) from "M6x10" (a length).
@@ -443,7 +465,9 @@ def read_name(name: str) -> NameHint | None:
             said = next(text for text, word in drives.items() if _HEAD_WORDS[word] is head)
             basis.append(f"drive {said!r}")
     socket_allowed = noun not in _GLAND_NOUNS
-    size, length, size_text, size_reason = _size_in(cleaned)
+    tapping = kind is Kind.SCREW and _says_tapping(words)
+    size, length, size_text, size_reason = _size_in(cleaned, tapping=tapping)
+    tapping = tapping or (size is not None and size.is_tapping)
     bare = kind is Kind.INSERT and noun in _BARE_INSERTS and not set(words) & _THREAD_WORDS
     if not socket_allowed:
         # A gland's thread says nothing about the hex a spanner grips (an M20
@@ -465,6 +489,7 @@ def read_name(name: str) -> NameHint | None:
         needs_bore=bare and size is None and size_reason is None,
         by_hand=by_hand,
         motion=motion,
+        tapping=tapping,
     )
 
 
@@ -476,7 +501,7 @@ def _designation(text: str, words: list[str], at: int | None) -> NameHint | None
     standoff``). A candidate, taken only on a drive in its solid: a stud, a rod
     or an insert is named by its thread and length as readily as a screw.
     """
-    size, length, size_text, size_reason = _size_in(text)
+    size, length, size_text, size_reason = _size_in(text, tapping=_says_tapping(words))
     if at is not None or length is None or size_text is None:
         return None
     run = set(words)
@@ -490,6 +515,7 @@ def _designation(text: str, words: list[str], at: int | None) -> NameHint | None
         not_covered=size_reason,
         needs_drive=True,
         by_hand=by_hand,
+        tapping=size is not None and size.is_tapping,
     )
 
 
@@ -599,7 +625,7 @@ def name_words(name: str) -> list[str]:
 
 def _words(text: str) -> list[str]:
     """Lower-case words, split at punctuation, camelCase and a run-in noun; sizes left out."""
-    stripped = _IMPERIAL.sub(" ", _METRIC.sub(" ", text))
+    stripped = _IMPERIAL.sub(" ", _METRIC.sub(" ", _TAPPING_SIZE.sub(_unless_a_size, text)))
     spaced = _CAMEL.sub(" ", stripped)
     words = [word.lower() for word in _TOKEN_SPLIT.split(spaced) if word]
     return [part for word in words for part in _unrun(word)]
@@ -729,9 +755,45 @@ def _head_from(run: set[str], kind: Kind) -> Head | None:
     return next((head for head in _HEAD_RANK if head in said), None)
 
 
-def _size_in(text: str) -> tuple[Size | None, float | None, str | None, str | None]:
-    """(size, length mm, the text that gave them, a not-covered reason)."""
+def _says_tapping(words: list[str]) -> bool:
+    """Whether a name's words say its screw is a tapping screw: ``self tapping``, ``Type AB``."""
+    if _TAPPING_WORDS & set(words):
+        return True
+    return any(
+        tuple(words[at : at + len(run)]) == run for run in _TAPPING_RUNS for at in range(len(words))
+    )
+
+
+def _tapping_size(match: re.Match[str]) -> Size | None:
+    """The ISO 1478 size a name's ``ST2.2`` gives, if it is one of them."""
+    designation = f"ST{float(match.group(1).replace(',', '.')):g}"
+    return Size.parse(designation) if designation in TAPPING_SIZES else None
+
+
+def _unless_a_size(match: re.Match[str]) -> str:
+    """A tapping size left out of a name's words; any other ``ST12`` stays a word."""
+    return " " if _tapping_size(match) is not None else match.group(0)
+
+
+def _size_in(
+    text: str, *, tapping: bool = False
+) -> tuple[Size | None, float | None, str | None, str | None]:
+    """(size, length mm, the text that gave them, a not-covered reason).
+
+    A tapping screw's own size, ``ST2.9x13``, where the name gives one. And with
+    ``tapping``, the name saying so in words, the tapping size its machine size
+    stands for (issue #142): a seller's ``M3 self tapping screw`` is an ST2.9,
+    and one named by its thread's own diameter, ``M2.9x9.5``, is the ST of that
+    number, where the machine tables hold no such size.
+    """
+    for own in _TAPPING_SIZE.finditer(text):
+        size = _tapping_size(own)
+        if size is not None:
+            length = float(own.group(2).replace(",", ".")) if own.group(2) else None
+            return size, length, own.group(0).strip(), None
     metric = _METRIC.search(text)
+    if metric is not None and tapping:
+        return _as_tapping(metric)
     if metric is not None:
         return _metric(metric)
     imperial = _IMPERIAL.search(_numbered(text))
@@ -775,6 +837,19 @@ def _metric(match: re.Match[str]) -> tuple[Size | None, float | None, str | None
     except ValueError:
         reason = f"{designation} is outside the sizes the tables hold (M1.6 to M24)"
         return None, length, text, reason
+
+
+def _as_tapping(match: re.Match[str]) -> tuple[Size | None, float | None, str | None, str | None]:
+    """A tapping screw named by a machine size, as the tapping size it stands for."""
+    size, length, text, reason = _metric(match)
+    if size is not None and size.designation in TAPPING_FOR:
+        stood_for = Size.parse(TAPPING_FOR[size.designation])
+        return stood_for, length, f"{text}, a tapping screw's: {stood_for.designation}", None
+    own = f"ST{float(match.group(1).replace(',', '.')):g}"
+    if size is None and own in TAPPING_SIZES:  # named by its thread's own diameter
+        lengths = [float(g.replace(",", ".")) for g in match.groups()[2:] if g]
+        return Size.parse(own), (lengths[0] if lengths else None), f"{text}: {own}", None
+    return size, length, text, reason
 
 
 def _is_pitch(value: float, diameter: float) -> bool:

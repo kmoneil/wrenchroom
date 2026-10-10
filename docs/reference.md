@@ -384,6 +384,29 @@ Inch tools carry their unit (`spanner-7/16in`), and inch fasteners (`#10`, `1/4`
 (B18.3), nuts (B18.2.2, B18.6.3) and hex heads (B18.2.1), which part ways with their
 nuts at 7/16 and 9/16.
 
+**Tapping screws** have sizes of their own (issue #142): ISO 1478's fourteen threads,
+`ST1.5` to `ST9.5`, each as wide as its number at most (an ST2.2 is 2.10 to 2.24
+across, an ST2.9 2.76 to 2.90). A tapping screw is sold by that size, and takes its
+product standard's tool: the cross recess ISO 7049 and 7050 give it (ST2.2 PH0, ST2.9
+PH1, ST3.5 to ST4.8 PH2, ST5.5 and ST6.3 PH3, ST8 and ST9.5 PH4), ISO 1479's hexagon
+(3.2, 5, 5.5, 7, 8, 8, 10 and 13 across flats for ST2.2 to ST8), ISO 14585's
+hexalobular socket (T10, T15, T20, T25, T25, T30 for ST2.9 to ST6.3). No standard
+gives one a hex socket: its socket as drawn picks the key, or `across_flats:` does.
+
+A name gives a tapping size as itself (`ST2.2x10`, `ST 4,2 x 16`), or as a machine
+size beside a word that says tapping (`self tapping`, `self-tapping`, `selftapping`,
+`tapping`, `thread forming`, `sheet metal screw`, `Type AB`): sellers name a tapping
+screw for the machine screw it stands in for, and an `M2 self tapping screw` is an
+ST2.2, an M3 an ST2.9, an M3.5 an ST3.5, an M4 an ST4.2, an M5 an ST4.8, an M6 an ST6.3
+(each the thread ISO 1478 gives the old number of that diameter). One named by its
+thread's own diameter, `M2.9x9.5`, is the ST of that number. Its shank is then its
+own thread's, drawn anywhere from its core to its major diameter, and nothing is
+noted; with no size in its name, the tapping size its shank is drawn at. A shank that
+is another tapping size's is taken as drawn and noted (`drawn as an ST3.5 (3.50
+shank), where its name says ST2.9: taken as drawn`). In the sidecar, `size: ST3.5`.
+An inch tapping screw is named by its gauge (`#6 x 1/2`), a machine screw's, and is
+read as one: ASME B18.6.4's numbered sizes take the cross recesses B18.6.3's do.
+
 ## Your own tools
 
 Tools a kit doesn't have (a long-series or short-arm key, a shop-made spanner, a

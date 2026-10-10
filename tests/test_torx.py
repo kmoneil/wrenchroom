@@ -57,7 +57,8 @@ def test_each_arm_is_the_longest_any_maker_sells(size):
 
 
 def test_the_thread_takes_the_size_the_screw_standards_say():
-    assert TORX_SIZE == {
+    # The machine screws'; the tapping screws', ISO 14585's, are test_tapping.py's.
+    assert {size: torx for size, torx in TORX_SIZE.items() if not size.startswith("ST")} == {
         "M2": "T6",
         "M2.5": "T8",
         "M3": "T10",

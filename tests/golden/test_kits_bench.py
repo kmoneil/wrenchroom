@@ -70,6 +70,11 @@ PAST_HOME = {
     # Issue #115: an M2 and a #1 cross recess, drawn as makers draw them, take PH0.
     "cross_M2_self_tapping_screw": _PH0,
     f"cross_{FUSION_TAPPING}": _PH0,
+    # Issue #142: an ST2.2's cross is PH0, and an ST4.2's hexalobular socket T20.
+    "selftap_M2x10_self_tapping_phillips_screw": _PH0,
+    "selftap_M4x10_self_tapping_torx_screw": (
+        "needs torx-key-T20, which kit metric-home does not hold (full has it)"
+    ),
     # Issue #124: Torx recesses drawn round, read from their lobes.
     "lobed_recess_plain_screw": (
         "needs torx-key-T25, which kit metric-home does not hold (full has it)"
@@ -190,6 +195,6 @@ def test_imperial_home_covers_nothing_metric_but_drivers(inch_json, bench_json):
     # trap's three nuts its blocks hold (issue #93), head_trap's head its plate holds
     # and the two joints head_trap and carriage_trap have that nothing in turns (issue
     # #134), unsized's Phillips and slotted screws (issue #135), build_ahead's
-    # trapped nut (M8's build order), and hosted's two inserts and its snug nut
-    # (issue #158).
-    assert unsized == 28
+    # trapped nut (M8's build order), hosted's two inserts and its snug nut
+    # (issue #158), and selftap's ST2.9, a PH1 (issue #142).
+    assert unsized == 29

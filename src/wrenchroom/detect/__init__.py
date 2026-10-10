@@ -58,6 +58,7 @@ from wrenchroom.fasteners import (
     in_recess_band,
     loosely_fits,
     phillips_by_span,
+    tapping_by_thread,
     thread_minor_mm,
     torx_by_point,
 )
@@ -378,12 +379,43 @@ def _outline_said(reading: ShapeReading, head: Head | None = None) -> str | None
 
 def _size(hint: NameHint, reading: ShapeReading) -> tuple[Size | None, str | None]:
     """The size, and a note where the solid is drawn as another than its name's (#117)."""
+    if hint.tapping:
+        return _tapping(hint.size, reading)
     drawn = _drawn_as(hint, reading)
     if drawn is not None:
         return drawn
     if reading.size is not None and reading.size_from_drive:
         return reading.size, None
     return hint.size or reading.size, None
+
+
+def _tapping(named: Size | None, reading: ShapeReading) -> tuple[Size | None, str | None]:
+    """A tapping screw's size, which is its thread's own, ISO 1478's (issue #142).
+
+    A machine screw's tables say nothing of it: a shank 2.2 across is an ST2.2's,
+    not a #2's, and its hex, 5.5 across on an ST3.5, an M3 nut's by the machine
+    tables. So its name's size stands, where its shank could be that thread's,
+    drawn anywhere from its core to its major diameter. With no size in its name,
+    the tapping size its shank is made at. A shank that is another tapping size's
+    is taken as drawn, and noted; one that is none's is said, and the name's kept.
+    An inch tapping screw is named by its gauge, a machine screw's, and keeps it the
+    same way; drawn as another thread, it is the tapping size of that diameter.
+    """
+    shank = reading.shank_mm
+    drawn = tapping_by_thread(shank) if shank is not None else None
+    if named is None:
+        return drawn or reading.size, None
+    if shank is None or _could_be(named, shank, loose=True):
+        return named, None
+    if drawn is not None:
+        return drawn, (
+            f"drawn as {drawn.said} ({shank:.2f} shank), where its name says "
+            f"{named.designation}: taken as drawn"
+        )
+    return named, (
+        f"drawn with a {shank:.2f} shank, no {named.designation}'s thread: "
+        f"the name's {named.designation} kept"
+    )
 
 
 #: A nut's bore may be drawn this much over its thread, as a fraction of it: with
@@ -431,7 +463,7 @@ def _drawn_as(hint: NameHint, reading: ShapeReading) -> tuple[Size, str] | None:
         hexed = nut or reading.head is Head.HEX
         shown.append(f"{reading.drive_af:.2f} {'hex' if hexed else 'socket'}")
     note = (
-        f"drawn as {_an(solid.designation)} ({', '.join(shown)}), where its name says "
+        f"drawn as {solid.said} ({', '.join(shown)}), where its name says "
         f"{named.designation}: taken as drawn"
     )
     return solid, note
@@ -471,12 +503,12 @@ def _unsized(named: Size, reading: ShapeReading) -> tuple[Size, str] | None:
     if len(fits) == 1:
         (drawn,) = fits
         return drawn, (
-            f"drawn as {_an(drawn.designation)} ({shank:.2f} shank, {recess}), where its "
+            f"drawn as {drawn.said} ({shank:.2f} shank, {recess}), where its "
             f"name says {named.designation}: taken as drawn"
         )
     every = [Size(d, nominal) for d, nominal in {**METRIC_SIZES, **IMPERIAL_SIZES}.items()]
     could = _own_system_first([size for size in every if _could_be(size, shank)], named)
-    whose = " or ".join(f"{_an(size.designation)}'s" for size in could)
+    whose = " or ".join(f"{size.said}'s" for size in could)
     return named, (
         f"drawn with a {shank:.2f} shank, no {named.designation}'s thread"
         f"{f' ({whose})' if whose else ''}: the name's {named.designation} kept"
@@ -484,24 +516,21 @@ def _unsized(named: Size, reading: ShapeReading) -> tuple[Size, str] | None:
 
 
 def _recess_sizes(reading: ShapeReading) -> tuple[list[Size], str]:
-    """The sizes a Torx or cross recess's standard gives it, and the recess, said."""
+    """The sizes a Torx or cross recess's standard gives it, and the recess, said.
+
+    A machine screw's sizes: a tapping screw's are its own (:func:`_tapping`).
+    """
     torx = torx_by_point(reading.torx_mm) if reading.torx_mm is not None else None
     if torx is not None:
         return [Size.parse(d) for d, t in TORX_SIZE.items() if t == torx], f"a {torx} recess"
     number = phillips_by_span(reading.cross_mm) if reading.cross_mm is not None else None
     if number is not None:
         sizes = [Size.parse(d) for d, n in PHILLIPS_NUMBER.items() if n == number]
-        return sizes, f"a PH{number} cross"
+        return [size for size in sizes if not size.is_tapping], f"a PH{number} cross"
     return [], ""
 
 
 def _own_system_first(sizes: list[Size], named: Size) -> list[Size]:
     """Those in the name's own system, metric or inch, if any are; else all of them."""
-    metric = named.designation.startswith("M")
-    own = [size for size in sizes if size.designation.startswith("M") == metric]
+    own = [size for size in sizes if size.family == named.family]
     return own or sizes
-
-
-def _an(designation: str) -> str:
-    """``an M3``, ``a #4``, ``a 1/4``: the article a size takes, read aloud."""
-    return f"{'an' if designation.startswith('M') else 'a'} {designation}"

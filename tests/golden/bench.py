@@ -70,10 +70,11 @@ SLOTS = len(CELLS) + 1
 #: three M3s their shanks drawn on no size, under M5 names, 162 with M8's build_buried,
 #: build_way_in, build_ahead and build_behind, whose verdicts in service are any cell's,
 #: 168 with #143's ring_stud and ring_handle (hand_tight's nut turns with the open end),
-#: 174 with #158's hosted: two inserts, a nut pressed into its trap, and their screws.
+#: 174 with #158's hosted: two inserts, a nut pressed into its trap, and their screws,
+#: 178 with #142's selftap, four tapping screws.
 FINAL_COUNTS = {
-    "fasteners": 174,
-    "turns": 129,
+    "fasteners": 178,
+    "turns": 133,
     "held": 14,
     "blocked": 28,
     "stuck": 3,

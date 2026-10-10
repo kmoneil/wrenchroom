@@ -13,6 +13,7 @@ from wrenchroom.fasteners import (
     IMPERIAL_SIZES,
     METRIC_SIZES,
     SOCKET_KEY_AF,
+    TAPPING_SIZES,
     Head,
     Size,
     hex_key_af,
@@ -68,8 +69,10 @@ def test_every_hex_a_nut_or_head_presents_is_a_spanner_size():
 
 
 def test_key_tables_only_name_known_threads():
-    for table in (SOCKET_KEY_AF, BUTTON_KEY_AF, FLAT_KEY_AF, HEX_AF, HEX_HEAD_AF):
+    for table in (SOCKET_KEY_AF, BUTTON_KEY_AF, FLAT_KEY_AF, HEX_AF):
         assert set(table) <= set(METRIC_SIZES) | set(IMPERIAL_SIZES)
+    # A hex head's holds the hexagon head tapping screws' too, ISO 1479's (issue #142).
+    assert set(HEX_HEAD_AF) <= set(METRIC_SIZES) | set(IMPERIAL_SIZES) | set(TAPPING_SIZES)
 
 
 def test_spanner_af_covers_every_hex_thread():

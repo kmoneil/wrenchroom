@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**174 fasteners: 129 turn, 14 held, 28 blocked, 3 stuck, 0 not covered**
+**178 fasteners: 133 turn, 14 held, 28 blocked, 3 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -25,7 +25,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | M12 nut | `short-ring-18` | 1 | all pass (ring, full length) |
 | M16 nut | `spanner-24` | 6 | 1 of 6 fail |
 | M2 flat screw | `hex-key-1.3` | 1 | all pass (driver straight in) |
-| M2 phillips screw | `driver-ph0` | 2 | all pass (driver straight in) |
+| M2 phillips screw | `driver-ph0` | 1 | all pass (driver straight in) |
 | M2 socket screw | `hex-key-1.5` | 1 | all pass (driver straight in) |
 | M2 torx screw | `torx-key-T6` | 1 | all pass (driver straight in) |
 | M2.5 nut | `spanner-5` | 1 | all pass (ring, full length) |
@@ -72,10 +72,14 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | M8 phillips screw | `driver-ph4` | 1 | all pass (driver straight in) |
 | M8 socket screw | `stubby-key-6` | 1 | all pass (short leg in) |
 | M8 torx screw | `torx-key-T40` | 1 | all pass (driver straight in) |
+| ST2.2 phillips screw | `driver-ph0` | 2 | all pass (driver straight in) |
+| ST2.9 phillips screw | `driver-ph1` | 1 | all pass (driver straight in) |
+| ST4.2 hex screw | `spanner-7` | 1 | all pass (ring, full length) |
+| ST4.2 torx screw | `torx-key-T20` | 1 | all pass (driver straight in) |
 
 #### Tools
 
-41 tools this model needs (kit full): 11 hex keys, 2 ball-end keys, 6 Torx keys, 13 spanners, 1 socket, 1 nut driver, 5 drivers, 2 others.
+42 tools this model needs (kit full): 11 hex keys, 2 ball-end keys, 6 Torx keys, 14 spanners, 1 socket, 1 nut driver, 5 drivers, 2 others.
 
 | Tool | Fasteners | |
 | --- | ---: | --- |
@@ -94,13 +98,14 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `ball-end-key-5` | 1 | not in metric-home; no straight key gets in at `ball_tilt_screw` |
 | `torx-key-T6` | 1 | not in metric-home; only `small_torx_screw` |
 | `torx-key-T10` | 1 | not in metric-home; only `unsized_M5x6_torx_screw` |
-| `torx-key-T20` | 1 | not in metric-home; only `lobed_recess_fluted_screw` |
+| `torx-key-T20` | 2 | not in metric-home; only `lobed_recess_fluted_screw`, `selftap_M4x10_self_tapping_torx_screw` |
 | `torx-key-T25` | 1 | not in metric-home; only `lobed_recess_plain_screw` |
 | `torx-key-T30` | 1 | not in metric-home; only `torx_wall_screw` |
 | `torx-key-T40` | 1 | not in metric-home; only `pan_t40_torx_screw` |
 | `spanner-3.2` | 1 | not in metric-home; only `small_tiny_nut` |
 | `spanner-5` | 1 | not in metric-home; only `small_little_nut` |
 | `spanner-5.5` | 1 | only `misnamed_M5_nut` |
+| `spanner-7` | 1 | only `selftap_ST4.2x10_hex_screw` |
 | `spanner-8` | 1 | only `w4032_nut` |
 | `spanner-10` | 10 | 2 at once on a joint |
 | `spanner-10, stubby` | 1 | no full-length spanner swings at `nut_stubby_box_nut` |
@@ -113,9 +118,9 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `spanner-41` | 1 | not in metric-home; only `big_gland_gland` |
 | `socket-16` | 2 | only `nut_deep_well_nut`, `tail_in_socket_nut` |
 | `nut-driver-10` | 1 | not in metric-home; only `nut_tube_nut` |
-| `driver-ph0` | 3 | not in metric-home |
+| `driver-ph0` | 4 | not in metric-home |
 | `driver-slotted` | 1 | only `unsized_M5x6_slotted_screw` |
-| `driver-ph1` | 4 |  |
+| `driver-ph1` | 5 |  |
 | `driver-ph2` | 3 |  |
 | `driver-ph4` | 1 | not in metric-home; only `ph4_screw` |
 | `stubby-key-6` | 1 | not in metric-home; only `short_key_screw` |

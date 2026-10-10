@@ -90,7 +90,52 @@ IMPERIAL_SIZES: dict[str, float] = {
     **{f: round(int(f.split("/")[0]) / int(f.split("/")[1]) * _MM_PER_INCH, 3) for f in _FRACTIONS},
 }
 
+#: Tapping screw threads, ISO 1478:1999's Table 1: designation -> (the least and the
+#: most its major diameter d1 is made, and the least its core d2 is), mm. A tapping
+#: screw is sold by this size, not by a machine screw's: an ST2.2 is 2.24 across at
+#: most, an ST2.9 2.90 (issue #142). Read from BS EN ISO 1478:2000, 2026-10-10.
+TAPPING_THREADS: dict[str, tuple[float, float, float]] = {
+    "ST1.5": (1.38, 1.52, 0.84),
+    "ST1.9": (1.76, 1.90, 1.17),
+    "ST2.2": (2.10, 2.24, 1.52),
+    "ST2.6": (2.43, 2.57, 1.80),
+    "ST2.9": (2.76, 2.90, 2.08),
+    "ST3.3": (3.12, 3.30, 2.29),
+    "ST3.5": (3.35, 3.53, 2.51),
+    "ST3.9": (3.73, 3.91, 2.77),
+    "ST4.2": (4.04, 4.22, 2.95),
+    "ST4.8": (4.62, 4.80, 3.43),
+    "ST5.5": (5.28, 5.46, 3.99),
+    "ST6.3": (6.03, 6.25, 4.70),
+    "ST8": (7.78, 8.00, 5.99),
+    "ST9.5": (9.43, 9.65, 7.59),
+}
+
+#: Each tapping size's diameter, as a size's is its thread's major: the most its d1 is.
+TAPPING_SIZES: dict[str, float] = {size: most for size, (_, most, _) in TAPPING_THREADS.items()}
+
+#: The tapping size a machine size stands for where a seller names a tapping screw
+#: by one ("M3 self tapping screw", an ST2.9). ISO 1478 gives each thread the number
+#: it had, "for information only": ST2.2 was No. 2, ST2.9 No. 4, ST3.5 No. 6, ST4.2
+#: No. 8, ST4.8 No. 10, ST6.3 No. 14, ST8 No. 16 and ST9.5 No. 20, and those numbers'
+#: diameters (0.060 in and 0.013 a number) are the metric sizes a seller rounds them
+#: to: 2.18 an M2, 2.84 an M3, 3.51 an M3.5, 4.17 an M4, 4.83 an M5, 6.15 an M6, and
+#: 5/16 and 3/8 an M8 and an M10. ST1.5 and ST2.6, No. 0 and No. 3, the same way.
+TAPPING_FOR: dict[str, str] = {
+    "M1.6": "ST1.5",
+    "M2": "ST2.2",
+    "M2.5": "ST2.6",
+    "M3": "ST2.9",
+    "M3.5": "ST3.5",
+    "M4": "ST4.2",
+    "M5": "ST4.8",
+    "M6": "ST6.3",
+    "M8": "ST8",
+    "M10": "ST9.5",
+}
+
 _THREAD_SUFFIX = re.compile(r"[- ]\d+$")  # "1/4-20", "#10-32": the pitch half
+_TAPPING = re.compile(r"ST\s?(\d+(?:[.,]\d)?)", re.IGNORECASE)  # "ST2.2", "st 2,9"
 
 #: ASME B1.1's UNC threads per inch (#0 has none: its UNF 80).
 _UNC_TPI = {
@@ -134,7 +179,25 @@ def thread_minor_mm(size: Size) -> float:
     A thread is drawn anywhere from there (a cosmetic thread at its minor) to its
     nominal (issue #117).
     """
+    if size.is_tapping:
+        return TAPPING_THREADS[size.designation][2]  # its core, d2: ISO 1478
     return size.diameter_mm - _MINOR_PITCHES * COARSE_PITCH_MM[size.designation]
+
+
+def tapping_by_thread(diameter: float) -> Size | None:
+    """The tapping size whose thread is made this diameter across, if one: ISO 1478's d1.
+
+    Between the least and the most its major diameter is made, and a drawing's
+    rounding either side (0.05): the sizes' ranges stand at least that far apart.
+    """
+    return next(
+        (
+            Size(designation, most)
+            for designation, (least, most, _) in TAPPING_THREADS.items()
+            if least - 0.05 <= diameter <= most + 0.05
+        ),
+        None,
+    )
 
 
 @dataclass(frozen=True)
@@ -146,12 +209,17 @@ class Size:
 
     @classmethod
     def parse(cls, text: str) -> Size:
-        """Parse "M6", "#10", "1/4", with any UNC/UNF pitch suffix dropped.
+        """Parse "M6", "#10", "1/4", "ST2.9", with any UNC/UNF pitch suffix dropped.
 
         Raises:
             ValueError: If the designation is not in the accepted tables; the message
                 carries the designation so a config error names its line.
         """
+        tapping = _TAPPING.fullmatch(text.strip())
+        if tapping is not None:
+            designation = f"ST{float(tapping.group(1).replace(',', '.')):g}"
+            if designation in TAPPING_SIZES:
+                return cls(designation, TAPPING_SIZES[designation])
         cleaned = _THREAD_SUFFIX.sub("", text.strip())
         metric = cleaned.upper()
         if metric in METRIC_SIZES:
@@ -163,8 +231,23 @@ class Size:
 
     @property
     def is_metric(self) -> bool:
-        """True for M-designations."""
-        return self.designation.startswith("M")
+        """True for M-designations, and a tapping screw's ST: sized in millimetres."""
+        return self.designation.startswith(("M", "ST"))
+
+    @property
+    def is_tapping(self) -> bool:
+        """True for a tapping screw's thread, ISO 1478's ST sizes."""
+        return self.designation.startswith("ST")
+
+    @property
+    def family(self) -> str:
+        """Which table it is from: ``M``, ``ST``, or ``inch`` for a gauge or a fraction."""
+        return "ST" if self.is_tapping else "M" if self.is_metric else "inch"
+
+    @property
+    def said(self) -> str:
+        """``an M3``, ``an ST2.9``, ``a #4``: the size with its article."""
+        return f"{'an' if self.is_metric else 'a'} {self.designation}"
 
 
 #: An axis is either "work it out from the geometry" or a given direction pointing
@@ -537,6 +620,17 @@ HEX_AF.update(
 #: nut is 7/8.
 HEX_HEAD_AF: dict[str, float] = {
     **{size: af for size, af in HEX_AF.items() if size.startswith("M")},
+    # Hexagon head tapping screws, ISO 1479 (DIN 7976's are the same): torqbolt.com's
+    # ISO 1479 table and fasteners.eu's DIN 7976 one agree, read 2026-10-10. Neither
+    # gives ST9.5's, so its hex is measured, as any size's a table lacks.
+    "ST2.2": 3.2,
+    "ST2.9": 5.0,
+    "ST3.5": 5.5,
+    "ST4.2": 7.0,
+    "ST4.8": 8.0,
+    "ST5.5": 8.0,
+    "ST6.3": 10.0,
+    "ST8": 13.0,
     **_inch(
         {
             "1/4": "7/16",
@@ -828,8 +922,13 @@ def no_such_head(head: Head, size: Size) -> str:
 
     ``ISO 7380-1 has no M2 button head``: the standard is the reason, not the kit.
     Where no table of the head's system is held (an inch shoulder or Torx screw),
-    there is no standard to name, and it says so as it always has.
+    there is no standard to name, and it says so as it always has. A tapping screw's
+    Torx is ISO 14585's; no standard gives one a hex socket (issue #142).
     """
+    if size.is_tapping:
+        if head is Head.TORX:
+            return f"ISO 14585 has no {size.designation} torx head"
+        return f"no standard key for {size.said} {head.value} head: give across_flats:"
     standard = KEY_STANDARD.get((head, size.is_metric))
     if standard is not None and head is Head.SET:
         return f"{standard} has no {size.designation} set screw"
@@ -873,6 +972,14 @@ TORX_SIZE: dict[str, str] = {
     "M8": "T45",
     "M10": "T50",
     "M12": "T55",
+    # Hexalobular socket pan head tapping screws, ISO 14585:2011's Table 1 (its own
+    # sizes, ST2.9 to ST6.3), read from the iTeh preview 2026-10-10.
+    "ST2.9": "T10",
+    "ST3.5": "T15",
+    "ST4.2": "T20",
+    "ST4.8": "T25",
+    "ST5.5": "T25",
+    "ST6.3": "T30",
 }
 
 #: Phillips recess number by thread. The ISO cross-recess standards agree size for size
@@ -901,6 +1008,17 @@ PHILLIPS_NUMBER: dict[str, int] = {
     "#10": 2,
     "#12": 3,
     "1/4": 3,
+    # Tapping screws: ISO 7049:2011's Table 1 (pan head), read from the iTeh preview
+    # 2026-10-10; ISO 7050's (countersunk) recesses are the same size for size.
+    "ST2.2": 0,
+    "ST2.9": 1,
+    "ST3.5": 2,
+    "ST4.2": 2,
+    "ST4.8": 2,
+    "ST5.5": 3,
+    "ST6.3": 3,
+    "ST8": 4,
+    "ST9.5": 4,
 }
 
 #: A cross recess's m, its diameter at the head's face, by Phillips number, mm: the
