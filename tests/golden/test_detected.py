@@ -317,12 +317,19 @@ def test_shoulder_screws_drawn_plainly_and_a_head_that_fits_nothing(detected):
 
 def test_each_plug_is_found_by_its_name(detected):
     # No connectors: in the sidecar: each plug is found by its name (M9), and
-    # plug_cable's lead, no mate now, is in its way.
+    # pull_cable's lead, no mate now, is in its way. byname's two, "plug" first in
+    # their names, are found as they are with the sidecar (issue #157).
     found = {c.name: (c.verdict.value, c.source, c.blockers) for c in detected.connectors.results}
     assert found == {
-        "plug_cable_plug": ("stuck", "name", ("plug_cable_lead",)),
-        "plug_latch_plug": ("unplugs", "name", ()),
-        "plug_open_plug": ("unplugs", "name", ()),
-        "plug_shelf_plug": ("stuck", "name", ("plug_shelf_shelf",)),
-        "plug_tight_plug": ("unplugs", "name", ()),
+        "byname_plug_fan_2": ("unplugs", "name", ()),
+        "byname_plug_motor": ("unplugs", "name", ()),
+        "pull_cable_plug": ("stuck", "name", ("pull_cable_lead",)),
+        "pull_latch_plug": ("unplugs", "name", ()),
+        "pull_open_plug": ("unplugs", "name", ()),
+        "pull_shelf_plug": ("stuck", "name", ("pull_shelf_shelf",)),
+        "pull_tight_plug": ("unplugs", "name", ()),
     }
+    # A lead in a plug's way that touches it is its own, as likely as not: asked.
+    reasons = {c.name: c.reason for c in detected.connectors.results if c.reason}
+    assert reasons == {"pull_cable_plug": "pull_cable_lead (its own cable? name it in mates:)"}
+    assert detected.connectors.named == ("byname_plug_cover",)

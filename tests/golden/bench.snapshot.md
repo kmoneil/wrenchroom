@@ -6,7 +6,7 @@ Kit `full`, ENGINE engine, wrenchroom VERSION.
 
 The model: 1 part drawn as a surface, not a solid, is left out, as nothing can meet it: `shelled_decal`.
 
-Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts drawn into each other (`checks: {clashes: true}` turns it on); the build order (a `build:` list in the sidecar turns it on); 10 parts named like a fastener, with no drive or bore in the solid (passed over); 1 part named for a leadscrew or a ball screw, which no tool turns (passed over); 3 parts shaped like fasteners, not named as any (passed over); 1 part drawn as a surface, not a solid (left out); parts the model doesn't have.
+Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts drawn into each other (`checks: {clashes: true}` turns it on); the build order (a `build:` list in the sidecar turns it on); 10 parts named like a fastener, with no drive or bore in the solid (passed over); 1 part named for a leadscrew or a ball screw, which no tool turns (passed over); 3 parts shaped like fasteners, not named as any (passed over); 1 part named like a connector (passed over); 1 part drawn as a surface, not a solid (left out); parts the model doesn't have.
 
 | Fasteners | Tool | Count | Outcome |
 | --- | --- | ---: | --- |
@@ -164,11 +164,13 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 
 #### Connectors
 
-**5 connectors: 4 unplug, 1 stuck, 0 not covered**
+**7 connectors: 6 unplug, 1 stuck, 0 not covered**
 
 | Connector | Verdict | In the way, or why |
 | --- | --- | --- |
-| `plug_shelf_plug` | stuck | `plug_shelf_shelf` |
+| `pull_shelf_plug` | stuck | `pull_shelf_shelf` |
+
+- 1 part named like a connector, not checked: `byname_plug_cover` (a name doesn't say which half comes off: list the plugs under connectors:)
 
 #### Notes
 

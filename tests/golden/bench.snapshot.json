@@ -4994,7 +4994,7 @@
     1.0
    ],
    "seat": [
-    900.0,
+    1900.0,
     19000.0,
     6.0
    ],
@@ -5026,7 +5026,7 @@
     1.0
    ],
    "seat": [
-    1100.0,
+    2100.0,
     19000.0,
     6.0
    ],
@@ -6366,8 +6366,8 @@
  "build": null,
  "connectors": {
   "summary": {
-   "connectors": 5,
-   "unplugs": 4,
+   "connectors": 7,
+   "unplugs": 6,
    "stuck": 1,
    "no_grip": 0,
    "no_latch_access": 0,
@@ -6376,11 +6376,11 @@
   "grip_checked": false,
   "results": [
    {
-    "name": "plug_cable_plug",
-    "source": "sidecar",
+    "name": "byname_plug_fan_2",
+    "source": "name",
     "verdict": "unplugs",
     "receptacle": [
-     "plug_cable_shroud"
+     "byname_shroud_b"
     ],
     "axis": [
      0.0,
@@ -6395,11 +6395,49 @@
     "latch": null
    },
    {
-    "name": "plug_latch_plug",
+    "name": "byname_plug_motor",
+    "source": "name",
+    "verdict": "unplugs",
+    "receptacle": [
+     "byname_shroud_a"
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "travel": 10.0,
+    "blocked_by": [],
+    "reason": null,
+    "state": null,
+    "grip": null,
+    "latch": null
+   },
+   {
+    "name": "pull_cable_plug",
     "source": "sidecar",
     "verdict": "unplugs",
     "receptacle": [
-     "plug_latch_shroud"
+     "pull_cable_shroud"
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "travel": 10.0,
+    "blocked_by": [],
+    "reason": null,
+    "state": null,
+    "grip": null,
+    "latch": null
+   },
+   {
+    "name": "pull_latch_plug",
+    "source": "sidecar",
+    "verdict": "unplugs",
+    "receptacle": [
+     "pull_latch_shroud"
     ],
     "axis": [
      0.0,
@@ -6418,11 +6456,11 @@
     ]
    },
    {
-    "name": "plug_open_plug",
+    "name": "pull_open_plug",
     "source": "sidecar",
     "verdict": "unplugs",
     "receptacle": [
-     "plug_open_shroud"
+     "pull_open_shroud"
     ],
     "axis": [
      0.0,
@@ -6437,11 +6475,11 @@
     "latch": null
    },
    {
-    "name": "plug_shelf_plug",
+    "name": "pull_shelf_plug",
     "source": "sidecar",
     "verdict": "stuck",
     "receptacle": [
-     "plug_shelf_shroud"
+     "pull_shelf_shroud"
     ],
     "axis": [
      0.0,
@@ -6450,7 +6488,7 @@
     ],
     "travel": 10.0,
     "blocked_by": [
-     "plug_shelf_shelf"
+     "pull_shelf_shelf"
     ],
     "reason": null,
     "state": null,
@@ -6458,11 +6496,11 @@
     "latch": null
    },
    {
-    "name": "plug_tight_plug",
+    "name": "pull_tight_plug",
     "source": "sidecar",
     "verdict": "unplugs",
     "receptacle": [
-     "plug_tight_shroud"
+     "pull_tight_shroud"
     ],
     "axis": [
      0.0,
@@ -6479,6 +6517,8 @@
   ],
   "unmatched_rules": [],
   "unmatched_mates": [],
-  "named": []
+  "named": [
+   "byname_plug_cover"
+  ]
  }
 }

@@ -670,8 +670,12 @@ connectors:
   plus 3 mm, to 0.1 mm.
 - **Its pull path** is its own solid moved along the axis by its travel, tested against
   every part but its receptacle, its pieces, its `mates` and the ignored parts: a part
-  in the way leaves it `stuck`, named. A plug already drawn into another part is not
-  covered: its cable, if that is what it is, belongs in its `mates`.
+  in the way leaves it `stuck`, named. A part in its way that is named like a cable
+  (cable, wire, lead, harness, cord) and touches it is its own cable, as likely as
+  not, drawn leaving its back and named in no rule: the reason asks (`FAIL plug
+  stuck  motor_cable (its own cable? name it in mates:)`). A plug already drawn into
+  another part is not covered: its cable, if that is what it is, belongs in its
+  `mates`.
 - **Fingers**, with hand room on (`--hand-room`, `checks: {hand_room: true}`), as the
   hand on a handle: for `pinch`, two fingers 8 mm round along its sides, from past its
   receptacle to 25 mm beyond its end, tried every 15 deg round it, any one position
@@ -683,14 +687,25 @@ connectors:
 - **States** apply as for fasteners: a rule's `state:`, the default state, then each
   of `try_states` until it comes off.
 
-A name is about a plug when "plug" is its last word (`xt60_plug`, `Motor Plug`), and
-nothing says it is turned in (`drain plug`). A connector family's code (XT30, XT60,
-XT90, Deutsch DT and DTP part numbers) or a connector word (connector, header, jack,
-receptacle, JST, Deutsch) says nothing of which half comes off, and most such parts in
-a model are the halves soldered to a board: such a part is listed, not checked, until
-the sidecar names it (`NOTE 62 parts named like connectors, not checked: ...`), and
-every report counts them under not checked. A part that is a checked plug's
-receptacle isn't listed. `socket` is a screw head, never a connector word.
+A name is about a plug when "plug" is the noun it is about, wherever it stands (issue
+#157): last, as a part is named in a sentence (`xt60_plug`, `Motor Plug`), or first,
+as code names a part by its kind (`plug_motor`, `plug_battery_main`, `Plug - Motor`,
+`PLUG_FAN`), whatever number, letter, side or version follows it or is run onto it
+(`fan plug 2`, `motor_plug_left`, `plug2`, `fan_plug.001`). Not where a word says it
+is turned or pressed in: `drain`, `oil`, `fill`, `filler`, `spark`, `threaded`,
+`screw` or `blanking` before it (`oil drain plug`), or all that follows it
+(`plug_drain`); that is no connector at all.
+
+A connector family's code (XT30, XT60, XT90, Deutsch DT and DTP part numbers) or a
+connector word (connector, header, jack, receptacle, JST, Deutsch) says nothing of
+which half comes off, and most such parts in a model are the halves soldered to a
+board: such a part is listed, not checked, until the sidecar names it (`NOTE 62 parts
+named like connectors, not checked: ...`), and every report counts them under not
+checked. So is a part named for a plug and for another thing a plug has, sits in or is
+held by (`plug_cover`, `plug_header`, `motor_plug_holder`, `plug_motor_cable`): most
+likely that other thing, but the words that say so are a list, not a dictionary, and
+a plug passed over without a word is a plug never pulled. A part that is a checked
+plug's receptacle isn't listed. `socket` alone is a screw head, never a connector word.
 
 The terminal gives the counts (`3 connectors: 2 unplug, 1 stuck, 0 not covered`, with
 the fingers' counts where they were checked) and a `FAIL name  verdict  what` line for
