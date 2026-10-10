@@ -542,6 +542,20 @@ every run, and every report says it wasn't looked for.
   tells it (`CLASH M3x8 into M3x12  120.8 mm^3  (one fastener drawn twice)`), the
   later by name into the first. The list has more than the verdicts do: a clash
   that stops no tool changes no verdict, and only the list says it.
+- **An insert set into its part is no clash** (issue #158). A heat-set insert goes
+  into a hole drawn smaller than its knurl, so overlapping the part it is melted
+  into is what it is drawn to do; so does a press nut or a rivnut. Each is counted
+  apart and fails nothing (`NOTE 26 inserts set into their parts, no clashes`), and
+  `wrenchroom clashes --with-inserts` lists them, a `SET` line each. An insert is
+  set into a part that is round its middle and takes up no more than 0.3 of the
+  insert's own cylinder along the length the two share: a hole 0.84 of the insert
+  across, or more. Makers' holes are 0.87 to 0.93 of their inserts (4.0 for a 4.6
+  M3, 4.4 for a 5.0, 10.2 for an 11.1 M8). It is still a clash where the part is
+  over one end of it only (the next part along, drawn into its face), where the
+  other is a fastener, and where the part takes up more: a hole drawn for the screw
+  alone is 0.68 to 0.81 of an insert, and reads `deeper than a knurl: no hole drawn
+  for the insert?`. An insert in two parts drawn in one place, two options of one
+  part, is set into both. No sidecar entry is needed; `allow:` still works.
 - **`allow:`** in the sidecar names pairs meant to overlap, as pairs of part globs,
   either way round: `allow: [[shaft_*, bearing_*], [hub_*, tire_*]]`. A glob that
   names no part fails the run (exit 2), as a rule's does.
@@ -549,6 +563,8 @@ every run, and every report says it wasn't looked for.
   named like a cable (`a gland and its cable: drawn without a bore?`), and a press
   fit, an overlap a few hundredths thick (`a press fit, 0.03 deep? allow it in the
   sidecar`: its volume over half its surface, which is how thick a thin shell is).
+  A nut or a hex head drawn into the trap that holds it is a clash, said as
+  `check` notes it on the fastener (`its trap: a press fit, or a clash to fix`).
   And one for a fault: `one fastener drawn twice`.
 - **States.** A state with a model of its own (a lever raised) is looked in too,
   and a clash the model as given doesn't have is said with its state
@@ -558,7 +574,8 @@ every run, and every report says it wasn't looked for.
 The terminal says each as `CLASH first into second  volume`, the first the part
 drawn into the other: a fastener, else the smaller. The JSON's `clashes` gives the
 pairs, their volumes, a point in each overlap (the middle of its box), the state and
-the hint; `wrenchroom clashes --json` and `--md` write the same alone. The 3D view
+the hint, and under `set_in`, the inserts set into their parts, the same way;
+`wrenchroom clashes --json` and `--md` write the same alone. The 3D view
 (`check --clashes --html`) lists them in its panel: choosing one draws its two parts
 see-through and the overlap itself in red, over them, in the state's own model where
 it has one (`report.html#clash:0` opens on the first).

@@ -20,6 +20,10 @@ from wrenchroom.config import Config
 
 PRESS_FIT = "a press fit, 0.03 deep? allow it in the sidecar"
 TWICE = "one fastener drawn twice"
+DEEP = "deeper than a knurl: no hole drawn for the insert?"
+TRAP = "its trap: a press fit, or a clash to fix"
+#: hosted's insert in its pocket (issue #158): set in, 12.06 mm^3, and no clash.
+SET_IN = [("hosted_pocket_insert", "hosted_pocket_block", 12.1, None, None)]
 
 
 @pytest.fixture(scope="module")
@@ -31,6 +35,10 @@ def said(found):
     return [(c.first, c.second, round(c.volume, 1), c.state, c.hint) for c in found.found]
 
 
+def set_in(found):
+    return [(c.first, c.second, round(c.volume, 1), c.state, c.hint) for c in found.set_in]
+
+
 def test_the_bench_s_clashes_are_the_two_drawn_for_them(bench_dir, bench_model, bench_engine):
     config = Config.load(bench_dir / "wrenchroom.yaml")
     found = find_clashes(bench_model, config, model_dir=bench_dir, engine=bench_engine)
@@ -39,6 +47,12 @@ def test_the_bench_s_clashes_are_the_two_drawn_for_them(bench_dir, bench_model, 
         ("state_clash_slider", "state_clash_wall", 200.0, "lever-up", None),
     ]
     assert (found.unmatched_allows, found.unmeasured, found.exit_code) == ((), (), 1)
+    # hosted's insert in its pocket is set in, and counted apart; its bare insert and
+    # its snug nut, each a clash, the bench's sidecar allows.
+    assert set_in(found) == SET_IN
+    assert found.lines()[-1] == (
+        "NOTE 1 insert set into its part, no clash (wrenchroom clashes --with-inserts lists them)"
+    )
     # The cells whose threads sit in holes at their minor or a tap drill: none.
     names = {name for clash in found.found for name in (clash.first, clash.second)}
     for cell in ("minor_bore", "tapped_hold", "tee_hold", "badge", "trap", "head_trap"):
@@ -69,6 +83,8 @@ def test_the_edges_bench_s_faults_are_each_a_clash(bench_dir, bench_model, bench
         ("drawn_in_side_nut", "drawn_in_side_chip", 0.5, None, None),
         ("drawn_in_tapped_screw", "drawn_in_tapped_block", 110.5, None, None),
         ("drawn_in_top_nut", "drawn_in_top_block", 96.1, None, None),
+        ("hosted_bare_insert", "hosted_bare_block", 42.2, None, DEEP),
+        ("hosted_snug_nut", "hosted_snug_block", 2.3, None, TRAP),
         ("press_fit_allowed_rod", "press_fit_block", 3.8, None, PRESS_FIT),
         ("press_fit_pressed_rod", "press_fit_block", 3.8, None, PRESS_FIT),
         ("set_core_screw", "set_core_hub", 3.9, None, None),
@@ -77,6 +93,7 @@ def test_the_edges_bench_s_faults_are_each_a_clash(bench_dir, bench_model, bench
         ("twice_dup_screw", "twice_dup_M3x12_screw", 120.8, None, TWICE),
         ("twice_side_screw", "twice_side_box", 8.9, None, None),
     ]
+    assert set_in(found) == SET_IN
 
 
 DRAWN_INTO = re.compile(r"drawn into (.+) \(([\d.]+) mm\^3\): fix the model")
@@ -107,9 +124,12 @@ def test_every_clash_a_verdict_tells_is_in_the_list_to_the_volume(
     assert {pair: listed.get(pair) for pair in told} == told
     # What the list alone tells: drawn_in's chip (a second part its nut is drawn
     # into, which stops no tool), press_fit's rods (no fasteners), stud_dome's
-    # open nut, which turns.
+    # open nut, which turns, and hosted's two: an insert holds itself and a trapped
+    # nut is held, whatever they are drawn into.
     assert sorted(set(listed) - set(told)) == [
         ("drawn_in_side_nut", "drawn_in_side_chip"),
+        ("hosted_bare_insert", "hosted_bare_block"),
+        ("hosted_snug_nut", "hosted_snug_block"),
         ("press_fit_allowed_rod", "press_fit_block"),
         ("press_fit_pressed_rod", "press_fit_block"),
         ("stud_dome_open_nut", "stud_dome_open_cover"),

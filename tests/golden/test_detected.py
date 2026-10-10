@@ -152,7 +152,9 @@ def test_every_candidate_name_is_taken_on_its_solid_or_passed_over(detected):
     # Those taken on their solids: vented's gland by its hex, badge's boss insert by
     # its bore (issue #84), std's four screws named by thread and length by their
     # drives (issue #95); std's stud, named M8x60, shows none and is passed over.
+    # And hosted's two inserts by their bores (issue #158).
     taken_on_solid = {"vented_gland_vent", "badge_boss_insert"}
+    taken_on_solid |= {"hosted_pocket_insert", "hosted_bare_insert"}
     taken_on_solid |= {f"std_{role}" for role in ("M3x16", "M5-0.8x12", "M4x0.7x12", "#10-32x1")}
     assert "std_M8x60" in said - taken_on_solid
     named = {part.name for part in detected.passed_over if part.named and not part.motion}
@@ -283,6 +285,7 @@ def test_a_nut_drawn_small_says_so_and_where_its_size_came_from(detected):
         "unsized_M5x6_phillips_screw",  # shanks on no size (issue #135)
         "unsized_M5x6_torx_screw",
         "unsized_M5x6_slotted_screw",
+        "hosted_snug_nut",  # drawn into its trap (issue #158)
     }
 
 

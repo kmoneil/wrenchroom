@@ -488,6 +488,7 @@ def test_the_undersize_nut_is_noted_in_every_format(bench_report, bench_json):
         "ball_tilt_screw",
         "ball_shoulder_screw",
         "cross_drawn_m4_screw",  # a cross drawn for PH1 (issue #125)
+        "hosted_snug_nut",  # drawn into its trap (issue #158)
     }
 
 
@@ -622,7 +623,9 @@ def test_the_tools_list_counts_each_passing_fastener_s_tool(bench_report, bench_
     # Joints with a bolt and a nut on one size: the pairs' cells.
     assert {use.tool for use in used.uses if use.at_once == 2} == {"spanner-10", "spanner-13"}
     assert used.by_hand == ("grip_thumb_screw", "grip_wheel_thumbscrew", "grip_wing_nut")
-    assert len(used.no_tool) == 9  # 4 hold themselves, 5 in traps (build_ahead's since M8)
+    # 6 hold themselves and 6 are in traps: build_ahead's since M8, and hosted's two
+    # inserts and its snug nut since issue #158.
+    assert len(used.no_tool) == 12
     assert len(used.without) == FINAL_COUNTS["blocked"] + FINAL_COUNTS["not_covered"]
     # Issue #136: each blocked fastener's tool, once reached, apart from the reached:
     # all 28 but the four in joints nothing turns, which no tool was tried on; and the

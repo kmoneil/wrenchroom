@@ -34,7 +34,7 @@ from build123d import GeomType, Plane, Shape, Solid
 from wrenchroom.assembly import Assembly, Part
 from wrenchroom.build import Build, Placed, Plan
 from wrenchroom.build import plan as plan_build
-from wrenchroom.clashes import TWICE, Clashes, Measured, scan
+from wrenchroom.clashes import TWICE, Along, Clashes, Measured, scan
 from wrenchroom.config import (
     Config,
     ConfigError,
@@ -421,7 +421,12 @@ def _clash_run(
             if frozenset((clash.first, clash.second)) not in seen:
                 seen.add(frozenset((clash.first, clash.second)))
                 found.append(clash)
-    return Clashes(tuple(found), config.unmatched_allows(names), unmeasured)
+    return Clashes(
+        tuple(clash for clash in found if not clash.set_in),
+        config.unmatched_allows(names),
+        unmeasured,
+        tuple(clash for clash in found if clash.set_in),
+    )
 
 
 def _clashes_in(
@@ -488,19 +493,33 @@ def _measuring(
 
     Its regions are parts of their own, which the engine meshes and keeps as it does
     any part. Measured to the end the check measures it to (:func:`_measured_end`),
-    in ``scene``, the one the check tries it in.
+    in ``scene``, the one the check tries it in. An insert goes with its axis and
+    its ends, which say whether a part it is drawn into is one it is set into; a
+    nut or a hex head, with the trap that holds it, found as the check finds it
+    (:func:`_trapped_in`) and only if asked (issue #158).
     """
     kept: list[Measured] = []
+    trap: list[str | None] = []
+
+    def trapped_in() -> str | None:
+        if not trap:
+            trap.append(_trapped_in(frame, fastener, scene()))
+        return trap[0]
 
     def measure() -> Measured:
         if not kept:
             toward = _measured_end(frame, fastener, scene(), bolt)
             region, past_thread = _measured(frame, fastener, toward)
+            ends = min(frame.projections), max(frame.projections)
             kept.append(
                 Measured(
                     Part(fastener.name, region),
                     Part(fastener.name, past_thread),
                     gland=not fastener.socket_allowed,
+                    insert=Along(frame.origin, frame.direction, *ends)
+                    if fastener.kind is Kind.INSERT
+                    else None,
+                    trap=trapped_in,
                 )
             )
         return kept[0]
