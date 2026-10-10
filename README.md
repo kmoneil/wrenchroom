@@ -331,7 +331,7 @@ fasteners:
     kind: screw                  # screw, nut or insert
     head: hex                    # socket, button, flat, hex, torx, phillips,
                                  # slotted, carriage, shoulder or set
-    size: M8                     # M8, #10, 1/4, ...
+    size: M8                     # M8, #10, 1/4, ST4.2, ...
   - parts: frame_bolt_3          # a later rule replaces an earlier one, whole
     kind: screw
     head: hex

@@ -58,7 +58,7 @@ def bench_parts(bench_dir):
 
 def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
     wrong, banded, outlined, guessed, unmatched, bored = [], [], [], [], [], []
-    unsized = []
+    unsized, tapping = [], []
     for name, rule in _described(bench_parts):
         kind = Kind(rule.get("kind", "screw"))
         size = Size.parse(rule["size"]) if "size" in rule else None  # a gland may give none
@@ -66,10 +66,11 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
         # A shoulder screw's head is the one only its name can tell (issue #40), and
         # named_head's outline is a socket head's, the name's button standing (#81).
         named = head if head is Head.SHOULDER or name in _BY_NAME else None
-        reading = _read(bench_parts[name], kind, named, size, unsized)
+        reading = _read(bench_parts[name], kind, named, size, (unsized, tapping))
         expected_af = _expected_af(rule, kind, size, head)
         got = (reading.head, reading.drive_af and round(reading.drive_af, 6), reading.size)
         want = (head, expected_af and round(expected_af, 6), size)  # inch sizes in mm
+
         if head is Head.TORX or rule.get("tool") == "hand":
             # The size only: the bench's Torx screws are hex sockets but lobed_recess's,
             # whose recesses test_torx_recess.py reads; and a thumb screw has no drive,
@@ -99,6 +100,10 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
         if got != want:
             wrong.append((name, got, want))
     assert not wrong
+    selftap = next(cell for cell in CELLS if cell.name == "selftap")
+    assert sorted(tapping) == sorted(
+        ["cross_M2_self_tapping_screw", *(f"selftap_{role}" for role in selftap.truth)]
+    )
     # Issue #27: 12.8, inside ISO 4032's band for 13 (band_agrees's on a bore of no size).
     assert banded == ["hex_band_nut", "band_agrees_nut"]
     # Issue #50: 12.6, a 5/16's by the band; its bolt, or its name, says M8.
@@ -115,10 +120,18 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
     assert unsized == [f"unsized_M5x6_{head}_screw" for head in ("phillips", "torx", "slotted")]
 
 
-def _read(part, kind, named, size, unsized):
+def _read(part, kind, named, size, listed):
     """The part's reading; one whose shank is on no size takes the rule's, and is
-    listed in ``unsized``: a recess, or a name, sizes it (issue #135)."""
+    listed in ``unsized``: a recess, or a name, sizes it (issue #135). So does a
+    tapping screw, listed in ``tapping`` (issue #142): its size is its name's, its
+    solid alone reading a machine screw's or none, and its shank its own thread's
+    at most."""
+    unsized, tapping = listed
     reading = read_shape(part.shape, kind, named)
+    if size is not None and size.is_tapping:
+        tapping.append(part.name)
+        assert reading.shank_mm <= size.diameter_mm + 0.05, part.name
+        return replace(reading, size=size)
     if reading.size is None and size is not None and reading.shank_mm is not None:
         unsized.append(part.name)
         return replace(reading, size=size)
@@ -133,7 +146,7 @@ def _expected_af(rule, kind, size, head):
     if rule.get("across_flats") is not None or size is None:
         return rule.get("across_flats")
     if kind is Kind.NUT or head is Head.HEX:
-        return spanner_af(size)
+        return spanner_af(size, head=size.is_tapping)  # a tapping screw's hex is its head's
     return hex_key_af(head, size) if head is not None else None
 
 

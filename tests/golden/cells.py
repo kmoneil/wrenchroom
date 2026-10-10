@@ -2434,7 +2434,7 @@ FUSION_TAPPING = (
     "cross",
     [
         {"parts": "M3x6_screw", "kind": "screw", "head": "phillips", "size": "M3"},
-        {"parts": "M2_self_tapping_screw", "kind": "screw", "head": "phillips", "size": "M2"},
+        {"parts": "M2_self_tapping_screw", "kind": "screw", "head": "phillips", "size": "ST2.2"},
         {"parts": FUSION_TAPPING, "kind": "screw", "head": "phillips", "size": "#1"},
     ],
     {
@@ -2450,7 +2450,8 @@ FUSION_TAPPING = (
 def cross():
     """Cross recesses drawn as makers draw them, open above (issue #115). Described,
     each turns with the driver its thread's standard gives, straight in: PH1 for
-    the M3 (ISO 7045), PH0 for the M2 and the #1 (ASME B18.6.3).
+    the M3 (ISO 7045), PH0 for the #1 (ASME B18.6.3) and for the M2 self-tapping
+    screw, which is an ST2.2 (ISO 7049, issue #142; it was described as an M2).
 
     The M3, the issue's: a pan head 5.6 by 2.4, its wings 3.2 across and 0.6 wide,
     1.4 deep, their ends sloping in. The M2, as the Voron Legacy's: wings 2.4 across,
@@ -3317,4 +3318,52 @@ def byname():
         ("plug_fan_2", Pos(30, 0, 0) * _plug()),
         ("plug_cover", Pos(0, 40, 5) * Box(40, 10, 10)),
         ("drain_plug", Pos(0, -40, 3) * Cylinder(4, 6)),
+    ]
+
+
+def _tapping_pan(d, dk, k, span):
+    """A pan head tapping screw, ISO 7049's: a head ``dk`` by ``k`` on a shank ``d``
+    across and 10 long, a cross ``span`` across its wings, 0.4 wide and 0.5 deep."""
+    cross = Pos(0, 0, k - 0.5) * (Box(span, 0.4, 1.01) + Box(0.4, span, 1.01))
+    return Pos(0, 0, k / 2) * Cylinder(dk / 2, k) - cross + Pos(0, 0, -5) * Cylinder(d / 2, 10)
+
+
+_SELFTAP = {
+    "M2x10_self_tapping_phillips_screw": ("phillips", "ST2.2", "driver-ph0"),
+    "ST2.9x10_phillips_screw": ("phillips", "ST2.9", "driver-ph1"),
+    "M4x10_self_tapping_torx_screw": ("torx", "ST4.2", "torx-key-T20"),
+    "ST4.2x10_hex_screw": ("hex", "ST4.2", "spanner-7"),
+}
+
+
+@cell(
+    "selftap",
+    [
+        {"parts": role, "kind": "screw", "head": head, "size": size}
+        for role, (head, size, _) in _SELFTAP.items()
+    ],
+    {
+        role: {"verdict": "turns", "tool": tool, "size": size}
+        for role, (_, size, tool) in _SELFTAP.items()
+    },
+)
+def selftap():
+    """Tapping screws are sized as tapping screws (issue #142), by ISO 1478's threads:
+    four in a plate, open above. An M2 self-tapping screw, as a seller names an ST2.2,
+    drawn as one: a 2.2 shank, ISO 7049's 4.0 by 1.6 pan head, a PH0 cross 1.9 across.
+    It was told as an inch machine screw, "drawn as a #2 (2.20 shank), where its name
+    says M2", and noted again for a cross a #2 doesn't take. An ST2.9, named by its
+    own size, which wasn't read as a size at all: 2.9, 5.6 by 2.4, a PH1 cross 3.0
+    across. An M4 self-tapping Torx screw, an ST4.2: lobed_recess's fluted head, 3.92
+    point to point, ISO 14585's T20, on a 4.2 shank. And an ST4.2 hexagon head, ISO
+    1479's, 7 across flats, which by the machine tables is an M4 nut's hex on a shank
+    that is no M4's. Each turns, and says its tapping size.
+    """
+    holes = [(-90, 0, 0.9), (-30, 0, 1.2), (30, 0, 1.8), (150, 0, 1.8)]
+    return [
+        ("plate", plate(w=400, holes=holes)),
+        ("M2x10_self_tapping_phillips_screw", Pos(-90, 0, 0) * _tapping_pan(2.2, 4.0, 1.6, 1.9)),
+        ("ST2.9x10_phillips_screw", Pos(-30, 0, 0) * _tapping_pan(2.9, 5.6, 2.4, 3.0)),
+        ("M4x10_self_tapping_torx_screw", Pos(30, 0, 0) * _torx_m4(3.92, flutes=True, shank=4.2)),
+        ("ST4.2x10_hex_screw", Pos(150, 0, 0) * hex_bolt(4.2, 10, 7, 2.8)),
     ]

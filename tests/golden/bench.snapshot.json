@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 174,
-  "turns": 129,
+  "fasteners": 178,
+  "turns": 133,
   "held": 14,
   "blocked": 28,
   "stuck": 3,
@@ -904,7 +904,7 @@
    "name": "cross_M2_self_tapping_screw",
    "kind": "screw",
    "head": "phillips",
-   "size": "M2",
+   "size": "ST2.2",
    "length": null,
    "axis": [
     0.0,
@@ -3757,6 +3757,126 @@
    "notes": []
   },
   {
+   "name": "selftap_M2x10_self_tapping_phillips_screw",
+   "kind": "screw",
+   "head": "phillips",
+   "size": "ST2.2",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1910.0,
+    19000.0,
+    1.6
+   ],
+   "source": "sidecar",
+   "tool": "driver-ph0",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "selftap_M4x10_self_tapping_torx_screw",
+   "kind": "screw",
+   "head": "torx",
+   "size": "ST4.2",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2030.0,
+    19000.0,
+    1.94
+   ],
+   "source": "sidecar",
+   "tool": "torx-key-T20",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "selftap_ST2.9x10_phillips_screw",
+   "kind": "screw",
+   "head": "phillips",
+   "size": "ST2.9",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1970.0,
+    19000.0,
+    2.4
+   ],
+   "source": "sidecar",
+   "tool": "driver-ph1",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "selftap_ST4.2x10_hex_screw",
+   "kind": "screw",
+   "head": "hex",
+   "size": "ST4.2",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2150.0,
+    19000.0,
+    2.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-7",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "set_sunk_screw",
    "kind": "screw",
    "head": "set",
@@ -4994,7 +5114,7 @@
     1.0
    ],
    "seat": [
-    1900.0,
+    2900.0,
     19000.0,
     6.0
    ],
@@ -5026,7 +5146,7 @@
     1.0
    ],
    "seat": [
-    2100.0,
+    3100.0,
     19000.0,
     6.0
    ],
@@ -5680,9 +5800,10 @@
    },
    {
     "tool": "torx-key-T20",
-    "count": 1,
+    "count": 2,
     "fasteners": [
-     "lobed_recess_fluted_screw"
+     "lobed_recess_fluted_screw",
+     "selftap_M4x10_self_tapping_torx_screw"
     ],
     "at_once": 1,
     "in_default_kit": false,
@@ -5779,6 +5900,21 @@
     "count": 1,
     "fasteners": [
      "misnamed_M5_nut"
+    ],
+    "at_once": 1,
+    "in_default_kit": true,
+    "unusual": [
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-7",
+    "count": 1,
+    "fasteners": [
+     "selftap_ST4.2x10_hex_screw"
     ],
     "at_once": 1,
     "in_default_kit": true,
@@ -6015,10 +6151,11 @@
    },
    {
     "tool": "driver-ph0",
-    "count": 3,
+    "count": 4,
     "fasteners": [
      "cross_M2_self_tapping_screw",
      "cross_Type I Cross Recessed Fillister Head Tapping Screw ANSI B18.6.4 1-42 x 0.1875 Type AB",
+     "selftap_M2x10_self_tapping_phillips_screw",
      "small_phillips_screw"
     ],
     "at_once": 1,
@@ -6047,11 +6184,12 @@
    },
    {
     "tool": "driver-ph1",
-    "count": 4,
+    "count": 5,
     "fasteners": [
      "cross_M3x6_screw",
      "cross_drawn_m4_screw",
      "misnamed_M5x12_phillips_screw",
+     "selftap_ST2.9x10_phillips_screw",
      "unsized_M5x6_phillips_screw"
     ],
     "at_once": 1,

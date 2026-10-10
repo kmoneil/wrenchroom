@@ -2580,7 +2580,7 @@ def _phillips(fastener: Fastener) -> tuple[int, str | None]:
         assert size is not None  # noqa: S101  (by_size came from it)
         return drawn, (
             f"cross drawn for PH{drawn} ({span:.2f} across its wings), where "
-            f"{'an' if size.designation.startswith('M') else 'a'} {size.designation}'s "
+            f"{size.said}'s "
             f"standard gives PH{by_size}: taken as drawn"
         )
     if by_size is not None:
