@@ -3,8 +3,8 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 162,
-  "turns": 120,
+  "fasteners": 168,
+  "turns": 126,
   "held": 11,
   "blocked": 28,
   "stuck": 3,
@@ -1628,7 +1628,7 @@
    "source": "sidecar",
    "tool": "spanner-10",
    "verdict": "turns",
-   "how": "ring, full length",
+   "how": "open end, full length",
    "swing_deg": 30.0,
    "state": null,
    "pair": "hand_tight_bolt",
@@ -3197,6 +3197,186 @@
    "notes": []
   },
   {
+   "name": "ring_handle_high_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    4150.0,
+    18000.0,
+    -15.3
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "ring_handle_high_nut",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "ring_handle_high_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4150.0,
+    18000.0,
+    6.5
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "ring_handle_high_bolt",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "ring_handle_low_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    3850.0,
+    18000.0,
+    -15.3
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "ring_handle_low_nut",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "ring_handle_low_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3850.0,
+    18000.0,
+    6.5
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "open end, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": "ring_handle_low_bolt",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "ring_stud_short_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3150.0,
+    18000.0,
+    6.5
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "ring_stud_through_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2850.0,
+    18000.0,
+    6.5
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "open end, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "ring_way_on_roomy_bolt",
    "kind": "screw",
    "head": "hex",
@@ -4640,7 +4820,7 @@
     1.0
    ],
    "seat": [
-    2900.0,
+    4900.0,
     18000.0,
     6.0
    ],
@@ -4672,7 +4852,7 @@
     1.0
    ],
    "seat": [
-    3100.0,
+    5100.0,
     18000.0,
     6.0
    ],
@@ -5502,7 +5682,7 @@
    },
    {
     "tool": "spanner-13",
-    "count": 25,
+    "count": 31,
     "fasteners": [
      "band_agrees_bolt",
      "band_agrees_nut",
@@ -5523,6 +5703,12 @@
      "nut_gap_nut",
      "pair_nut_held_bolt",
      "pair_nut_held_nut",
+     "ring_handle_high_bolt",
+     "ring_handle_high_nut",
+     "ring_handle_low_bolt",
+     "ring_handle_low_nut",
+     "ring_stud_short_nut",
+     "ring_stud_through_nut",
      "ring_way_on_roomy_bolt",
      "ring_way_on_roomy_nut",
      "ring_way_on_tight_bolt",

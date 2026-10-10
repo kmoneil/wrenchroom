@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from build123d import GeomType, Plane, Solid
+from build123d import GeomType, Plane, Shape, Solid
 
 from wrenchroom.assembly import Assembly, Part
 from wrenchroom.build import Build, Placed, Plan
@@ -76,7 +76,7 @@ from wrenchroom.engine import (
     make_engine,
 )
 from wrenchroom.engine.exact import common, cut, exact_overlap
-from wrenchroom.engine.scene import boxes_overlap
+from wrenchroom.engine.scene import boxes_overlap, shape_bounds
 from wrenchroom.fasteners import (
     HEX_AF_MIN,
     PHILLIPS_NUMBER,
@@ -109,6 +109,7 @@ from wrenchroom.report import (
     bounded,
     listed,
 )
+from wrenchroom.solids import frame_location
 from wrenchroom.tools.ball_end import BALL_END_KEYS, BallEndKey, ball_end_attempts
 from wrenchroom.tools.custom import (
     ENDS,
@@ -148,7 +149,7 @@ from wrenchroom.tools.torx_keys import ISO_10664
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
-    from build123d import Axis, Face, Shape
+    from build123d import Axis, Face
 
     from wrenchroom.tools.nut_drivers import NutDriver
     from wrenchroom.tools.sockets import Socket
@@ -1578,6 +1579,8 @@ def _try_in(
     mount, geometry = oriented
     if partner is not None and partner in assembly.names and partner not in removed:
         geometry = replace(geometry, through=_through(mount, assembly[partner]))
+    elif fastener.kind is Kind.NUT and not fastener.self_holding:  # a stud, say (#143)
+        geometry = replace(geometry, through=_through_its_bore(mount, geometry, scene))
     candidate = _Candidate(fastener, axis=mount.axis, seat=mount.seat, state=state_name)
     if fastener.self_holding:
         candidate.how = "holds itself"
@@ -2236,6 +2239,53 @@ def _through(mount: Mount, bolt: Part) -> float:
     """
     ends = [_dot(_sub(tuple(v), mount.seat), mount.axis) for v in bolt.shape.vertices()]
     return max([0.0, *ends])
+
+
+#: A part in this much of a nut's bore, as a fraction of its radius, along its hex,
+#: runs through it: a tube as well as a rod.
+_IN_BORE = 0.9
+
+#: A piece starting this far below a nut's seat, mm, starts inside the nut; one
+#: starting nearer rests on its face, and one further up stands apart from it.
+_RESTING = 0.01
+
+
+def _through_its_bore(mount: Mount, geometry: _Geometry, scene: Scene) -> float:
+    """How far past the seat whatever runs up through a nut's bore reaches, 0 for nothing.
+
+    For a nut no bolt is paired with: a stud, a threaded rod, a bolt no rule names
+    (issue #143). Each part in its bore along the hex is measured as far as it
+    runs on up the axis, unbroken (:func:`_runs_up`), within the ring's bore.
+    """
+    if geometry.bore_radius <= 0:
+        return 0.0
+    bore = axial_cylinder(_IN_BORE * geometry.bore_radius, geometry.band_bottom, geometry.band_top)
+    found = set(scene.hits(mount.place(bore)))
+    start = (geometry.band_top + geometry.band_bottom) / 2
+    radius = geometry.circumradius + RING_CLEARANCE
+    reaches = [_runs_up(mount, part, radius, start) for part in scene.parts if part.name in found]
+    return max([0.0, *reaches])
+
+
+def _runs_up(mount: Mount, part: Part, radius: float, start: float) -> float:
+    """How far past the seat a part in a nut's bore runs on up its axis, unbroken.
+
+    Its solid within ``radius`` of the axis, from ``start`` in the nut up: the
+    piece of that which starts in the nut. A piece further up, apart from it (a
+    housing's far wall across the axis), is no end a ring comes down over.
+    Measured in the seat's own frame, so near the origin (issue #107).
+    """
+    to_local = frame_location(mount.seat, mount.axis).inverse()
+    local = Shape.cast(part.shape.wrapped.Moved(to_local.wrapped))
+    top = shape_bounds(local)[1][2]
+    if top <= start:
+        return 0.0
+    column = Solid.make_cylinder(radius, top - start + 1.0, Plane((0.0, 0.0, start)))
+    shared = common(local, column)
+    if shared is None:
+        return 0.0
+    boxes = [piece.bounding_box() for piece in shared.solids()]
+    return max([0.0, *(box.max.Z for box in boxes if box.min.Z < -_RESTING)])
 
 
 def _drawn_af(frame: _Frame, fastener: Fastener) -> float | None:

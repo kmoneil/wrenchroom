@@ -192,10 +192,13 @@ Real tools against the real parts:
   1-1/4 in. The lengths are makers', the longest of a few makers' standard series at
   each size. Each needs 30 degrees of free swing. A ring is closed, so it gets on
   along the axis: its way down, the ring's annulus from the hex up to its own
-  thickness past the fastener's end and the end of the bolt through it, must be clear
-  (issue #121). A cover over a nut closer than that leaves the ring off, and the open
-  end, from the side, is tried. The bolt is the nut's pair; a stud no rule names isn't
-  measured, and the ring clears the nut's own end.
+  thickness past the fastener's end and the end of whatever runs through it, must be
+  clear (issue #121). Its handle comes down with it, on its own line, so the handle's
+  way down must be clear too, at each angle the swing tries (issue #143). A cover over
+  a nut closer than that, or a tube round it that the ring fits down and its handle
+  doesn't, leaves the ring off, and the open end, from the side, is tried. What runs
+  through a nut is its bolt, its pair; where it has none, whatever is in its bore,
+  named or not (a stud, a threaded rod), as far as it runs on up the axis.
 - **Sockets** on a ratchet, then on each stock extension.
 - **Phillips and slotted drivers**.
 - **Nut drivers** (in the `full` kit), tried last, straight in, where nothing that

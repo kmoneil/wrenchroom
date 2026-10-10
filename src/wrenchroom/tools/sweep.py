@@ -129,7 +129,7 @@ class Attempt:
     required_deg: float = 0.0
 
 
-def swing_attempt(
+def swing_attempt(  # noqa: PLR0913  (keyword-only: one per thing a swing tries)
     *,
     tool: str,
     way: str,
@@ -139,6 +139,7 @@ def swing_attempt(
     required_deg: float,
     step_deg: float = DEFAULT_STEP_DEG,
     hand_at: Callable[[float], ToolSolid] | None = None,
+    way_at: Callable[[float], ToolSolid] | None = None,
 ) -> Attempt:
     """Try an engagement solid, then search the arm's swing.
 
@@ -150,7 +151,10 @@ def swing_attempt(
     engagement: ``engagement`` is None and ``arm_at`` is the whole tool. With
     ``hand_at``, a position is free only when the hand there is clear too; the
     hand is tested only where the arm is, so a check without hand room costs
-    exactly what it did.
+    exactly what it did. With ``way_at``, the arm is clear at a position only
+    where the way it came there is clear too: a ring's handle, come down the
+    axis with it (issue #143). That way is tested only where the arm is clear,
+    and drawn only where it is what stopped the tool.
     """
     blockers: list[str] = []
     hand_blockers: list[str] = []
@@ -169,9 +173,7 @@ def swing_attempt(
 
     def arm_is_clear(index: int) -> bool:
         if index not in arm_hits:
-            arm = arm_at(index * step_deg)
-            hits, grazes = scene.contacts(arm)
-            probes.append(Probe(arm, hits, grazes))
+            hits, grazes = _arm_contacts(scene, arm_at, way_at, index * step_deg, probes)
             _note(blockers, hits)
             _note(grazed, () if hits else grazes)  # a graze where the arm was clear
             arm_hits[index] = hits
@@ -216,6 +218,29 @@ def swing_attempt(
         bounds,
         required_deg,
     )
+
+
+def _arm_contacts(
+    scene: Scene,
+    arm_at: Callable[[float], ToolSolid],
+    way_at: Callable[[float], ToolSolid] | None,
+    phi: float,
+    probes: list[Probe],
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """What the arm at an angle hit and grazed, and the way it came there, where it is clear.
+
+    The arm is drawn always, its way only where it hit something.
+    """
+    arm = arm_at(phi)
+    hits, grazes = scene.contacts(arm)
+    probes.append(Probe(arm, hits, grazes))
+    if hits or way_at is None:
+        return hits, grazes
+    way = way_at(phi)
+    way_hits, way_grazes = scene.contacts(way)
+    if way_hits:
+        probes.append(Probe(way, way_hits, way_grazes))
+    return way_hits, (*grazes, *way_grazes)
 
 
 def _hand_bounds(
