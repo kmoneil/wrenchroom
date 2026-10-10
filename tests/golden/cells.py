@@ -664,22 +664,24 @@ def torx_open():
     ],
     {
         "bolt": {"verdict": "turns", "tool": "spanner-10", "how": "ring, full length"},
-        "nut": {"verdict": "turns", "tool": "spanner-10", "how": "ring, full length"},
+        "nut": {"verdict": "turns", "tool": "spanner-10", "how": "open end, full length"},
     },
 )
 def hand_tight():
     """A nut a spanner reaches and a hand can't follow (GOLDEN-BENCH section 6, M6).
 
     A block 300 tall sits 6.8 over the nut (underside at z 12), bored r 20 round it.
-    Hand room off (the bench's way): the ring (z 0.35..4.85, outer r 10) and its
-    handle pass under the block, so the nut turns, ring, full length; the bolt turns
-    from below. Hand room on (test_hand_room_bench.py): the hand rests on the handle
-    (underside z 2.6, r 35) over the handle's last 90 mm, from r 51.3 on the full
-    spanner (reach 141.3) and from the axis on the stubby (86.4), so it meets the
-    block at every angle, 31.3 past the bore at the least; the socket's ratchet
-    handle (z 36.5) hits the block whatever the extension, the tool itself blocked.
-    The ring alone would turn, so the nut is blocked for want of a hand. The bolt
-    below is in open air.
+    Hand room off (the bench's way): the open end (z 0.2..5.0) and its handle pass
+    under the block, so the nut turns, open end, full length. The ring would fit up
+    the bore, but it comes down over the bolt's end (z 10) from z 14.5, and its
+    handle, coming down with it, meets the block at every angle (issue #143): it
+    used to turn the nut. The bolt turns from below. Hand room on
+    (test_hand_room_bench.py): the hand rests on the handle (underside z 2.6, r 35)
+    over the handle's last 90 mm, from r 51.3 on the full spanner (reach 141.3), so
+    it meets the block at every angle, 31.3 past the bore at the least; the socket's
+    ratchet handle (z 36.5) hits the block whatever the extension, the tool itself
+    blocked. The open end alone would turn, so the nut is blocked for want of a
+    hand. The bolt below is in open air.
     """
     block = Pos(0, 0, 12 + 150) * Box(300, 300, 300) - Pos(0, 0, 12 + 150) * Cylinder(20, 301)
     return [
@@ -3126,3 +3128,66 @@ def plug_latch():
         ("plug", _plug()),
         ("wall", _column(0, 4 + 5 + 5, 60, 10)),
     ]
+
+
+@cell(
+    "ring_stud",
+    [{"parts": "*_nut", "kind": "nut", "size": "M8"}],
+    {
+        "through_nut": {"verdict": "turns", "tool": "spanner-13", "how": "open end, full length"},
+        "short_nut": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
+    },
+)
+def ring_stud():
+    """A ring comes down over the end of whatever its nut is on, named or not (issue
+    #143). Two M8 nuts, 13 across and 6.5 high, each on a stud no rule names, up
+    through the plate. Over each a cover 10 thick, its underside 40 over the nut, at
+    46.5, with a hole 9 across for the stud. The through stud runs on up through its
+    cover to z 60: no ring comes down over its end, and the open end turns the nut
+    from the side, under the cover. The short stud ends at z 8, 1.5 past its nut, as
+    ring_way_on's bolts do: the ring clears it at 13.4 and turns it. The through nut
+    used to turn with the ring, its stud measured to the nut's own end. The joints
+    stand 300 apart, past a 13 spanner's reach.
+    """
+    parts = [("plate", plate(w=400, t=10, holes=[(-150, 0, 4.5), (150, 0, 4.5)]))]
+    for tag, x, end in (("through", -150, 60.0), ("short", 150, 8.0)):
+        parts += [
+            (f"{tag}_stud", Pos(x, 0, (end - 10) / 2) * Cylinder(4, end + 10)),
+            (f"{tag}_nut", Pos(x, 0, 0) * hex_nut(8, 13, 6.5)),
+            (f"{tag}_cover", Pos(x, 0, 0) * (slab(46.5, w=60, d=60) - Cylinder(4.5, 200))),
+        ]
+    return parts
+
+
+@cell(
+    "ring_handle",
+    [
+        {"parts": "*_bolt", "kind": "screw", "head": "hex", "size": "M8"},
+        {"parts": "*_nut", "kind": "nut", "size": "M8"},
+    ],
+    {
+        "low_nut": {"verdict": "turns", "tool": "spanner-13", "how": "open end, full length"},
+        "high_nut": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
+        "low_bolt": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
+        "high_bolt": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
+    },
+)
+def ring_handle():
+    """A ring's handle comes down the axis with it (issue #143). Two of ring_way_on's
+    joints, each in a tube 60 tall round its axis, 15 inside and 25 outside: wide
+    enough for the 13 ring, 12.4 round, not for its handle, 175 long. The low tube
+    stands 3.5 over its nut, at z 10. The ring would come down inside it to 13.4, past
+    the bolt's end, but its handle, coming down with it, meets the tube at every angle,
+    and the open end turns the nut from the side, under the tube. The high tube stands
+    10 over its nut, at 16.5, past the ring's way down: the ring turns it. The low nut
+    used to turn with the ring. Each bolt's ring comes up from under the plate.
+    """
+    parts = [("plate", plate(w=400, t=10, holes=[(-150, 0, 4.5), (150, 0, 4.5)]))]
+    tube = Cylinder(25, 60) - Cylinder(15, 61)
+    for tag, x, gap in (("low", -150, 3.5), ("high", 150, 10.0)):
+        parts += [
+            (f"{tag}_bolt", Pos(x, 0, -10) * Rot(180, 0, 0) * hex_bolt(8, 18, 13, 5.3)),
+            (f"{tag}_nut", Pos(x, 0, 0) * hex_nut(8, 13, 6.5)),
+            (f"{tag}_tube", Pos(x, 0, 6.5 + gap + 30) * tube),
+        ]
+    return parts

@@ -300,11 +300,14 @@ def ring_attempts(
     Turns over 30 degrees, holds at any one angle.
 
     A ring is closed, so it gets on along the axis, down over the fastener's end
-    and the end of the bolt through it, ``through`` past the seat: its way on,
-    the ring's annulus from where it grips up to its own full thickness past
+    and the end of whatever runs through it, ``through`` past the seat: its way
+    on, the ring's annulus from where it grips up to its own full thickness past
     that end, where it can come in from the side, must be clear too (issue
     #121). A part over a nut's end stops the ring at any gap less: where the
-    ring's grip is clear, the attempt fails on its way on, which it draws.
+    ring's grip is clear, the attempt fails on its way on, which it draws. Its
+    handle comes down with it, on its own line (issue #143): at each angle the
+    swing tries, the handle's way down, over the same height, must be clear
+    too, so a tube round the joint that the ring fits down stops its handle.
 
     ``hex_band`` is ``(top, bottom)`` in the local frame (seat at 0, both <= 0):
     where the hex actually is, which on a cable gland is below a dome nothing
@@ -321,6 +324,7 @@ def ring_attempts(
     top = mid_z + thickness / 2
     height = through + spanner.head_thickness - top
     way_on = mount.place(axial_annulus(inner, spanner.ring_outer_radius, top, height))
+    handle_mid = top + height / 2
     engagement = mount.place(ring + corner_sweep(hex_af, hex_band))
     stopped = _stopped_on_its_way(scene, engagement, way_on)
     for way, length in _lengths("ring", spanner):
@@ -352,6 +356,16 @@ def ring_attempts(
                 )
                 if hand_room
                 else None
+            ),
+            way_at=lambda phi, reach=0.85 * length: mount.place(
+                radial_box(
+                    spanner.handle_width,
+                    height,
+                    spanner.ring_outer_radius,
+                    reach,
+                    handle_mid,
+                    phi,
+                )
             ),
         )
 
