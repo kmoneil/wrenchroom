@@ -24,6 +24,7 @@ import numpy as np
 from build123d import Location, Shape
 from OCP.BRepAlgoAPI import BRepAlgoAPI_Common, BRepAlgoAPI_Cut
 from OCP.collections import List_TopoDS_Shape
+from OCP.ShapeUpgrade import ShapeUpgrade_UnifySameDomain
 
 from wrenchroom.engine.scene import (
     HIT_MIN_VOLUME,
@@ -172,6 +173,25 @@ def _boolean(operation: BRepAlgoAPI_Common | BRepAlgoAPI_Cut, a: Shape, b: Shape
     operation.SetRunParallel(True)
     operation.Build()
     return Shape.cast(operation.Shape()) if operation.IsDone() else None
+
+
+def merged(shape: Shape) -> Shape:
+    """The shape with each surface's faces merged into one, the edges between them gone.
+
+    A boolean leaves a face it split in its pieces. A head cut from its shank by a
+    rod has its bearing face in three, round the rod's rim, and that rim is an
+    edge inside a flat face, on nothing's boundary. The next boolean meets it all
+    the same: where another part's bore lies along it, a few millionths of a
+    millimetre off (a hole drawn 0.1 over the screw, in a part an assembly placed
+    a hair askew), OCCT finds the two have nothing in common at all, though the
+    head is drawn 15 mm^3 into the part. Merged, the head is the solid it would be
+    drawn as, and measures as one. The volume is the same; the shape given is left
+    as it was.
+    """
+    unify = ShapeUpgrade_UnifySameDomain(shape.wrapped, True, True, False)
+    unify.Build()
+    result = unify.Shape()
+    return shape if result.IsNull() else Shape.cast(result)
 
 
 def exact_common(a: Shape, b: Shape) -> PartOverlap | None:

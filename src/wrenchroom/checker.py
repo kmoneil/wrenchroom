@@ -75,7 +75,7 @@ from wrenchroom.engine import (
     Scene,
     make_engine,
 )
-from wrenchroom.engine.exact import common, cut, exact_overlap
+from wrenchroom.engine.exact import common, cut, exact_overlap, merged
 from wrenchroom.engine.scene import boxes_overlap, shape_bounds
 from wrenchroom.fasteners import (
     HEX_AF_MIN,
@@ -1883,6 +1883,9 @@ def _head_region(
     thread's) from its tip up to the bearing face, and is left out, as a thread
     is. A head drawn with no shank (a part's head piece, its shank another
     solid) is all head. None for a set screw, which has no head, and a nut.
+
+    The head is given as one clean solid, the faces its cut split merged
+    (:func:`~wrenchroom.engine.exact.merged`).
     """
     if fastener.kind is not Kind.SCREW or fastener.head is Head.SET or toward is None:
         return None
@@ -1899,7 +1902,10 @@ def _head_region(
     start = tip - 1.0 if end > 0 else bearing  # from past the tip to the bearing face
     plane = Plane(origin=frame.point_at(start), z_dir=frame.direction)
     rod = Solid.make_cylinder(max(shank) + _SHANK_SLACK, abs(bearing - tip) + 1.0, plane)
-    return cut(frame.part.shape, rod) or frame.part.shape
+    head = cut(frame.part.shape, rod)
+    # The rod's end is in the bearing face's plane, and leaves its rim in that face:
+    # merged away, or a part bored at the rod's radius measures as clear of the head.
+    return merged(head) if head else frame.part.shape
 
 
 def _drawn_into(
