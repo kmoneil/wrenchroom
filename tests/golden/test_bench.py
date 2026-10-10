@@ -296,6 +296,29 @@ def test_a_cap_nut_s_dome_is_measured(edges_report):
     }
 
 
+def test_a_cap_nut_on_a_stud_no_rule_names(edges_report):
+    """Issue #156: stud_dome's cap nuts, which only the edges sidecar keeps, each on
+    a stud no rule names, a cover 2 into its dome, 67.02 mm^3. Shut in a pocket, no
+    spanner goes on, and the verdict tells the clash; open, the spanner turns it
+    from the side, and no verdict asks. The clash list tells both
+    (test_clashes_bench.py)."""
+    by_name = {r.fastener.name: r for r in edges_report.results}
+    told = {
+        name: (r.verdict.value, r.tool, r.how, r.reason)
+        for name, r in by_name.items()
+        if name.startswith("stud_dome_")
+    }
+    assert told == {
+        "stud_dome_shut_nut": (
+            "not-covered",
+            None,
+            None,
+            "drawn into stud_dome_shut_cover (67.0 mm^3): fix the model",
+        ),
+        "stud_dome_open_nut": ("turns", "spanner-13", "open end, full length", None),
+    }
+
+
 def test_a_rule_s_tool_that_can_t_drive_its_fastener_is_not_covered(edges_report):
     """Issue #72: wrong_tool's fasteners, which only the edges sidecar keeps. Each
     misfit is not covered and nothing is swept; a tool no table holds says so; the

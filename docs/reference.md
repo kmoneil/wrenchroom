@@ -533,6 +533,15 @@ every run, and every report says it wasn't looked for.
   pieces, or an ignored part (`--with-ignored` measures those too). A fastener not
   understood (no axis) can't be measured past its thread, so it is left out, and
   said.
+- **The list and the verdicts agree, to the volume** (issue #156). A fastener is
+  measured to the end `check` comes at it from: a screw's whole head, which its
+  solid says, a dome, a crown or a countersunk cone and all; a nut to its free end,
+  which the parts round it say, its bolt where both its ends are covered. So a
+  verdict's `drawn into lid (96.1 mm^3)` is the list's `CLASH nut into lid  96.1
+  mm^3`. One fastener drawn twice is told whole, threads and all, as its verdict
+  tells it (`CLASH M3x8 into M3x12  120.8 mm^3  (one fastener drawn twice)`), the
+  later by name into the first. The list has more than the verdicts do: a clash
+  that stops no tool changes no verdict, and only the list says it.
 - **`allow:`** in the sidecar names pairs meant to overlap, as pairs of part globs,
   either way round: `allow: [[shaft_*, bearing_*], [hub_*, tire_*]]`. A glob that
   names no part fails the run (exit 2), as a rule's does.
@@ -540,6 +549,7 @@ every run, and every report says it wasn't looked for.
   named like a cable (`a gland and its cable: drawn without a bore?`), and a press
   fit, an overlap a few hundredths thick (`a press fit, 0.03 deep? allow it in the
   sidecar`: its volume over half its surface, which is how thick a thin shell is).
+  And one for a fault: `one fastener drawn twice`.
 - **States.** A state with a model of its own (a lever raised) is looked in too,
   and a clash the model as given doesn't have is said with its state
   (`CLASH lever into wall  16.0 mm^3  in state lever-up`). A state that only takes
