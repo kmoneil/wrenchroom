@@ -294,6 +294,8 @@ def edges_sidecar():
             # cap_dome's cap nuts and their bolts, ignored there too (issue #123).
             {"parts": "cap_dome_*_nut", "kind": "nut", "size": "M8"},
             {"parts": "cap_dome_*_bolt", "kind": "screw", "head": "hex", "size": "M8"},
+            # stud_dome's cap nuts, on studs no rule names, ignored there too (issue #156).
+            {"parts": "stud_dome_*_nut", "kind": "nut", "size": "M8"},
             # wrong_tool's fasteners, each with a tool its rule names (issue #72).
             *(_wrong_tool(role, rule) for role, rule in WRONG_TOOL.items()),
         ],

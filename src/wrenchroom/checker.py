@@ -23,6 +23,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field, replace
 from fnmatch import fnmatchcase
+from functools import partial
 from itertools import compress
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -33,7 +34,7 @@ from build123d import GeomType, Plane, Shape, Solid
 from wrenchroom.assembly import Assembly, Part
 from wrenchroom.build import Build, Placed, Plan
 from wrenchroom.build import plan as plan_build
-from wrenchroom.clashes import Clashes, Measured, scan
+from wrenchroom.clashes import TWICE, Clashes, Measured, scan
 from wrenchroom.config import (
     Config,
     ConfigError,
@@ -435,10 +436,11 @@ def _clashes_in(
 ) -> tuple[list, tuple[str, ...]]:
     """One model's clashes, and the fasteners in it not understood, which aren't measured.
 
-    Each fastener is measured on this model's own copy of it, past its thread; a
-    nut's thread runs from its bolt's side (:func:`_from_its_bolt`). One with no
-    frame can't be measured past its thread, and measured whole, its thread in its
-    hole would be a clash: it is left out, and said.
+    Each fastener is measured on this model's own copy of it, past its thread, to
+    the end the check measures it to, in the scene the check tries it in
+    (:func:`_measured_end`). One with no frame can't be measured past its thread,
+    and measured whole, its thread in its hole would be a clash: it is left out,
+    and said.
     """
     measured: dict[str, Callable[[], Measured]] = {}
     unmeasured: list[str] = []
@@ -453,7 +455,8 @@ def _clashes_in(
             continue
         partner = pairs.get(name)
         bolt = assembly[partner] if partner is not None and partner in assembly.names else None
-        measured[name] = _measuring(frame, fastener, bolt)
+        scene = partial(_scene_of, fastener, assembly, removed, space)
+        measured[name] = _measuring(frame, fastener, bolt, scene)
     leaf = {part.name: part.piece_of or part.name for part in assembly}
     mates = {fastener.name: fastener.mates for fastener in fasteners if fastener.mates}
 
@@ -478,18 +481,20 @@ def _clashes_in(
     return scan(parts, space.engine, measured, meant, state), tuple(unmeasured)
 
 
-def _measuring(frame: _Frame, fastener: Fastener, bolt: Part | None) -> Callable[[], Measured]:
+def _measuring(
+    frame: _Frame, fastener: Fastener, bolt: Part | None, scene: Callable[[], Scene]
+) -> Callable[[], Measured]:
     """A fastener measured past its thread for a clash, on first need, then kept.
 
     Its regions are parts of their own, which the engine meshes and keeps as it does
-    any part. A nut's thread runs from its bolt's side (:func:`_from_its_bolt`).
+    any part. Measured to the end the check measures it to (:func:`_measured_end`),
+    in ``scene``, the one the check tries it in.
     """
     kept: list[Measured] = []
 
     def measure() -> Measured:
         if not kept:
-            nut = fastener.kind is Kind.NUT and bolt is not None
-            toward = _from_its_bolt(frame, bolt) if nut and bolt is not None else None
+            toward = _measured_end(frame, fastener, scene(), bolt)
             region, past_thread = _measured(frame, fastener, toward)
             kept.append(
                 Measured(
@@ -501,11 +506,6 @@ def _measuring(frame: _Frame, fastener: Fastener, bolt: Part | None) -> Callable
         return kept[0]
 
     return measure
-
-
-#: Two fasteners sharing more than this fraction of each one's volume are one drawn
-#: twice (issue #94): a screw drawn once for each of two optional parts, say.
-_TWICE = 0.5
 
 
 # ---------------------------------------------------------------------------
@@ -836,14 +836,14 @@ def _drawn_twice(
     high = np.minimum(corners[:, None, 1], corners[None, :, 1])
     shared = np.clip(high - low, 0.0, None).prod(axis=2)
     own = (corners[:, 1] - corners[:, 0]).prod(axis=1)
-    near = np.triu(shared > _TWICE * np.maximum(own[:, None], own[None, :]), k=1)
+    near = np.triu(shared > TWICE * np.maximum(own[:, None], own[None, :]), k=1)
     found: dict[str, tuple[str, float]] = {}
     for first, second in np.argwhere(near):
         kept, other = fasteners[first].name, fasteners[second].name
         if kept in found or other in found:
             continue
         common = exact_overlap(shapes[first], shapes[second])
-        if common > _TWICE * max(shapes[first].volume, shapes[second].volume):
+        if common > TWICE * max(shapes[first].volume, shapes[second].volume):
             found[other] = (kept, common)
     return found
 
@@ -1566,13 +1566,7 @@ def _try_in(
             frame = _frame(assembly[fastener.name], fastener, _pieces(assembly, fastener.name))
         except NotCovered as exc:
             return _Candidate(fastener, reason=str(exc), state=state_name)
-    mates = (
-        {name for name in assembly.names if is_mate(name, fastener.mates)}
-        if fastener.mates
-        else set()
-    )
-    pieces = assembly.pieces(fastener.name)  # its other solids, which go with it
-    scene = space.scene(assembly, {fastener.name, *mates, *pieces} | removed)
+    scene = _scene_of(fastener, assembly, removed, space)
     oriented = _oriented(fastener, frame, scene, state_name, partner)
     if isinstance(oriented, _Candidate):
         return oriented
@@ -1587,6 +1581,19 @@ def _try_in(
         return candidate
     _try_tools(candidate, frame, mount, geometry, scene, tools, partner)
     return candidate
+
+
+def _scene_of(
+    fastener: Fastener, assembly: Assembly, removed: frozenset[str], space: _StateSpace
+) -> Scene:
+    """What a fastener is tried among: every part but itself, its mates and what is off."""
+    mates = (
+        {name for name in assembly.names if is_mate(name, fastener.mates)}
+        if fastener.mates
+        else set()
+    )
+    pieces = assembly.pieces(fastener.name)  # its other solids, which go with it
+    return space.scene(assembly, {fastener.name, *mates, *pieces} | removed)
 
 
 def _oriented(
@@ -1849,6 +1856,23 @@ def _from_its_bolt(frame: _Frame, bolt: Part) -> Vec:
     return frame.direction if (min(ends) + max(ends)) / 2 < middle else _neg(frame.direction)
 
 
+def _measured_end(frame: _Frame, fastener: Fastener, scene: Scene, bolt: Part | None) -> Vec | None:
+    """The end a clash is measured to, where no tool's way in has said (issue #156).
+
+    The end the check would come at it from (:func:`_points_in`): a screw's head's,
+    which its solid says, and a nut's free one, which the parts round it say. A
+    clash list tries no tool, and measures what the verdicts measure: a head's dome
+    and all (#116), a cap nut's (#123). Where that end can't be told, a nut both of
+    whose ends are covered, its pair says: the end away from it
+    (:func:`_from_its_bolt`). None where nothing says. An insert and a set screw
+    are measured the same from either end.
+    """
+    try:
+        return _neg(frame.direction) if _points_in(frame, fastener, scene) else frame.direction
+    except NotCovered:
+        return _from_its_bolt(frame, bolt) if bolt is not None else None
+
+
 def _set_core(frame: _Frame, fastener: Fastener) -> Shape:
     """A set screw's core, for a clash: all of it inside its thread (issue #122).
 
@@ -1947,9 +1971,9 @@ def _clashes(
     """Each part the fastener is drawn into, past its thread, and by how much (mm^3)."""
     part, engine = frame.part, scene.engine
     box = engine.part_bounds(part)
-    if toward is None and fastener.kind is Kind.NUT and partner is not None:
+    if toward is None:
         bolt = next((p for p in scene.parts if p.name == partner), None)
-        toward = _from_its_bolt(frame, bolt) if bolt is not None else None
+        toward = _measured_end(frame, fastener, scene, bolt)
     region, past_thread = _measured(frame, fastener, toward)
     found: list[tuple[str, float]] = []
     for other in scene.parts:
@@ -2216,7 +2240,7 @@ class _Geometry:
 def _orient(frame: _Frame, fastener: Fastener, scene: Scene) -> tuple[Mount, _Geometry]:
     direction = frame.direction
     projections = frame.projections
-    if not frame.oriented and _is_flipped(frame, fastener, scene):
+    if _points_in(frame, fastener, scene):
         direction = _neg(direction)
         projections = tuple(-p for p in projections)
     top = max(projections)
@@ -2304,6 +2328,11 @@ def _drawn_af(frame: _Frame, fastener: Fastener) -> float | None:
     if fastener.tool is None or fastener.drive_af is not None:
         return None
     return read_shape(frame.part.shape, fastener.kind, fastener.head).drive_af
+
+
+def _points_in(frame: _Frame, fastener: Fastener, scene: Scene) -> bool:
+    """Whether a frame's axis points into the joint: a rule's own axis never does."""
+    return not frame.oriented and _is_flipped(frame, fastener, scene)
 
 
 def _is_flipped(frame: _Frame, fastener: Fastener, scene: Scene) -> bool:

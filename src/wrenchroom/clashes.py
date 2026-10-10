@@ -17,6 +17,9 @@ own nut.
   bored at its minor diameter, overlap by design and are no clash. So is a fastener
   with its pair, its mates and its own pieces, an ignored part with anything, and
   any two parts the sidecar's ``allow:`` names.
+- What a verdict says of a fastener's clash, the list says to the same volume
+  (issue #156): a screw's whole head, a nut to its free end, and one fastener drawn
+  twice, all the two solids share.
 - Two shortcuts get a hint, not another verdict: a gland or grommet drawn into a
   cable (drawn without a bore?), and a press fit, an overlap a few hundredths thick.
 """
@@ -48,6 +51,13 @@ if TYPE_CHECKING:
 #: hundredths into its hole. Said, as a hint.
 PRESS_FIT_MM = 0.1
 
+#: Two fasteners sharing more than this fraction of each one's volume are one drawn
+#: twice (issue #94): a screw drawn once for each of two optional parts, say.
+TWICE = 0.5
+
+#: What a clash of one fastener drawn twice is said to be.
+TWICE_HINT = "one fastener drawn twice"
+
 #: Words in a part's name that say it is a cable, which a gland or grommet is drawn
 #: round.
 _CABLE_WORDS = frozenset({"cable", "cables", "wire", "wires", "cord", "lead", "leads"})
@@ -66,8 +76,8 @@ class Clash:
         volume: How much they share, mm^3: of a fastener, its part past its thread.
         point: The middle of the overlap's box, mm: where to look.
         state: The state whose model it is in, where it isn't in the model as given.
-        hint: A shortcut it may be, rather than a fault: a press fit, a gland round its
-            cable.
+        hint: What it may be: a shortcut rather than a fault (a press fit, a gland
+            round its cable), or one fastener drawn twice.
     """
 
     first: str
@@ -254,6 +264,9 @@ def _clash(
     if engine.parts_apart(a, b):
         return None
     sides = [(x, y) for x, y in ((a, b), (b, a)) if x.name in fasteners]
+    twice = _drawn_twice(a, b, state) if len(sides) > 1 else None
+    if twice is not None:
+        return twice
     if sides:
         return _fastener_clash(sides, engine, fasteners, state)
     overlap = exact_common(a.shape, b.shape)
@@ -285,6 +298,25 @@ def _fastener_clash(
     return max(found, key=_by_volume) if found else None
 
 
+def _drawn_twice(a: Part, b: Part, state: str | None) -> Clash | None:
+    """Two fasteners that are one drawn twice, told as its verdict tells it (issue #156).
+
+    All the two solids share, threads and all: over half of each (:data:`TWICE`),
+    they are one fastener, and its shank drawn twice is as much the fault as its
+    head. The later by name is the one drawn over the other, as ``check`` says it
+    (issue #94).
+    """
+    overlap = exact_common(a.shape, b.shape)
+    if overlap is None or overlap.volume <= TWICE * max(_by_size(a)[0], _by_size(b)[0]):
+        return None
+    kept, other = sorted((a, b), key=_by_name)
+    return _made(other, kept, overlap, state, hint=TWICE_HINT)
+
+
+def _by_name(part: Part) -> str:
+    return part.name
+
+
 def _by_size(part: Part) -> tuple[float, str]:
     """Smaller first, by volume, then by name: the part drawn into the other."""
     return cast("Solid", part.shape).volume, part.name  # a solid, or a compound of them
@@ -295,7 +327,13 @@ def _by_volume(clash: Clash) -> float:
 
 
 def _made(
-    first: Part, second: Part, overlap: PartOverlap, state: str | None, *, gland: bool
+    first: Part,
+    second: Part,
+    overlap: PartOverlap,
+    state: str | None,
+    *,
+    gland: bool = False,
+    hint: str | None = None,
 ) -> Clash:
     point = tuple((lo + hi) / 2 for lo, hi in zip(overlap.low, overlap.high, strict=True))
     return Clash(
@@ -304,7 +342,7 @@ def _made(
         overlap.volume,
         (point[0], point[1], point[2]),
         state,
-        _hint(second, overlap, gland=gland),
+        hint or _hint(second, overlap, gland=gland),
         overlap.shape,
     )
 

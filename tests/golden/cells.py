@@ -2536,12 +2536,16 @@ def set_core():
     return [("hub", hub), ("screw", Pos(0, 0, -1) * set_screw())]
 
 
-def _cap_nut():
+def _cap_nut(bore_down=False):
     """An M8 cap nut, DIN 1587-ish: a 13 hex z 0 to 6.5, a collar 6.25 round to z 9, a
-    dome, a sphere of 6 about z 9, to z 15; bored at M8's minor, blind, to z 12."""
+    dome, a sphere of 6 about z 9, to z 15; bored at M8's minor, blind, to z 12.
+    ``bore_down``: the same solid, its bore's own axis drawn pointing down: the
+    bore, its largest round face, sets its frame's axis, which then points from its
+    dome into what it is on."""
     dome = Pos(0, 0, 7.75) * Cylinder(6.25, 2.5) + Pos(0, 0, 9.0) * Sphere(6.0)
     dome = dome - Pos(0, 0, -30) * Box(40, 40, 60)
-    return hex_prism(13, 6.5) + dome - Pos(0, 0, 6) * Cylinder(6.647 / 2, 12)
+    bore = Cylinder(6.647 / 2, 12)
+    return hex_prism(13, 6.5) + dome - Pos(0, 0, 6) * (Rot(180, 0, 0) * bore if bore_down else bore)
 
 
 @cell("cap_dome", ignore=["*cap_dome_*"], timed=False)
@@ -3190,4 +3194,30 @@ def ring_handle():
             (f"{tag}_nut", Pos(x, 0, 0) * hex_nut(8, 13, 6.5)),
             (f"{tag}_tube", Pos(x, 0, 6.5 + gap + 30) * tube),
         ]
+    return parts
+
+
+@cell("stud_dome", ignore=["*stud_dome_*"], timed=False)
+def stud_dome():
+    """A clash list measures a nut to its free end with no bolt to say it (issue
+    #156): two of cap_dome's M8 cap nuts, each on a stud no rule names, up through
+    the plate to z 5, and over each a cover from z 13, 2 into its dome: a cap of 2
+    of a sphere of 6, 67.02 mm^3. A clash list tries no tool, and with no bolt to
+    say which end the dome is, it measured the hex alone, under the cover: no clash.
+    Clashes are not-covered, so only the edges sidecar keeps them, as drawn_in's.
+
+    shut: a pocket 8 round its hex leaves no spanner on, and the verdict asks what
+    the nut is drawn into: its cover, which the list didn't tell. open: no pocket,
+    and the open end turns the nut from the side, under the cover: no verdict asks
+    of a clash that stops nothing, and the list alone is where it is said. Its bore
+    is drawn pointing down, so its dome is at the near end of its own axis.
+    """
+    parts = [("plate", plate(t=10, holes=[(-100, 0, 4.5), (100, 0, 4.5)]))]
+    for tag, x in (("shut", -100), ("open", 100)):
+        parts += [
+            (f"{tag}_stud", Pos(x, 0, -2.5) * Cylinder(4, 15)),
+            (f"{tag}_nut", Pos(x, 0, 0) * _cap_nut(bore_down=tag == "open")),
+            (f"{tag}_cover", Pos(x, 0, 0) * slab(13.0, w=60, d=60)),
+        ]
+    parts.append(("shut_pocket", Pos(-100, 0, 4) * (Box(60, 60, 8) - Cylinder(8.0, 8))))
     return parts
