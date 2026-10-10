@@ -106,20 +106,21 @@ def test_the_note_stops_listing_hand_room(hand_report, bench_report):
         f"{named} parts named like a fastener, "
         "with no drive or bore in the solid (passed over); 1 part named for a leadscrew "
         f"or a ball screw, which no tool turns (passed over); {alike} parts shaped like "
-        "fasteners, not named as any (passed over); 1 part drawn as a surface, not a "
-        "solid (left out); parts the model doesn't have"
+        "fasteners, not named as any (passed over); 1 part named like a connector "
+        "(passed over); 1 part drawn as a surface, not a solid (left out); parts the "
+        "model doesn't have"  # the connector: byname's cover, named for a plug (#157)
     )
     assert "room for a hand" in bench_report.terminal_lines()[-1]
 
 
 #: What hand room takes from the bench's connectors (M9): fingers don't fit round
-#: plug_tight's plug, nor a thumb on plug_latch's latch. Each comes off without.
+#: pull_tight's plug, nor a thumb on pull_latch's latch. Each comes off without.
 PLUGS = {
-    "plug_tight_plug": (
+    "pull_tight_plug": (
         "no-grip",
-        {"plug_tight_left", "plug_tight_right", "plug_tight_near", "plug_tight_far"},
+        {"pull_tight_left", "pull_tight_right", "pull_tight_near", "pull_tight_far"},
     ),
-    "plug_latch_plug": ("no-latch-access", {"plug_latch_wall"}),
+    "pull_latch_plug": ("no-latch-access", {"pull_latch_wall"}),
 }
 
 

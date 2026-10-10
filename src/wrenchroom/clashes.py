@@ -26,7 +26,7 @@ own nut.
   it: a press fit, or a clash to fix.
 - An insert set into its part is no clash (issue #158): a heat-set insert goes into
   a hole drawn smaller than its knurl, so overlapping the part it is melted into is
-  what it is drawn to do. It is counted apart (:func:`_set_in`), and a clash only
+  what it is drawn to do. It is counted apart (:func:`_share`), and a clash only
   where the part is over one end of it, or takes up more of it than a hole drawn
   for an insert leaves.
 """
@@ -375,7 +375,7 @@ def _fastener_clash(
     """A fastener drawn into a part past its thread: the larger, where two are fasteners.
 
     An insert in a part that is no fastener may be set into it, which is no clash
-    (:func:`_set_in`); a nut in the trap that holds it is said so.
+    (:func:`_share`); a nut in the trap that holds it is said so.
     """
     found = []
     for fastener, other in sides:

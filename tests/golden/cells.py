@@ -3024,7 +3024,7 @@ def _plug():
 
 
 @cell(
-    "plug_open",
+    "pull_open",
     connectors=[{"parts": "plug"}],
     plugs={
         "plug": {
@@ -3036,7 +3036,7 @@ def _plug():
         }
     },
 )
-def plug_open():
+def pull_open():
     """A plug in its shroud on a board, nothing over it. Its shroud holds it every way
     but up, so it comes off up; it sits 7 in, so it must come 10 (7, plus 3). The board
     under the shroud holds it in no way: it doesn't touch it.
@@ -3045,7 +3045,7 @@ def plug_open():
 
 
 @cell(
-    "plug_shelf",
+    "pull_shelf",
     connectors=[{"parts": "plug"}],
     plugs={
         "plug": {
@@ -3056,8 +3056,8 @@ def plug_open():
         }
     },
 )
-def plug_shelf():
-    """plug_open under a shelf 8 over the plug's top, closer than the 10 it must come:
+def pull_shelf():
+    """pull_open under a shelf 8 over the plug's top, closer than the 10 it must come:
     stuck, naming the shelf. 12 over, it would come off.
     """
     return [
@@ -3069,12 +3069,12 @@ def plug_shelf():
 
 
 @cell(
-    "plug_cable",
+    "pull_cable",
     connectors=[{"parts": "plug", "mates": ["lead"]}],
     plugs={"plug": {"verdict": "unplugs", "receptacle": ["shroud"], "blocked_by": []}},
 )
-def plug_cable():
-    """plug_open with its cable, its lead, 6 across, running 80 up from its top through a
+def pull_cable():
+    """pull_open with its cable, its lead, 6 across, running 80 up from its top through a
     hole 7 across in a panel 25 over it. The lead is its mate: it comes with the plug,
     and is in nobody's way. Without the mate, the lead would leave it stuck. (A lead,
     not a cable: the bench ignores every part named a cable.)
@@ -3095,12 +3095,12 @@ def _column(x, y, width, depth):
 
 
 @cell(
-    "plug_tight",
+    "pull_tight",
     connectors=[{"parts": "plug"}],
     plugs={"plug": {"verdict": "unplugs", "receptacle": ["shroud"], "blocked_by": []}},
 )
-def plug_tight():
-    """plug_open in a row and a channel: neighbours 2 off either end, walls 3 off either
+def pull_tight():
+    """pull_open in a row and a channel: neighbours 2 off either end, walls 3 off either
     side, all 30 tall. It comes off: nothing is over it. With hand room on, no grip:
     two fingers 16 across fit at no angle round it, the channel being 14 wide and the
     row's gaps 2 (test_hand_room_bench.py).
@@ -3117,12 +3117,12 @@ def plug_tight():
 
 
 @cell(
-    "plug_latch",
+    "pull_latch",
     connectors=[{"parts": "plug", "latch": "+y"}],
     plugs={"plug": {"verdict": "unplugs", "receptacle": ["shroud"], "latch": [0.0, 1.0, 0.0]}},
 )
-def plug_latch():
-    """plug_open with its latch on its +y side, a wall 5 off that side. It comes off,
+def pull_latch():
+    """pull_open with its latch on its +y side, a wall 5 off that side. It comes off,
     and fingers pinch it from its ends. With hand room on, no latch access: a thumb 18
     across, pressing the latch, meets the wall (test_hand_room_bench.py).
     """
@@ -3280,3 +3280,41 @@ def hosted():
         ("snug_nut", Pos(100, 0, -16) * hex_nut(3, 5.5, 2.4)),
     ]
     return parts
+
+
+@cell(
+    "byname",
+    plugs={
+        "plug_motor": {
+            "verdict": "unplugs",
+            "source": "name",
+            "receptacle": ["shroud_a"],
+            "blocked_by": [],
+        },
+        "plug_fan_2": {
+            "verdict": "unplugs",
+            "source": "name",
+            "receptacle": ["shroud_b"],
+            "blocked_by": [],
+        },
+    },
+)
+def byname():
+    """A plug is found by its name wherever "plug" stands in it (issue #157), with no
+    connectors: rule: two of pull_open's plugs in their shrouds, 60 apart, named as
+    code names a part, its kind first: plug_motor, and plug_fan_2, its number after
+    it. Only a name ending in "plug" was checked, and these two were passed over
+    without a word. A cover beside them, plug_cover, is named for a plug and is not
+    one: listed as named like a connector, not checked, so a plug named some way the
+    words don't cover is at least said. And drain_plug, a pin in the board: turned
+    in, no connector, and not listed.
+    """
+    return [
+        ("board", plate(t=2)),
+        ("shroud_a", Pos(-30, 0, 0) * _shroud()),
+        ("plug_motor", Pos(-30, 0, 0) * _plug()),
+        ("shroud_b", Pos(30, 0, 0) * _shroud()),
+        ("plug_fan_2", Pos(30, 0, 0) * _plug()),
+        ("plug_cover", Pos(0, 40, 5) * Box(40, 10, 10)),
+        ("drain_plug", Pos(0, -40, 3) * Cylinder(4, 6)),
+    ]

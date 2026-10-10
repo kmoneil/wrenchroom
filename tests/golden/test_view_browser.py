@@ -172,7 +172,7 @@ def test_the_panel_lists_the_tools_the_report_needs_in_node(bench_page):
 
 
 def test_the_overview_colours_every_fastener_by_its_verdict_in_node(bench_page):
-    # And each plug by its own (M9): plug_shelf's stuck, red; the rest come off, green.
+    # And each plug by its own (M9): pull_shelf's stuck, red; the rest come off, green.
     page, view = bench_page
     (load,) = _node(page, "")
     record = load["drawn"]
@@ -182,8 +182,11 @@ def test_the_overview_colours_every_fastener_by_its_verdict_in_node(bench_page):
     colour_of = {f["name"]: f["colour"] for f in view["fasteners"]}
     colour_of |= {p["name"]: p["colour"] for p in view["connectors"]["found"]}
     assert {p["name"]: p["colour"] for p in view["connectors"]["found"]} == {
-        "plug_shelf_plug": COLOURS["fails"],
-        **{f"plug_{cell}_plug": COLOURS["turns"] for cell in ("cable", "latch", "open", "tight")},
+        "pull_shelf_plug": COLOURS["fails"],
+        **{f"pull_{cell}_plug": COLOURS["turns"] for cell in ("cable", "latch", "open", "tight")},
+        # byname's two, found by their names, "plug" first in each (issue #157).
+        "byname_plug_motor": COLOURS["turns"],
+        "byname_plug_fan_2": COLOURS["turns"],
     }
     assert set(by_part) == set(view["views"][view["overview"]]["parts"])
     for index, colour in by_part.items():

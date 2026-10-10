@@ -454,8 +454,9 @@ does a part no step adds, or two do. Details are in the [reference](https://gith
 
 A plug must come off its receptacle: pulled straight out, far enough to be free, with
 nothing in the way. `check` checks each plug the sidecar's `connectors:` names, and
-each part whose name is about a plug (`motor_plug`). It finds what the plug sits in,
-which way it comes out, and how far, from the geometry, and says so where it can't:
+each part whose name is about a plug (`motor_plug`, `plug_motor`). It finds what the
+plug sits in, which way it comes out, and how far, from the geometry, and says so
+where it can't:
 
 ```yaml
 # wrenchroom.yaml

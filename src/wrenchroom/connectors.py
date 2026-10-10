@@ -18,11 +18,13 @@ pull, not a turn: out of its receptacle, along its pull axis, far enough to be f
   it) and the ignored parts: a part in the way leaves it ``stuck``.
 
 A part is a connector where the sidecar's ``connectors:`` names it, or where its name
-is about a plug (``motor_plug``): a plug is the half that comes off. A name of a
+is about a plug, wherever the word stands in it (``motor_plug``, ``plug_motor``,
+``Plug - Motor``, ``fan plug 2``): a plug is the half that comes off. A name of a
 connector family (XT30, XT60, XT90, JST, Deutsch DT) or a connector word (connector,
 header, jack, receptacle) says nothing of which half comes off, and most such parts in
 a model are the halves soldered to a board: such a part is listed, not checked, until
-the sidecar names it.
+the sidecar names it. So is one named for a plug and for something else a plug has or
+goes into (``plug_cover``, ``plug_header``): no plug is passed over without a word.
 
 Whether the fingers have room to grip it, and a thumb its latch, waits on figures
 checked against real hands, as room for a hand does.
@@ -322,11 +324,41 @@ def _md_why(result: ConnectorResult) -> str:
 # Names: a plug is the half that comes off.
 # ---------------------------------------------------------------------------
 
-#: The words that name the half that comes off.
-PLUG_WORDS = frozenset({"plug", "plugs"})
+#: The word that names the half that comes off, an instance number run onto it or
+#: not (``plug2``), alone or run onto the word before it (``motorplug``, three letters
+#: or more: ``unplug`` is no plug).
+_PLUG = re.compile(r"(?:(?P<before>[a-z]{3,}))?plugs?\d*")
 
-#: Words before "plug" that make it a plug turned in, or no connector at all.
-_NOT_PULLED = frozenset({"drain", "spark", "threaded", "screw", "fill", "oil"})
+#: Words that make a plug one turned or pressed in, no connector at all: before it
+#: (``oil drain plug``), or all that follows it (``plug_drain``).
+_NOT_PULLED = frozenset(
+    {"drain", "spark", "threaded", "screw", "fill", "filler", "oil", "blanking"}
+)
+
+#: Nouns a plug describes: after "plug", the part is that, not the plug. The other
+#: half, what a plug is made of and what goes on it, what holds it, and what it comes
+#: through. Where in doubt a word is here: a part named with one is listed, not
+#: checked, and a part wrongly taken for a plug is pulled at and found not covered.
+_NOT_THE_PLUG = frozenset(
+    # the other half
+    {"header", "headers", "jack", "jacks", "receptacle", "receptacles", "socket", "sockets"}
+    | {"inlet", "outlet", "port"}
+    # what a plug is made of, and what goes on it
+    | {"shroud", "pin", "pins", "contact", "contacts", "terminal", "terminals", "crimp", "ferrule"}
+    | {"latch", "lock", "lever", "tab", "cover", "cap", "lid", "boot", "hood", "seal", "gasket"}
+    | {"sleeve", "relief", "gland", "grommet", "label"}
+    | {"cable", "cables", "wire", "wires", "lead", "leads", "harness", "cord", "loom"}
+    # what holds it, and what it comes through
+    | {"holder", "bracket", "mount", "clip", "clamp", "retainer", "guard", "support", "spacer"}
+    | {"standoff", "plate", "panel", "board", "pcb", "shelf", "wall", "block", "base", "frame"}
+    | {"hole", "cutout", "slot", "opening", "pocket"}
+    # what is used on it
+    | {"screw", "nut", "bolt", "washer", "tool", "wrench", "key", "puller", "adapter", "adaptor"}
+    | {"tester"}
+)
+
+#: Words that name a cable: one in a plug's way, touching it, is likely its own.
+CABLE_WORDS = frozenset({"cable", "cables", "wire", "wires", "lead", "leads", "harness", "cord"})
 
 #: Words that name a connector, or a half of one, without saying which.
 CONNECTOR_WORDS = frozenset(
@@ -357,16 +389,47 @@ class Named(enum.Enum):
 def read_connector_name(name: str) -> Named | None:
     """Whether a name is about a plug, a connector of no stated half, or neither.
 
-    About a plug when "plug" is the word the name is about, its last (``xt60_plug``,
-    ``Motor Plug``), and nothing says it is turned in (``drain plug``). A connector
-    word anywhere, or a family's code, makes a connector of no stated half.
+    About a plug when "plug" is the noun the name is about, wherever it stands:
+    last, as a part is named in a sentence (``xt60_plug``, ``Motor Plug``), or
+    first, as code names a part by its kind (``plug_motor``, ``plug_battery_main``,
+    ``Plug - Motor``), whatever number or side follows it (``fan plug 2``,
+    ``motor_plug_left``, ``plug2``). Not where a word says it is turned or pressed
+    in (``drain plug``, ``plug_drain``): no connector at all.
+
+    A plug word followed by a noun it describes (``plug_cover``, ``plug_header``)
+    is about that other thing, but the list of such nouns is no dictionary: the
+    part is listed as a connector of no stated half, so no plug goes unsaid. So is
+    a connector word anywhere, or a family's code.
     """
     words = name_words(name)
-    if words and words[-1] in PLUG_WORDS and not _NOT_PULLED & set(words[:-1]):
-        return Named.PLUG
+    found = [(index, _PLUG.fullmatch(word)) for index, word in enumerate(words)]
+    plugs = [(index, match["before"]) for index, match in found if match]
+    if plugs:
+        at, run_on = plugs[-1]
+        before = {*words[:at], *([run_on] if run_on else [])}
+        after = set(words[at + 1 :])
+        if _NOT_PULLED & before or (after and after <= _NOT_PULLED):
+            return None
+        return Named.CONNECTOR if _NOT_THE_PLUG & after else Named.PLUG
     if CONNECTOR_WORDS & set(words) or _FAMILY.search(name):
         return Named.CONNECTOR
     return None
+
+
+def own_cable(blockers: tuple[str, ...], touching: Sequence[str]) -> str | None:
+    """What to say of a plug stuck behind a part named like a cable that touches it.
+
+    Its own cable, as likely as not, drawn leaving its back along the way it comes
+    off, and not named among its ``mates``: it comes off with the plug. The parts in
+    the way, and the question.
+    """
+    cables = tuple(
+        name for name in blockers if name in touching and CABLE_WORDS & set(name_words(name))
+    )
+    if not cables:
+        return None
+    whose = "" if len(cables) == len(blockers) else f"{listed(cables)}: "
+    return f"{listed(blockers)} ({whose}its own cable? name it in mates:)"
 
 
 # ---------------------------------------------------------------------------

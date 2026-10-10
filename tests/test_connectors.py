@@ -164,7 +164,6 @@ def test_a_later_rule_replaces_an_earlier_one_and_globs_naming_nothing_are_said(
         ("plugs", Named.PLUG),
         ("drain plug", None),  # screwed in, not pulled
         ("spark_plug", None),
-        ("plug_cover", None),  # a cover
         ("plugin_bracket", None),
         ("XT60 female", Named.CONNECTOR),
         ("xt90_male_panel", Named.CONNECTOR),
@@ -182,6 +181,79 @@ def test_a_later_rule_replaces_an_earlier_one_and_globs_naming_nothing_are_said(
 )
 def test_a_name_about_a_plug_is_one_and_a_connector_word_names_no_half(name, named):
     assert read_connector_name(name) is named
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        # The issue's six: the kind first, as code names a part, and a number after it.
+        "motor_plug",
+        "plug_motor",
+        "plug_battery_main",
+        "Plug - Motor",
+        "PLUG_FAN",
+        "fan plug 2",
+        # A side, a letter, a version or a number after it, or run onto it.
+        "motor_plug_left",
+        "Plug A",
+        "X1_plug_v2",
+        "fan_plug.001",
+        "plug_01",
+        "plug2",
+        "motor_plug2",
+        "PlugMotor",
+        "motorplug",  # run onto the word before it
+        "XT60 plug male",  # its family and its gender round it
+        "JST XH plug housing 4p",  # a plug's housing is the plug
+        "plug_oil_pump",  # the oil pump's plug: what follows is more than "oil"
+        # What stands before "plug" describes it, whatever it is: only what follows
+        # can be the thing the name is about.
+        "cable_plug",
+        "header plug",
+        "pcb_plug",
+        "plug_holder_plug",  # the last "plug" is the noun
+    ],
+)
+def test_plug_is_a_part_s_noun_wherever_it_stands(name):
+    assert read_connector_name(name) is Named.PLUG
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "drain_plug",
+        "oil drain plug M12",
+        "filler_plug",
+        "oil_filler_plug",
+        "blanking plug",
+        "sparkplug",
+        "plug_drain",  # the kind first, and what it is after it
+        "plug_filler_oil",
+        "threaded plug",
+        "unplug",  # no plug: a verb
+        "unplugged_state",
+        "plugin_bracket",
+    ],
+)
+def test_a_plug_turned_or_pressed_in_and_a_word_that_only_holds_plug_are_none(name):
+    assert read_connector_name(name) is None
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "plug_cover",  # a cover, most likely: said, not pulled at
+        "plug_header",
+        "plug_socket_4p",
+        "plug_motor_cable",
+        "motor_plug_holder",
+        "plug_board",
+        "plug_latch",
+        "Plug - Pin 3",
+    ],
+)
+def test_a_plug_word_before_a_noun_it_describes_is_listed_not_checked(name):
+    assert read_connector_name(name) is Named.CONNECTOR
 
 
 # ---------------------------------------------------------------------------
@@ -250,6 +322,58 @@ def test_its_cable_comes_with_it_as_a_mate(engine):
 def test_a_cable_not_said_to_be_its_mate_is_in_its_way(engine):
     report = run(cabled(), [{"parts": "plug"}], engine)
     assert outcome(report)["plug"] == (ConnectorVerdict.STUCK, ("jack",), ("cable",))
+
+
+OWN_CABLE = "its own cable? name it in mates:"
+
+
+@pytest.mark.parametrize("name", ["cable", "motor_wire", "Lead 2", "harness_a", "power cord"])
+def test_a_cable_in_its_way_that_touches_it_is_asked_about(engine, name):
+    # Its cable runs up from its top, along the way it comes off, and no mate names
+    # it: stuck, as before, and the reason says what it most likely is (issue #157).
+    parts = [(name if n == "cable" else n, shape) for n, shape in cabled()]
+    report = run(parts, [{"parts": "plug"}], engine)
+    found = result(report, "plug")
+    assert (found.verdict, found.blockers) == (ConnectorVerdict.STUCK, (name,))
+    assert found.reason == f"{name} ({OWN_CABLE})"
+    assert f"FAIL plug  stuck  {name} ({OWN_CABLE})" in report.terminal_lines()
+
+
+def test_a_cable_in_its_way_among_other_parts_is_the_one_asked_about():
+    # A shelf over it too, 6 above its top and bored for its cable: both are in its
+    # way, and the question is of the cable.
+    shelf = Pos(0, 0, 23 + 6 + 2) * Box(40, 40, 4) - Pos(0, 0, 31) * Cylinder(3.5, 5)
+    report = run([*cabled(), ("shelf", shelf)], [{"parts": "plug"}])
+    found = result(report, "plug")
+    assert set(found.blockers) == {"cable", "shelf"}
+    assert found.reason == f"cable, shelf (cable: {OWN_CABLE})"
+
+
+def test_a_cable_in_its_way_that_doesn_t_touch_it_is_any_part():
+    # Another plug's cable crossing 6 over this one: in its way, and not its own.
+    parts = [(n, s) for n, s in cabled() if n not in {"cable", "panel"}]
+    crossing = Pos(0, 0, 23 + 6 + 3) * Rot(0, 90, 0) * Cylinder(3, 80)
+    report = run([*parts, ("cable", crossing)], [{"parts": "plug"}])
+    found = result(report, "plug")
+    assert (found.verdict, found.blockers, found.reason) == (
+        ConnectorVerdict.STUCK,
+        ("cable",),
+        None,
+    )
+
+
+def test_a_part_in_its_way_that_touches_it_and_is_no_cable_is_any_part():
+    # The same rod up from its top, named a post: nothing says it comes off with it.
+    parts = [("post" if n == "cable" else n, shape) for n, shape in cabled()]
+    found = result(run(parts, [{"parts": "plug"}]), "plug")
+    assert (found.blockers, found.reason) == (("post",), None)
+
+
+def test_its_own_cable_is_asked_about_in_the_json_and_the_markdown():
+    report = run(cabled(), [{"parts": "plug"}])
+    (entry,) = report.to_json_dict()["connectors"]["results"]
+    assert (entry["blocked_by"], entry["reason"]) == (["cable"], f"cable ({OWN_CABLE})")
+    assert f"| `plug` | stuck | `cable ({OWN_CABLE})` |" in report.markdown()
 
 
 def test_a_plug_drawn_into_its_receptacle_comes_off_the_way_moving_leaves_no_more_in(engine):
@@ -420,6 +544,53 @@ def test_a_part_named_about_a_plug_is_checked_and_its_receptacle_isn_t_listed():
     ) in report.terminal_lines()
     assert "2 parts named like connectors (passed over)" in report.not_checked
     assert report.exit_code == 0
+
+
+def issue_model():
+    """The issue's six cells, 100 apart: a plug in a shroud on a board, each plug named
+    another way, and no shroud named like a connector."""
+    names = ["motor_plug", "plug_motor", "plug_battery_main", "Plug - Motor", "PLUG_FAN"]
+    names.append("fan plug 2")
+    parts = [("board", board())]
+    for index, name in enumerate(names):
+        parts += [(f"shroud {index}", shroud(100 * index)), (name, plug(100 * index))]
+    return parts, names
+
+
+def test_a_plug_named_any_of_the_issue_s_ways_is_checked():
+    parts, names = issue_model()
+    report = run(parts)
+    connectors = report.connectors
+    assert sorted(c.name for c in connectors.results) == sorted(names)
+    assert {(c.verdict, c.source) for c in connectors.results} == {
+        (ConnectorVerdict.UNPLUGS, "name")
+    }
+    assert [
+        c.receptacle for c in sorted(connectors.results, key=lambda c: names.index(c.name))
+    ] == [(f"shroud {index}",) for index in range(6)]
+    assert connectors.named == ()
+    assert "6 connectors: 6 unplug, 0 stuck, 0 not covered" in report.terminal_lines()
+    # Only motor_plug was checked, and nothing was said of the other five.
+
+
+def test_a_part_named_with_a_plug_and_another_noun_is_listed():
+    # A cover over the plug, clear of its way off, named for the plug it covers.
+    cover = Pos(40, 0, 15) * Box(10, 30, 30)
+    parts = [("board", board()), ("shroud", shroud()), ("plug_motor", plug())]
+    report = run([*parts, ("plug_motor_cover", cover)])
+    assert [c.name for c in report.connectors.results] == ["plug_motor"]
+    assert report.connectors.named == ("plug_motor_cover",)
+    assert (
+        "NOTE 1 part named like a connector, not checked: plug_motor_cover "
+        "(a name doesn't say which half comes off: list the plugs under connectors:)"
+    ) in report.terminal_lines()
+
+
+def test_a_drain_plug_is_no_connector_at_all():
+    parts = [("sump", shroud()), ("oil drain plug", plug()), ("plug_drain", plug(100))]
+    report = run(parts)
+    assert report.connectors is None
+    assert "connector" not in report.not_checked
 
 
 def test_detection_off_finds_no_plug_and_lists_none():

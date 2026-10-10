@@ -57,6 +57,7 @@ from wrenchroom.connectors import (
     find_receptacle,
     fist,
     holds_in,
+    own_cable,
     pinch,
     plug_shape,
     pull_axis,
@@ -661,7 +662,10 @@ def _connector_in_state(
         return replace(found, verdict=ConnectorVerdict.NOT_COVERED, reason=reason)
     blockers = pull_path(shape, axis, travel, scene)
     if blockers:
-        return replace(found, verdict=ConnectorVerdict.STUCK, blockers=blockers)
+        # A cable in its way that touches it is its own, as likely as not (issue #157).
+        beside = [part.name for part in touching(shape, others, space.engine)]
+        why = own_cable(blockers, beside)
+        return replace(found, verdict=ConnectorVerdict.STUCK, blockers=blockers, reason=why)
     if not hand_room:
         return found
     # Its receptacle stays: fingers start past it, and meet it only where it stands up
