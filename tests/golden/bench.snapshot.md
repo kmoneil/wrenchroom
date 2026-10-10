@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**168 fasteners: 126 turn, 11 held, 28 blocked, 3 stuck, 0 not covered**
+**174 fasteners: 129 turn, 14 held, 28 blocked, 3 stuck, 0 not covered**
 
 Kit `full`, ENGINE engine, wrenchroom VERSION.
 
@@ -31,13 +31,14 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | M2.5 nut | `spanner-5` | 1 | all pass (ring, full length) |
 | M24 nut | `spanner-36` | 1 | 1 of 1 fail |
 | M3 button screw | `hex-key-2` | 1 | all pass (driver straight in) |
-| M3 nut | - | 4 | all pass (held by its trap in trap\_stopped\_block) |
+| M3 insert | - | 2 | all pass (holds itself) |
+| M3 nut | - | 5 | all pass (held by its trap in trap\_stopped\_block) |
 | M3 nut | `spanner-5.5` | 2 | 1 of 2 fail |
 | M3 phillips screw | `driver-ph1` | 3 | all pass (driver straight in) |
 | M3 screw | `hand` | 2 | all pass (fingers round its head) |
 | M3 set screw | `hex-key-1.5` | 2 | 1 of 2 fail |
 | M3 slotted screw | `driver-slotted` | 1 | all pass (driver straight in) |
-| M3 socket screw | `hex-key-2.5` | 7 | 1 of 7 fail |
+| M3 socket screw | `hex-key-2.5` | 10 | 1 of 10 fail |
 | M3 torx screw | `torx-key-T10` | 1 | all pass (driver straight in) |
 | M4 button screw | `hex-key-2.5` | 6 | 2 of 6 fail |
 | M4 flat screw | `hex-key-2.5` | 2 | all pass (driver straight in) |
@@ -83,7 +84,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `hex-key-1.3` | 1 | not in metric-home; only `small_flat_screw` |
 | `hex-key-1.5` | 2 | only `grip_set_screw`, `small_socket_screw` |
 | `hex-key-2` | 1 | only `dome_tip_screw` |
-| `hex-key-2.5` | 12 |  |
+| `hex-key-2.5` | 15 |  |
 | `hex-key-3` | 5 |  |
 | `hex-key-5/32in` | 1 | not in metric-home; only `std_#10-32x1` |
 | `hex-key-4` | 8 |  |
@@ -121,7 +122,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `short-ring-18` | 1 | not in metric-home; only `shop_spanner_nut` |
 
 - By hand: 3 (`grip_thumb_screw`, `grip_wheel_thumbscrew`, `grip_wing_nut`)
-- No tool needed: 9, held by themselves or a trap
+- No tool needed: 12, held by themselves or a trap
 - No tool yet: 28 blocked (wrenchroom check says why)
 - Blocked, once reached: `hex-key-1.5` x1, `hex-key-2.5` x3, `hex-key-4` x1, `hex-key-5` x7, `spanner-5.5` x1, `spanner-13` x5, `spanner-15` x1, `spanner-16` x2, `spanner-24` x1, `spanner-36` x1 (only blocked fasteners need it: `big_tube_gland`), `driver-ph2` x1
 
@@ -174,6 +175,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 - `ball_shoulder_screw`: only a ball end turns it (ball end, 20 deg off the axis): a ball end takes much less torque than a straight key, so tightening it to its torque, or breaking it loose, may need a straight key, which can't get in
 - `ball_tilt_screw`: only a ball end turns it (ball end, 25 deg off the axis): a ball end takes much less torque than a straight key, so tightening it to its torque, or breaking it loose, may need a straight key, which can't get in
 - `cross_drawn_m4_screw`: cross drawn for PH1 (3.00 across its wings), where an M4's standard gives PH2: taken as drawn
+- `hosted_snug_nut`: drawn 2.3 mm^3 into its trap: a press fit, or a clash to fix
 - `sunk_cap_cap_nut`, `wide_dome_gland`: no ring, socket or nut driver gets on: past its hex the part is 20.00 across, wider than their bore round the hex; only an open end grips it, from the side
 - `undersize_nut`: hex drawn undersize: 12.60 across flats, 0.13 under the least its M8 standard allows (12.73); taken as size 13
 - `w10642_screw`: socket drawn loose: 2.60 across flats, 0.02 past the most the standards allow a 2.5 key's (2.58); taken as size 2.5

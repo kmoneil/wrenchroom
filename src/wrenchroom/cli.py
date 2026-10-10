@@ -251,6 +251,11 @@ def _beside(model: Path, config_path: Path | None) -> Path | None:
     is_flag=True,
     help="Also measure the parts the sidecar ignores (cables, hoses), which a clash leaves out.",
 )
+@click.option(
+    "--with-inserts",
+    is_flag=True,
+    help="Also list each insert set into its part, which is counted and is no clash.",
+)
 def clashes_command(
     model: Path,
     config_path: Path | None,
@@ -258,13 +263,15 @@ def clashes_command(
     md_path: str | None,
     exact: bool,
     with_ignored: bool,
+    with_inserts: bool,
 ) -> None:
     """List every pair of parts in MODEL drawn into each other, in every state's model.
 
     A fastener is measured past its thread, so a screw in a hole drawn at its tap
     drill is no clash; nor is a fastener with its pair or its mates, an ignored
-    part, or two parts the sidecar's allow: names. Exits 1 for a clash, 2 for a
-    config error or an allow glob that names no part.
+    part, or two parts the sidecar's allow: names. An insert set into its part, in
+    a hole drawn smaller than its knurl, is counted, and no clash. Exits 1 for a
+    clash, 2 for a config error or an allow glob that names no part.
     """
     from wrenchroom.assembly import Assembly
     from wrenchroom.checker import find_clashes
@@ -284,14 +291,14 @@ def clashes_command(
     except (ConfigError, ValueError) as exc:
         _say(f"error: {exc}", err=True)
         sys.exit(EXIT_NOT_COVERED)
-    for line in found.lines():
+    for line in found.lines(with_inserts=with_inserts):
         _say(line, err=to_stdout)
     engine = "exact" if exact else "mesh"
     if json_path is not None:
         document = partial(found.json_text, model.name, engine)
         _write(json_path, document, partial(_save, document))
     if md_path is not None:
-        page = partial(found.markdown_text, model.name)
+        page = partial(found.markdown_text, model.name, with_inserts=with_inserts)
         _write(md_path, page, partial(_save, page))
     sys.exit(found.exit_code)
 

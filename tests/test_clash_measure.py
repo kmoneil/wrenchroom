@@ -481,7 +481,8 @@ def test_a_trapped_nut_s_note_and_its_line_in_the_list_agree(engine):
     nut = results["nut"]
     assert (nut.verdict, nut.how) == (Verdict.HELD, "held by its trap in housing")
     assert nut.notes == ("drawn 67.0 mm^3 into its trap: a press fit, or a clash to fix",)
-    assert listed == [("nut", "housing", 67.0, None)]
+    # And the line says what the note says (issue #158).
+    assert listed == [("nut", "housing", 67.0, "its trap: a press fit, or a clash to fix")]
 
 
 def test_one_drawn_twice_in_a_state_s_model_alone_says_its_state(tmp_path):

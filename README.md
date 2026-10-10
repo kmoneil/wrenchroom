@@ -301,7 +301,9 @@ matches no part, say, which is usually a renamed part).
   nut). `wrenchroom clashes` lists them; `--clashes` (or `checks: {clashes: true}`)
   adds them to `check`'s report, where each fails the run. A fastener is measured
   past its thread, so a screw in its tapped hole is no clash, and the sidecar's
-  `allow:` names pairs meant to overlap (a press fit, a shaft in its bearing).
+  `allow:` names pairs meant to overlap (a press fit, a shaft in its bearing). A
+  heat-set insert set into its printed part, in a hole drawn smaller than its knurl,
+  is counted and is no clash (`--with-inserts` lists them).
 
   ```console
   $ wrenchroom clashes examples/bracket.step

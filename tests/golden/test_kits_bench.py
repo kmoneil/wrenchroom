@@ -189,6 +189,7 @@ def test_imperial_home_covers_nothing_metric_but_drivers(inch_json, bench_json):
     # cross_drawn's two since #125), grip's three turned by hand (issue #96),
     # trap's three nuts its blocks hold (issue #93), head_trap's head its plate holds
     # and the two joints head_trap and carriage_trap have that nothing in turns (issue
-    # #134), unsized's Phillips and slotted screws (issue #135), and build_ahead's
-    # trapped nut (M8's build order).
-    assert unsized == 25
+    # #134), unsized's Phillips and slotted screws (issue #135), build_ahead's
+    # trapped nut (M8's build order), and hosted's two inserts and its snug nut
+    # (issue #158).
+    assert unsized == 28

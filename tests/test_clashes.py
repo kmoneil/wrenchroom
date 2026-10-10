@@ -409,6 +409,7 @@ def test_the_report_says_the_clashes_in_every_format():
         ],
         "unmatched_allows": [],
         "unmeasured": [],
+        "set_in": [],
     }
     section = report.markdown().split("#### Clashes")[1]
     assert "1 clash (overlap over 0.05 mm^3)." in section

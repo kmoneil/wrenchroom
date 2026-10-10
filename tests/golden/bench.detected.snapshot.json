@@ -3,9 +3,9 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 168,
-  "turns": 123,
-  "held": 11,
+  "fasteners": 174,
+  "turns": 126,
+  "held": 14,
   "blocked": 29,
   "stuck": 3,
   "not_covered": 2
@@ -1846,6 +1846,180 @@
    "blocked_by": [
     "hex_side_wall_wall"
    ],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "hosted_bare_insert",
+   "kind": "insert",
+   "head": null,
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": null,
+   "source": "name+geometry",
+   "tool": null,
+   "verdict": "held",
+   "how": "holds itself",
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "hosted_bare_screw",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "hosted_bare_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    19000.0,
+    7.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2.5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": "hosted_bare_insert",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "hosted_pocket_insert",
+   "kind": "insert",
+   "head": null,
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": null,
+   "source": "name+geometry",
+   "tool": null,
+   "verdict": "held",
+   "how": "holds itself",
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "hosted_pocket_screw",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "hosted_pocket_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    -100.0,
+    19000.0,
+    7.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2.5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": "hosted_pocket_insert",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "hosted_snug_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "seat": [
+    100.0,
+    19000.0,
+    -16.0
+   ],
+   "source": "name+geometry",
+   "tool": null,
+   "verdict": "held",
+   "how": "held by its trap in hosted_snug_block",
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "hosted_snug_screw",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "drawn 2.3 mm^3 into its trap: a press fit, or a clash to fix"
+   ]
+  },
+  {
+   "name": "hosted_snug_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    100.0,
+    19000.0,
+    3.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2.5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": "hosted_snug_nut",
+   "blocked_by": [],
    "deciding": [],
    "stuck_on": [],
    "reason": null,
@@ -4834,7 +5008,7 @@
     1.0
    ],
    "seat": [
-    -100.0,
+    900.0,
     19000.0,
     6.0
    ],
@@ -4866,7 +5040,7 @@
     1.0
    ],
    "seat": [
-    100.0,
+    1100.0,
     19000.0,
     6.0
    ],
@@ -5341,10 +5515,13 @@
    },
    {
     "tool": "hex-key-2.5",
-    "count": 12,
+    "count": 15,
     "fasteners": [
      "build_ahead_trapped_screw",
      "flat_graze_screw",
+     "hosted_bare_screw",
+     "hosted_pocket_screw",
+     "hosted_snug_screw",
      "misnamed_M5x16_screw",
      "named_head_bhcs",
      "renamed_M3x12_screw",
@@ -5959,6 +6136,9 @@
    "build_ahead_trapped_nut",
    "carriage_boxed_bolt",
    "head_trap_held_bolt",
+   "hosted_bare_insert",
+   "hosted_pocket_insert",
+   "hosted_snug_nut",
    "rubber_well_nut",
    "tee_hold_tnut",
    "trap_pocket_nut",

@@ -3221,3 +3221,62 @@ def stud_dome():
         ]
     parts.append(("shut_pocket", Pos(-100, 0, 4) * (Box(60, 60, 8) - Cylinder(8.0, 8))))
     return parts
+
+
+@cell(
+    "hosted",
+    [
+        *({"parts": f"{where}_screw", **_M3_SOCKET} for where in ("pocket", "bare", "snug")),
+        {"parts": "*_insert", "kind": "insert", "size": "M3"},
+        {"parts": "snug_nut", **_M3_NUT},
+    ],
+    {
+        "pocket_screw": {"verdict": "turns", "tool": "hex-key-2.5", "pair": "pocket_insert"},
+        "pocket_insert": {"verdict": "held", "how": "holds itself", "pair": "pocket_screw"},
+        "bare_screw": {"verdict": "turns", "tool": "hex-key-2.5", "pair": "bare_insert"},
+        "bare_insert": {"verdict": "held", "how": "holds itself", "pair": "bare_screw"},
+        "snug_screw": {"verdict": "turns", "tool": "hex-key-2.5", "pair": "snug_nut"},
+        "snug_nut": {
+            "verdict": "held",
+            "pair": "snug_screw",
+            "notes": ["drawn 2.3 mm^3 into its trap: a press fit, or a clash to fix"],
+        },
+    },
+    allow=[("bare_insert", "bare_block"), ("snug_nut", "snug_block")],
+)
+def hosted():
+    """An insert set into its part is no clash (issue #158), as printed parts draw
+    them: an M3 heat-set insert 5.0 across and 4 long, bored 3.0, in a block's face,
+    a plate 4 thick on the block, and an M3x8 socket head screw down through the
+    plate into it. Each insert holds itself, and its screw turns.
+
+    pocket: the block's hole for it is 4.6 across, 0.92 of the insert, as a maker's
+    is: the block is drawn 0.2 into its knurl all round, pi (2.5^2 - 2.3^2) 4 = 12.06
+    mm^3, 0.15 of the insert's own cylinder. Set in: counted apart, no clash. It was
+    one, and failed a run that looked for clashes. bare: no hole for the insert, only
+    its screw's, 3.4 across: the block takes up 0.54 of it, pi (2.5^2 - 1.7^2) 4 =
+    42.22 mm^3, a clash, hinted. snug: trap's nut, 5.5 across, in a hex pocket 5.4
+    across: (5.5^2 - 5.4^2) sqrt(3) / 2 by 2.4, 2.27 mm^3, a clash said as its trap,
+    which the check notes on the nut it holds. The bench's sidecar allows the two
+    clashes; the edges sidecar tells them.
+    """
+    insert = Pos(0, 0, -2) * (Cylinder(2.5, 4) - Cylinder(1.5, 5))
+    cover = Pos(0, 0, 2) * Box(30, 30, 4) - Cylinder(1.7, 5)
+    short = socket_screw(d=3, length=8, dk=5.5, k=3, s=2.5, t=1.3)
+    parts = []
+    for where, x, hole in (("pocket", -100, 2.3), ("bare", 0, 1.7)):
+        block = Pos(0, 0, -8) * Box(30, 30, 16) - Cylinder(1.7, 40)
+        block -= Pos(0, 0, -2) * Cylinder(hole, 4)
+        parts += [
+            (f"{where}_block", Pos(x, 0, 0) * block),
+            (f"{where}_insert", Pos(x, 0, 0) * insert),
+            (f"{where}_plate", Pos(x, 0, 0) * cover),
+            (f"{where}_screw", Pos(x, 0, 4) * short),
+        ]
+    block = Pos(100, 0, -8) * Box(30, 30, 16) - Pos(100, 0, -8) * Cylinder(1.7, 17)
+    parts += [
+        ("snug_block", block - Pos(100, 0, -16) * hex_prism(5.4, 2.6)),
+        ("snug_screw", Pos(100, 0, 0) * socket_screw(d=3, length=16, dk=5.5, k=3, s=2.5, t=1.3)),
+        ("snug_nut", Pos(100, 0, -16) * hex_nut(3, 5.5, 2.4)),
+    ]
+    return parts
