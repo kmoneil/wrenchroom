@@ -412,12 +412,21 @@ _TOKEN_SPLIT = re.compile(r"[^0-9A-Za-z]+")
 _TAPPING_WORDS = frozenset({"tapping", "selftapping", "selftapper"})
 _TAPPING_RUNS = (
     ("self", "tapper"),
-    ("thread", "forming"),
     ("type", "ab"),
     ("sheet", "metal", "screw"),
     ("sheet", "metal", "screws"),
     ("sheetmetal", "screw"),
 )
+
+#: Words that say a screw forms a machine thread, whatever else its name says (issue
+#: #164). DIN 7500's thread-forming screws are for ISO metric threads: an M3 is 3.0
+#: across, and a machine screw fits the hole after it; sellers call them
+#: self-tapping all the same. Taptite's and other trilobular screws roll one too.
+#: "Thread forming" alone says neither: screws for metal by that name carry a
+#: machine thread, and screws for plastic a thread of their own, so it is no word
+#: for a tapping screw, and beside a machine size the size is the name's.
+_MACHINE_THREAD_WORDS = frozenset({"taptite", "trilobular", "din7500"})
+_MACHINE_THREAD_RUNS = (("din", "7500"), ("thread", "rolling"))
 
 #: Thread pitches (ISO 261, coarse and common fine), used only to tell "M6x1"
 #: (a pitch) from "M6x10" (a length).
@@ -756,12 +765,19 @@ def _head_from(run: set[str], kind: Kind) -> Head | None:
 
 
 def _says_tapping(words: list[str]) -> bool:
-    """Whether a name's words say its screw is a tapping screw: ``self tapping``, ``Type AB``."""
-    if _TAPPING_WORDS & set(words):
-        return True
-    return any(
-        tuple(words[at : at + len(run)]) == run for run in _TAPPING_RUNS for at in range(len(words))
-    )
+    """Whether a name's words say its screw is a tapping screw: ``self tapping``, ``Type AB``.
+
+    Not where they say it forms a machine thread (``DIN 7500``, ``Taptite``),
+    whatever else they say.
+    """
+    if _MACHINE_THREAD_WORDS & set(words) or _has_run(words, _MACHINE_THREAD_RUNS):
+        return False
+    return bool(_TAPPING_WORDS & set(words)) or _has_run(words, _TAPPING_RUNS)
+
+
+def _has_run(words: list[str], runs: tuple[tuple[str, ...], ...]) -> bool:
+    """Whether one of ``runs`` stands in the words, each of its words after the last."""
+    return any(tuple(words[at : at + len(run)]) == run for run in runs for at in range(len(words)))
 
 
 def _tapping_size(match: re.Match[str]) -> Size | None:
