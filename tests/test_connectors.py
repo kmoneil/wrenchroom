@@ -212,6 +212,13 @@ def test_a_name_about_a_plug_is_one_and_a_connector_word_names_no_half(name, nam
         "header plug",
         "pcb_plug",
         "plug_holder_plug",  # the last "plug" is the noun
+        # A screw terminal's plug (issue #166): "screw" is about the terminal.
+        "screw terminal plug",
+        "screw_terminal_plug_2",
+        "Screw Terminal Plug 3P 5.08",
+        "pluggable screw terminal block plug",
+        "screw terminals plug",
+        "screw_terminalplug",  # run onto the word before it
     ],
 )
 def test_plug_is_a_part_s_noun_wherever_it_stands(name):
@@ -230,6 +237,11 @@ def test_plug_is_a_part_s_noun_wherever_it_stands(name):
         "plug_drain",  # the kind first, and what it is after it
         "plug_filler_oil",
         "threaded plug",
+        "screw plug",
+        "screw-in plug",
+        "terminal screw plug",  # a screw plug, on a terminal: the word next to it says
+        "screw terminal drain plug",  # and one such word is enough
+        "screw terminal oil plug",
         "unplug",  # no plug: a verb
         "unplugged_state",
         "plugin_bracket",
@@ -254,6 +266,37 @@ def test_a_plug_turned_or_pressed_in_and_a_word_that_only_holds_plug_are_none(na
 )
 def test_a_plug_word_before_a_noun_it_describes_is_listed_not_checked(name):
     assert read_connector_name(name) is Named.CONNECTOR
+
+
+def test_a_screw_terminal_s_plug_is_pulled_and_is_no_screw_passed_over():
+    # The issue's three, each in its shroud: all checked, where only the first was,
+    # and the other two were noted as fasteners passed over for the "screw" in
+    # their names. Nothing else is noted of them.
+    names = ["terminal plug", "screw terminal plug", "screw_terminal_plug_2"]
+    parts = [("board", board())]
+    for index, name in enumerate(names):
+        parts += [(f"shroud {index}", shroud(index * 100)), (name, plug(index * 100))]
+    report = run(parts)
+    assert outcome(report) == {
+        name: (ConnectorVerdict.UNPLUGS, (f"shroud {index}",), ())
+        for index, name in enumerate(names)
+    }
+    assert report.passed_over == ()
+    lines = report.terminal_lines()
+    assert lines[:2] == [
+        "0 fasteners: 0 turn, 0 held, 0 blocked, 0 stuck, 0 not covered",
+        "3 connectors: 3 unplug, 0 stuck, 0 not covered",
+    ]
+    assert not any("passed over" in line for line in lines)
+
+
+def test_a_part_named_for_a_screw_that_is_no_plug_is_still_passed_over():
+    # A screw terminal itself, no plug: named like a fastener, no drive in its
+    # solid, and said so, as before.
+    parts = [("board", board()), ("screw terminal", Pos(100, 0, 5) * Box(10, 8, 10))]
+    report = run(parts)
+    assert [part.name for part in report.passed_over] == ["screw terminal"]
+    assert report.connectors is None  # nothing named like one
 
 
 # ---------------------------------------------------------------------------

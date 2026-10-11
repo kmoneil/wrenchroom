@@ -157,8 +157,12 @@ def test_every_candidate_name_is_taken_on_its_solid_or_passed_over(detected):
     taken_on_solid |= {"hosted_pocket_insert", "hosted_bare_insert"}
     taken_on_solid |= {f"std_{role}" for role in ("M3x16", "M5-0.8x12", "M4x0.7x12", "#10-32x1")}
     assert "std_M8x60" in said - taken_on_solid
+    # byname's screw terminal plug is named with "screw" and has no drive: checked
+    # as the plug it is, and so not passed over as a screw (issue #166).
+    as_plugs = {"byname_screw_terminal_plug"}
+    assert as_plugs <= said & {c.name for c in detected.connectors.results}
     named = {part.name for part in detected.passed_over if part.named and not part.motion}
-    assert named == said - taken_on_solid
+    assert named == said - taken_on_solid - as_plugs
     taken = {r.fastener.name for r in detected.results}
     assert candidates & taken == taken_on_solid
     (gland,) = [r for r in detected.results if r.fastener.name == "vented_gland_vent"]
@@ -317,12 +321,14 @@ def test_shoulder_screws_drawn_plainly_and_a_head_that_fits_nothing(detected):
 
 def test_each_plug_is_found_by_its_name(detected):
     # No connectors: in the sidecar: each plug is found by its name (M9), and
-    # pull_cable's lead, no mate now, is in its way. byname's two, "plug" first in
-    # their names, are found as they are with the sidecar (issue #157).
+    # pull_cable's lead, no mate now, is in its way. byname's three, "plug" first in
+    # two names and a screw terminal's the third, are found as they are with the
+    # sidecar (issues #157 and #166).
     found = {c.name: (c.verdict.value, c.source, c.blockers) for c in detected.connectors.results}
     assert found == {
         "byname_plug_fan_2": ("unplugs", "name", ()),
         "byname_plug_motor": ("unplugs", "name", ()),
+        "byname_screw_terminal_plug": ("unplugs", "name", ()),
         "pull_cable_plug": ("stuck", "name", ("pull_cable_lead",)),
         "pull_latch_plug": ("unplugs", "name", ()),
         "pull_open_plug": ("unplugs", "name", ()),

@@ -337,7 +337,9 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         ),
         notes=(*space.notes, *_unused_tools(fasteners, tools)),
         engine_notes=_engine_notes(space.engine),
-        passed_over=passed_over,
+        # A part checked as a plug is accounted for: a screw terminal's plug is no
+        # screw passed over (issue #166).
+        passed_over=tuple(part for part in passed_over if part.name not in plugs),
         default_state=default_state,
         hand_room=tools.hand_room,
         clashes=clashed,

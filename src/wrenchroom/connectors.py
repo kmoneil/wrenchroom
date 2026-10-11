@@ -337,6 +337,10 @@ _NOT_PULLED = frozenset(
     {"drain", "spark", "threaded", "screw", "fill", "filler", "oil", "blanking"}
 )
 
+#: Just before one of these, such a word is about the terminal, not the plug: a screw
+#: terminal's plug pulls off its header, the wires still screwed into it (issue #166).
+_TERMINALS = frozenset({"terminal", "terminals"})
+
 #: Nouns a plug describes: after "plug", the part is that, not the plug. The other
 #: half, what a plug is made of and what goes on it, what holds it, and what it comes
 #: through. Where in doubt a word is here: a part named with one is listed, not
@@ -396,7 +400,8 @@ def read_connector_name(name: str) -> Named | None:
     first, as code names a part by its kind (``plug_motor``, ``plug_battery_main``,
     ``Plug - Motor``), whatever number or side follows it (``fan plug 2``,
     ``motor_plug_left``, ``plug2``). Not where a word says it is turned or pressed
-    in (``drain plug``, ``plug_drain``): no connector at all.
+    in (``drain plug``, ``plug_drain``): no connector at all. A word that says so
+    of a terminal says nothing of the plug: a ``screw terminal plug`` is a plug.
 
     A plug word followed by a noun it describes (``plug_cover``, ``plug_header``)
     is about that other thing, but the list of such nouns is no dictionary: the
@@ -408,7 +413,12 @@ def read_connector_name(name: str) -> Named | None:
     plugs = [(index, match["before"]) for index, match in found if match]
     if plugs:
         at, run_on = plugs[-1]
-        before = {*words[:at], *([run_on] if run_on else [])}
+        ahead = [*words[:at], *([run_on] if run_on else [])]
+        before = {
+            word
+            for word, then in zip(ahead, [*ahead[1:], ""], strict=False)
+            if not (word in _NOT_PULLED and then in _TERMINALS)
+        }
         after = set(words[at + 1 :])
         if _NOT_PULLED & before or (after and after <= _NOT_PULLED):
             return None
