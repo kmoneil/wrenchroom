@@ -784,6 +784,15 @@ engines give the golden bench the same report, field for field. A mesh's possibl
 error is each face's own: one face the tessellator met its tolerance poorly on leaves
 the rest of the part sure.
 
+A boolean is no surer for being exact: OCCT's comes back empty for some solids drawn
+well into each other, and says nothing of it (issues #163 and #169). So under
+`--exact` a tool its booleans leave short of a hit is held to what its meshes and
+the part's share, as two parts' clash is: where the two differ by more than the
+floor and a factor of two, the solids are asked point by point, and what they bear
+out being past the floor, the tool is into the part. A plug drawn into its
+receptacle is measured the same way. The mesh engine's own referee is not held to
+them: it is asked only where the meshes couldn't be sure.
+
 Real CAD doesn't always tessellate into a closed solid. A part that won't is mended
 first: a face OCP won't mesh (a maker's countersink, its seam at an odd parameter) is
 split, and a hole up to 2 mm across, where neighbouring faces' edges didn't meet, is

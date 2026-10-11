@@ -64,6 +64,7 @@ from OCP.TopAbs import TopAbs_FACE, TopAbs_REVERSED
 from OCP.TopExp import TopExp_Explorer
 from OCP.TopLoc import TopLoc_Location
 
+from wrenchroom.assembly import Part
 from wrenchroom.engine.exact import ExactEngine, ExactQuery, measured_common, merged
 from wrenchroom.engine.scene import (
     BOX_MARGIN,
@@ -85,9 +86,10 @@ from wrenchroom.solids import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from build123d import Solid
 
-    from wrenchroom.assembly import Part
     from wrenchroom.solids import Bounds, Primitive
 
 #: Chord deviation for tessellating parts, mm. The spec's default.
@@ -106,6 +108,9 @@ WITNESS_DEPTH = 0.02
 WITNESS_RAYS = 24
 WITNESS_POINTS = 6
 WITNESS_LUMPS = 64
+
+#: What a tool's piece is called where its solid is asked about as a part's is.
+TOOL = "tool"
 
 #: The six ways along the axes, for how much room a point has round it.
 _AXES = np.vstack([np.eye(3), -np.eye(3)])
@@ -150,7 +155,7 @@ class MeshEngine(Engine):
         self._surfaces: dict[int, tuple[Part, tuple[np.ndarray, np.ndarray]]] = {}
         #: The exact engine, asked whenever a mesh can't be sure. What it finds of the
         #: parts' validity is this engine's too: one list says which are invalid.
-        self.referee = ExactEngine()
+        self.referee = ExactEngine(second_opinion=False)
         self.referee.share_validity(self)
         #: How many tool-part tests the referee decided, for perf reports and tests.
         self.referred = 0
@@ -273,6 +278,26 @@ class MeshEngine(Engine):
         if borne is not None and said < held:
             return _again(first, second, borne)
         return exact if exact is None or not self.refuted(exact, first, second) else borne
+
+    def into(self, tool: Tool, part: Part, said: float, solid: Callable[[int], Shape]) -> bool:
+        """Whether a tool whose booleans sum to ``said``, short of a hit, is into a part.
+
+        As two parts' overlap is held to their meshes (:meth:`shared`), so is a
+        tool's with a part (issue #169). Where the tool's pieces' meshes share with
+        the part's what ``said`` agrees with, within the floor or a factor of two,
+        the booleans stand. Where they don't, each piece's overlap is kept lump by
+        lump where points deep inside it lie inside both the piece's own solid and
+        the part's; and what the solids bear out being past the floor, and more
+        than the booleans said by as much again, the tool is into the part.
+        """
+        query = self.query(tool)
+        if _agree(said, query.shares(part)):
+            return False
+        borne = 0.0
+        for index, overlap in query.overlaps(part):
+            held = self._borne_out(overlap, Part(TOOL, solid(index)), part)
+            borne += held.volume if held is not None else 0.0
+        return borne > HIT_MIN_VOLUME and not _agree(said, borne)
 
     def _borne_out(self, overlap: Manifold, first: Part, second: Part) -> PartOverlap | None:
         """What of two meshes' overlap the solids bear out: its lumps with points inside both."""
@@ -422,6 +447,41 @@ class MeshQuery:
         if volume <= 0 and all(out <= 0 or m.gap(mesh, out) >= out for m, out in near):
             return Contact.CLEAR
         return self._refer(part)
+
+    def shares(self, part: Part) -> float:
+        """What the pieces' meshes share with the part's, mm^3 in all; nothing with no mesh of it.
+
+        Each piece's measure is the one a contact takes, kept for the next tool
+        that has the piece there: asked of every tool ``--exact`` finds clear, it
+        costs a mesh engine's pass and no more.
+        """
+        mesh = self._engine.part_mesh(part)
+        if mesh is None:
+            return 0.0
+        measures = (
+            self._measure(int(index), mesh, part)
+            for index in pieces_near(self._lows, self._highs, self._engine.part_box(part))
+        )
+        return sum(measure.volume for measure in measures if measure is not None)
+
+    def overlaps(self, part: Part) -> list[tuple[int, Manifold]]:
+        """Each piece's overlap with the part's mesh, with the piece's index, where it has one.
+
+        None where the part has no closed mesh, or a piece none: nothing to hold a
+        boolean to.
+        """
+        mesh = self._engine.part_mesh(part)
+        found: list[tuple[int, Manifold]] = []
+        if mesh is None:
+            return found
+        for index in pieces_near(self._lows, self._highs, self._engine.part_box(part)):
+            piece = self._piece(int(index))
+            if piece is None:
+                continue
+            overlap = mesh ^ piece
+            if overlap.volume() > 0:
+                found.append((int(index), overlap))
+        return found
 
     def _measure(self, index: int, mesh: Manifold, part: Part) -> _Measure | None:
         """One piece's overlap with the part: volume and surface, kept for next time."""

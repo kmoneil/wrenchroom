@@ -52,10 +52,11 @@ jobs:
   # The unit suite on every platform and Python the project claims, macOS as above.
   # The HTML view's tests use the Node and Chrome the runner images come with; under
   # CI a missing one fails the run instead of skipping (tests/golden/test_view_browser.py).
-  # The slowest row, Linux 3.14, took 19 minutes with the bench at 152 fasteners: the
-  # limit leaves the bench room to grow.
+  # One suite takes 17 to 29 minutes by the runner it draws (both on one day, the
+  # bench at 178 fasteners), and a row cancelled at its limit is run again from the
+  # start: the limit leaves that spread room, and the bench room to grow.
   fast:
-    timeout-minutes: 30
+    timeout-minutes: 40
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
