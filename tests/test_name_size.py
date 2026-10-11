@@ -172,7 +172,9 @@ def test_a_drive_alone_against_the_name_stays_as_it_was():
 
 
 def test_the_minors_are_iso_724_s_and_the_pitches_coarse():
-    assert set(COARSE_PITCH_MM) == {*METRIC_SIZES, *IMPERIAL_SIZES}
+    # And a #5's, 5-40: a size a name gives (issue #165).
+    assert set(COARSE_PITCH_MM) == {*METRIC_SIZES, *IMPERIAL_SIZES, "#5"}
+    assert COARSE_PITCH_MM["#5"] == pytest.approx(25.4 / 40)
     assert COARSE_PITCH_MM["M3"] == 0.5
     assert COARSE_PITCH_MM["M24"] == 3.0
     assert COARSE_PITCH_MM["1/4"] == pytest.approx(25.4 / 20)

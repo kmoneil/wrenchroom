@@ -90,6 +90,27 @@ IMPERIAL_SIZES: dict[str, float] = {
     **{f: round(int(f.split("/")[0]) / int(f.split("/")[1]) * _MM_PER_INCH, 3) for f in _FRACTIONS},
 }
 
+#: Gauges only tapping and wood screws come in, ASME B18.6.4's: designation -> (the
+#: most its thread's major diameter is made, and the least its core is), inches. A
+#: #7 comes with a Type A thread (0.158 at most, its core 0.108 at least) and a Type
+#: AB (0.154, 0.109); a #14 is a Type A size alone. Read 2026-10-11 from Tanner
+#: Bolt's sheets "Threads For Self-Tapping Screws Type A, ASME B18.6.4" and "Type
+#: AB". As with ISO 1478's, the size's diameter is the most its thread is made.
+_TAPPING_GAUGE_THREADS: dict[str, tuple[float, float]] = {
+    "#7": (0.158, 0.108),
+    "#14": (0.254, 0.178),
+}
+
+#: Sizes a name gives, and no shank or hex is taken for (issue #165): they were
+#: outside the tables, and a screw named by one was not covered. A #7 and a #14 are
+#: no machine screw's, socket screw's or nut's. A #5 is, 5-40 and 5-44, but a rare
+#: one, and 3.175 across it sits where an M3 drawn a little full does: were a shank
+#: taken for it, an M3 drawn 3.13 to 3.22 would be told as a #5.
+NAMED_SIZES: dict[str, float] = {
+    "#5": round((0.060 + 0.013 * 5) * _MM_PER_INCH, 3),
+    **{g: round(most * _MM_PER_INCH, 3) for g, (most, _) in _TAPPING_GAUGE_THREADS.items()},
+}
+
 #: Tapping screw threads, ISO 1478:1999's Table 1: designation -> (the least and the
 #: most its major diameter d1 is made, and the least its core d2 is), mm. A tapping
 #: screw is sold by this size, not by a machine screw's: an ST2.2 is 2.24 across at
@@ -139,7 +160,7 @@ _TAPPING = re.compile(r"ST\s?(\d+(?:[.,]\d)?)", re.IGNORECASE)  # "ST2.2", "st 2
 
 #: ASME B1.1's UNC threads per inch (#0 has none: its UNF 80).
 _UNC_TPI = {
-    "#0": 80, "#1": 64, "#2": 56, "#3": 48, "#4": 40, "#6": 32, "#8": 32, "#10": 24,
+    "#0": 80, "#1": 64, "#2": 56, "#3": 48, "#4": 40, "#5": 40, "#6": 32, "#8": 32, "#10": 24,
     "#12": 24, "1/4": 20, "5/16": 18, "3/8": 16, "7/16": 14, "1/2": 13, "9/16": 12,
     "5/8": 11, "3/4": 10,
 }  # fmt: skip
@@ -181,6 +202,8 @@ def thread_minor_mm(size: Size) -> float:
     """
     if size.is_tapping:
         return TAPPING_THREADS[size.designation][2]  # its core, d2: ISO 1478
+    if size.designation in _TAPPING_GAUGE_THREADS:  # its core: ASME B18.6.4
+        return _TAPPING_GAUGE_THREADS[size.designation][1] * _MM_PER_INCH
     return size.diameter_mm - _MINOR_PITCHES * COARSE_PITCH_MM[size.designation]
 
 
@@ -226,6 +249,8 @@ class Size:
             return cls(metric, METRIC_SIZES[metric])
         if cleaned in IMPERIAL_SIZES:
             return cls(cleaned, IMPERIAL_SIZES[cleaned])
+        if cleaned in NAMED_SIZES:
+            return cls(cleaned, NAMED_SIZES[cleaned])
         msg = f"unknown fastener size {text!r}"
         raise ValueError(msg)
 
@@ -480,6 +505,7 @@ SOCKET_KEY_AF.update(
             "#2": "5/64",
             "#3": "5/64",
             "#4": "3/32",
+            "#5": "3/32",
             "#6": "7/64",
             "#8": "9/64",
             "#10": "5/32",
@@ -502,6 +528,7 @@ BUTTON_KEY_AF.update(
             "#2": "0.050",
             "#3": "1/16",
             "#4": "1/16",
+            "#5": "5/64",
             "#6": "5/64",
             "#8": "3/32",
             "#10": "1/8",
@@ -521,6 +548,7 @@ FLAT_KEY_AF.update(
             "#2": "0.050",
             "#3": "1/16",
             "#4": "1/16",
+            "#5": "5/64",
             "#6": "5/64",
             "#8": "3/32",
             "#10": "1/8",
@@ -545,6 +573,7 @@ SET_KEY_AF.update(
             "#2": "0.035",
             "#3": "0.050",
             "#4": "0.050",
+            "#5": "1/16",
             "#6": "1/16",
             "#8": "5/64",
             "#10": "3/32",
@@ -598,6 +627,7 @@ HEX_AF.update(
             "#2": "3/16",
             "#3": "3/16",
             "#4": "1/4",
+            "#5": "5/16",
             "#6": "5/16",
             "#8": "11/32",
             "#10": "3/8",
@@ -1003,10 +1033,13 @@ PHILLIPS_NUMBER: dict[str, int] = {
     "#2": 1,
     "#3": 1,
     "#4": 1,
+    "#5": 2,
     "#6": 2,
+    "#7": 2,
     "#8": 2,
     "#10": 2,
     "#12": 3,
+    "#14": 3,
     "1/4": 3,
     # Tapping screws: ISO 7049:2011's Table 1 (pan head), read from the iTeh preview
     # 2026-10-10; ISO 7050's (countersunk) recesses are the same size for size.

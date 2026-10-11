@@ -379,10 +379,13 @@ _GAUGE_TPI = {
     2: {56, 64, 32},
     3: {48, 56, 28},
     4: {40, 48, 24},
+    5: {40, 44, 20},
     6: {32, 40, 20, 18},
+    7: {19, 16},  # a tapping screw's alone, as a 14's is (issue #165)
     8: {32, 36, 18, 15},
     10: {24, 32, 16, 12},
     12: {24, 28, 14, 11},
+    14: {10},
 }
 _MCMASTER = re.compile(r"(?<![0-9A-Za-z])(\d{4,5}A)\d{1,4}(?![0-9A-Za-z])", re.IGNORECASE)
 #: ``M6``, ``M6x20``, ``M6x1x20``, and the pitch after a dash as suppliers write it,

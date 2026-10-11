@@ -132,7 +132,7 @@ def test_a_set_or_thumb_word_beside_it_says_so():
     ("name", "reason"),
     [
         ("M30x100", "M30 is outside the sizes the tables hold"),
-        ("#14-20x1", "#14 is outside the sizes the tables hold"),
+        ("#16-18x1", "#16 is outside the sizes the tables hold"),
     ],
 )
 def test_one_the_kit_cannot_check_still_says_why(name, reason):
