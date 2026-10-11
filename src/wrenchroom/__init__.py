@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from wrenchroom.config import Config
     from wrenchroom.report import Report, Verdict
 
-__version__ = "0.5.1"
+__version__ = "0.5.2.dev0"
 
 __all__ = ["Assembly", "Config", "Part", "Report", "Verdict", "__version__", "check"]
 
