@@ -33,6 +33,7 @@ from wrenchroom.assembly import Assembly, Part
 from wrenchroom.checker import check, find_clashes
 from wrenchroom.cli import main
 from wrenchroom.config import Config
+from wrenchroom.fasteners import Size
 from wrenchroom.report import Verdict
 
 DEEP = "deeper than a knurl: no hole drawn for the insert?"
@@ -153,7 +154,9 @@ MAKERS = [
     ("M2.5", 4.0, 3.7, 2.9),
     ("M3", 4.6, 4.0, 3.4),  # ruthex, ACF: the least of them, 0.870
     ("M3", 5.0, 4.4, 3.4),  # ruthex's M3x5x4
+    ("M3", 4.55, 4.01, 3.4),  # PEM's IUTB-M3
     ("M4", 6.0, 5.3, 4.5),
+    ("M4", 6.17, 5.67, 4.5),  # PEM's IUTB-M4
     ("M4", 6.3, 5.6, 4.5),
     ("M5", 7.1, 6.4, 5.5),
     ("M6", 8.4, 7.6, 6.6),
@@ -180,10 +183,70 @@ def test_a_maker_s_hole_sets_its_insert_in_and_a_clearance_hole_doesn_t(
 
 
 def test_the_makers_holes_and_the_clearance_holes_stand_either_side_of_the_line():
-    # The guard: no maker's hole under 0.87 of its insert, no clearance hole over 0.82.
+    # The guard: no metric maker's hole under 0.87 of its insert (PEM's inch least is
+    # 0.864, below), no clearance hole over 0.82.
     assert min(hole / across for _, across, hole, _ in MAKERS) == pytest.approx(0.870, abs=5e-4)
     assert max(clear / across for _, across, _, clear in MAKERS) == pytest.approx(0.811, abs=5e-4)
     assert math.sqrt(1 - 0.3) == pytest.approx(0.837, abs=5e-4)
+
+
+IN = 25.4
+
+#: PEM's inch heat staking inserts, IUTB, as its product pages give them (read
+#: 2026-10-11): (thread, the insert over its knurl, its hole), inches.
+PEM_INCH = [("#2", 0.147, 0.127), ("#4", 0.179, 0.158), ("#6", 0.210, 0.189)]
+
+#: Albany County Fasteners' inch rows, from its Heat-Set Insert Specifications sheet.
+ACF_INCH = [
+    ("#2", 0.125, 0.107),
+    ("#4", 0.175, 0.129),
+    ("#6", 0.218, 0.166),
+    ("#8", 0.250, 0.196),
+    ("#10", 0.281, 0.213),
+    ("1/4", 0.375, 0.323),
+]
+
+
+def inch_clashes(thread, across, hole):
+    """An inch insert ``across`` over its knurl in a hole ``hole`` across, both inches."""
+    rule = {"parts": "insert", "kind": "insert", "size": thread}
+    bore = Size.parse(thread).diameter_mm
+    made = ("insert", insert(across * IN, bore, 2 * bore))
+    host = ("block", block(hole * IN, 2 * bore, bore + 0.4))
+    return clashes([made, host], [rule]), shell(across * IN, hole * IN, 2 * bore)
+
+
+@pytest.mark.parametrize(("thread", "across", "hole"), PEM_INCH)
+def test_an_inch_insert_in_its_maker_s_hole_is_set_in(thread, across, hole):
+    # Issue #167: inch inserts sit in holes 0.86 to 0.90 of them, as metric ones do.
+    found, volume = inch_clashes(thread, across, hole)
+    assert said(found.found) == []
+    assert said(found.set_in) == [("insert", "block", round(volume, 1), None)]
+
+
+def test_inch_makers_holes_are_in_the_metric_makers_band():
+    ratios = [hole / across for _, across, hole in PEM_INCH]
+    assert [f"{ratio:.3f}" for ratio in ratios] == ["0.864", "0.883", "0.900"]
+    assert min(ratios) > math.sqrt(1 - 0.3)  # each over the line, 0.837
+
+
+@pytest.mark.parametrize(
+    ("thread", "across", "hole", "set_in"),
+    [(*row, row[0] in {"#2", "1/4"}) for row in ACF_INCH],
+)
+def test_one_sheet_s_inch_holes_read_as_no_hole_for_the_insert(thread, across, hole, set_in):
+    # The same sheet's metric rows are 0.87 to 0.93; its inch rows from #4 to #10 are
+    # 0.74 to 0.78, as a hole drawn for the screw alone is, and under every other
+    # maker's for the same threads (0.129 against PEM's 0.158 for a #4-40, and
+    # McMaster's 0.141 and 0.153 for its long and short ones). An insert drawn to them
+    # is told as one with no hole drawn for it: said, and for allow: to answer.
+    assert (hole / across >= math.sqrt(1 - 0.3)) is set_in
+    found, volume = inch_clashes(thread, across, hole)
+    if set_in:
+        assert (said(found.found), len(found.set_in)) == ([], 1)
+    else:
+        assert said(found.found) == [("insert", "block", round(volume, 1), DEEP)]
+        assert found.set_in == ()
 
 
 def test_an_insert_in_two_parts_drawn_in_one_place_is_set_into_both():

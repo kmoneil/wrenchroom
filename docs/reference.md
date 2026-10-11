@@ -611,13 +611,17 @@ every run, and every report says it wasn't looked for.
   `wrenchroom clashes --with-inserts` lists them, a `SET` line each. An insert is
   set into a part that is round its middle and takes up no more than 0.3 of the
   insert's own cylinder along the length the two share: a hole 0.84 of the insert
-  across, or more. Makers' holes are 0.87 to 0.93 of their inserts (4.0 for a 4.6
-  M3, 4.4 for a 5.0, 10.2 for an 11.1 M8). It is still a clash where the part is
+  across, or more. Makers' holes are 0.86 to 0.93 of their inserts, inch and metric
+  (4.0 for a 4.6 M3, 4.4 for a 5.0, 10.2 for an 11.1 M8; PEM's 0.158 in for a 0.179
+  `#4-40`). It is still a clash where the part is
   over one end of it only (the next part along, drawn into its face), where the
   other is a fastener, and where the part takes up more: a hole drawn for the screw
   alone is 0.68 to 0.81 of an insert, and reads `deeper than a knurl: no hole drawn
   for the insert?`. An insert in two parts drawn in one place, two options of one
-  part, is set into both. No sidecar entry is needed; `allow:` still works.
+  part, is set into both. No sidecar entry is needed; `allow:` still works. One
+  maker's inch table (issue #167) gives holes 0.74 to 0.78 of the insert for `#4` to
+  `#10`, 0.01 to 0.05 in under every other maker's for the same threads: an insert drawn to
+  it reads as that clash, and `allow:` is the way to say it is meant.
 - **`allow:`** in the sidecar names pairs meant to overlap, as pairs of part globs,
   either way round: `allow: [[shaft_*, bearing_*], [hub_*, tire_*]]`. A glob that
   names no part fails the run (exit 2), as a rule's does.

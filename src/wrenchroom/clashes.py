@@ -72,11 +72,17 @@ TWICE_HINT = "one fastener drawn twice"
 
 #: An insert is set into a part that takes up no more than this share of the
 #: insert's own cylinder, along the length the two share: a hole 0.84 of the insert
-#: across, or more (1 - 0.84^2 = 0.29). Makers' holes are 0.87 to 0.93 of their
+#: across, or more (1 - 0.84^2 = 0.29). Makers' holes are 0.86 to 0.93 of their
 #: inserts (ruthex: 4.0 for 4.6, 4.4 for 5.0, 5.6 for 6.3, 6.4 for 7.1; Albany
-#: County Fasteners' table: 3.2 for 3.5 up to 10.2 for 11.1). A hole drawn for the
-#: screw alone, ISO 273's medium clearance, is 0.68 to 0.81 of them (3.4 for 5.0,
-#: 9 for 11.1): no hole for the insert at all.
+#: County Fasteners' metric table: 3.2 for 3.5 up to 10.2 for 11.1; PEM's IUTB, inch
+#: and metric: 0.127 in for 0.147, 0.158 for 0.179, 0.189 for 0.210, 4.01 mm for
+#: 4.55, 5.67 for 6.17). A hole drawn for the screw alone, ISO 273's medium
+#: clearance, is 0.68 to 0.81 of them (3.4 for 5.0, 9 for 11.1): no hole for the
+#: insert at all. One sheet's inch rows don't fit (issue #167): Albany County
+#: Fasteners gives 0.129 in for a 0.175 #4-40, 0.74 of it, and as little to #10,
+#: where PEM gives 0.158 for a 0.179 one, and every other hole read for those
+#: threads is 0.01 to 0.05 in over that sheet's. An insert drawn to it reads as one
+#: with no hole drawn for it.
 SET_IN_SHARE = 0.3
 
 #: What a clash of a nut or a hex head with the trap that holds it is said to be:
