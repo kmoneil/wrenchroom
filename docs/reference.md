@@ -395,7 +395,7 @@ gives one a hex socket: its socket as drawn picks the key, or `across_flats:` do
 
 A name gives a tapping size as itself (`ST2.2x10`, `ST 4,2 x 16`), or as a machine
 size beside a word that says tapping (`self tapping`, `self-tapping`, `selftapping`,
-`tapping`, `thread forming`, `sheet metal screw`, `Type AB`): sellers name a tapping
+`tapping`, `sheet metal screw`, `Type AB`): sellers name a tapping
 screw for the machine screw it stands in for, and an `M2 self tapping screw` is an
 ST2.2, an M3 an ST2.9, an M3.5 an ST3.5, an M4 an ST4.2, an M5 an ST4.8, an M6 an ST6.3
 (each the thread ISO 1478 gives the old number of that diameter). One named by its
@@ -406,6 +406,16 @@ is another tapping size's is taken as drawn and noted (`drawn as an ST3.5 (3.50
 shank), where its name says ST2.9: taken as drawn`). In the sidecar, `size: ST3.5`.
 An inch tapping screw is named by its gauge (`#6 x 1/2`), a machine screw's, and is
 read as one: ASME B18.6.4's numbered sizes take the cross recesses B18.6.3's do.
+
+A screw that forms a machine thread is a machine screw by its size (issue #164). DIN
+7500's thread-forming screws are for ISO metric threads: an M3 is 3.0 across, an M3
+machine screw fits the hole after it, and its tool is an M3's. So `DIN 7500`,
+`Taptite`, `trilobular` and `thread rolling` in a name keep its machine size, even
+beside `self tapping`, which sellers call these too. `thread forming` alone is no
+word for a tapping screw either: screws for metal by that name carry a machine
+thread and screws for plastic a thread of their own, so `M3x8 thread forming screw`
+is an M3. With a tapping size of its own in its name (`ST2.9x9.5 thread forming
+screw`) or a word that says tapping, it is the tapping screw that says.
 
 ## Your own tools
 

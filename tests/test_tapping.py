@@ -207,7 +207,8 @@ def test_the_threads_ranges_don_t_meet():
         ("M3x10 self-tapping screw", "ST2.9", 10.0),
         ("M2x10 Selftapping screw", "ST2.2", 10.0),
         ("M4x12 tapping screw", "ST4.2", 12.0),
-        ("M4x12 thread forming screw", "ST4.2", 12.0),
+        ("M4x12 self tapping thread forming screw", "ST4.2", 12.0),  # the first says
+        ("ST4.2x13 thread forming screw", "ST4.2", 13.0),  # its own size does
         ("M5x20 Type AB pan head screw", "ST4.8", 20.0),
         ("M6x25 sheet metal screw", "ST6.3", 25.0),
         ("M4x13 sheetmetal screw", "ST4.2", 13.0),
@@ -249,6 +250,47 @@ def test_a_name_that_gives_no_tapping_size_keeps_its_own(name, size):
     hint = read_name(name)
     assert (hint.size.designation if hint.size else None) == size
     assert hint.size is None or not hint.size.is_tapping
+
+
+@pytest.mark.parametrize(
+    ("name", "length"),
+    [
+        # Thread forming alone: for metal a machine thread, for plastic its own.
+        ("M3x8 thread forming screw", 8.0),
+        ("M3x8 thread forming pan head phillips screw", 8.0),
+        ("M3 x 8 Thread-Forming Screw for plastic", 8.0),
+        # DIN 7500's are for ISO metric threads, and sold as self-tapping all the same.
+        ("M3x8 thread forming pan head phillips screw DIN 7500", 8.0),
+        ("DIN 7500 C M3x8 self-tapping screw", 8.0),
+        ("M3x8 self tapping screw DIN7500", 8.0),
+        ("M3x8 pan head screw DIN 7500-1 form C", 8.0),
+        # Trilobular screws roll a machine thread.
+        ("M3x10 Taptite pan head torx screw", 10.0),
+        ("M3x10 self tapping Taptite screw", 10.0),
+        ("M3x10 trilobular self tapping screw", 10.0),
+        ("M3x10 thread rolling screw", 10.0),
+        ("M3x10 self-tapping thread rolling screw", 10.0),
+    ],
+)
+def test_a_screw_that_forms_a_machine_thread_keeps_its_machine_size(name, length):
+    # Issue #164: each was an ST2.9, the tapping size an M3 stands for, or would
+    # have been beside "self tapping". An M3 machine screw fits the hole it forms.
+    hint = read_name(name)
+    assert (hint.size.designation, hint.length_mm, hint.tapping) == ("M3", length, False)
+
+
+@pytest.mark.parametrize(
+    ("name", "size"),
+    [
+        ("ST2.9x9.5 thread forming screw", "ST2.9"),  # its own size says
+        ("ST2.9x9.5 pan head screw DIN 7500", "ST2.9"),  # and is said, whatever else is
+        ("M3x10 self tapping thread forming screw", "ST2.9"),  # a word that says tapping
+        ("M3x10 sheet metal screw, thread forming", "ST2.9"),
+    ],
+)
+def test_thread_forming_beside_a_tapping_size_or_word_is_a_tapping_screw(name, size):
+    hint = read_name(name)
+    assert (hint.size.designation, hint.tapping) == (size, True)
 
 
 def test_a_tapping_word_alone_gives_no_size():
@@ -322,6 +364,40 @@ def test_the_issue_s_three_are_tapping_sizes_and_nothing_is_noted(engine):
     # It said "#2 phillips screw x2", and two notes: "drawn as a #2 (2.20 shank), where
     # its name says M2" and "cross drawn for PH0 ..., where a #2's standard gives PH1".
     assert not any(line.startswith("NOTE M") or line.startswith("NOTE ST") for line in lines)
+
+
+def test_a_thread_forming_screw_drawn_as_the_machine_screw_it_is_is_one(engine):
+    # Issue #164's three: a DIN 7500 M3, 3.0 across with ISO 7045's 5.6 by 2.4 head
+    # and a PH1 cross, the same solid named as a plain M3, and a DIN 7500 M4. The
+    # two thread-forming ones were an ST2.9 and an ST4.2, and nothing was said.
+    cases = [
+        ("M3x8 thread forming pan head phillips screw DIN 7500", pan(2.9, 3.0, dk=5.6, k=2.4)),
+        ("M3x8 pan head phillips screw", pan(2.9, 3.0, dk=5.6, k=2.4)),
+        ("M4x10 thread forming pan head phillips screw DIN 7500", pan(4.2, 4.0, dk=8.0, k=3.1)),
+    ]
+    results, report = run(cases, engine=engine)
+    assert {
+        name: (r.fastener.size.designation, r.tool, r.notes) for name, r in results.items()
+    } == {
+        "M3x8 thread forming pan head phillips screw DIN 7500": ("M3", "driver-ph1", ()),
+        "M3x8 pan head phillips screw": ("M3", "driver-ph1", ()),
+        "M4x10 thread forming pan head phillips screw DIN 7500": ("M4", "driver-ph2", ()),
+    }
+    assert report.terminal_lines()[:3] == [
+        "3 fasteners: 3 turn, 0 held, 0 blocked, 0 stuck, 0 not covered",
+        "  M3 phillips screw        driver-ph1     x2    all pass (driver straight in)",
+        "  M4 phillips screw        driver-ph2     x1    all pass (driver straight in)",
+    ]
+
+
+def test_a_thread_forming_screw_s_core_is_its_machine_thread_s():
+    # What a clash measures a screw past: 2.39 for an M3, where an ST2.9's is 2.08.
+    (found,) = run([("M3x8 thread forming screw DIN 7500", pan(2.9, 3.0, dk=5.6, k=2.4))])[
+        0
+    ].values()
+    assert found.fastener.size.designation == "M3"
+    assert thread_minor_mm(found.fastener.size) == pytest.approx(2.387, abs=0.001)
+    assert thread_minor_mm(Size.parse("ST2.9")) == 2.08
 
 
 def test_the_same_screws_with_no_tapping_word_are_machine_screws_as_before():
