@@ -47,9 +47,18 @@ HIT_MIN_VOLUME = 0.05
 GRAZE_MIN_VOLUME = 1e-4
 
 
+#: A mesh as a view draws one: vertices (n, 3) and triangles (m, 3).
+Triangles = tuple[np.ndarray, np.ndarray]
+
+
 @dataclass(frozen=True)
 class PartOverlap:
-    """Two parts' overlap, as measured: volume (mm^3), surface (mm^2), box, and solid."""
+    """Two parts' overlap, as measured: volume (mm^3), surface (mm^2), box, and solid.
+
+    Measured on the two solids, by a boolean, or where that failed, on their
+    meshes (:attr:`mesh`, issue #163): then its volume is good to what the meshes
+    are, and it says so.
+    """
 
     volume: float
     area: float
@@ -57,6 +66,23 @@ class PartOverlap:
     high: tuple[float, float, float]
     #: The overlap itself, where the parts are, for a view to draw.
     shape: Shape | None = field(default=None, compare=False, repr=False)
+    #: The overlap as the two meshes share it, where it was measured on them.
+    mesh: Triangles | None = field(default=None, compare=False, repr=False)
+
+    @property
+    def by_meshes(self) -> bool:
+        """Whether it was measured on the parts' meshes, the solids' boolean having failed."""
+        return self.mesh is not None
+
+    def corners(self) -> np.ndarray:
+        """The overlap's own vertices, (n, 3): the solid's, or its mesh's."""
+        if self.mesh is not None:
+            return self.mesh[0]
+        if self.shape is None:
+            return np.zeros((0, 3))
+        return np.array([tuple(vertex) for vertex in self.shape.vertices()], dtype=float).reshape(
+            -1, 3
+        )
 
 
 class Contact(enum.Enum):
@@ -113,6 +139,10 @@ class Engine(ABC):
         #: only where the engine leans on the B-rep itself, a boolean or a repaired
         #: or missing mesh, so collisions with them are approximate (issue #85).
         self.invalid: list[str] = []
+        #: Pairs of parts whose overlap could not be measured at all, by name: the
+        #: solids' boolean gave an answer no solid could be, and one of the two has
+        #: no closed mesh to measure on instead (issue #163).
+        self.unsure: list[tuple[str, str]] = []
 
     def scene(self, parts: Iterable[Part]) -> Scene:
         """The obstacles for one fastener's check, queried through this engine."""
@@ -172,6 +202,14 @@ class Engine(ABC):
         measured exactly.
         """
         return False
+
+    @abstractmethod
+    def shared(self, first: Part, second: Part) -> PartOverlap | None:
+        """What two parts share, measured; None where they share nothing.
+
+        By a boolean on the two solids, checked against their meshes: a boolean
+        that comes back empty is no proof the two are apart (issue #163).
+        """
 
 
 class Scene:

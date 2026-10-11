@@ -12,6 +12,11 @@ own nut.
   the mesh engine, two parts' meshes first rule out the pairs they are sure of, by
   more than either mesh could stray (``MeshEngine.parts_apart``); the rest, a shaft
   in a bore of its own radius, a face on a face, go to a boolean.
+- A boolean's answer is held to what the two meshes share (issue #163,
+  ``MeshEngine.shared``): OCCT's comes back empty, or with what no solid could be,
+  for parts drawn far into each other, and says nothing of it. Where the solids
+  themselves bear the meshes out, the clash is told on the meshes' figure, and says
+  so (:data:`BY_MESHES`).
 - A fastener is measured past its thread, as #63's test measures it
   (``checker._measured``): a screw in a hole drawn at its tap drill, a bolt in a nut
   bored at its minor diameter, overlap by design and are no clash. So is a fastener
@@ -42,7 +47,6 @@ from typing import TYPE_CHECKING, cast
 import numpy as np
 
 from wrenchroom import __version__
-from wrenchroom.engine.exact import exact_common, exact_overlap
 from wrenchroom.engine.scene import HIT_MIN_VOLUME
 from wrenchroom.report import md_code, md_text, printable
 
@@ -52,7 +56,7 @@ if TYPE_CHECKING:
     from build123d import Shape, Solid
 
     from wrenchroom.assembly import Part
-    from wrenchroom.engine.scene import Engine, PartOverlap
+    from wrenchroom.engine.scene import Engine, PartOverlap, Triangles
 
 #: An overlap thinner than this, mm (its volume over half its surface, which a thin
 #: shell's thickness is), is as often a press fit as a fault: a pin drawn a few
@@ -83,6 +87,10 @@ TRAP_HINT = "its trap: a press fit, or a clash to fix"
 #: part takes up more of it than a hole for an insert leaves.
 DEEP_HINT = "deeper than a knurl: no hole drawn for the insert?"
 
+#: What is said of a clash measured on the two parts' meshes (issue #163): its volume
+#: is theirs, good to what a mesh is.
+BY_MESHES = "measured on their meshes: the solids' boolean failed"
+
 #: Words in a part's name that say it is a cable, which a gland or grommet is drawn
 #: round.
 _CABLE_WORDS = frozenset({"cable", "cables", "wire", "wires", "cord", "lead", "leads"})
@@ -104,6 +112,8 @@ class Clash:
         hint: What it may be: a shortcut rather than a fault (a press fit, a gland
             round its cable, a nut in its trap), or one fastener drawn twice.
         set_in: An insert set into its part, which is no clash: counted apart.
+        by_meshes: Measured on the two parts' meshes, the solids' boolean having
+            failed (issue #163): its volume is good to what the meshes are.
     """
 
     first: str
@@ -112,9 +122,11 @@ class Clash:
     point: tuple[float, float, float]
     state: str | None = None
     hint: str | None = None
-    #: The overlap itself, for the 3D view to draw; not in the JSON.
-    overlap: Shape | None = field(default=None, compare=False, repr=False)
+    #: The overlap itself, for the 3D view to draw: the solid, or measured on the
+    #: meshes, its triangles. Not in the JSON.
+    overlap: Shape | Triangles | None = field(default=None, compare=False, repr=False)
     set_in: bool = False
+    by_meshes: bool = False
 
 
 @dataclass(frozen=True)
@@ -166,12 +178,16 @@ class Clashes:
             be wrong, so not measured: said, never silent.
         set_in: Each insert set into a part, which is no clash and fails nothing
             (issue #158): counted, and listed when asked.
+        unsure: Pairs of parts not measured at all: the solids' boolean gave what no
+            solid could be, and one of the two has no closed mesh to measure on
+            instead (issue #163). Said, never silent.
     """
 
     found: tuple[Clash, ...] = ()
     unmatched_allows: tuple[str, ...] = ()
     unmeasured: tuple[str, ...] = ()
     set_in: tuple[Clash, ...] = ()
+    unsure: tuple[tuple[str, str], ...] = ()
 
     @property
     def exit_code(self) -> int:
@@ -217,6 +233,8 @@ class Clashes:
         if self.unmeasured:
             names = ", ".join(self.unmeasured)
             lines.append(f"NOTE not measured for clashes, not understood as fasteners: {names}")
+        if self.unsure:
+            lines.append(f"NOTE {UNSURE}: {_pairs_said(self.unsure)}")
         return [printable(line) for line in lines]
 
     def to_json(self) -> dict[str, object]:
@@ -230,6 +248,7 @@ class Clashes:
                     "point": [round(c, 2) for c in clash.point],
                     "state": clash.state,
                     "hint": clash.hint,
+                    "by_meshes": clash.by_meshes,
                 }
                 for clash in self.found
             ],
@@ -241,9 +260,11 @@ class Clashes:
                     "volume": round(clash.volume, 2),
                     "point": [round(c, 2) for c in clash.point],
                     "state": clash.state,
+                    "by_meshes": clash.by_meshes,
                 }
                 for clash in self.set_in
             ],
+            "unsure": [list(pair) for pair in self.unsure],
         }
 
     def json_text(self, model: str = "", engine: str = "mesh") -> str:
@@ -289,13 +310,28 @@ class Clashes:
         if self.unmeasured:
             names = ", ".join(md_code(name, in_table=False) for name in self.unmeasured)
             apart.append(f"- Not measured for clashes, not understood as fasteners: {names}")
+        if self.unsure:
+            pairs = "; ".join(
+                f"{md_code(a, in_table=False)} with {md_code(b, in_table=False)}"
+                for a, b in self.unsure
+            )
+            apart.append(f"- {UNSURE[0].upper()}{UNSURE[1:]}: {pairs}")
         return lines + (["", *apart] if apart else [])
+
+
+#: What is said of the pairs in :attr:`Clashes.unsure`.
+UNSURE = "not measured, the solids' boolean failed and one has no closed mesh"
+
+
+def _pairs_said(pairs: tuple[tuple[str, str], ...]) -> str:
+    return "; ".join(f"{a} with {b}" for a, b in pairs)
 
 
 def _line(word: str, clash: Clash) -> str:
     """``CLASH nut into lid  96.1 mm^3  in state open  (a press fit, 0.03 deep?)``."""
     said = [f"in state {clash.state}"] if clash.state else []
     said += [f"({clash.hint})"] if clash.hint else []
+    said += [f"({BY_MESHES})"] if clash.by_meshes else []
     return "  ".join([f"{word} {clash.first} into {clash.second}", f"{clash.volume:.1f} mm^3"]) + (
         "".join(f"  {part}" for part in said)
     )
@@ -305,6 +341,7 @@ def _row(clash: Clash) -> str:
     """A clash as a row of its Markdown table."""
     said = [f"in state {md_code(clash.state)}"] if clash.state else []
     said += [md_text(clash.hint)] if clash.hint else []
+    said += [md_text(BY_MESHES)] if clash.by_meshes else []
     return (
         f"| {md_code(clash.first)} | {md_code(clash.second)} | {clash.volume:.1f} "
         f"| {'; '.join(said)} |"
@@ -353,12 +390,12 @@ def _clash(
     if engine.parts_apart(a, b):
         return None
     sides = [(x, y) for x, y in ((a, b), (b, a)) if x.name in fasteners]
-    twice = _drawn_twice(a, b, state) if len(sides) > 1 else None
+    twice = _drawn_twice(a, b, engine, state) if len(sides) > 1 else None
     if twice is not None:
         return twice
     if sides:
         return _fastener_clash(sides, engine, fasteners, state)
-    overlap = exact_common(a.shape, b.shape)
+    overlap = engine.shared(a, b)
     if overlap is None or overlap.volume <= HIT_MIN_VOLUME:
         return None
     first, second = sorted((a, b), key=_by_size)
@@ -380,12 +417,7 @@ def _fastener_clash(
     found = []
     for fastener, other in sides:
         measured = fasteners[fastener.name]()
-        past = measured.past_thread
-        if engine.parts_apart(past, other):
-            continue
-        if exact_overlap(past.shape, other.shape) <= HIT_MIN_VOLUME:
-            continue
-        overlap = exact_common(measured.region.shape, other.shape)
+        overlap = drawn_into(engine, measured, other)
         if overlap is None:
             continue
         hint, set_in = None, False
@@ -401,6 +433,22 @@ def _fastener_clash(
     return max(found, key=_by_volume) if found else None
 
 
+def drawn_into(engine: Engine, measured: Measured, other: Part) -> PartOverlap | None:
+    """A fastener's overlap with a part it is drawn into past its thread; None where it isn't.
+
+    What lies past its thread decides; what is told is all its measured region
+    shares with the part. The one measure of it, for the list and for a verdict
+    (issue #156).
+    """
+    past = measured.past_thread
+    if engine.parts_apart(past, other):
+        return None
+    through = engine.shared(past, other)
+    if through is None or through.volume <= HIT_MIN_VOLUME:
+        return None
+    return engine.shared(measured.region, other) or through
+
+
 def _share(insert: Along, overlap: PartOverlap) -> float | None:
     """How much of an insert a part round its middle takes up; None for a part that isn't.
 
@@ -413,9 +461,7 @@ def _share(insert: Along, overlap: PartOverlap) -> float | None:
     overlap's, the overlap is this share: a hole 0.9 of the insert across leaves
     0.19 of it, one drawn for the screw alone, half.
     """
-    if overlap.shape is None:
-        return None
-    points = np.array([tuple(vertex) for vertex in overlap.shape.vertices()], dtype=float)
+    points = overlap.corners()
     if not len(points):
         return None
     direction = np.array(insert.direction, dtype=float)
@@ -428,7 +474,7 @@ def _share(insert: Along, overlap: PartOverlap) -> float | None:
     return overlap.volume / (math.pi * radius**2 * (high - low))
 
 
-def _drawn_twice(a: Part, b: Part, state: str | None) -> Clash | None:
+def _drawn_twice(a: Part, b: Part, engine: Engine, state: str | None) -> Clash | None:
     """Two fasteners that are one drawn twice, told as its verdict tells it (issue #156).
 
     All the two solids share, threads and all: over half of each (:data:`TWICE`),
@@ -436,7 +482,7 @@ def _drawn_twice(a: Part, b: Part, state: str | None) -> Clash | None:
     head. The later by name is the one drawn over the other, as ``check`` says it
     (issue #94).
     """
-    overlap = exact_common(a.shape, b.shape)
+    overlap = engine.shared(a, b)
     if overlap is None or overlap.volume <= TWICE * max(_by_size(a)[0], _by_size(b)[0]):
         return None
     kept, other = sorted((a, b), key=_by_name)
@@ -473,7 +519,8 @@ def _made(
         (point[0], point[1], point[2]),
         state,
         hint or _hint(second, overlap, gland=gland),
-        overlap.shape,
+        overlap.mesh if overlap.by_meshes else overlap.shape,
+        by_meshes=overlap.by_meshes,
     )
 
 

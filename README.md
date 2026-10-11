@@ -303,7 +303,10 @@ matches no part, say, which is usually a renamed part).
   past its thread, so a screw in its tapped hole is no clash, and the sidecar's
   `allow:` names pairs meant to overlap (a press fit, a shaft in its bearing). A
   heat-set insert set into its printed part, in a hole drawn smaller than its knurl,
-  is counted and is no clash (`--with-inserts` lists them).
+  is counted and is no clash (`--with-inserts` lists them). Each overlap is measured
+  exactly and held to what the two parts' meshes share, so a boolean that comes back
+  empty for two parts drawn into each other is caught, and the clash told all the
+  same.
 
   ```console
   $ wrenchroom clashes examples/bracket.step

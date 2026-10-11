@@ -6,7 +6,9 @@ slider, into its wall in bench_lever-up.step alone. Its threads in their holes,
 drawn at a tap drill or at a minor diameter, a bolt in its nut and every mate, are
 none. The edges sidecar keeps the faults: each drawn-in cell's fastener is a clash,
 measured as #63's "drawn into" measures it, and every clash a verdict tells is in
-the list, to the volume (issue #156).
+the list, to the volume (issue #156). And with every boolean coming back empty, as
+OCCT's does of some pairs without a word, the same clashes are told all the same,
+on the parts' meshes (issue #163).
 """
 
 import re
@@ -17,6 +19,8 @@ from bench import edges_sidecar
 from wrenchroom.assembly import Assembly
 from wrenchroom.checker import check, find_clashes
 from wrenchroom.config import Config
+from wrenchroom.engine import exact as exact_module
+from wrenchroom.engine import mesh as mesh_module
 
 PRESS_FIT = "a press fit, 0.03 deep? allow it in the sidecar"
 TWICE = "one fastener drawn twice"
@@ -94,6 +98,47 @@ def test_the_edges_bench_s_faults_are_each_a_clash(bench_dir, bench_model, bench
         ("twice_side_screw", "twice_side_box", 8.9, None, None),
     ]
     assert set_in(found) == SET_IN
+
+
+def test_with_every_boolean_failing_the_edges_bench_s_clashes_are_still_told(
+    bench_dir, bench_model, bench_engine, monkeypatch
+):
+    """Issue #163: a boolean that comes back empty is no proof two parts are apart.
+
+    Every boolean a clash is measured by is made to answer nothing, as OCCT's did
+    for the housings of a public model. All but two of the edges bench's clashes
+    are told all the same, the same two parts and the same hint, on the meshes'
+    figure of each: within a fifth under what the boolean measures (a dome's mesh
+    lies inside it, a thin cap of one most of all), and said to be the meshes'.
+    The two it can't tell are press_fit's rods, 0.03 into their block: no point of
+    that is deeper than a mesh may stand off its surface, so nothing can be asked
+    of the solids, and with no boolean there is no measure. hosted's insert is
+    still set into its pocket.
+    """
+    config = Config.from_dict(edges_sidecar(), source="edges")
+    exact = find_clashes(bench_model, config, model_dir=bench_dir, engine=bench_engine)
+    for module in (mesh_module, exact_module):  # whoever asks it
+        monkeypatch.setattr(module, "measured_common", lambda a, b: (None, True))
+    failing = find_clashes(bench_model, config, model_dir=bench_dir, engine=bench_engine)
+    assert not any(clash.by_meshes for clash in exact.found)
+    assert all(clash.by_meshes for clash in failing.found)
+    told = {(clash.first, clash.second): clash for clash in failing.found}
+    measured = {(clash.first, clash.second): clash for clash in exact.found}
+    assert sorted(set(measured) - set(told)) == [
+        ("press_fit_allowed_rod", "press_fit_block"),
+        ("press_fit_pressed_rod", "press_fit_block"),
+    ]
+    assert len(told) == 20  # the guard: the rest, and no pair the boolean didn't have
+    assert set(told) <= set(measured)
+    for pair, clash in told.items():
+        assert clash.hint == measured[pair].hint, pair
+        assert 0.8 < clash.volume / measured[pair].volume < 1.02, pair
+    near = [pair for pair, clash in told.items() if clash.volume > 0.95 * measured[pair].volume]
+    assert len(near) >= 14  # most to a few per cent
+    (insert,) = failing.set_in
+    assert (insert.first, insert.second, insert.by_meshes) == (*SET_IN[0][:2], True)
+    assert insert.volume == pytest.approx(SET_IN[0][2], rel=0.05)
+    assert (failing.unsure, failing.exit_code) == ((), 1)
 
 
 DRAWN_INTO = re.compile(r"drawn into (.+) \(([\d.]+) mm\^3\): fix the model")

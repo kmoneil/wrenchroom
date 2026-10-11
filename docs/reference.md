@@ -547,8 +547,27 @@ every run, and every report says it wasn't looked for.
 
 - **A clash** is an overlap past the hit floor, 0.05 mm^3, the floor a tool's hit
   is held to. Every pair of parts whose boxes overlap is measured, and every clash
-  told is measured exactly, so both engines tell the same ones to the same volume.
-  The mesh engine rules out first the pairs its meshes are sure of.
+  told is measured exactly, or says it wasn't (below), so both engines tell the
+  same ones to the same volume. The mesh engine rules out first the pairs its
+  meshes are sure of.
+- **A boolean's answer is held to the meshes** (issue #163). The boolean that
+  measures an overlap exactly is OCCT's, and it fails without saying so. For two
+  parts drawn far into each other it can come back empty, or with a piece of what
+  they share, or with a solid inside out; for two that only touch, with the whole
+  of the smaller. So its answer is compared with what the two parts' meshes share.
+  Where the two differ by more than the floor and a factor of two, the solids
+  themselves are asked, point by point: the meshes' overlap is real where points
+  deep inside it, 0.02 mm or more from its surface, lie inside both solids. The
+  boolean is then asked once more, each solid's faces merged first; failing that
+  too, the clash is told on the meshes' figure, good to what a mesh is, and says so:
+  `CLASH cowl_a into cowl_b  40502.7 mm^3  (measured on their meshes: the solids'
+  boolean failed)`. Two faces drawn in one place, a shaft in a bore of its own
+  radius, overlap on their meshes too, a few hundredths deep, and no point of that
+  is inside both solids: no clash, as before. An overlap under 0.04 thick has no
+  point deep enough to ask about, and there the boolean's answer stands. `--exact`
+  measures the same way. Where the boolean gives what no solid could be and one of
+  the two parts has no closed mesh, the pair can't be measured, and is said: `NOTE
+  not measured, the solids' boolean failed and one has no closed mesh: a with b`.
 - **A fastener is measured past its thread**, as a fastener drawn into a part is
   (issue #63): a screw's head, a nut's body less its bore's thread. A screw in a
   hole drawn at its tap drill or its minor diameter, a bolt in a nut bored at its
@@ -596,8 +615,9 @@ every run, and every report says it wasn't looked for.
 
 The terminal says each as `CLASH first into second  volume`, the first the part
 drawn into the other: a fastener, else the smaller. The JSON's `clashes` gives the
-pairs, their volumes, a point in each overlap (the middle of its box), the state and
-the hint, and under `set_in`, the inserts set into their parts, the same way;
+pairs, their volumes, a point in each overlap (the middle of its box), the state, the
+hint and `by_meshes` (true where it was measured on the meshes); under `set_in`, the
+inserts set into their parts, the same way; and under `unsure`, the pairs not measured;
 `wrenchroom clashes --json` and `--md` write the same alone. The 3D view
 (`check --clashes --html`) lists them in its panel: choosing one draws its two parts
 see-through and the overlap itself in red, over them, in the state's own model where
