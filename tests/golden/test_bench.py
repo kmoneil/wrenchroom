@@ -11,7 +11,9 @@ from cells import CELLS
 from wrenchroom.assembly import Assembly
 from wrenchroom.checker import check
 from wrenchroom.config import Config, ConfigError
-from wrenchroom.report import md_text
+from wrenchroom.engine import exact as exact_module
+from wrenchroom.engine import mesh as mesh_module
+from wrenchroom.report import Verdict, md_text
 
 
 def _truth_params():
@@ -639,3 +641,37 @@ def test_the_tools_list_counts_each_passing_fastener_s_tool(bench_report, bench_
         "build_buried_late_screw",
         "key_wall_near_screw",
     )
+
+
+def test_under_exact_the_bench_s_verdicts_stand_though_every_boolean_comes_back_empty(
+    bench_dir, bench_report, bench_engine, monkeypatch
+):
+    """Issue #169: a boolean that comes back empty is no proof a tool is clear.
+
+    Under ``--exact`` every contact of a tool with a part is a boolean, and here
+    each one answers nothing, as OCCT's does of some solids without a word. Each
+    tool the booleans leave clear is then held to what its meshes and the part's
+    share, and the solids are asked. All but two of the bench's fasteners get the
+    verdict and the tool they get with the booleans as they are, and every plug
+    comes off as it did. The two are torus_deep's and flat_deep's screws, blocked
+    by a key 0.075 mm^3 into a part, a hair past the floor and 0.08 deep at most:
+    no point of that is deep enough to ask the solids about, so with no boolean to
+    measure it the key reads as clear, and the screw turns.
+    """
+    if bench_engine != "exact":
+        pytest.skip("--exact's own booleans: the mesh engine decides a deep hit by its meshes")
+    measured = bench_report
+    monkeypatch.setattr(exact_module, "exact_overlap", lambda a, b: 0.0)
+    for module in (exact_module, mesh_module):
+        monkeypatch.setattr(module, "measured_common", lambda a, b: (None, True))
+    failing = check_bench(bench_dir, engine="exact")
+    as_measured = {r.fastener.name: (r.verdict, r.tool) for r in measured.results}
+    told = {r.fastener.name: (r.verdict, r.tool) for r in failing.results}
+    assert len(told) == len(as_measured) == FINAL_COUNTS["fasteners"]
+    moved = sorted(name for name in told if told[name] != as_measured[name])
+    assert moved == ["flat_deep_screw", "torus_deep_screw"]
+    assert {as_measured[name][0] for name in moved} == {Verdict.BLOCKED}
+    assert {told[name][0] for name in moved} == {Verdict.TURNS}
+    plugs = {c.name: (c.verdict, c.axis) for c in measured.connectors.results}
+    assert plugs == {c.name: (c.verdict, c.axis) for c in failing.connectors.results}
+    assert len(plugs) == 7

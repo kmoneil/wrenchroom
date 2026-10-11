@@ -34,7 +34,7 @@ from OCP.TopAbs import TopAbs_IN
 from wrenchroom.solids import Bounds, ToolSolid
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Callable, Iterable, Iterator
 
     from wrenchroom.assembly import Part
 
@@ -201,6 +201,14 @@ class Engine(ABC):
         An engine that can only be sure by measuring says False, and the overlap is
         measured exactly.
         """
+        return False
+
+    def into(self, tool: Tool, part: Part, said: float, solid: Callable[[int], Shape]) -> bool:
+        """Whether a tool whose booleans sum to ``said``, short of a hit, is into a part.
+
+        Only an engine with the meshes to hold a boolean to can say so.
+        """
+        del tool, part, said, solid
         return False
 
     @abstractmethod

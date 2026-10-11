@@ -40,6 +40,8 @@ from wrenchroom.engine.scene import (
 from wrenchroom.solids import Bounds, ToolSolid, frame_location
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from wrenchroom.assembly import Part
     from wrenchroom.solids import Primitive
 
@@ -57,8 +59,12 @@ class ExactEngine(Engine):
 
     name: ClassVar[str] = "exact"
 
-    def __init__(self) -> None:
+    def __init__(self, *, second_opinion: bool = True) -> None:
         super().__init__()
+        #: Whether a tool its booleans call clear of a part is held to the two
+        #: meshes (:meth:`into`). Not for a mesh engine's own referee: it is asked
+        #: where the meshes couldn't be sure, and theirs is no second opinion there.
+        self.second_opinion = second_opinion
         #: Each placed piece's overlap volume with each part, measured once (a
         #: socket's mouth comes back on every extension). Keyed by the piece, its
         #: placement and the part's identity; the part is kept with its box.
@@ -79,12 +85,27 @@ class ExactEngine(Engine):
         it comes back empty, or with what no solid could be, the meshes are the
         second opinion (issue #163), and both engines tell the same clashes.
         """
+        return self._second().shared(first, second)
+
+    def into(self, tool: Tool, part: Part, said: float, solid: Callable[[int], Shape]) -> bool:
+        """Whether a tool the booleans call clear of a part is into it all the same.
+
+        A tool's contact is a boolean a piece, and a boolean that comes back empty
+        is a tool that passes (issue #169): a round shaft 13.2 mm^3 into a disc
+        whose underside is split along a circle of the shaft's own radius read as
+        clear. So a tool not a hit by its booleans' sum, ``said``, is held to what
+        its meshes and the part's share, as two parts' clash is
+        (:meth:`MeshEngine.into`). ``solid`` gives a piece's own solid, by its index.
+        """
+        return self.second_opinion and self._second().into(tool, part, said, solid)
+
+    def _second(self) -> Engine:
         if self._meshes is None:
             from wrenchroom.engine.mesh import MeshEngine  # noqa: PLC0415  (it imports this)
 
             self._meshes = MeshEngine()
             self._meshes.unsure = self.unsure
-        return self._meshes.shared(first, second)
+        return self._meshes
 
 
 class ExactQuery:
@@ -140,12 +161,19 @@ class ExactQuery:
         return self._pieces[index]
 
     def contact(self, part: Part) -> Contact:
-        """The pieces' summed overlap with the part, as a contact; stops at a hit."""
+        """The pieces' summed overlap with the part, as a contact; stops at a hit.
+
+        Short of a hit, the sum is held to what the tool's meshes and the part's
+        share (:meth:`ExactEngine.into`): a boolean that comes back empty is no
+        proof the tool is clear.
+        """
         total = 0.0
         for index in pieces_near(*self._boxes, self._engine.part_box(part)):
             total += self.overlap(int(index), part)
             if total > HIT_MIN_VOLUME:
                 return Contact.HIT
+        if self._engine.into(self._tool, part, total, self._piece):
+            return Contact.HIT
         return contact_of(total)
 
     def hits(self, part: Part) -> bool:

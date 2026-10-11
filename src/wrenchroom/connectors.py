@@ -41,8 +41,8 @@ from typing import TYPE_CHECKING
 
 from build123d import Compound, GeomType, Location
 
+from wrenchroom.assembly import Part
 from wrenchroom.detect.names import name_words
-from wrenchroom.engine.exact import exact_overlap
 from wrenchroom.engine.scene import HIT_MIN_VOLUME, Contact, shape_bounds
 from wrenchroom.report import listed, md_code, md_text, shortlist
 from wrenchroom.tools.fingers import FINGER_REACH
@@ -53,10 +53,12 @@ if TYPE_CHECKING:
 
     from build123d import Shape
 
-    from wrenchroom.assembly import Part
     from wrenchroom.engine.scene import Engine, Scene
 
 Vec = tuple[float, float, float]
+
+#: What a plug is called where it is measured as placed, drawn or moved along a pull.
+_PLACED = "plug"
 
 #: Past its engaged length, how far a plug must come out to be free, mm: its contacts'
 #: last grip, and a hand's slack.
@@ -493,6 +495,12 @@ def touching(shape: Shape, parts: Sequence[Part], engine: Engine) -> list[Part]:
     return [part for part in near if _distance(shape, part.shape) <= TOUCH_MM]
 
 
+def _shared(engine: Engine, plug: Shape, part: Part) -> float:
+    """What a plug, as placed, shares with a part, mm^3: its boolean, held to the meshes (#169)."""
+    overlap = engine.shared(Part(_PLACED, plug), part)
+    return overlap.volume if overlap is not None else 0.0
+
+
 def holds_in(shape: Shape, part: Part, directions: Sequence[Vec], engine: Engine) -> set[int]:
     """Which of ``directions``, by index, a part stops the plug moving in.
 
@@ -502,13 +510,13 @@ def holds_in(shape: Shape, part: Part, directions: Sequence[Vec], engine: Engine
     """
     query = engine.query(shape)
     drawn_in = query.contact(part) is Contact.HIT
-    rest = exact_overlap(shape, part.shape) if drawn_in else 0.0
+    rest = _shared(engine, shape, part) if drawn_in else 0.0
     held: set[int] = set()
     for index, direction in enumerate(directions):
         for step in PROBE_STEPS:
             moved = _moved(shape, _scale(direction, step))
             if drawn_in:
-                if exact_overlap(moved, part.shape) > rest + HIT_MIN_VOLUME:
+                if _shared(engine, moved, part) > rest + HIT_MIN_VOLUME:
                     held.add(index)
                     break
             elif engine.query(moved).contact(part) is Contact.HIT:
