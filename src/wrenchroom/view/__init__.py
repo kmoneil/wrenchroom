@@ -370,8 +370,11 @@ class _Builder:
         """One clash: its two parts in its state's view, and the overlap itself to draw."""
         view = self.view(clash.state)
         by_name = self._view_parts[view]
-        overlap = clash.overlap
-        arrays = shape_triangles(overlap, MESH_TOLERANCE) if overlap is not None else None
+        overlap = clash.overlap  # the solid, or measured on the meshes, their triangles
+        if overlap is None or isinstance(overlap, tuple):
+            arrays = overlap
+        else:
+            arrays = shape_triangles(overlap, MESH_TOLERANCE)
         return {
             "label": printable(f"{clash.first} into {clash.second}"),
             "volume": f"{clash.volume:.1f}",

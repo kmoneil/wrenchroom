@@ -324,6 +324,7 @@ def test_the_json_gives_the_inserts_set_in_apart():
             "volume": 12.06,
             "point": [0.0, 0.0, -2.0],
             "state": None,
+            "by_meshes": False,
         }
     ]
 

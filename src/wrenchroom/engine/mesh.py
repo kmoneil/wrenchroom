@@ -64,12 +64,13 @@ from OCP.TopAbs import TopAbs_FACE, TopAbs_REVERSED
 from OCP.TopExp import TopExp_Explorer
 from OCP.TopLoc import TopLoc_Location
 
-from wrenchroom.engine.exact import ExactEngine, ExactQuery
+from wrenchroom.engine.exact import ExactEngine, ExactQuery, measured_common, merged
 from wrenchroom.engine.scene import (
     BOX_MARGIN,
     HIT_MIN_VOLUME,
     Contact,
     Engine,
+    PartOverlap,
     Tool,
     contact_of,
     pieces_near,
@@ -84,11 +85,30 @@ from wrenchroom.solids import (
 )
 
 if TYPE_CHECKING:
+    from build123d import Solid
+
     from wrenchroom.assembly import Part
     from wrenchroom.solids import Bounds, Primitive
 
 #: Chord deviation for tessellating parts, mm. The spec's default.
 MESH_TOLERANCE = 0.2
+
+#: How deep in the meshes' overlap a point must lie, mm, for the solids to be asked
+#: about it (:meth:`MeshEngine.shared`). Nearer the overlap's surface than a mesh
+#: stands off the surface it was made from, a point says nothing: two faces drawn in
+#: one place, a shaft in a bore of its own radius, make an overlap of their meshes
+#: that deep and no more. On five public models those were 0.003 to 0.012 deep, and
+#: the least of the real ones (a screw's thread in its hole) 0.05.
+WITNESS_DEPTH = 0.02
+
+#: Rays cast into each lump of an overlap to find points inside it, the points the
+#: solids are asked about at most, and the lumps looked at, largest first.
+WITNESS_RAYS = 24
+WITNESS_POINTS = 6
+WITNESS_LUMPS = 64
+
+#: The six ways along the axes, for how much room a point has round it.
+_AXES = np.vstack([np.eye(3), -np.eye(3)])
 
 #: Angular deflection for tessellating parts, radians: keeps small radii (an M3
 #: shank) from coming out as a handful of sides when 0.2 mm alone would allow it.
@@ -140,8 +160,8 @@ class MeshEngine(Engine):
         #: placement, and the part's identity (its mesh is kept, so is the part).
         self.measured: dict[tuple[object, ...], _Measure] = {}
         #: Each pair of parts' verdict for a clash (M8), measured once: whether surely
-        #: apart. The parts ride along.
-        self._pairs: dict[tuple[int, int], tuple[Part, Part, bool]] = {}
+        #: apart, and what their meshes share, mm^3. The parts ride along.
+        self._pairs: dict[tuple[int, int], tuple[Part, Part, bool, float]] = {}
 
     @property
     def meshed(self) -> tuple[str, ...]:
@@ -168,17 +188,25 @@ class MeshEngine(Engine):
         short of how far its mesh stands off (two arcs on the public Voron Legacy
         model overlapped 0.2 deep on their meshes, and in truth not at all).
         """
+        return self._pair(first, second)[0]
+
+    def _pair(self, first: Part, second: Part) -> tuple[bool, float]:
+        """Whether two parts are surely apart, and what their meshes share, mm^3: kept."""
         key = (id(first), id(second))
         cached = self._pairs.get(key)
         if cached is None:
-            cached = (first, second, self._apart(first, second))
+            cached = (first, second, *self._apart(first, second))
             self._pairs[key] = cached
-        return cached[2]
+        return cached[2], cached[3]
 
-    def _apart(self, first: Part, second: Part) -> bool:
+    def meshes_share(self, first: Part, second: Part) -> float:
+        """What two parts' meshes share, mm^3; nothing where one of them has no closed mesh."""
+        return self._pair(first, second)[1]
+
+    def _apart(self, first: Part, second: Part) -> tuple[bool, float]:
         mesh_a, mesh_b = self.part_mesh(first), self.part_mesh(second)
         if mesh_a is None or mesh_b is None:
-            return False  # a part that wouldn't close: measured exactly
+            return False, 0.0  # a part that wouldn't close: measured exactly
         box_a, box_b = self.part_box(first), self.part_box(second)
         low = np.maximum(box_a[0], box_b[0]) - BOX_MARGIN
         high = np.minimum(box_a[1], box_b[1]) + BOX_MARGIN
@@ -188,9 +216,112 @@ class MeshEngine(Engine):
         volume = overlap.volume()
         if volume <= 0:
             reach = out_a + out_b
-            return reach <= 0 or mesh_a.min_gap(mesh_b, reach) >= reach
+            return reach <= 0 or mesh_a.min_gap(mesh_b, reach) >= reach, 0.0
         # At most a graze, however the true surfaces lie near it.
-        return volume + (out_a + out_b) * overlap.surface_area() <= HIT_MIN_VOLUME
+        return volume + (out_a + out_b) * overlap.surface_area() <= HIT_MIN_VOLUME, volume
+
+    def shared(self, first: Part, second: Part) -> PartOverlap | None:
+        """What two parts share: the solids' boolean, held to what their meshes share.
+
+        OCCT's boolean fails without a word (issue #163). It comes back empty for
+        two parts drawn far into each other (a face of one split along an edge the
+        other's bore runs on; two housings, variants of one part, drawn in one
+        place), or with a piece of what they share, or with the whole of the
+        smaller part where the two only touch. Nothing in the answer says so, but
+        the two meshes do: closed solids both, their overlap is sure to within what
+        a mesh strays from its surface.
+
+        So the two are compared. Where they agree, within the hit floor or a factor
+        of two, the boolean's answer is the measure, as it was: exact. Where they
+        don't, the solids themselves are asked, point by point, which no boolean
+        has a hand in (:meth:`Engine.inside`). Each lump of the meshes' overlap is
+        kept where points deep inside it lie inside both solids: two faces drawn in
+        one place overlap on their meshes too, a few hundredths deep, and no point
+        of that is inside both. What is kept is what the solids bear out, and the
+        boolean is held to that:
+
+        - agreeing with it, the boolean stands (the meshes' surplus was slivers);
+        - saying less, it has lost what the solids bear out. It is asked once
+          more, the solids' faces merged (:func:`_again`); failing that too, the
+          overlap is measured on the meshes, and says so;
+        - saying more, its own pieces are asked as the lumps were, and the bulk of
+          it lying outside one of the solids, it is not taken: what the solids
+          bear out of the meshes' overlap is the measure, if anything;
+        - an answer no solid could be (:func:`measured_common`) is never taken, nor
+          asked for again (on a public model's housings each asking took five
+          seconds, and gave the same).
+
+        Without a closed mesh of both there is no second opinion: the boolean's
+        answer stands, or, being what no solid could be, the pair is noted as not
+        measured (:attr:`Engine.unsure`).
+        """
+        exact, sound = measured_common(first.shape, second.shape)
+        mesh_a, mesh_b = self.part_mesh(first), self.part_mesh(second)
+        if mesh_a is None or mesh_b is None:
+            if not sound:
+                self.unsure.append((first.name, second.name))
+            return exact if sound else None
+        said = exact.volume if exact is not None else 0.0
+        if sound and _agree(said, self.meshes_share(first, second)):
+            return exact
+        borne = self._borne_out(mesh_a ^ mesh_b, first, second)
+        held = borne.volume if borne is not None else 0.0
+        if not sound:
+            return borne
+        if _agree(said, held):
+            return exact
+        if borne is not None and said < held:
+            return _again(first, second, borne)
+        return exact if exact is None or not self.refuted(exact, first, second) else borne
+
+    def _borne_out(self, overlap: Manifold, first: Part, second: Part) -> PartOverlap | None:
+        """What of two meshes' overlap the solids bear out: its lumps with points inside both."""
+        lumps = sorted(overlap.decompose(), key=_volume, reverse=True)[:WITNESS_LUMPS]
+        kept = [lump for lump in lumps if self.inside_both(lump, first, second)]
+        if not kept:
+            return None
+        whole = kept[0] if len(kept) == 1 else Manifold.compose(kept)
+        mesh = whole.to_mesh()
+        vertices = np.asarray(mesh.vert_properties, dtype=float)[:, :3]
+        triangles = np.asarray(mesh.tri_verts, dtype=np.int64)
+        low, high = vertices.min(axis=0), vertices.max(axis=0)
+        return PartOverlap(
+            sum(lump.volume() for lump in kept),
+            sum(lump.surface_area() for lump in kept),
+            (float(low[0]), float(low[1]), float(low[2])),
+            (float(high[0]), float(high[1]), float(high[2])),
+            mesh=(vertices, triangles),
+        )
+
+    def refuted(self, exact: PartOverlap, first: Part, second: Part) -> bool:
+        """Whether the bulk of a boolean's answer lies outside one of the two solids.
+
+        Each of its pieces is meshed and asked as a lump of an overlap is. A piece
+        with no point deep enough to ask says nothing, and counts for the answer.
+        """
+        if exact.shape is None:
+            return False
+        outside = 0.0
+        for piece in sorted(exact.shape.solids(), key=_solid_volume, reverse=True)[:WITNESS_LUMPS]:
+            mesh = solid_mesh(piece, self.tolerance)
+            if mesh is not None and self.inside_both(mesh, first, second) is False:
+                outside += piece.volume
+        return 2 * outside > exact.volume
+
+    def inside_both(self, lump: Manifold, first: Part, second: Part) -> bool | None:
+        """Whether points deep in a closed mesh lie inside both solids; None with none to ask.
+
+        Asked deepest first, and no further once three agree: at least half inside
+        both, the lump is. A solid whose points take seconds apiece (a leadscrew's
+        thread) is asked of few.
+        """
+        inside = asked = 0
+        for point in inner_points(lump)[:WITNESS_POINTS]:
+            asked += 1
+            inside += self.inside(first, point) and self.inside(second, point)
+            if asked == WITNESS_POINTS // 2 and inside in {0, asked}:
+                break
+        return 2 * inside >= asked if asked else None
 
     def part_strays(self, part: Part) -> Strays:
         """How far the part may stand outside its mesh, and inside it, face by face (Strays)."""
@@ -376,6 +507,112 @@ class _Measure:
 # ---------------------------------------------------------------------------
 # Parts: OCP tessellation into a closed manifold3d solid.
 # ---------------------------------------------------------------------------
+
+
+def _again(first: Part, second: Part, borne: PartOverlap) -> PartOverlap:
+    """Two parts' boolean once more, each one's faces merged first; failing that too, the meshes'.
+
+    A face split along an edge is what one kind of failure turns on, and merged it
+    is gone (:func:`merged`): the boolean then gives what the meshes bear out, and
+    its figure is exact. Where it doesn't, the meshes' own is the measure; as it
+    is where neither solid has a face to merge, and the boolean would be asked
+    what it was asked before (an insert and its part, on a public model: a fifth
+    of a second each, for the same answer).
+    """
+    one, other = merged(first.shape), merged(second.shape)
+    if _faces(one) == _faces(first.shape) and _faces(other) == _faces(second.shape):
+        return borne
+    exact, sound = measured_common(one, other)
+    if sound and exact is not None and _agree(exact.volume, borne.volume):
+        return exact
+    return borne
+
+
+def _faces(shape: Shape) -> int:
+    return len(shape.faces())
+
+
+def _agree(said: float, theirs: float) -> bool:
+    """Whether a boolean's volume and the meshes' agree: within the floor, or a factor of two."""
+    return abs(said - theirs) <= HIT_MIN_VOLUME or 2 * min(said, theirs) >= max(said, theirs)
+
+
+def _volume(mesh: Manifold) -> float:
+    return mesh.volume()
+
+
+def _solid_volume(solid: Solid) -> float:
+    return solid.volume
+
+
+def inner_points(
+    mesh: Manifold, rays: int = WITNESS_RAYS, depth: float = WITNESS_DEPTH
+) -> np.ndarray:
+    """Points inside a closed mesh at least ``depth`` from its surface, (n, 3), deepest first.
+
+    From triangles spread over its surface evenly by area, a ray straight in from
+    each one's middle to the far wall: the middle of that chord is inside. How far
+    it is from the surface is taken as the least of half the chord and the way to
+    a wall along each axis, both ways: a chord down the length of a sliver is long,
+    and its middle is still at the sliver's skin.
+    """
+    data = mesh.to_mesh()
+    vertices = np.asarray(data.vert_properties, dtype=float)[:, :3]
+    corners = vertices[np.asarray(data.tri_verts, dtype=np.int64)]
+    if not len(corners):
+        return np.zeros((0, 3))
+    walls = corners[:, 0], corners[:, 1] - corners[:, 0], corners[:, 2] - corners[:, 0]
+    cross = np.cross(walls[1], walls[2])
+    doubled = np.linalg.norm(cross, axis=1)  # twice each triangle's area
+    upto = np.cumsum(doubled)
+    at = (np.arange(rays) + 0.5) / rays * upto[-1]
+    picks = np.unique(np.minimum(np.searchsorted(upto, at), len(corners) - 1))
+    found: list[tuple[float, np.ndarray]] = []
+    for pick in picks[doubled[picks] > 0]:
+        inward = -cross[pick] / doubled[pick]
+        start = corners[pick].mean(axis=0)
+        far = _first_hit(start, inward, walls, skip=int(pick))
+        if far is None or far / 2 < depth:
+            continue
+        middle = start + inward * far / 2
+        ways = [_first_hit(middle, axis, walls) for axis in _AXES]
+        room = min([far / 2, *(way for way in ways if way is not None)])
+        if room >= depth:
+            found.append((room, middle))
+    found.sort(key=_room, reverse=True)
+    return np.array([point for _, point in found], dtype=float).reshape(-1, 3)
+
+
+def _room(found: tuple[float, np.ndarray]) -> float:
+    return found[0]
+
+
+def _first_hit(
+    start: np.ndarray,
+    way: np.ndarray,
+    walls: tuple[np.ndarray, np.ndarray, np.ndarray],
+    skip: int | None = None,
+) -> float | None:
+    """How far along a ray the first of a mesh's triangles is; None where it meets none.
+
+    Moller and Trumbore's test against every triangle at once, each given as a
+    corner and its two edges. ``skip`` is the triangle the ray starts on.
+    """
+    base, edge_u, edge_v = walls
+    across = np.cross(way, edge_v)
+    facing = np.einsum("ij,ij->i", edge_u, across)
+    met = np.abs(facing) > 1e-12  # noqa: PLR2004  (a ray along a triangle's plane misses it)
+    scale = np.zeros_like(facing)
+    scale[met] = 1.0 / facing[met]
+    out = start - base
+    u = scale * np.einsum("ij,ij->i", out, across)
+    turned = np.cross(out, edge_u)
+    v = scale * (turned @ way)
+    far = scale * np.einsum("ij,ij->i", edge_v, turned)
+    met &= (u >= 0) & (v >= 0) & (u + v <= 1) & (far > 1e-9)  # noqa: PLR2004
+    if skip is not None:
+        met[skip] = False
+    return float(far[met].min()) if met.any() else None
 
 
 def solid_mesh(shape: Shape, tolerance: float = MESH_TOLERANCE) -> Manifold | None:

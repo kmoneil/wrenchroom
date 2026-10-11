@@ -34,7 +34,7 @@ from build123d import GeomType, Plane, Shape, Solid
 from wrenchroom.assembly import Assembly, Part
 from wrenchroom.build import Build, Placed, Plan
 from wrenchroom.build import plan as plan_build
-from wrenchroom.clashes import TWICE, Along, Clashes, Measured, scan
+from wrenchroom.clashes import TWICE, Along, Clashes, Measured, drawn_into, scan
 from wrenchroom.config import (
     Config,
     ConfigError,
@@ -72,12 +72,11 @@ from wrenchroom.detect.geometry import read_shape, wide_end
 from wrenchroom.engine import (
     DEFAULT_ENGINE,
     ENGINES,
-    HIT_MIN_VOLUME,
     Engine,
     Scene,
     make_engine,
 )
-from wrenchroom.engine.exact import common, cut, exact_overlap, merged
+from wrenchroom.engine.exact import common, cut, merged
 from wrenchroom.engine.scene import boxes_overlap, shape_bounds
 from wrenchroom.fasteners import (
     HEX_AF_MIN,
@@ -427,6 +426,7 @@ def _clash_run(
         config.unmatched_allows(names),
         unmeasured,
         tuple(clash for clash in found if clash.set_in),
+        tuple(dict.fromkeys(space.engine.unsure)),
     )
 
 
@@ -865,7 +865,8 @@ def _drawn_twice(
         kept, other = fasteners[first].name, fasteners[second].name
         if kept in found or other in found:
             continue
-        common = exact_overlap(shapes[first], shapes[second])
+        overlap = engine.shared(parts[first], parts[second])
+        common = overlap.volume if overlap is not None else 0.0
         if common > TWICE * max(shapes[first].volume, shapes[second].volume):
             found[other] = (kept, common)
     return found
@@ -1998,14 +1999,16 @@ def _clashes(
         bolt = next((p for p in scene.parts if p.name == partner), None)
         toward = _measured_end(frame, fastener, scene, bolt)
     region, past_thread = _measured(frame, fastener, toward)
+    measured = Measured(Part(fastener.name, region), Part(fastener.name, past_thread))
     found: list[tuple[str, float]] = []
     for other in scene.parts:
         if other.name == partner or (among is not None and other.name not in among):
             continue
         if not boxes_overlap(box, engine.part_bounds(other)):
             continue
-        if exact_overlap(past_thread, other.shape) > HIT_MIN_VOLUME:
-            found.append((other.name, exact_overlap(region, other.shape)))
+        overlap = drawn_into(engine, measured, other)
+        if overlap is not None:
+            found.append((other.name, overlap.volume))
     return found
 
 

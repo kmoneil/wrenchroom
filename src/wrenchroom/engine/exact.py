@@ -17,6 +17,7 @@ next, and a result depended on what was measured before it (issue #146).
 
 from __future__ import annotations
 
+import math
 from functools import cached_property, lru_cache
 from typing import TYPE_CHECKING, ClassVar
 
@@ -42,6 +43,14 @@ if TYPE_CHECKING:
     from wrenchroom.assembly import Part
     from wrenchroom.solids import Primitive
 
+#: A ball's surface for its volume, (36 pi)^(1/3) V^(2/3): no solid has less.
+_BALL = (36 * math.pi) ** (1 / 3)
+
+#: A piece of a boolean's answer smaller than this, mm^3, either way, is no sign the
+#: answer is wrong: a tenth of the hit floor. A sliver of -0.0014 mm^3 came with
+#: 18.2 mm^3 of true overlap on a public model, and the 18.2 is right.
+_NOISE = HIT_MIN_VOLUME / 10
+
 
 class ExactEngine(Engine):
     """Collision by OCP booleans: the overlap volume of tool and part, exactly."""
@@ -54,10 +63,28 @@ class ExactEngine(Engine):
         #: socket's mouth comes back on every extension). Keyed by the piece, its
         #: placement and the part's identity; the part is kept with its box.
         self.measured: dict[tuple[object, ...], float] = {}
+        #: A mesh engine of its own, made on first need: what two parts' meshes
+        #: share is what their boolean is held to (:meth:`shared`).
+        self._meshes: Engine | None = None
 
     def query(self, tool: Tool) -> ExactQuery:
         """Prepare a tool; its OCP pieces are built only if a part is near them."""
         return ExactQuery(self, tool)
+
+    def shared(self, first: Part, second: Part) -> PartOverlap | None:
+        """What two parts share: their boolean, held to their meshes as the mesh engine holds it.
+
+        No pair is cleared by its meshes here (:meth:`parts_apart` says False of
+        every one), but a boolean is no surer for being asked by ``--exact``: where
+        it comes back empty, or with what no solid could be, the meshes are the
+        second opinion (issue #163), and both engines tell the same clashes.
+        """
+        if self._meshes is None:
+            from wrenchroom.engine.mesh import MeshEngine  # noqa: PLC0415  (it imports this)
+
+            self._meshes = MeshEngine()
+            self._meshes.unsure = self.unsure
+        return self._meshes.shared(first, second)
 
 
 class ExactQuery:
@@ -199,22 +226,51 @@ def exact_common(a: Shape, b: Shape) -> PartOverlap | None:
 
     Measured near the origin, as :func:`exact_overlap` is, and its box moved back.
     """
+    return measured_common(a, b)[0]
+
+
+def measured_common(a: Shape, b: Shape) -> tuple[PartOverlap | None, bool]:
+    """What two OCP shapes share, as :func:`exact_common` gives it, and whether a solid could be it.
+
+    OCCT's boolean fails without saying so (issue #163). Some of its failures show
+    in the answer itself: a piece with a volume under nothing, a solid turned
+    inside out (two housings drawn in one place, on a public model, came back as
+    one piece of -236 mm^3), or a piece with less surface than a ball of its
+    volume, which no solid has (an insert in its part: 7.57 mm^3 inside 5.7 mm^2,
+    where a ball of that has 18.6). Such an answer is given with False: it is not
+    to be taken, whatever its volume. So is an operation OCCT itself calls failed.
+    An empty answer shows nothing either way, and is given with True: only the two
+    parts' meshes can say it is wrong.
+    """
     low, high = shape_bounds(b)
     middle = tuple((lo + hi) / 2 for lo, hi in zip(low, high, strict=True))
     step = Location(tuple(-c for c in middle))
     shared = common(_moved(a, step), _moved(b, step))
     if shared is None:
-        return None
+        return None, False
     solids = shared.solids()
+    sound = all(
+        possible(piece.volume, piece.area) for piece in solids if abs(piece.volume) > _NOISE
+    )
     volume = sum(piece.volume for piece in solids)
     if volume <= 0:
-        return None
+        return None, sound
     corners = [shape_bounds(piece) for piece in solids]
     low = tuple(min(c[0][i] for c in corners) + middle[i] for i in range(3))
     high = tuple(max(c[1][i] for c in corners) + middle[i] for i in range(3))
     area = sum(piece.area for piece in solids)
     where = _moved(shared, Location(middle))  # back where the parts are
-    return PartOverlap(volume, area, (low[0], low[1], low[2]), (high[0], high[1], high[2]), where)
+    box = (low[0], low[1], low[2]), (high[0], high[1], high[2])
+    return PartOverlap(volume, area, *box, where), sound
+
+
+def possible(volume: float, area: float) -> bool:
+    """Whether a solid could have this volume, mm^3, inside this surface, mm^2.
+
+    Not one with no volume or less, and not one with less surface than a ball of
+    its volume, the least any solid has (a thousandth is given for rounding).
+    """
+    return volume > 0 and area >= 0.999 * _BALL * volume ** (2 / 3)
 
 
 def _moved(shape: Shape, step: Location) -> Shape:
