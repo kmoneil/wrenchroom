@@ -71,11 +71,13 @@ SLOTS = len(CELLS) + 1
 #: build_way_in, build_ahead and build_behind, whose verdicts in service are any cell's,
 #: 168 with #143's ring_stud and ring_handle (hand_tight's nut turns with the open end),
 #: 174 with #158's hosted: two inserts, a nut pressed into its trap, and their screws,
-#: 178 with #142's selftap, four tapping screws.
+#: 178 with #142's selftap, four tapping screws, 180 with #178's pushed: an insert as
+#: long as a fixed thread comes and its screw (its two tubes named inserts are passed
+#: over).
 FINAL_COUNTS = {
-    "fasteners": 178,
-    "turns": 133,
-    "held": 14,
+    "fasteners": 180,
+    "turns": 134,
+    "held": 15,
     "blocked": 28,
     "stuck": 3,
     "not_covered": 0,

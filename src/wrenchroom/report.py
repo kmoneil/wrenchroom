@@ -664,8 +664,9 @@ def _marginal_text(result: FastenerResult) -> str:
 
 def _passed_over_count(passed: tuple[PassedOver, ...]) -> str:
     motion = sum(part.motion for part in passed)
-    named = sum(part.named for part in passed) - motion
-    alike = len(passed) - named - motion
+    tube = sum(part.tube for part in passed)
+    named = sum(part.named for part in passed) - motion - tube
+    alike = len(passed) - named - motion - tube
     said = []
     if named:
         noun = "part" if named == 1 else "parts"
@@ -679,6 +680,13 @@ def _passed_over_count(passed: tuple[PassedOver, ...]) -> str:
             f"{motion} {noun} named for a leadscrew or a ball screw, which no tool turns "
             "(passed over)"
         )
+    if tube:  # issue #178
+        what = (
+            "part named as an insert that is a tube or a liner, not a fixed thread"
+            if tube == 1
+            else "parts named as inserts that are tubes or liners, not fixed threads"
+        )
+        said.append(f"{tube} {what} (passed over)")
     if alike:  # issue #95
         what = (
             "part shaped like a fastener, not named as one"

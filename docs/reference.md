@@ -349,7 +349,17 @@ before "nut" counts only if the solid shows no hex, so a nut deep in a well stay
 nut), and a nut whose solid shows no hex is not covered rather than given a spanner
 that couldn't grip it. "Insert" alone may be a logo's inlay: with no thread size in
 the name, no word such as threaded or heat-set, and no bore in the solid, it is
-passed over, and the report says so. A fixed thread's size from its bore alone is a
+passed over, and the report says so. A tube pushed into a part is named an insert
+too, as a printer's PTFE tube is, and has a bore: an insert is a tube, and passed
+over, where its name says tube, liner or sleeve as well (`PTFE insert`, `bowden tube
+insert`, `teflon liner insert`; `ptfe`, `pfte`, `teflon`, `tube`, `tubing`, `liner`,
+`bowden`, `sleeve`) and gives no thread, or where it is named only as an insert and
+its solid is more than six times as long as it is across, the longest threaded
+insert a maker lists being 4.8 (issue #178). A thread size, or a word that says
+threaded, keeps it a fixed thread (`tube clamp M3 insert`, `bowden clamp heat set
+insert`), and a rule with `kind: insert` says so outright. Passed over, a tube is a
+part like any other: drawn into the part it is pushed into, it is a clash, where an
+insert set in is none. A fixed thread's size from its bore alone is a
 guess (an M3 T-nut bored 2.8 is #4's size), and the screw into it outranks it, as a
 nut's bolt does.
 

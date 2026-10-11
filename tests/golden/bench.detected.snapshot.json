@@ -3,9 +3,9 @@
  "model": "bench.step",
  "kit": "full",
  "summary": {
-  "fasteners": 178,
-  "turns": 130,
-  "held": 14,
+  "fasteners": 180,
+  "turns": 131,
+  "held": 15,
   "blocked": 29,
   "stuck": 3,
   "not_covered": 2
@@ -101,6 +101,18 @@
    "name": "misnamed_leadscrew_nut",
    "kind": "nut",
    "reason": "noun 'nut'; named for a leadscrew or a ball screw, or the nut that runs on one: a motion part, which no tool turns",
+   "named": true
+  },
+  {
+   "name": "pushed_ptfe_insert",
+   "kind": "insert",
+   "reason": "noun 'insert', word 'ptfe'; named as a tube, a liner or a sleeve, which is pushed into its part: not a fixed thread (a rule with kind: insert says it is one)",
+   "named": true
+  },
+  {
+   "name": "pushed_long_insert",
+   "kind": "insert",
+   "reason": "noun 'insert'; named only as an insert, with no thread size or word such as threaded, and its solid is 10.0 times as long as it is across: a tube, not a fixed thread, whose makers' longest is under 6 (a rule with kind: insert says it is one)",
    "named": true
   }
  ],
@@ -3286,6 +3298,62 @@
    "notes": []
   },
   {
+   "name": "pushed_stout_insert",
+   "kind": "insert",
+   "head": null,
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": null,
+   "source": "name+geometry",
+   "tool": null,
+   "verdict": "held",
+   "how": "holds itself",
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": "pushed_stout_screw",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "pushed_stout_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M3",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3020.0,
+    19000.0,
+    7.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-2.5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": "pushed_stout_insert",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "reach_13_nut",
    "kind": "nut",
    "head": null,
@@ -5128,7 +5196,7 @@
     1.0
    ],
    "seat": [
-    2900.0,
+    3900.0,
     19000.0,
     6.0
    ],
@@ -5160,7 +5228,7 @@
     1.0
    ],
    "seat": [
-    3100.0,
+    4100.0,
     19000.0,
     6.0
    ],
@@ -5635,7 +5703,7 @@
    },
    {
     "tool": "hex-key-2.5",
-    "count": 15,
+    "count": 16,
     "fasteners": [
      "build_ahead_trapped_screw",
      "flat_graze_screw",
@@ -5644,6 +5712,7 @@
      "hosted_snug_screw",
      "misnamed_M5x16_screw",
      "named_head_bhcs",
+     "pushed_stout_screw",
      "renamed_M3x12_screw",
      "rubber_screw",
      "std_M3x16",
@@ -6277,6 +6346,7 @@
    "hosted_bare_insert",
    "hosted_pocket_insert",
    "hosted_snug_nut",
+   "pushed_stout_insert",
    "rubber_well_nut",
    "tee_hold_tnut",
    "trap_pocket_nut",

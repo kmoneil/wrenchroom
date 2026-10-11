@@ -200,6 +200,10 @@ class ShapeReading:
             should settle which is right (issue #81).
         bore_mm: A nut's or an insert's bore, the thinnest round facing its
             axis, as drawn, mm; None when it has none (issue #84).
+        slender: A nut's or an insert's length along its axis over its width
+            across it, as drawn: a fixed thread is a few times as long as it is
+            across at most, a tube pushed into a part many (issue #178). None
+            for a screw.
         shank_mm: A screw's shank, the thinnest round on its axis facing out
             and narrower than its head, as drawn, mm; None when it has none (a
             tapping screw's cone, a thread modelled). A name's size it is no
@@ -229,6 +233,7 @@ class ShapeReading:
     head_drawn: tuple[float, float] | None = None
     outline_head: Head | None = None
     bore_mm: float | None = None
+    slender: float | None = None
     length_mm: float | None = None
     shank_mm: float | None = None
     cross_mm: float | None = None
@@ -299,6 +304,7 @@ def read_shape(shape: Shape, kind: Kind, named: Head | None = None) -> ShapeRead
             settled,
             size_from_band=banded,
             bore_mm=2 * min(bores) if bores else None,
+            slender=_Profile.of(shape, origin, direction).slender,
         )
     convex = [r for r, outside in rounds if outside]
     walls = _walls(faces, origin, direction)
@@ -515,6 +521,13 @@ class _Profile:
     @property
     def widest(self) -> float:
         return max(self.out, default=0.0)
+
+    @property
+    def slender(self) -> float | None:
+        """Its length along the axis over its width across it; None with no width."""
+        if self.widest <= 0:
+            return None
+        return (max(self.along) - min(self.along)) / (2 * self.widest)
 
     def head(self) -> tuple[float, float]:
         """(radius, height) of the head: the widest section, and how far it runs.

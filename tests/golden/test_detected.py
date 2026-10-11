@@ -30,7 +30,7 @@ from pathlib import Path
 import pytest
 from bench import canonical, check_detected, sidecar_and_truth
 
-from wrenchroom.detect import read_name
+from wrenchroom.detect import LONG_TUBE, TUBE, read_name
 from wrenchroom.detect.names import ends_in_part_noun
 
 SNAPSHOT = Path(__file__).parent / "bench.detected.snapshot.json"
@@ -135,16 +135,17 @@ def test_every_candidate_name_is_taken_on_its_solid_or_passed_over(detected):
     """Issue #30: a fastener noun with words after it. On the bench the one whose
     solid shows a drive is vented's gland; every other is a plate, block, stud,
     tube or dome, and none is taken; nor is badge's bare insert, with no bore
-    (issue #84). Those passed over are listed by name, but not a name ending in a
-    part's noun (gland_rib_plate, nut_gap_plate): it says what the part is, and a
-    note would be noise (issue #75)."""
+    (issue #84), nor pushed's two tubes named inserts, one by its name and one by
+    its length (issue #178). Those passed over are listed by name, but not a name
+    ending in a part's noun (gland_rib_plate, nut_gap_plate): it says what the part
+    is, and a note would be noise (issue #75)."""
     names = detected.models[None].assembly.names
     candidates = {
         name
         for name in names
         if name not in detected.ignored
         and (hint := read_name(name))
-        and (hint.needs_drive or hint.needs_bore)
+        and (hint.needs_drive or hint.needs_bore or hint.tube)
     }
     assert len(candidates) > 15  # a vacuity guard: the bench is full of such names
     said = {name for name in candidates if not ends_in_part_noun(name)}
@@ -152,9 +153,10 @@ def test_every_candidate_name_is_taken_on_its_solid_or_passed_over(detected):
     # Those taken on their solids: vented's gland by its hex, badge's boss insert by
     # its bore (issue #84), std's four screws named by thread and length by their
     # drives (issue #95); std's stud, named M8x60, shows none and is passed over.
-    # And hosted's two inserts by their bores (issue #158).
+    # And hosted's two inserts by their bores (issue #158), and pushed's, as long as
+    # a fixed thread comes (issue #178).
     taken_on_solid = {"vented_gland_vent", "badge_boss_insert"}
-    taken_on_solid |= {"hosted_pocket_insert", "hosted_bare_insert"}
+    taken_on_solid |= {"hosted_pocket_insert", "hosted_bare_insert", "pushed_stout_insert"}
     taken_on_solid |= {f"std_{role}" for role in ("M3x16", "M5-0.8x12", "M4x0.7x12", "#10-32x1")}
     assert "std_M8x60" in said - taken_on_solid
     # byname's screw terminal plug is named with "screw" and has no drive: checked
@@ -163,6 +165,10 @@ def test_every_candidate_name_is_taken_on_its_solid_or_passed_over(detected):
     assert as_plugs <= said & {c.name for c in detected.connectors.results}
     named = {part.name for part in detected.passed_over if part.named and not part.motion}
     assert named == said - taken_on_solid - as_plugs
+    tubes = {part.name: part.reason for part in detected.passed_over if part.tube}
+    assert set(tubes) == {"pushed_ptfe_insert", "pushed_long_insert"} <= named
+    assert tubes["pushed_ptfe_insert"] == f"noun 'insert', word 'ptfe'; {TUBE}"
+    assert tubes["pushed_long_insert"] == f"noun 'insert'; {LONG_TUBE.format(times=10.0)}"
     taken = {r.fastener.name for r in detected.results}
     assert candidates & taken == taken_on_solid
     (gland,) = [r for r in detected.results if r.fastener.name == "vented_gland_vent"]

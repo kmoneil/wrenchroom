@@ -95,17 +95,20 @@ def test_everything_else_is_the_same_report(hand_report, bench_json):
 
 def test_the_note_stops_listing_hand_room(hand_report, bench_report):
     motion = sum(part.motion for part in hand_report.passed_over)
-    named = sum(part.named for part in hand_report.passed_over) - motion
-    alike = len(hand_report.passed_over) - named - motion
+    tube = sum(part.tube for part in hand_report.passed_over)
+    named = sum(part.named for part in hand_report.passed_over) - motion - tube
+    alike = len(hand_report.passed_over) - named - motion - tube
     assert alike == 3  # a vacuity guard: std's part7, part8 and part9 (issue #95)
     assert motion == 1  # misnamed's leadscrew nut (issue #117)
+    assert tube == 2  # pushed's two tubes named inserts (issue #178)
     assert hand_report.surfaces == ("shelled_decal",)  # issue #104
     assert hand_report.terminal_lines()[-1] == (
         "NOTE not checked: parts drawn into each other (checks: {clashes: true} turns it on); "
         "the build order (a build: list in the sidecar turns it on); "
         f"{named} parts named like a fastener, "
         "with no drive or bore in the solid (passed over); 1 part named for a leadscrew "
-        f"or a ball screw, which no tool turns (passed over); {alike} parts shaped like "
+        "or a ball screw, which no tool turns (passed over); 2 parts named as inserts "
+        f"that are tubes or liners, not fixed threads (passed over); {alike} parts shaped like "
         "fasteners, not named as any (passed over); 1 part named like a connector "
         "(passed over); 1 part drawn as a surface, not a solid (left out); parts the "
         "model doesn't have"  # the connector: byname's cover, named for a plug (#157)

@@ -34,6 +34,10 @@ A leadscrew, a ball screw and the nut that runs on one (``Leadscrew Nut``, ``T8
 nut``, ``ball screw``) move a part, and no tool turns them: such a name is
 ``motion``, passed over whatever its solid shows (issue #117).
 
+A tube pushed into a part is named an insert as a fixed thread is (``PTFE
+insert``, ``bowden tube insert``): an insert whose name also says tube, liner or
+sleeve, and gives no thread, is ``tube``, passed over the same way (issue #178).
+
 Whatever the name doesn't say stays None for geometry to fill in (spec 5.2: names,
 then geometry, then the sidecar, each overriding the one before). A name that is
 clearly a fastener the kit can't check (a low-head socket screw, an M1) comes back
@@ -87,6 +91,10 @@ class NameHint:
         motion: A leadscrew, a ball screw or the nut that runs on one: a motion
             part, which no tool turns, passed over whatever its solid shows
             (issue #117).
+        tube: An insert by the bare word whose name also says it is a tube, a
+            liner or a sleeve (``PTFE insert``), with no thread size and no word
+            that says threaded: pushed into its part, no fixed thread, and passed
+            over whatever its solid shows (issue #178).
         tapping: A tapping screw, by a word in its name or its ST size: its thread
             is ISO 1478's, whatever machine size a seller named it for (issue #142).
     """
@@ -103,6 +111,7 @@ class NameHint:
     needs_bore: bool = False
     by_hand: bool = False
     motion: bool = False
+    tube: bool = False
     tapping: bool = False
 
 
@@ -234,6 +243,16 @@ _LOCK_WORDS = {"lock", "locking", "nylon", "nyloc", "nylock", "nylok"}
 #: size, a word below, or a bore in its solid to be a fixed thread (issue #84).
 _BARE_INSERTS = {"insert", "inserts"}
 _THREAD_WORDS = {"threaded", "thread", "tapped", "heatset", "heat", "brass", "helicoil", "knurled"}
+#: Words that say an insert is a tube, a liner or a sleeve pushed into its part, as
+#: a printer's PTFE tube is, and no fixed thread (issue #178). PTFE is written PFTE
+#: as readily, as the Voron Legacy's model writes it.
+_TUBE_WORDS = {"ptfe", "pfte", "teflon", "tube", "tubing", "liner", "bowden", "sleeve"}
+#: Words, and runs of them, that say an insert is threaded whatever else its name
+#: says: beside one, a tube word is about the part the insert goes into ("bowden
+#: clamp heat set insert"). Not ``brass`` or ``heat`` alone, which a brass sleeve
+#: and a heat break's liner carry too.
+_SAYS_THREADED = {"threaded", "thread", "tapped", "heatset", "helicoil", "knurled"}
+_SAYS_THREADED_RUNS = (("heat", "set"), ("heat", "stake"), ("heat", "staked"))
 #: Fastener nouns a describing word is run into in one word ("hexnut", "jamnut",
 #: "hexbolt", "nylocnut"): read as the two words they are (issue #84). Longest first.
 _COMPOUND_NOUNS = ("screws", "screw", "bolts", "bolt", "nuts", "nut")
@@ -480,7 +499,8 @@ def read_name(name: str) -> NameHint | None:
     tapping = kind is Kind.SCREW and _says_tapping(words)
     size, length, size_text, size_reason = _size_in(cleaned, tapping=tapping)
     tapping = tapping or (size is not None and size.is_tapping)
-    bare = kind is Kind.INSERT and noun in _BARE_INSERTS and not set(words) & _THREAD_WORDS
+    bare, pushed = _bare_insert(kind, noun, words, sized=size is not None or bool(size_reason))
+    basis.extend(f"word {word!r}" for word in pushed)
     if not socket_allowed:
         # A gland's thread says nothing about the hex a spanner grips (an M20
         # gland is commonly 24 across flats): geometry measures the hex.
@@ -498,9 +518,10 @@ def read_name(name: str) -> NameHint | None:
         not_covered=reason or size_reason,
         needs_drive=needs_drive,
         unless_hex=kind is Kind.INSERT and word not in _INSERT_NOUNS,
-        needs_bore=bare and size is None and size_reason is None,
+        needs_bore=bare,
         by_hand=by_hand,
         motion=motion,
+        tube=bool(pushed),
         tapping=tapping,
     )
 
@@ -739,6 +760,26 @@ def _motion(words: list[str], kind: Kind) -> bool:
     if any(word in _MOTION_SCREWS and after in {"screw", "screws"} for word, after in pairs):
         return True
     return kind is Kind.NUT and any(_TRAPEZOIDAL.fullmatch(word) for word in words)
+
+
+def _bare_insert(
+    kind: Kind, noun: str | None, words: list[str], *, sized: bool
+) -> tuple[bool, tuple[str, ...]]:
+    """Whether an insert by the bare word needs a bore, and the words that say it is a tube.
+
+    With no thread size and no word that says threaded, an insert is an inlay as
+    readily as a fixed thread, and needs its solid to show a bore (issue #84).
+    Named as a tube, a liner or a sleeve too, it is one, pushed into its part,
+    whatever its solid shows (issue #178): but for a word that says it is
+    threaded, beside which a tube word is about the part the insert goes into
+    (``tube clamp threaded insert``).
+    """
+    if kind is not Kind.INSERT or noun not in _BARE_INSERTS or sized:
+        return False, ()
+    if _SAYS_THREADED & set(words) or _has_run(words, _SAYS_THREADED_RUNS):
+        return False, ()
+    pushed = tuple(word for word in words if word in _TUBE_WORDS)
+    return not pushed and not set(words) & _THREAD_WORDS, pushed
 
 
 def _is_insert(words: list[str], at: int, kind: Kind) -> bool:
