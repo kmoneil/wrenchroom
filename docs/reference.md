@@ -747,7 +747,10 @@ as code names a part by its kind (`plug_motor`, `plug_battery_main`, `Plug - Mot
 (`fan plug 2`, `motor_plug_left`, `plug2`, `fan_plug.001`). Not where a word says it
 is turned or pressed in: `drain`, `oil`, `fill`, `filler`, `spark`, `threaded`,
 `screw` or `blanking` before it (`oil drain plug`), or all that follows it
-(`plug_drain`); that is no connector at all.
+(`plug_drain`); that is no connector at all. Such a word just before `terminal` is
+about the terminal (issue #166): a `screw terminal plug` pulls off its header with
+its wires still screwed in, and is a plug. A part checked as a plug is not also
+noted as a fastener passed over for the `screw` in its name.
 
 A connector family's code (XT30, XT60, XT90, Deutsch DT and DTP part numbers) or a
 connector word (connector, header, jack, receptacle, JST, Deutsch) says nothing of

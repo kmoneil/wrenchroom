@@ -6518,8 +6518,8 @@
  "build": null,
  "connectors": {
   "summary": {
-   "connectors": 7,
-   "unplugs": 5,
+   "connectors": 8,
+   "unplugs": 6,
    "stuck": 2,
    "no_grip": 0,
    "no_latch_access": 0,
@@ -6552,6 +6552,25 @@
     "verdict": "unplugs",
     "receptacle": [
      "byname_shroud_a"
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "travel": 10.0,
+    "blocked_by": [],
+    "reason": null,
+    "state": null,
+    "grip": null,
+    "latch": null
+   },
+   {
+    "name": "byname_screw_terminal_plug",
+    "source": "name",
+    "verdict": "unplugs",
+    "receptacle": [
+     "byname_shroud_c"
     ],
     "axis": [
      0.0,

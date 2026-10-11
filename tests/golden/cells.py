@@ -3298,6 +3298,12 @@ def hosted():
             "receptacle": ["shroud_b"],
             "blocked_by": [],
         },
+        "screw_terminal_plug": {
+            "verdict": "unplugs",
+            "source": "name",
+            "receptacle": ["shroud_c"],
+            "blocked_by": [],
+        },
     },
 )
 def byname():
@@ -3309,6 +3315,11 @@ def byname():
     one: listed as named like a connector, not checked, so a plug named some way the
     words don't cover is at least said. And drain_plug, a pin in the board: turned
     in, no connector, and not listed.
+
+    A third between them, screw_terminal_plug (issue #166): "screw" before "plug"
+    said it was turned in, as a drain plug is, and it was passed over as a plug and
+    noted as a screw with no drive. The word is about the terminal: it is pulled
+    like the others, and noted as nothing else.
     """
     return [
         ("board", plate(t=2)),
@@ -3316,6 +3327,8 @@ def byname():
         ("plug_motor", Pos(-30, 0, 0) * _plug()),
         ("shroud_b", Pos(30, 0, 0) * _shroud()),
         ("plug_fan_2", Pos(30, 0, 0) * _plug()),
+        ("shroud_c", _shroud()),
+        ("screw_terminal_plug", _plug()),
         ("plug_cover", Pos(0, 40, 5) * Box(40, 10, 10)),
         ("drain_plug", Pos(0, -40, 3) * Cylinder(4, 6)),
     ]
