@@ -3380,3 +3380,53 @@ def selftap():
         ("M4x10_self_tapping_torx_screw", Pos(30, 0, 0) * _torx_m4(3.92, flutes=True, shank=4.2)),
         ("ST4.2x10_hex_screw", Pos(150, 0, 0) * hex_bolt(4.2, 10, 7, 2.8)),
     ]
+
+
+@cell(
+    "pushed",
+    [
+        {"parts": "stout_screw", **_M3_SOCKET},
+        {"parts": "stout_insert", "kind": "insert", "size": "M3"},
+    ],
+    {
+        "stout_screw": {"verdict": "turns", "tool": "hex-key-2.5", "pair": "stout_insert"},
+        "stout_insert": {"verdict": "held", "how": "holds itself", "pair": "stout_screw"},
+    },
+    allow=[("ptfe_insert", "block"), ("long_insert", "block")],
+)
+def pushed():
+    """A tube pushed into a part is no threaded insert, though it is named one (issue
+    #178), as a printer's model names its PTFE tube. Three in a block 20 thick.
+
+    ptfe_insert: a tube 4 across, bored 2 and 12 long, three times its width, as a
+    fixed thread may be: its name says what it is, and it is passed over. long_insert
+    is named only as an insert, the same tube 40 long, ten times its width, where the
+    longest threaded insert a maker lists is 4.8: passed over on its solid. Each was
+    an M2 threaded insert by its bore, held. Their holes are 3.6 across, so each is
+    drawn 0.2 into the block all round: pi (2^2 - 1.8^2) 12 = 28.65 mm^3 and, over
+    the block's 20, 47.75. Each was counted among the inserts set into their parts,
+    and is a clash again, which the bench's sidecar allows and the edges sidecar
+    tells.
+
+    stout_insert is as long as a fixed thread comes: 4.74 across and 18 long, 3.8
+    times, PEM's longest M3 for moulding in, bored 3.0. Still a fixed thread, by its
+    bore, in a hole 4.4 across, 0.93 of it: set in, pi (2.37^2 - 2.2^2) 18 = 43.93
+    mm^3 and no clash. An M3x16 socket head screw goes down through a plate into it,
+    and turns.
+    """
+    pipe = Cylinder(2, 12) - Cylinder(1, 41)
+    long = Cylinder(2, 40) - Cylinder(1, 41)
+    stout = Pos(20, 0, -9) * (Cylinder(2.37, 18) - Cylinder(1.5, 19))
+    block = Pos(0, 0, -10) * Box(70, 30, 20)
+    block -= Pos(-20, 0, -10) * Cylinder(1.8, 21) + Pos(0, 0, -10) * Cylinder(1.8, 21)
+    block -= Pos(20, 0, -10) * Cylinder(1.7, 21) + Pos(20, 0, -9) * Cylinder(2.2, 18)
+    cover = Pos(20, 0, 2) * Box(16, 30, 4) - Pos(20, 0, 2) * Cylinder(1.7, 5)
+    screw = socket_screw(d=3, length=16, dk=5.5, k=3, s=2.5, t=1.3)
+    return [
+        ("block", block),
+        ("ptfe_insert", Pos(-20, 0, -6) * pipe),
+        ("long_insert", Pos(0, 0, -18) * long),
+        ("stout_insert", stout),
+        ("stout_plate", cover),
+        ("stout_screw", Pos(20, 0, 4) * screw),
+    ]

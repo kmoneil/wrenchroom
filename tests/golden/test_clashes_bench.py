@@ -26,8 +26,12 @@ PRESS_FIT = "a press fit, 0.03 deep? allow it in the sidecar"
 TWICE = "one fastener drawn twice"
 DEEP = "deeper than a knurl: no hole drawn for the insert?"
 TRAP = "its trap: a press fit, or a clash to fix"
-#: hosted's insert in its pocket (issue #158): set in, 12.06 mm^3, and no clash.
-SET_IN = [("hosted_pocket_insert", "hosted_pocket_block", 12.1, None, None)]
+#: hosted's insert in its pocket (issue #158): set in, 12.06 mm^3, and no clash. And
+#: pushed's, as long as a fixed thread comes (issue #178), 43.93.
+SET_IN = [
+    ("hosted_pocket_insert", "hosted_pocket_block", 12.1, None, None),
+    ("pushed_stout_insert", "pushed_block", 43.9, None, None),
+]
 
 
 @pytest.fixture(scope="module")
@@ -55,12 +59,15 @@ def test_the_bench_s_clashes_are_the_two_drawn_for_them(bench_dir, bench_model, 
     # its snug nut, each a clash, the bench's sidecar allows.
     assert set_in(found) == SET_IN
     assert found.lines()[-1] == (
-        "NOTE 1 insert set into its part, no clash (wrenchroom clashes --with-inserts lists them)"
+        "NOTE 2 inserts set into their parts, no clashes "
+        "(wrenchroom clashes --with-inserts lists them)"
     )
     # The cells whose threads sit in holes at their minor or a tap drill: none.
     names = {name for clash in found.found for name in (clash.first, clash.second)}
     for cell in ("minor_bore", "tapped_hold", "tee_hold", "badge", "trap", "head_trap"):
         assert not any(name.startswith(f"{cell}_") for name in names), cell
+    # pushed's two tubes named inserts, each drawn into the block, the sidecar allows.
+    assert not any(name.startswith("pushed_") for name in names)
 
 
 def test_the_edges_bench_s_faults_are_each_a_clash(bench_dir, bench_model, bench_engine):
@@ -71,6 +78,9 @@ def test_the_edges_bench_s_faults_are_each_a_clash(bench_dir, bench_model, bench
     # allowed only by the bench's own. domed's flat_thread, a countersunk screw's
     # thread in its tapped hole, is none: it was 111.4, its whole screw measured
     # (issue #156), as its cone was 128.2 and its buried button head 18.1, the rim.
+    # And pushed's two tubes, named inserts and no fixed threads, each 0.2 into the
+    # block all round, 47.75 and 28.65 mm^3: they were inserts set in, and not told
+    # (issue #178).
     config = Config.from_dict(edges_sidecar(), source="edges")
     found = find_clashes(bench_model, config, model_dir=bench_dir, engine=bench_engine)
     assert said(found) == [
@@ -91,6 +101,8 @@ def test_the_edges_bench_s_faults_are_each_a_clash(bench_dir, bench_model, bench
         ("hosted_snug_nut", "hosted_snug_block", 2.3, None, TRAP),
         ("press_fit_allowed_rod", "press_fit_block", 3.8, None, PRESS_FIT),
         ("press_fit_pressed_rod", "press_fit_block", 3.8, None, PRESS_FIT),
+        ("pushed_long_insert", "pushed_block", 47.8, None, None),
+        ("pushed_ptfe_insert", "pushed_block", 28.7, None, None),
         ("set_core_screw", "set_core_hub", 3.9, None, None),
         ("stud_dome_open_nut", "stud_dome_open_cover", 67.0, None, None),
         ("stud_dome_shut_nut", "stud_dome_shut_cover", 67.0, None, None),
@@ -113,7 +125,7 @@ def test_with_every_boolean_failing_the_edges_bench_s_clashes_are_still_told(
     The two it can't tell are press_fit's rods, 0.03 into their block: no point of
     that is deeper than a mesh may stand off its surface, so nothing can be asked
     of the solids, and with no boolean there is no measure. hosted's insert is
-    still set into its pocket.
+    still set into its pocket, and pushed's into its hole.
     """
     config = Config.from_dict(edges_sidecar(), source="edges")
     exact = find_clashes(bench_model, config, model_dir=bench_dir, engine=bench_engine)
@@ -128,16 +140,18 @@ def test_with_every_boolean_failing_the_edges_bench_s_clashes_are_still_told(
         ("press_fit_allowed_rod", "press_fit_block"),
         ("press_fit_pressed_rod", "press_fit_block"),
     ]
-    assert len(told) == 20  # the guard: the rest, and no pair the boolean didn't have
+    assert len(told) == 22  # the guard: the rest, and no pair the boolean didn't have
     assert set(told) <= set(measured)
     for pair, clash in told.items():
         assert clash.hint == measured[pair].hint, pair
         assert 0.8 < clash.volume / measured[pair].volume < 1.02, pair
     near = [pair for pair, clash in told.items() if clash.volume > 0.95 * measured[pair].volume]
     assert len(near) >= 14  # most to a few per cent
-    (insert,) = failing.set_in
-    assert (insert.first, insert.second, insert.by_meshes) == (*SET_IN[0][:2], True)
-    assert insert.volume == pytest.approx(SET_IN[0][2], rel=0.05)
+    assert [(c.first, c.second, c.by_meshes) for c in failing.set_in] == [
+        (*row[:2], True) for row in SET_IN
+    ]
+    for insert, row in zip(failing.set_in, SET_IN, strict=True):
+        assert insert.volume == pytest.approx(row[2], rel=0.05), row[0]
     assert (failing.unsure, failing.exit_code) == ((), 1)
 
 
@@ -169,14 +183,17 @@ def test_every_clash_a_verdict_tells_is_in_the_list_to_the_volume(
     assert {pair: listed.get(pair) for pair in told} == told
     # What the list alone tells: drawn_in's chip (a second part its nut is drawn
     # into, which stops no tool), press_fit's rods (no fasteners), stud_dome's
-    # open nut, which turns, and hosted's two: an insert holds itself and a trapped
-    # nut is held, whatever they are drawn into.
+    # open nut, which turns, hosted's two: an insert holds itself and a trapped
+    # nut is held, whatever they are drawn into; and pushed's two tubes, no
+    # fasteners (issue #178).
     assert sorted(set(listed) - set(told)) == [
         ("drawn_in_side_nut", "drawn_in_side_chip"),
         ("hosted_bare_insert", "hosted_bare_block"),
         ("hosted_snug_nut", "hosted_snug_block"),
         ("press_fit_allowed_rod", "press_fit_block"),
         ("press_fit_pressed_rod", "press_fit_block"),
+        ("pushed_long_insert", "pushed_block"),
+        ("pushed_ptfe_insert", "pushed_block"),
         ("stud_dome_open_nut", "stud_dome_open_cover"),
     ]
 

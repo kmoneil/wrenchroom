@@ -99,6 +99,29 @@ NO_THREAD = (
     "its solid shows no bore: an inlay, not a fixed thread"
 )
 
+#: Why an insert its name says is a tube, a liner or a sleeve is passed over (issue #178).
+TUBE = (
+    "named as a tube, a liner or a sleeve, which is pushed into its part: not a "
+    "fixed thread (a rule with kind: insert says it is one)"
+)
+
+#: A fixed thread is at most this many times as long as it is across (issue #178).
+#: PEM's SI bulletin, inserts for plastics, read 2026-10-11: the longest is a
+#: thru-threaded knurled insert for moulding in (STKB), 0.750 in long on 0.156 for
+#: a 2-56 thread, 4.8 times, and 18 mm on 4.74 for an M3, 3.8; a blind one (IBB)
+#: reaches 2.5 (0.716 in on 0.281), a heat-staked one (ISB) 1.5 (12.7 on 8.58). A
+#: tube is as long as its path: the PTFE tubes in the public models, 4 across, run
+#: 7.7 to 21.5.
+INSERT_SLENDER_MAX = 6.0
+
+#: Why a part named only as an insert, whose solid is a long tube, is passed over.
+LONG_TUBE = (
+    "named only as an insert, with no thread size or word such as threaded, and "
+    "its solid is {times:.1f} times as long as it is across: a tube, not a fixed "
+    f"thread, whose makers' longest is under {INSERT_SLENDER_MAX:g} "
+    "(a rule with kind: insert says it is one)"
+)
+
 #: Why a leadscrew's or a ball screw's nut, or the screw itself, is passed over (issue #117).
 MOTION = (
     "named for a leadscrew or a ball screw, or the nut that runs on one: a motion "
@@ -153,22 +176,41 @@ def find(parts: Iterable[Part]) -> Found:
             fasteners.append(describe(part, hint, reading))
         elif not ends_in_part_noun(part.name):  # a nut_plate is a plate (issue #75)
             reason = f"{hint.basis}; {missing}"
-            passed.append(PassedOver(part.name, hint.kind, reason, motion=hint.motion))
+            tube = missing == _tube(hint, reading)
+            passed.append(PassedOver(part.name, hint.kind, reason, motion=hint.motion, tube=tube))
     return Found(tuple(fasteners), tuple(passed))
 
 
 def _missing(hint: NameHint, reading: ShapeReading) -> str | None:
     """What a name that needs its solid to say more found missing there; None if nothing.
 
-    A candidate name needs a drive (issue #30); a bare insert, a bore (issue #84).
-    A motion part is passed over whatever its solid shows (issue #117).
+    A candidate name needs a drive (issue #30); a bare insert, a bore (issue #84),
+    in a solid no longer than a fixed thread is (issue #178). A motion part is
+    passed over whatever its solid shows (issue #117), and so is an insert named
+    as a tube.
     """
     if hint.motion:
         return MOTION
+    if hint.tube:
+        return TUBE
     if hint.needs_drive and not shows_drive(reading):
         return NO_DRIVE
     if hint.needs_bore and reading.bore_mm is None:
         return NO_THREAD
+    return _tube(hint, reading)
+
+
+def _tube(hint: NameHint, reading: ShapeReading) -> str | None:
+    """Why an insert by its name is a tube pushed into its part; None if it isn't one.
+
+    Its name says so, or it is named only as an insert and its solid, bored as a
+    fixed thread's is, is longer for its width than any fixed thread (issue #178).
+    """
+    if hint.tube:
+        return TUBE
+    times = reading.slender
+    if hint.needs_bore and times is not None and times > INSERT_SLENDER_MAX:
+        return LONG_TUBE.format(times=times)
     return None
 
 

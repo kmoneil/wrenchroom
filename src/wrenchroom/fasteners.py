@@ -362,7 +362,9 @@ class PassedOver:
     named nothing a fastener is (``Part7``), and its solid looks like one
     (``named`` False, issue #95): detection checks named parts only. Or it is
     named for a leadscrew, a ball screw or the nut that runs on one, which no
-    tool turns (``motion``, issue #117).
+    tool turns (``motion``, issue #117). Or it is named an insert and is a tube, a
+    liner or a sleeve pushed into its part, by its name or by its solid's length,
+    and no fixed thread (``tube``, issue #178).
     """
 
     name: str
@@ -370,6 +372,7 @@ class PassedOver:
     reason: str
     named: bool = True
     motion: bool = False
+    tube: bool = False
 
 
 # ---------------------------------------------------------------------------
