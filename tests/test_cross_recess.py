@@ -366,7 +366,10 @@ def test_asme_standards_are_standards(name, kind, head, basis):
         ("Tapping Screw ANSI B18.6.4 8-15 x 0.5", "#8"),  # type A's
         ("Machine Screw ANSI B18.6.3 #4-40 x 0.25", "#4"),  # marked already
         ("Machine Screw ANSI B18.6.3 4-41 x 0.25", None),  # no #4 thread
-        ("Machine Screw ANSI B18.6.3 5-40 x 0.25", None),  # #5: no size the tables hold
+        ("Machine Screw ANSI B18.6.3 5-40 x 0.25", "#5"),  # a size since issue #165
+        ("Tapping Screw ANSI B18.6.4 7-19 x 0.5", "#7"),  # type AB's, and a tapping size alone
+        ("Tapping Screw ANSI B18.6.4 14-10 x 1", "#14"),  # type A's
+        ("Machine Screw ANSI B18.6.3 9-32 x 0.25", None),  # #9: no size the tables hold
         ("Machine Screw 4-40 x 0.25", None),  # bare, and no ASME standard beside it
         ("Machine Screw ANSI B18.6.3 rev 2-56a", None),  # in a word
     ],

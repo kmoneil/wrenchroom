@@ -69,8 +69,9 @@ def test_every_hex_a_nut_or_head_presents_is_a_spanner_size():
 
 
 def test_key_tables_only_name_known_threads():
+    # A #5 is a size a name gives (issue #165): in the tables, and no shank's.
     for table in (SOCKET_KEY_AF, BUTTON_KEY_AF, FLAT_KEY_AF, HEX_AF):
-        assert set(table) <= set(METRIC_SIZES) | set(IMPERIAL_SIZES)
+        assert set(table) <= set(METRIC_SIZES) | set(IMPERIAL_SIZES) | {"#5"}
     # A hex head's holds the hexagon head tapping screws' too, ISO 1479's (issue #142).
     assert set(HEX_HEAD_AF) <= set(METRIC_SIZES) | set(IMPERIAL_SIZES) | set(TAPPING_SIZES)
 

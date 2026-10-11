@@ -407,6 +407,16 @@ shank), where its name says ST2.9: taken as drawn`). In the sidecar, `size: ST3.
 An inch tapping screw is named by its gauge (`#6 x 1/2`), a machine screw's, and is
 read as one: ASME B18.6.4's numbered sizes take the cross recesses B18.6.3's do.
 
+Three gauges are sizes a name gives and no shank or hex is taken for (issue #165).
+A `#7` and a `#14` are tapping and wood screws' alone, ASME B18.6.4's: a #7's thread
+is 0.158 in across at most and 0.108 at its core and takes a No. 2 cross, a #14's
+0.254 and 0.178 and a No. 3. A `#5` is a machine screw's, 5-40 and 5-44, with ASME
+B18.3's keys (3/32 for a socket head, 5/64 for a button or flat head, 1/16 for a set
+screw) and B18.6.3's 5/16 nut and No. 2 cross; but 3.175 across it sits where an M3
+drawn a little full does, so a shank is never read as one: an M3 drawn 3.2 across
+stays the M3 its name says. Any other number (`#9`, `#16`) is outside the tables,
+and its screw not covered, which says so.
+
 A screw that forms a machine thread is a machine screw by its size (issue #164). DIN
 7500's thread-forming screws are for ISO metric threads: an M3 is 3.0 across, an M3
 machine screw fits the hole after it, and its tool is an M3's. So `DIN 7500`,
