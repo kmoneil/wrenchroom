@@ -5,6 +5,11 @@ past 240 degrees, or below 0, the circle was one position, which stood for all o
 a key free at one angle read as turning a full circle. A step is held to 0.1 to 30
 degrees wherever it comes in, and every report records the one it was run at.
 
+Issue #185: a step that doesn't divide 360 put its positions unevenly, the last some
+other distance from 0, and an arc across 0 was counted in whole steps all the same: at
+20.5, a key with 55 degrees of room, which needs 60, turned. The positions are spaced
+evenly now, the nearest whole number of them to the step asked.
+
 The search's own cases use a scene with no geometry, free at the angles it is told;
 the issue's model is checked on both engines and through the command line.
 """
@@ -664,3 +669,203 @@ def test_check_writes_its_step_in_the_json_and_the_markdown(slot_step, tmp_path)
         assert (
             f"Kit `metric-home`, swings tried every {said} deg, mesh engine" in md_path.read_text()
         )
+
+
+# ---------------------------------------------------------------------------
+# A step that doesn't divide the circle (issue #185): the positions are even.
+# ---------------------------------------------------------------------------
+
+#: Steps 360 is no whole number of, each with the count of positions it is taken as.
+UNEVEN = {20.5: 18, 25.0: 14, 28.7: 13, 7.7: 47, 11.0: 33, 0.7: 514}
+
+
+def nowhere(_phi):
+    return False
+
+
+def arc(start, width):
+    """Free on the arc from ``start`` on for ``width`` degrees, its ends too, across 0 or not."""
+    return lambda phi: (phi - start) % 360.0 <= width
+
+
+def gaps(angles):
+    """The space from each position to the next, and from the last back round to the first."""
+    return [b - a for a, b in zip(angles, [*angles[1:], angles[0] + 360.0], strict=True)]
+
+
+@pytest.mark.parametrize("step", [*UNEVEN, *TAKEN])
+def test_the_positions_are_spaced_evenly_round_the_circle(step):
+    _, scene = swing(nowhere, step)
+    assert len(scene.asked) == positions(step)
+    assert scene.asked[0] == 0.0
+    spaces = gaps(scene.asked)
+    assert max(spaces) - min(spaces) < 1e-9
+    assert spaces[-1] == pytest.approx(360.0 / positions(step))  # across 0 as anywhere
+
+
+@pytest.mark.parametrize(("step", "count"), UNEVEN.items())
+def test_a_step_that_doesn_t_divide_the_circle_is_the_nearest_count_of_positions(step, count):
+    assert positions(step) == count
+    _, scene = swing(nowhere, step)
+    assert scene.asked == pytest.approx([index * 360.0 / count for index in range(count)])
+
+
+@pytest.mark.parametrize("step", [30.0, 15.0, 7.5, 5.0, 1.0, 0.5, 0.25])
+def test_a_step_that_divides_the_circle_is_tried_at_its_own_multiples(step):
+    _, scene = swing(nowhere, step)
+    assert scene.asked == [index * step for index in range(round(360 / step))]
+
+
+class ArmAndHand:
+    """A scene nothing is in, which keeps where the arm, and the hand on it, were tried."""
+
+    def __init__(self):
+        self.arms = []
+        self.hands = []
+
+    def contacts(self, phi):
+        self.arms.append(phi)
+        return (), ()
+
+    def hits(self, phi):
+        self.hands.append(phi)
+        return ()
+
+
+@pytest.mark.parametrize("step", UNEVEN)
+def test_the_hand_is_tried_where_the_arm_is_at_a_step_that_doesn_t_divide_the_circle(step):
+    scene = ArmAndHand()
+    attempt = swing_attempt(
+        tool="probe",
+        way="probe",
+        scene=scene,
+        engagement=None,
+        arm_at=lambda phi: phi,
+        hand_at=lambda phi: phi,
+        required_deg=HEX_RESEAT_DEG,
+        step_deg=step,
+    )
+    assert attempt.turns
+    assert len(scene.arms) >= 3
+    assert scene.hands == scene.arms
+    assert scene.arms[1] == pytest.approx(360.0 / UNEVEN[step])
+
+
+def test_an_arc_across_zero_is_worth_what_it_spans():
+    # The issue's figures. At 20.5 there were 18 positions, 0 to 348.5, and the 11.5
+    # degrees from the last back to 0 counted as a step: the four from 307.5 to 0,
+    # 52.5 degrees apart, read as 61.5, and a key that needs 60 turned.
+    key_room = arc(305.4, 56.7)  # a little under 57 degrees, ending just past 0
+    for step, proved in ((15.0, 45.0), (5.0, 50.0), (1.0, 56.0), (20.0, 40.0), (20.5, 40.0)):
+        attempt, _ = swing(key_room, step)
+        assert (attempt.turns, attempt.holds) == (False, True), step
+        assert attempt.swing_deg == pytest.approx(proved), step
+
+
+def test_the_same_arc_is_worth_the_same_wherever_it_lies():
+    # Even positions make no part of the circle special: turned round to start on a
+    # position anywhere, an arc holds as many, and proves as much.
+    for step in UNEVEN:
+        count = positions(step)
+        proved = {
+            swing(arc(index * 360.0 / count, 56.7), step)[0].swing_deg
+            for index in range(0, count, max(count // 12, 1))
+        }
+        assert len(proved) == 1, step
+
+
+def test_no_step_proves_more_arc_than_there_is():
+    rng = np.random.default_rng(185)
+    crossing = turned = held = blocked = 0
+    for _ in range(3000):
+        step = float(rng.uniform(1.0, MAX_STEP_DEG))
+        start, width = float(rng.uniform(0.0, 360.0)), float(rng.uniform(0.0, 150.0))
+        required = float(rng.choice([RATCHET_72_SWING_DEG, RING_RESEAT_DEG, HEX_RESEAT_DEG]))
+        free = arc(start, width)
+        attempt, _ = swing(free, step, required)
+        count = positions(step)
+        space = 360.0 / count
+        inside = sum(free(index * 360.0 / count) for index in range(count))
+        case = (step, start, width, required)
+        # What is proved lies in the free arc, first position to last.
+        assert attempt.swing_deg <= width + 1e-9, case
+        assert attempt.holds == (inside >= 1), case
+        assert attempt.turns == ((inside - 1) * space >= required - 1e-9), case
+        if attempt.turns:
+            # The search stops at the first run long enough: under a space past it.
+            assert required - 1e-9 <= attempt.swing_deg < required + space, case
+        else:
+            assert attempt.swing_deg == pytest.approx(max(inside - 1, 0) * space), case
+        # An arc two spaces longer than a tool needs is never missed.
+        assert attempt.turns or width < required + 2 * space, case
+        crossing += start + width > 360.0
+        turned += attempt.turns
+        held += attempt.holds and not attempt.turns
+        blocked += not attempt.holds
+    # Not vacuous: arcs across 0 and clear of it, tools that turn, hold and neither.
+    assert min(crossing, 3000 - crossing, turned, held) > 400
+    assert blocked > 20
+
+
+#: A slot from 56 degrees one side of +X to 6 the other: the key's arm, about 6
+#: degrees across at the tube, has under 56 degrees of room, and needs 60. Each
+#: step's first and last free positions stand a degree or more inside the room.
+WIDE_SLOT = (-56.0, 6.0)
+MIRRORED = (-6.0, 56.0)
+
+#: The arc each step proves in that slot: one space fewer than its positions there.
+PROVED = {
+    15.0: 45.0,
+    5.0: 50.0,
+    2.0: 54.0,
+    20.0: 40.0,
+    20.5: 40.0,  # 18 positions, 20 apart: it read 61.5, and turned
+    25.0: 2 * 360.0 / 14,
+    28.7: 360.0 / 13,
+}
+
+
+@pytest.mark.parametrize("slot", [WIDE_SLOT, MIRRORED])
+@pytest.mark.parametrize("step", PROVED)
+def test_a_key_with_under_sixty_degrees_of_room_turns_at_no_step(engine, slot, step):
+    report = check_slot(engine, slot, step_deg=step)
+    (result,) = report.results
+    short_leg = result.attempts[1]
+    assert (result.verdict, result.reason) == (Verdict.BLOCKED, ONLY_HOLDS)
+    assert (short_leg.turns, short_leg.holds) == (False, True)
+    assert short_leg.swing_deg == pytest.approx(PROVED[step])
+    assert short_leg.swing_deg < 56.0
+    assert report.step_deg == step  # the step asked, whatever it was taken as
+
+
+@pytest.fixture(scope="module")
+def wide_slot_step(tmp_path_factory):
+    """The wide slot as a STEP file, across 0 the way the positions are walked."""
+    shapes = []
+    for name, shape in slotted_tube(*WIDE_SLOT).items():
+        shape.label = name
+        shapes.append(shape)
+    model = tmp_path_factory.mktemp("wide") / "wide.step"
+    export_step(Compound(children=shapes), str(model))
+    return model
+
+
+@pytest.mark.parametrize(
+    ("typed", "best"), [("20.5", "40"), ("20", "40"), ("15", "45"), ("5", "50")]
+)
+def test_explain_tells_the_arc_the_key_has_at_a_step_that_doesn_t_divide_360(
+    wide_slot_step, typed, best
+):
+    arguments = ["explain", str(wide_slot_step), "M3x10 SHCS", "--step-deg", typed]
+    result = CliRunner().invoke(main, arguments)
+    assert result.exit_code == 1
+    assert "M3x10 SHCS: blocked" in result.output
+    assert (
+        f"tried hex-key-2.5, short leg in: holds, best {best} of 60 deg, bounded by wall"
+    ) in result.output
+
+
+def test_check_blocks_it_at_a_step_that_doesn_t_divide_360(wide_slot_step):
+    result = CliRunner().invoke(main, ["check", str(wide_slot_step), "--step-deg", "20.5"])
+    assert result.exit_code == 1
+    assert BLOCKED_LINE in result.output

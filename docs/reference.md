@@ -210,7 +210,10 @@ Real tools against the real parts:
 
 A swing is tried at positions round the fastener, 15 degrees apart unless `--step-deg`
 says (`step_deg=` in Python): so many free positions in a row are one step fewer of
-swing. A finer step finds a narrower arc and takes longer. A step is from 0.1 to 30
+swing. The positions are spaced evenly round the circle, so a step that doesn't
+divide 360 is taken as the nearest that does (20.5 as 18 positions, 20 apart), and an
+arc across 0 is worth what it spans (issue #185); a report says the step it was asked
+for. A finer step finds a narrower arc and takes longer. A step is from 0.1 to 30
 degrees, 30 being the arc a spanner has to show, and any other is a usage error (exit
 2): a wider one could never show a spanner with just its arc to turn, and with one
 position for the whole circle, one free angle read as a full turn (issue #184).
