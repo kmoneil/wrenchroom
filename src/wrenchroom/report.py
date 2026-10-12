@@ -191,6 +191,7 @@ class Report:
     #: The step each swing was sampled at, degrees: ``--step-deg``, 15 unless the run
     #: said otherwise (sweep.py's DEFAULT_STEP_DEG). Recorded as the engine is: a
     #: coarser step finds less, so two reports compare only at one step (issue #184).
+    #: As asked: one that doesn't divide 360 is tried as the nearest that does.
     step_deg: float = 15.0
     unmatched_rules: tuple[str, ...] = ()
     unmatched_ignores: tuple[str, ...] = ()

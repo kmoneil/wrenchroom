@@ -6,12 +6,15 @@ assembly by the fastener's :class:`Mount`. ``u(phi)`` is the local direction
 ``(cos phi, sin phi, 0)``; which global direction ``phi = 0`` lands on is arbitrary
 and doesn't matter, because every search covers the full circle.
 
-Swing is sampled every ``step_deg`` (default 15). ``k`` consecutive free positions
-prove a swing of ``(k - 1) * step_deg``: the handle moves from the first free
-position to the last. The search stops as soon as the required arc is proven (so
-``swing_deg`` is what was proven, not the whole free circle), and a free arc
-across 0 degrees counts whole: the scan walks the circle twice. A step is held to
-:data:`MIN_STEP_DEG` to :data:`MAX_STEP_DEG` (:func:`checked_step`).
+Swing is sampled every ``step_deg`` (default 15), at positions spaced evenly round
+the circle: the whole number of them nearest to one every ``step_deg``, so a step
+that doesn't divide 360 is taken as the nearest that does (20.5 as 18 positions, 20
+apart). ``k`` consecutive free positions prove a swing of ``k - 1`` of those spaces:
+the handle moves from the first free position to the last. The search stops as soon
+as the required arc is proven (so ``swing_deg`` is what was proven, not the whole
+free circle), and a free arc across 0 degrees counts whole: the scan walks the
+circle twice. A step is held to :data:`MIN_STEP_DEG` to :data:`MAX_STEP_DEG`
+(:func:`checked_step`).
 """
 
 from __future__ import annotations
@@ -157,10 +160,23 @@ def checked_step(step_deg: float) -> float:
 def positions(step_deg: float) -> int:
     """How many positions round the circle a step gives: 24 at the default 15.
 
+    The whole number nearest to one every ``step_deg``; they are spaced evenly
+    (:func:`_angle`), whether or not the step divides 360.
+
     Raises:
         ValueError: On a step :func:`checked_step` refuses.
     """
     return round(FULL_CIRCLE / checked_step(step_deg))
+
+
+def _angle(index: int, samples: int) -> float:
+    """Where one of ``samples`` positions is round the circle, degrees: evenly spaced.
+
+    Not ``index * step_deg``: a step that doesn't divide 360 then left the last
+    position some other distance from 0, and an arc across 0 was counted as if it
+    were a whole step (at 20.5, 52.5 degrees as 61.5: issue #185).
+    """
+    return index * FULL_CIRCLE / samples
 
 
 def swing_attempt(  # noqa: PLR0913  (keyword-only: one per thing a swing tries)
@@ -210,7 +226,7 @@ def swing_attempt(  # noqa: PLR0913  (keyword-only: one per thing a swing tries)
 
     def arm_is_clear(index: int) -> bool:
         if index not in arm_hits:
-            hits, grazes = _arm_contacts(scene, arm_at, way_at, index * step_deg, probes)
+            hits, grazes = _arm_contacts(scene, arm_at, way_at, _angle(index, samples), probes)
             _note(blockers, hits)
             _note(grazed, () if hits else grazes)  # a graze where the arm was clear
             arm_hits[index] = hits
@@ -222,22 +238,22 @@ def swing_attempt(  # noqa: PLR0913  (keyword-only: one per thing a swing tries)
         if hand_at is None:
             return True
         if index not in hand_hits:
-            hand = hand_at(index * step_deg)
+            hand = hand_at(_angle(index, samples))
             hits = scene.hits(hand)
             probes.append(Probe(hand, hits))
             _note(hand_blockers, hits)
             hand_hits[index] = hits
         return not hand_hits[index]
 
-    best, end = _longest_run(is_free, samples, step_deg, required_deg)
-    swing = _swing(best, samples, step_deg)
+    best, end = _longest_run(is_free, samples, required_deg)
+    swing = _swing(best, samples)
     turns = swing >= required_deg
     holds = best >= 1
     no_hand_room = False
     bounds = () if turns else _bounds(best, end, samples, arm_hits, hand_hits)
     if hand_at is not None and not turns:
-        alone, alone_end = _longest_run(arm_is_clear, samples, step_deg, required_deg)
-        alone_turns = _swing(alone, samples, step_deg) >= required_deg
+        alone, alone_end = _longest_run(arm_is_clear, samples, required_deg)
+        alone_turns = _swing(alone, samples) >= required_deg
         no_hand_room = alone_turns or (alone >= 1 and not holds)
         # Where the tool alone would do, what stopped the hand along its best arc.
         bounds = _hand_bounds(alone, alone_end, samples, hand_hits) if no_hand_room else bounds
@@ -313,7 +329,7 @@ def _note(seen: list[str], hits: tuple[str, ...]) -> None:
 
 
 def _longest_run(
-    is_free: Callable[[int], bool], samples: int, step_deg: float, required_deg: float
+    is_free: Callable[[int], bool], samples: int, required_deg: float
 ) -> tuple[int, int]:
     """The longest run of free positions, and the position it ends at.
 
@@ -335,14 +351,17 @@ def _longest_run(
         run = min(run + 1, samples)
         if run > best:
             best, end = run, position % samples
-        if run == samples or (run - 1) * step_deg >= required_deg:
+        if _swing(run, samples) >= required_deg:
             break
     return best, end
 
 
-def _swing(best: int, samples: int, step_deg: float) -> float:
-    """The arc ``best`` consecutive free positions prove, degrees."""
-    return FULL_CIRCLE if best == samples else max(0.0, (best - 1) * step_deg)
+def _swing(best: int, samples: int) -> float:
+    """The arc ``best`` consecutive free positions of ``samples`` prove, degrees.
+
+    From the first of them to the last, and the whole circle where all are free.
+    """
+    return FULL_CIRCLE if best == samples else _angle(max(best - 1, 0), samples)
 
 
 def straight_attempt(
