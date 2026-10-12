@@ -1,0 +1,666 @@
+"""The swing's step (``--step-deg``, ``check(step_deg=...)``): which are taken, where it is said.
+
+Issue #184: any number was taken. A step of 0 was a traceback, nan an odd error, and
+past 240 degrees, or below 0, the circle was one position, which stood for all of it:
+a key free at one angle read as turning a full circle. A step is held to 0.1 to 30
+degrees wherever it comes in, and every report records the one it was run at.
+
+The search's own cases use a scene with no geometry, free at the angles it is told;
+the issue's model is checked on both engines and through the command line.
+"""
+
+import inspect
+import json
+import math
+
+import numpy as np
+import pytest
+from build123d import (
+    Box,
+    Compound,
+    Cylinder,
+    Polygon,
+    Pos,
+    RegularPolygon,
+    export_step,
+    extrude,
+)
+from click.testing import CliRunner
+
+from fixture_models import hex_nut, nut_on_plate, screw_facing_wall
+from wrenchroom import __version__, cli
+from wrenchroom.assembly import Assembly, Part
+from wrenchroom.checker import check
+from wrenchroom.cli import EXIT_NOT_COVERED, main
+from wrenchroom.config import Config
+from wrenchroom.report import Report, Verdict
+from wrenchroom.tools import sweep
+from wrenchroom.tools.ball_end import BALL_END_KEYS, ball_end_attempts
+from wrenchroom.tools.fingers import finger_attempts, rim_attempt
+from wrenchroom.tools.hex_keys import HEX_RESEAT_DEG, ISO_2936, hex_key_attempts
+from wrenchroom.tools.sockets import RATCHET_72_SWING_DEG, socket_attempts, socket_for
+from wrenchroom.tools.spanners import (
+    OPEN_RESEAT_DEG,
+    RING_RESEAT_DEG,
+    open_end_attempts,
+    ring_attempts,
+    spanner_for,
+)
+from wrenchroom.tools.sweep import (
+    DEFAULT_STEP_DEG,
+    MAX_STEP_DEG,
+    MIN_STEP_DEG,
+    Mount,
+    checked_step,
+    positions,
+    swing_attempt,
+)
+
+#: Steps a swing is sampled at: the bounds themselves, and steps that don't divide 360.
+TAKEN = [0.1, 0.25, 1.0, 5.0, 7.5, 15.0, 20.5, 29.999, 30.0]
+
+#: The issue's table and its neighbours: nothing, less than nothing, no number, and
+#: every step past the widest, 240 (two positions) and the one-position steps among
+#: them; then the two too fine to count the positions of.
+REFUSED = [
+    0.0,
+    -0.0,
+    -0.1,
+    -15.0,
+    0.05,
+    0.0999,
+    30.001,
+    31.0,
+    45.0,
+    60.0,
+    200.0,
+    240.0,
+    250.0,
+    300.0,
+    400.0,
+    math.inf,
+    -math.inf,
+    math.nan,
+    1e-310,
+    5e-324,
+]
+
+REFUSAL = "a swing step is from 0.1 to 30 degrees, not "
+
+ORIGIN_MOUNT = Mount(seat=(0.0, 0.0, 0.0), axis=(0.0, 0.0, 1.0))
+
+
+def seeded_steps(count=200):
+    """Steps drawn evenly over the whole range taken, the same ones every run."""
+    return np.random.default_rng(184).uniform(MIN_STEP_DEG, MAX_STEP_DEG, count).tolist()
+
+
+# ---------------------------------------------------------------------------
+# The range.
+# ---------------------------------------------------------------------------
+
+
+def test_a_step_is_from_a_tenth_of_a_degree_to_thirty():
+    assert (MIN_STEP_DEG, DEFAULT_STEP_DEG, MAX_STEP_DEG) == (0.1, 15.0, 30.0)
+
+
+def test_no_step_is_wider_than_the_arc_a_spanner_or_a_key_has_to_show():
+    assert MAX_STEP_DEG == RING_RESEAT_DEG == OPEN_RESEAT_DEG == 30.0
+    assert MAX_STEP_DEG <= HEX_RESEAT_DEG
+
+
+@pytest.mark.parametrize("step", TAKEN)
+def test_a_step_in_range_is_taken_as_given(step):
+    assert checked_step(step) == step
+
+
+def test_a_whole_number_of_degrees_is_taken_as_a_float():
+    taken = checked_step(15)
+    assert (taken, type(taken)) == (15.0, float)
+
+
+@pytest.mark.parametrize("step", REFUSED)
+def test_a_step_out_of_range_is_refused(step):
+    with pytest.raises(ValueError, match=REFUSAL):
+        checked_step(step)
+
+
+@pytest.mark.parametrize(
+    ("step", "said"),
+    [(400.0, "400.0"), (-15, "-15"), (math.nan, "nan"), (math.inf, "inf"), (0.0, "0.0")],
+)
+def test_the_refusal_says_the_step_it_was_given(step, said):
+    with pytest.raises(ValueError, match="^" + REFUSAL + said + "$"):
+        checked_step(step)
+
+
+def test_the_refusal_never_rounds_a_step_into_range():
+    # At six figures, 30.0000001 is "30": in the range the message has just given.
+    with pytest.raises(ValueError, match=r"not 30\.0000001$"):
+        checked_step(30.0000001)
+    with pytest.raises(ValueError, match=r"not 0\.09999999$"):
+        checked_step(0.09999999)
+
+
+@pytest.mark.parametrize(
+    ("step", "count"), [(30.0, 12), (15.0, 24), (7.5, 48), (5.0, 72), (1.0, 360), (0.1, 3600)]
+)
+def test_a_step_gives_that_many_positions_round_the_circle(step, count):
+    assert positions(step) == count
+
+
+@pytest.mark.parametrize("step", REFUSED)
+def test_no_positions_are_counted_at_a_step_out_of_range(step):
+    with pytest.raises(ValueError, match=REFUSAL):
+        positions(step)
+
+
+def test_every_step_taken_tries_at_least_twelve_positions():
+    steps = seeded_steps()
+    assert min(steps) < 1  # the family reaches both ends of the range
+    assert max(steps) > 29
+    counts = [positions(step) for step in (*steps, *TAKEN)]
+    assert min(counts) == 12
+    assert max(counts) == 3600
+
+
+# ---------------------------------------------------------------------------
+# The search, on a scene with no geometry.
+# ---------------------------------------------------------------------------
+
+
+class Angles:
+    """A scene of angles: an arm is clear where ``free`` says, and hits ``wall`` elsewhere.
+
+    The arm "solid" is its angle, as :func:`swing` hands it over, so the search is
+    tested apart from any tool's shape. ``asked`` is every angle it was asked about.
+    """
+
+    def __init__(self, free):
+        self.free = free
+        self.asked = []
+
+    def contacts(self, phi):
+        self.asked.append(phi)
+        return ((), ()) if self.free(phi) else (("wall",), ())
+
+
+def swing(free, step, required=HEX_RESEAT_DEG, engagement=None):
+    scene = Angles(free)
+    attempt = swing_attempt(
+        tool="probe",
+        way="probe",
+        scene=scene,
+        engagement=engagement,
+        arm_at=lambda phi: phi,
+        required_deg=required,
+        step_deg=step,
+    )
+    return attempt, scene
+
+
+def at_zero_only(phi):
+    return phi == 0
+
+
+def everywhere(_phi):
+    return True
+
+
+@pytest.mark.parametrize("required", [RATCHET_72_SWING_DEG, RING_RESEAT_DEG, HEX_RESEAT_DEG])
+def test_one_free_angle_holds_and_turns_nothing_at_any_step_taken(required):
+    for step in (*TAKEN, *seeded_steps(40)):
+        attempt, scene = swing(at_zero_only, step, required)
+        assert (attempt.turns, attempt.holds, attempt.swing_deg) == (False, True, 0.0), step
+        assert attempt.bounds == ("wall",)
+        # Every position round the circle was tried, twelve at the fewest, and only
+        # the one at 0 was free: no one position stood for the rest.
+        assert len(scene.asked) == positions(step) >= 12, step
+        assert [phi for phi in scene.asked if at_zero_only(phi)] == [0.0]
+
+
+@pytest.mark.parametrize("step", REFUSED)
+def test_the_search_refuses_a_step_out_of_range(step):
+    with pytest.raises(ValueError, match=REFUSAL):
+        swing(at_zero_only, step)
+
+
+@pytest.mark.parametrize("step", [400.0, 0.0, math.nan])
+def test_the_search_refuses_it_before_it_asks_the_scene_anything(step):
+    # A blocked engagement ends an attempt early: not early enough to pass a step
+    # no swing could be sampled at.
+    scene = Angles(lambda _solid: False)
+    with pytest.raises(ValueError, match=REFUSAL):
+        swing_attempt(
+            tool="probe",
+            way="probe",
+            scene=scene,
+            engagement="the engagement",
+            arm_at=lambda phi: phi,
+            required_deg=HEX_RESEAT_DEG,
+            step_deg=step,
+        )
+    assert scene.asked == []
+
+
+def test_a_free_circle_turns_at_either_end_of_the_range():
+    for step in (MIN_STEP_DEG, MAX_STEP_DEG):
+        attempt, _ = swing(everywhere, step)
+        assert attempt.turns
+        assert attempt.swing_deg == pytest.approx(HEX_RESEAT_DEG)
+
+
+def test_every_position_free_is_the_whole_circle_and_one_short_of_it_is_not():
+    # A tool that had to go all the way round, as none here does. Every position
+    # free is the circle; all but one is the circle less the space either side of it.
+    for step in (30.0, 15.0, 5.0):
+        attempt, _ = swing(everywhere, step, required=360.0)
+        assert (attempt.turns, attempt.swing_deg) == (True, 360.0)
+        attempt, _ = swing(lambda phi: phi != 0, step, required=360.0)
+        assert (attempt.turns, attempt.holds) == (False, True)
+        assert attempt.swing_deg == pytest.approx(360.0 - 2 * step)
+
+
+@pytest.mark.parametrize("step", REFUSED)
+def test_a_fingertip_on_a_rim_refuses_a_step_out_of_range(step):
+    scene = Angles(everywhere)
+    with pytest.raises(ValueError, match=REFUSAL):
+        rim_attempt(ORIGIN_MOUNT, scene, 4.0, 3.0, step)
+    assert scene.asked == []
+
+
+# ---------------------------------------------------------------------------
+# Every tool samples at the step it was handed: what a report says of its step is
+# true of each swing in it.
+# ---------------------------------------------------------------------------
+
+
+class Clear:
+    """A scene nothing is in: every tool, each way, gets as far as its swing."""
+
+    @staticmethod
+    def contacts(_solid):
+        return (), ()
+
+    @staticmethod
+    def hits(_solid):
+        return ()
+
+
+@pytest.fixture
+def steps_sampled(monkeypatch):
+    """Every step a swing or a fingertip was sampled at, as the searches were handed it."""
+    seen = []
+
+    def spy(step_deg):
+        seen.append(step_deg)
+        return checked_step(step_deg)
+
+    monkeypatch.setattr(sweep, "checked_step", spy)
+    return seen
+
+
+HEX_BAND = (0.0, -5.0)
+
+FAMILIES = {
+    "hex key": lambda step: hex_key_attempts(ORIGIN_MOUNT, ISO_2936[5.0], Clear, step),
+    "ball end": lambda step: ball_end_attempts(ORIGIN_MOUNT, BALL_END_KEYS[5.0], Clear, step),
+    "ring": lambda step: ring_attempts(
+        ORIGIN_MOUNT, spanner_for(10.0), 10.0, HEX_BAND, Clear, step
+    ),
+    "open end": lambda step: open_end_attempts(
+        ORIGIN_MOUNT, spanner_for(10.0), 10.0, HEX_BAND, Clear, step
+    ),
+    "socket": lambda step: socket_attempts(
+        ORIGIN_MOUNT, socket_for(10.0), 10.0, HEX_BAND, Clear, step
+    ),
+    "fingers": lambda step: finger_attempts(
+        ORIGIN_MOUNT, Clear, 4.0, 3.0, 0.0, nut=False, step_deg=step
+    ),
+}
+
+
+@pytest.mark.parametrize("family", FAMILIES)
+def test_each_tool_samples_at_the_step_it_is_handed(family, steps_sampled):
+    attempts = list(FAMILIES[family](7.5))
+    assert attempts
+    assert steps_sampled, "no way of this tool reached a swing"
+    assert set(steps_sampled) == {7.5}
+
+
+@pytest.mark.parametrize("family", FAMILIES)
+def test_each_tool_refuses_a_step_out_of_range(family):
+    with pytest.raises(ValueError, match=REFUSAL):
+        list(FAMILIES[family](400.0))
+
+
+M6_SOCKET = {"parts": "bolt", "kind": "screw", "head": "socket", "size": "M6"}
+M6_TORX = {**M6_SOCKET, "head": "torx"}
+M6_NUT = {"parts": "nut", "kind": "nut", "size": "M6"}
+THUMB = {"parts": "thumb", "kind": "screw", "size": "M3", "tool": "hand"}
+
+#: A sidecar's own key, short enough for an M6 socket head under a wall 30 over it.
+STUBBY = {"name": "stubby-key-5", "type": "hex-key", "across_flats": 5, "long": 60, "short": 20}
+
+RIM = "a fingertip on its rim"
+
+
+def nut_in_a_well():
+    """An M6 nut at the foot of a tube: no spanner's handle fits, a socket on an extension does."""
+    plate = Pos(0, 0, -5) * Box(200, 200, 10)
+    well = Pos(0, 0, 30) * (Cylinder(12, 60) - Cylinder(9, 60))
+    return Assembly([Part("nut", hex_nut()), Part("plate", plate), Part("well", well)])
+
+
+def thumb_in_a_cup():
+    """A thumb screw's head in a cup too close round it for fingers, or a fingertip."""
+    thumb = Pos(0, 0, 1.5) * Cylinder(4.0, 3.0) + Pos(0, 0, -5) * Cylinder(1.5, 10)
+    plate = Pos(0, 0, -5) * Box(80, 80, 10) - Cylinder(1.6, 30)
+    cup = Pos(0, 0, 10) * (Cylinder(9, 20) - Cylinder(6, 20))
+    return Assembly([Part("thumb", thumb), Part("plate", plate), Part("cup", cup)])
+
+
+#: Each road check has to a swing: a model, its rule, the sidecar's own tools, and
+#: what must be among the attempts for the road to have been taken.
+ROADS = {
+    "the kit's hex key": (lambda: screw_facing_wall(50.0), M6_SOCKET, (), {"hex-key-5"}),
+    "a hex key the rule names": (
+        lambda: screw_facing_wall(50.0),
+        {**M6_SOCKET, "tool": "hex-key-5"},
+        (),
+        {"hex-key-5"},
+    ),
+    "the kit's Torx key": (lambda: screw_facing_wall(50.0), M6_TORX, (), {"torx-key-T30"}),
+    "a Torx key the rule names": (
+        lambda: screw_facing_wall(50.0),
+        {**M6_TORX, "tool": "torx-key-T30"},
+        (),
+        {"torx-key-T30"},
+    ),
+    "a ball end, then the sidecar's own key": (
+        lambda: screw_facing_wall(30.0),
+        M6_SOCKET,
+        (STUBBY,),
+        {"hex-key-5", "ball-end-key-5", "stubby-key-5"},
+    ),
+    "the sidecar's own key the rule names": (
+        lambda: screw_facing_wall(30.0),
+        {**M6_SOCKET, "tool": "stubby-key-5"},
+        (STUBBY,),
+        {"stubby-key-5"},
+    ),
+    "a ring": (nut_on_plate, M6_NUT, (), {"spanner-10"}),
+    "an open end, then a socket": (nut_in_a_well, M6_NUT, (), {"open end, stubby", "socket-10"}),
+    "a fingertip on a rim": (thumb_in_a_cup, THUMB, (), {RIM}),
+}
+
+
+@pytest.mark.parametrize("road", ROADS)
+def test_check_hands_every_tool_the_run_s_step(road, steps_sampled):
+    # A report says the step it ran at, which has to be true of each swing in it:
+    # check reaches the tools by ten calls, and one handing over the default would
+    # go unseen in every run at 15.
+    model, rule, own, taken = ROADS[road]
+    config = Config.from_dict({"fasteners": [rule], "tools": list(own)})
+    report = check(model(), config, kit="full", step_deg=7.5)
+    (result,) = report.results
+    tried = {attempt.tool for attempt in result.attempts}
+    tried |= {attempt.way for attempt in result.attempts}
+    assert tried >= taken
+    assert steps_sampled
+    assert set(steps_sampled) == {7.5}
+    assert report.step_deg == 7.5
+
+
+# ---------------------------------------------------------------------------
+# The issue's model: a socket head screw a key holds at one angle only.
+# ---------------------------------------------------------------------------
+
+
+def slotted_tube(low=-5.0, high=5.0):
+    """The issue's model, by part: an M3x10 socket head screw free at one angle.
+
+    An ISO 4762 M3x10 (head 5.5 across and 3 tall, a 2.5 hex socket 1.3 deep) in a
+    30 x 30 x 5 plate. A slab 40 mm over its head keeps a hex key from going in as a
+    driver, and a tube round it (radius 25 to 28, from the plate up to the slab)
+    stops the key's long arm everywhere but in a slot 10 degrees wide on +X: from
+    ``low`` to ``high`` degrees round +Z, measured from +X.
+    """
+    socket = Pos(0, 0, 1.7) * extrude(RegularPolygon(2.5 / math.sqrt(3), 6), 1.3)
+    screw = Pos(0, 0, 1.5) * Cylinder(2.75, 3) + Pos(0, 0, -5) * Cylinder(1.5, 10) - socket
+    plate = Pos(0, 0, -2.5) * Box(30, 30, 5) - Cylinder(1.5, 20)
+    across = (low, (low + high) / 2, high)
+    edge = [(40 * math.cos(math.radians(a)), 40 * math.sin(math.radians(a))) for a in across]
+    slot = extrude(Polygon((0, 0), *edge, align=None), 50)
+    wall = Pos(0, 0, 21.5) * (Cylinder(28, 43) - Cylinder(25, 43)) - slot
+    slab = Pos(0, 0, 44) * Box(10, 10, 2)
+    return {"plate": plate, "M3x10 SHCS": screw, "slab": slab, "wall": wall}
+
+
+M3_SOCKET = {"parts": "M3x10 SHCS", "kind": "screw", "head": "socket", "size": "M3"}
+
+ONLY_HOLDS = "only holds, and it has no nut; best arc bounded by wall"
+
+
+def check_slot(engine="mesh", slot=(-5.0, 5.0), **kwargs):
+    assembly = Assembly([Part(name, shape) for name, shape in slotted_tube(*slot).items()])
+    return check(assembly, Config.from_dict({"fasteners": [M3_SOCKET]}), engine=engine, **kwargs)
+
+
+@pytest.mark.parametrize("step", [30.0, 20.5, 15.0, 7.5, 5.0])
+def test_a_key_free_at_one_angle_only_holds_at_every_step(engine, step):
+    report = check_slot(engine, step_deg=step)
+    (result,) = report.results
+    assert (result.verdict, result.tool, result.reason) == (
+        Verdict.BLOCKED,
+        "hex-key-2.5",
+        ONLY_HOLDS,
+    )
+    assert result.deciding == ("wall",)
+    driver, short_leg, long_leg = result.attempts
+    assert (driver.blockers, long_leg.blockers) == (("slab",), ("slab",))
+    assert (short_leg.turns, short_leg.holds, short_leg.swing_deg) == (False, True, 0.0)
+    # The leg in the socket, then the arm at every position the step gives.
+    assert len(short_leg.probes) == 1 + positions(step)
+    assert report.exit_code == 1
+
+
+def test_a_finer_step_finds_a_slot_s_few_degrees_and_still_only_holds(engine):
+    # A slot 12 degrees wide. The key's arm is 2.82 across its corners, 6.5 degrees
+    # at the tube's 25 mm, so its centre line has 2.77 degrees either side of +X.
+    # At a step of 2 the positions 2 either side are 0.3 mm clear of the wall and
+    # the ones at 4 half a millimetre into it: three free, two steps of swing.
+    (result,) = check_slot(engine, (-6.0, 6.0), step_deg=2.0).results
+    short_leg = result.attempts[1]
+    assert (result.verdict, result.reason) == (Verdict.BLOCKED, ONLY_HOLDS)
+    assert (short_leg.turns, short_leg.holds) == (False, True)
+    assert short_leg.swing_deg == pytest.approx(4.0)
+
+
+def test_the_finest_step_is_a_run_that_ends():
+    (result,) = check_slot(step_deg=MIN_STEP_DEG).results
+    short_leg = result.attempts[1]
+    assert (result.verdict, short_leg.holds) == (Verdict.BLOCKED, True)
+    assert len(short_leg.probes) == 3601
+    assert 3.0 < short_leg.swing_deg < 5.0
+
+
+@pytest.mark.parametrize("step", REFUSED)
+def test_check_refuses_a_step_out_of_range(engine, step):
+    with pytest.raises(ValueError, match=REFUSAL):
+        check_slot(engine, step_deg=step)
+
+
+@pytest.mark.parametrize("step", [0.0, 400.0, math.nan])
+def test_check_refuses_it_with_nothing_to_swing_a_tool_on(step):
+    # No fastener, so no swing: the step is still what the report would say it ran at.
+    nothing = Config.from_dict({"checks": {"detect": False}})
+    assert check(screw_facing_wall(40.0), nothing).summary["fasteners"] == 0
+    with pytest.raises(ValueError, match=REFUSAL):
+        check(screw_facing_wall(40.0), nothing, step_deg=step)
+
+
+# ---------------------------------------------------------------------------
+# The report records the step it was run at.
+# ---------------------------------------------------------------------------
+
+
+def test_a_report_made_by_hand_is_at_the_default_step():
+    assert Report(model="m", kit="full", results=()).step_deg == DEFAULT_STEP_DEG
+
+
+def test_a_run_s_report_carries_its_step():
+    assert check_slot().step_deg == DEFAULT_STEP_DEG
+    for step in (5, 7.5, 30.0):
+        carried = check_slot(step_deg=step).step_deg
+        assert (carried, type(carried)) == (float(step), float)
+
+
+def test_the_json_records_the_step_beside_the_engine():
+    document = check_slot(step_deg=5.0).to_json_dict()
+    assert document["step_deg"] == 5.0
+    assert list(document)[:6] == ["schema", "model", "kit", "engine", "step_deg", "tool_version"]
+    assert check_slot().to_json_dict()["step_deg"] == 15.0
+    assert json.loads(check_slot(step_deg=7.5).json_text())["step_deg"] == 7.5
+
+
+@pytest.mark.parametrize(("step", "said"), [(None, "15"), (5.0, "5"), (7.5, "7.5"), (0.25, "0.25")])
+def test_the_markdown_says_the_step_on_its_kit_line(step, said):
+    report = check_slot() if step is None else check_slot(step_deg=step)
+    assert report.markdown().splitlines()[4] == (
+        f"Kit `metric-home`, swings tried every {said} deg, mesh engine, wrenchroom {__version__}."
+    )
+
+
+# ---------------------------------------------------------------------------
+# The command line: the issue's table.
+# ---------------------------------------------------------------------------
+
+BLOCKED_LINE = (
+    "FAIL M3x10 SHCS  hex-key-2.5  blocked  only holds, and it has no nut; best arc bounded by wall"
+)
+
+USAGE = "Error: Invalid value for '--step-deg': " + REFUSAL
+
+#: As typed: the issue's own (0, nan, 250, 300, 400, inf, -15), and 200, which gave
+#: the right answer from two positions and is past the widest step all the same.
+TYPED_REFUSED = [
+    "0",
+    "nan",
+    "250",
+    "300",
+    "400",
+    "inf",
+    "-inf",
+    "-15",
+    "200",
+    "30.5",
+    "0.05",
+    "1e-320",
+]
+
+
+@pytest.fixture(scope="module")
+def slot_step(tmp_path_factory):
+    """The issue's model as a STEP file with no sidecar: the screw is found by its name."""
+    shapes = []
+    for name, shape in slotted_tube().items():
+        shape.label = name
+        shapes.append(shape)
+    model = tmp_path_factory.mktemp("slot") / "slot.step"
+    export_step(Compound(children=shapes), str(model))
+    return model
+
+
+@pytest.mark.parametrize(
+    "flags", [[], ["--step-deg", "5"], ["--step-deg", "30"], ["--step-deg=7.5"]]
+)
+def test_check_blocks_the_key_at_every_step_taken(slot_step, flags):
+    result = CliRunner().invoke(main, ["check", str(slot_step), *flags])
+    assert result.exit_code == 1
+    assert "1 fasteners: 0 turn, 0 held, 1 blocked, 0 stuck, 0 not covered" in result.output
+    assert BLOCKED_LINE in result.output
+
+
+@pytest.mark.parametrize("typed", TYPED_REFUSED)
+def test_check_refuses_a_step_out_of_range_as_a_usage_error(slot_step, typed):
+    result = CliRunner().invoke(main, ["check", str(slot_step), f"--step-deg={typed}"])
+    assert result.exit_code == EXIT_NOT_COVERED
+    assert isinstance(result.exception, SystemExit)  # said, not a traceback
+    assert USAGE in result.output
+    assert "fasteners" not in result.output  # nothing was checked
+
+
+@pytest.mark.parametrize("typed", TYPED_REFUSED)
+def test_explain_refuses_a_step_out_of_range_as_a_usage_error(slot_step, typed):
+    arguments = ["explain", str(slot_step), "M3x10 SHCS", f"--step-deg={typed}"]
+    result = CliRunner().invoke(main, arguments)
+    assert result.exit_code == EXIT_NOT_COVERED
+    assert isinstance(result.exception, SystemExit)
+    assert USAGE in result.output
+    assert "tried" not in result.output
+
+
+def test_a_negative_step_typed_after_a_space_is_refused_too(slot_step):
+    result = CliRunner().invoke(
+        main, ["explain", str(slot_step), "M3x10 SHCS", "--step-deg", "-15"]
+    )
+    assert result.exit_code == EXIT_NOT_COVERED
+    assert USAGE + "-15.0" in result.output
+
+
+def test_explain_tells_the_one_angle_at_a_step_taken(slot_step):
+    arguments = ["explain", str(slot_step), "M3x10 SHCS", "--step-deg", "5"]
+    result = CliRunner().invoke(main, arguments)
+    assert result.exit_code == 1
+    assert "M3x10 SHCS: blocked" in result.output
+    assert "tried hex-key-2.5, driver straight in: blocked; hit slab" in result.output
+    assert (
+        "tried hex-key-2.5, short leg in: holds, at one angle only (60 deg needed), "
+        "bounded by wall; hit wall"
+    ) in result.output
+
+
+@pytest.mark.parametrize("command", [["check"], ["explain", "M3x10 SHCS"]])
+def test_a_step_out_of_range_is_refused_before_the_model_is_read(tmp_path, command):
+    scrawl = tmp_path / "scrawl.step"
+    scrawl.write_text("no STEP file\n")
+    verb, *rest = command
+    refused = CliRunner().invoke(main, [verb, str(scrawl), *rest, "--step-deg=400"])
+    assert refused.exit_code == EXIT_NOT_COVERED
+    assert USAGE in refused.output
+    assert "error:" not in refused.output
+    # At a step taken the model is read, and it is the model the run fails on.
+    read = CliRunner().invoke(main, [verb, str(scrawl), *rest, "--step-deg=30"])
+    assert read.exit_code == EXIT_NOT_COVERED
+    assert "error:" in read.output
+    assert "--step-deg" not in read.output
+
+
+@pytest.mark.parametrize("command", ["check", "explain"])
+def test_the_help_gives_the_range_and_the_default(command):
+    result = CliRunner().invoke(main, [command, "--help"])
+    assert result.exit_code == 0
+    said = " ".join(result.output.split())
+    assert f"degrees: from {MIN_STEP_DEG:g} to {MAX_STEP_DEG:g}. [default: 15.0]" in said
+
+
+@pytest.mark.parametrize("command", ["check", "explain"])
+def test_the_command_line_s_default_step_is_the_sweep_s(command):
+    (option,) = [p for p in main.commands[command].params if p.name == "step_deg"]
+    assert option.default == DEFAULT_STEP_DEG
+    run = cli._run  # noqa: SLF001  (what check, explain and tools --used all go through)
+    assert inspect.signature(run).parameters["step_deg"].default == DEFAULT_STEP_DEG
+    assert inspect.signature(check).parameters["step_deg"].default == DEFAULT_STEP_DEG
+
+
+def test_check_writes_its_step_in_the_json_and_the_markdown(slot_step, tmp_path):
+    for flags, step, said in (([], 15.0, "15"), (["--step-deg", "5"], 5.0, "5")):
+        json_path, md_path = tmp_path / "report.json", tmp_path / "report.md"
+        outputs = ["--json", str(json_path), "--md", str(md_path)]
+        result = CliRunner().invoke(main, ["check", str(slot_step), *flags, *outputs])
+        assert result.exit_code == 1
+        assert json.loads(json_path.read_text())["step_deg"] == step
+        assert (
+            f"Kit `metric-home`, swings tried every {said} deg, mesh engine" in md_path.read_text()
+        )

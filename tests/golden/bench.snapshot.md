@@ -2,7 +2,7 @@
 
 **180 fasteners: 134 turn, 15 held, 28 blocked, 3 stuck, 0 not covered**
 
-Kit `full`, ENGINE engine, wrenchroom VERSION.
+Kit `full`, swings tried every 15 deg, ENGINE engine, wrenchroom VERSION.
 
 The model: 1 part drawn as a surface, not a solid, is left out, as nothing can meet it: `shelled_decal`.
 

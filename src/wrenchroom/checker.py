@@ -143,6 +143,7 @@ from wrenchroom.tools.sweep import (
     Probe,
     axial_annulus,
     axial_cylinder,
+    checked_step,
     radial_cylinder,
 )
 from wrenchroom.tools.torx_keys import ISO_10664
@@ -215,7 +216,8 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
             valid (empty, passing) report.
         kit: Which tool kit (:mod:`wrenchroom.tools.kits`): only its tools are
             tried, and a fastener needing another is not covered.
-        step_deg: Swing sampling step, degrees.
+        step_deg: Swing sampling step, degrees, from 0.1 to 30
+            (:func:`~wrenchroom.tools.sweep.checked_step`); the report records it.
         model: The model's name for the report header.
         only: A glob narrowing which fasteners are checked, as ``--only``.
         state: Overrides the config's ``default_state`` for this run.
@@ -232,11 +234,12 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
 
     Raises:
         ValueError: On a kit, state or engine that doesn't exist (a typo, not a
-            model problem).
+            model problem), or a step no swing can be sampled at, whether or not
+            the model has anything to swing a tool on.
     """
     config = config or Config()
     hand = config.hand_room if hand_room is None else hand_room
-    tools = _Tools(kit_named(kit), step_deg, hand, config.tools)
+    tools = _Tools(kit_named(kit), checked_step(step_deg), hand, config.tools)
     if engine not in ENGINES:
         msg = f"unknown engine {engine!r}; available: {', '.join(ENGINES)}"
         raise ValueError(msg)
@@ -319,6 +322,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         model=model,
         kit=kit,
         engine=engine,
+        step_deg=tools.step_deg,
         results=tuple(results),
         unmatched_rules=tuple(
             rule.parts

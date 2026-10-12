@@ -188,6 +188,10 @@ class Report:
     #: The collision engine that answered: ``mesh`` by default, ``exact`` under
     #: ``--exact``. Recorded so a report says how it was computed.
     engine: str = "mesh"
+    #: The step each swing was sampled at, degrees: ``--step-deg``, 15 unless the run
+    #: said otherwise (sweep.py's DEFAULT_STEP_DEG). Recorded as the engine is: a
+    #: coarser step finds less, so two reports compare only at one step (issue #184).
+    step_deg: float = 15.0
     unmatched_rules: tuple[str, ...] = ()
     unmatched_ignores: tuple[str, ...] = ()
     #: Config-grade problems found while checking (a forced pair naming nothing,
@@ -342,6 +346,7 @@ class Report:
             "model": self.model,
             "kit": self.kit,
             "engine": self.engine,
+            "step_deg": self.step_deg,
             "tool_version": __version__,
             "summary": self.summary,
             "unmatched_rules": list(self.unmatched_rules),
@@ -474,7 +479,8 @@ class Report:
             "",
             f"**{_summary_text(self.summary)}**",
             "",
-            f"Kit {md_code(self.kit, in_table=False)}, {md_text(self.engine)} engine, "
+            f"Kit {md_code(self.kit, in_table=False)}, swings tried every "
+            f"{md_text(f'{self.step_deg:g}')} deg, {md_text(self.engine)} engine, "
             f"wrenchroom {md_text(__version__)}.",
             "",
             *(

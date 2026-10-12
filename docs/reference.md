@@ -208,6 +208,13 @@ Real tools against the real parts:
   any one side, as a thumb wheel is turned through a window. Each is tried in place,
   as a driver is.
 
+A swing is tried at positions round the fastener, 15 degrees apart unless `--step-deg`
+says (`step_deg=` in Python): so many free positions in a row are one step fewer of
+swing. A finer step finds a narrower arc and takes longer. A step is from 0.1 to 30
+degrees, 30 being the arc a spanner has to show, and any other is a usage error (exit
+2): a wider one could never show a spanner with just its arc to turn, and with one
+position for the whole circle, one free angle read as a full turn (issue #184).
+
 A tool on a hex's flats needs the room the hex's own corners sweep as it turns, and a
 socket the room for its wall round the hex. A part in that first room stops the hex
 whatever grips it, which is said once, before any tool is tried (`the nut's corners
@@ -513,6 +520,11 @@ fastener fails, 2 not covered or a config error. A FILE of `-` writes that repor
 stdout instead and moves the table to stderr, so it can be piped: `--json - | jq`,
 `--md - >> "$GITHUB_STEP_SUMMARY"`. Only one report can go to stdout; a file really
 named `-` is `./-`.
+
+The JSON and the Markdown say how the run was made: its kit, its engine and the step
+its swings were tried at (`kit`, `engine` and `step_deg` in the JSON, one line under
+the Markdown's summary). A coarser step finds less, so two reports compare only at
+one step.
 
 Names come from the model, so the terminal shows control characters written out and
 the Markdown puts every name in a code span: a crafted part name can't steer a
