@@ -10,6 +10,11 @@ other distance from 0, and an arc across 0 was counted in whole steps all the sa
 20.5, a key with 55 degrees of room, which needs 60, turned. The positions are spaced
 evenly now, the nearest whole number of them to the step asked.
 
+Issue #188: only ``check`` and ``explain`` could be told a step, so ``tools --used``
+and the pytest plugin ran at 15 whatever a project checked at. The sidecar says it now
+(``checks: {step_deg: 5}``) for every way of running the check, and ``--step-deg``
+outranks it for one run.
+
 The search's own cases use a scene with no geometry, free at the angles it is told;
 the issue's model is checked on both engines and through the command line.
 """
@@ -37,7 +42,7 @@ from wrenchroom import __version__, cli
 from wrenchroom.assembly import Assembly, Part
 from wrenchroom.checker import check
 from wrenchroom.cli import EXIT_NOT_COVERED, main
-from wrenchroom.config import Config
+from wrenchroom.config import Config, ConfigError
 from wrenchroom.report import Report, Verdict
 from wrenchroom.tools import sweep
 from wrenchroom.tools.ball_end import BALL_END_KEYS, ball_end_attempts
@@ -447,9 +452,20 @@ M3_SOCKET = {"parts": "M3x10 SHCS", "kind": "screw", "head": "socket", "size": "
 ONLY_HOLDS = "only holds, and it has no nut; best arc bounded by wall"
 
 
-def check_slot(engine="mesh", slot=(-5.0, 5.0), **kwargs):
+def check_slot(engine="mesh", slot=(-5.0, 5.0), checks=None, **kwargs):
     assembly = Assembly([Part(name, shape) for name, shape in slotted_tube(*slot).items()])
-    return check(assembly, Config.from_dict({"fasteners": [M3_SOCKET]}), engine=engine, **kwargs)
+    sidecar = {"fasteners": [M3_SOCKET], **({} if checks is None else {"checks": checks})}
+    return check(assembly, Config.from_dict(sidecar), engine=engine, **kwargs)
+
+
+def export_slot(model, low=-5.0, high=5.0):
+    """A slotted tube's model as a STEP file: the screw is found by its name."""
+    shapes = []
+    for name, shape in slotted_tube(low, high).items():
+        shape.label = name
+        shapes.append(shape)
+    export_step(Compound(children=shapes), str(model))
+    return model
 
 
 @pytest.mark.parametrize("step", [30.0, 20.5, 15.0, 7.5, 5.0])
@@ -568,13 +584,7 @@ TYPED_REFUSED = [
 @pytest.fixture(scope="module")
 def slot_step(tmp_path_factory):
     """The issue's model as a STEP file with no sidecar: the screw is found by its name."""
-    shapes = []
-    for name, shape in slotted_tube().items():
-        shape.label = name
-        shapes.append(shape)
-    model = tmp_path_factory.mktemp("slot") / "slot.step"
-    export_step(Compound(children=shapes), str(model))
-    return model
+    return export_slot(tmp_path_factory.mktemp("slot") / "slot.step")
 
 
 @pytest.mark.parametrize(
@@ -643,20 +653,21 @@ def test_a_step_out_of_range_is_refused_before_the_model_is_read(tmp_path, comma
 
 
 @pytest.mark.parametrize("command", ["check", "explain"])
-def test_the_help_gives_the_range_and_the_default(command):
+def test_the_help_gives_the_range_the_sidecar_s_key_and_the_default(command):
     result = CliRunner().invoke(main, [command, "--help"])
     assert result.exit_code == 0
     said = " ".join(result.output.split())
-    assert f"degrees: from {MIN_STEP_DEG:g} to {MAX_STEP_DEG:g}. [default: 15.0]" in said
+    assert (
+        f"degrees, from {MIN_STEP_DEG:g} to {MAX_STEP_DEG:g} (as `checks: {{step_deg: 5}}`); "
+        f"{DEFAULT_STEP_DEG:g} unless the sidecar says."
+    ) in said
 
 
-@pytest.mark.parametrize("command", ["check", "explain"])
-def test_the_command_line_s_default_step_is_the_sweep_s(command):
-    (option,) = [p for p in main.commands[command].params if p.name == "step_deg"]
-    assert option.default == DEFAULT_STEP_DEG
+def test_no_way_of_running_the_check_has_a_step_of_its_own_to_hide_the_sidecar_s():
+    # A default of 15 anywhere on the way would be a step given, and outrank the sidecar.
     run = cli._run  # noqa: SLF001  (what check, explain and tools --used all go through)
-    assert inspect.signature(run).parameters["step_deg"].default == DEFAULT_STEP_DEG
-    assert inspect.signature(check).parameters["step_deg"].default == DEFAULT_STEP_DEG
+    assert inspect.signature(run).parameters["step_deg"].default is None
+    assert inspect.signature(check).parameters["step_deg"].default is None
 
 
 def test_check_writes_its_step_in_the_json_and_the_markdown(slot_step, tmp_path):
@@ -841,13 +852,7 @@ def test_a_key_with_under_sixty_degrees_of_room_turns_at_no_step(engine, slot, s
 @pytest.fixture(scope="module")
 def wide_slot_step(tmp_path_factory):
     """The wide slot as a STEP file, across 0 the way the positions are walked."""
-    shapes = []
-    for name, shape in slotted_tube(*WIDE_SLOT).items():
-        shape.label = name
-        shapes.append(shape)
-    model = tmp_path_factory.mktemp("wide") / "wide.step"
-    export_step(Compound(children=shapes), str(model))
-    return model
+    return export_slot(tmp_path_factory.mktemp("wide") / "wide.step", *WIDE_SLOT)
 
 
 @pytest.mark.parametrize(
@@ -869,3 +874,245 @@ def test_check_blocks_it_at_a_step_that_doesn_t_divide_360(wide_slot_step):
     result = CliRunner().invoke(main, ["check", str(wide_slot_step), "--step-deg", "20.5"])
     assert result.exit_code == 1
     assert BLOCKED_LINE in result.output
+
+
+# ---------------------------------------------------------------------------
+# The sidecar's step (issue #188): every way of running the check takes it.
+# ---------------------------------------------------------------------------
+
+#: A slot from 11 degrees one side of +X to 62 the other: the key's arm has about 66
+#: degrees of room and needs 60. At 15 the positions in it are 0 to 45, which prove
+#: 45; at 5 they run from -5 to 55, which prove 60. Each end position stands over a
+#: degree inside the room or past it.
+GAP = (-11.0, 62.0)
+
+
+def from_checks(**checks):
+    return Config.from_dict({"checks": checks})
+
+
+def test_a_sidecar_with_no_step_has_none():
+    assert Config().step_deg is None
+    assert Config.from_dict({}).step_deg is None
+    assert from_checks(hand_room=True).step_deg is None
+    assert from_checks(step_deg=None).step_deg is None
+
+
+@pytest.mark.parametrize("step", TAKEN)
+def test_a_sidecar_s_step_in_range_is_taken(step):
+    assert from_checks(step_deg=step).step_deg == step
+
+
+def test_a_sidecar_s_whole_number_of_degrees_is_a_float():
+    taken = from_checks(step_deg=5).step_deg
+    assert (taken, type(taken)) == (5.0, float)
+
+
+@pytest.mark.parametrize("step", REFUSED)
+def test_a_sidecar_s_step_out_of_range_is_a_config_error(step):
+    with pytest.raises(ConfigError, match="^<dict>: checks: step_deg: " + REFUSAL):
+        from_checks(step_deg=step)
+
+
+@pytest.mark.parametrize("step", ["5", "fine", True, False, [5], {"deg": 5}])
+def test_a_sidecar_s_step_that_is_no_number_is_a_config_error(step):
+    with pytest.raises(ConfigError, match=r"^<dict>: checks: step_deg must be a number of degrees"):
+        from_checks(step_deg=step)
+
+
+@pytest.mark.parametrize("key", ["step", "step-deg", "step_degrees"])
+def test_another_spelling_of_the_key_is_unknown_not_ignored(key):
+    with pytest.raises(ConfigError, match="unknown key"):
+        Config.from_dict({"checks": {key: 5}})
+
+
+@pytest.mark.parametrize(
+    ("written", "said"),
+    [
+        ("400", "a swing step is from 0.1 to 30 degrees, not 400"),
+        ("0", "a swing step is from 0.1 to 30 degrees, not 0"),
+        (".nan", "a swing step is from 0.1 to 30 degrees, not nan"),
+        (".inf", "a swing step is from 0.1 to 30 degrees, not inf"),
+        ("yes", "must be a number of degrees, not True"),
+        ("fine", "must be a number of degrees, not 'fine'"),
+    ],
+)
+def test_a_sidecar_file_s_bad_step_names_the_file_and_the_key(tmp_path, written, said):
+    sidecar = tmp_path / "wrenchroom.yaml"
+    sidecar.write_text(f"checks:\n  step_deg: {written}\n")
+    with pytest.raises(ConfigError) as error:
+        Config.load(sidecar)
+    assert str(error.value).startswith(f"{sidecar}: checks: step_deg")
+    assert str(error.value).endswith(said)
+
+
+def test_a_sidecar_file_s_step_is_read(tmp_path):
+    sidecar = tmp_path / "wrenchroom.yaml"
+    sidecar.write_text("checks:\n  step_deg: 7.5\n")
+    assert Config.load(sidecar).step_deg == 7.5
+
+
+@pytest.mark.parametrize(
+    ("asked", "sidecar", "used"),
+    [
+        (None, None, 15.0),
+        (None, 5, 5.0),
+        (None, 30.0, 30.0),
+        (7.5, None, 7.5),
+        (7.5, 5, 7.5),
+        (15.0, 5, 15.0),  # the default, asked for: it is a step given like any other
+    ],
+)
+def test_a_run_swings_at_the_step_asked_then_the_sidecar_s_then_the_default(
+    asked, sidecar, used, steps_sampled
+):
+    checks = None if sidecar is None else {"step_deg": sidecar}
+    kwargs = {} if asked is None else {"step_deg": asked}
+    report = check_slot(checks=checks, **kwargs)
+    assert steps_sampled
+    assert set(steps_sampled) == {used}
+    assert (report.step_deg, type(report.step_deg)) == (used, float)
+    assert report.to_json_dict()["step_deg"] == used
+
+
+@pytest.mark.parametrize("step", [0.0, 400.0, math.nan])
+def test_a_step_asked_out_of_range_is_refused_whatever_the_sidecar_says(step):
+    with pytest.raises(ValueError, match=REFUSAL):
+        check_slot(checks={"step_deg": 5}, step_deg=step)
+
+
+def test_a_key_the_default_step_misses_turns_at_the_sidecar_s(engine):
+    (coarse,) = check_slot(engine, GAP).results
+    assert (coarse.verdict, coarse.reason) == (Verdict.BLOCKED, ONLY_HOLDS)
+    assert coarse.attempts[1].swing_deg == pytest.approx(45.0)
+    (fine,) = check_slot(engine, GAP, checks={"step_deg": 5}).results
+    assert (fine.verdict, fine.tool, fine.how) == (Verdict.TURNS, "hex-key-2.5", "short leg in")
+    assert fine.attempts[1].swing_deg == pytest.approx(60.0)
+    (back,) = check_slot(engine, GAP, checks={"step_deg": 5}, step_deg=15.0).results
+    assert (back.verdict, back.reason) == (Verdict.BLOCKED, ONLY_HOLDS)
+
+
+@pytest.fixture(scope="module")
+def gap_models(tmp_path_factory):
+    """The gap's model twice: beside a sidecar that says a step of 5, and with none."""
+    stepped, plain = tmp_path_factory.mktemp("stepped"), tmp_path_factory.mktemp("plain")
+    (stepped / "wrenchroom.yaml").write_text("checks:\n  step_deg: 5\n")
+    return export_slot(stepped / "gap.step", *GAP), export_slot(plain / "gap.step", *GAP)
+
+
+def test_check_takes_the_sidecar_s_step_and_the_flag_outranks_it(gap_models, tmp_path):
+    stepped, plain = gap_models
+    json_path, md_path = tmp_path / "report.json", tmp_path / "report.md"
+    outputs = ["--json", str(json_path), "--md", str(md_path)]
+
+    fine = CliRunner().invoke(main, ["check", str(stepped), *outputs])
+    assert fine.exit_code == 0
+    assert "1 fasteners: 1 turn, 0 held, 0 blocked, 0 stuck, 0 not covered" in fine.output
+    assert json.loads(json_path.read_text())["step_deg"] == 5.0
+    assert "swings tried every 5 deg" in md_path.read_text()
+
+    coarse = CliRunner().invoke(main, ["check", str(stepped), "--step-deg", "15", *outputs])
+    assert coarse.exit_code == 1
+    assert BLOCKED_LINE in coarse.output
+    assert json.loads(json_path.read_text())["step_deg"] == 15.0
+
+    default = CliRunner().invoke(main, ["check", str(plain), *outputs])
+    assert default.exit_code == 1
+    assert BLOCKED_LINE in default.output
+    assert json.loads(json_path.read_text())["step_deg"] == 15.0
+
+    asked = CliRunner().invoke(main, ["check", str(plain), "--step-deg", "5"])
+    assert asked.exit_code == 0
+
+
+def test_explain_takes_the_sidecar_s_step_and_the_flag_outranks_it(gap_models):
+    stepped, plain = gap_models
+    fine = CliRunner().invoke(main, ["explain", str(stepped), "M3x10 SHCS"])
+    assert fine.exit_code == 0
+    assert "M3x10 SHCS: turns with hex-key-2.5, short leg in" in fine.output
+    for arguments in ([str(stepped), "M3x10 SHCS", "--step-deg", "15"], [str(plain), "M3x10 SHCS"]):
+        coarse = CliRunner().invoke(main, ["explain", *arguments])
+        assert coarse.exit_code == 1
+        assert "short leg in: holds, best 45 of 60 deg, bounded by wall" in coarse.output
+
+
+def test_the_tools_a_model_needs_are_found_at_the_sidecar_s_step(gap_models):
+    # The issue: the model passed check --step-deg 5, and was told it needed no tools.
+    stepped, plain = gap_models
+    fine = CliRunner().invoke(main, ["tools", "--used", str(stepped)])
+    assert fine.exit_code == 0
+    assert "1 tool this model needs (kit metric-home): 1 hex key" in fine.output
+    assert "hex-key-2.5" in fine.output
+    assert "blocked" not in fine.output
+    coarse = CliRunner().invoke(main, ["tools", "--used", str(plain)])
+    assert coarse.exit_code == 0
+    assert "0 tools this model needs (kit metric-home): none" in coarse.output
+    assert "blocked, once reached: hex-key-2.5 x1" in coarse.output
+
+
+def test_a_sidecar_named_on_the_command_line_gives_its_step_too(gap_models, tmp_path):
+    _, plain = gap_models
+    sidecar = tmp_path / "fine.yaml"
+    sidecar.write_text("checks:\n  step_deg: 5\n")
+    named = [str(plain), "--config", str(sidecar)]
+    checked = CliRunner().invoke(main, ["check", *named])
+    assert checked.exit_code == 0
+    assert "1 fasteners: 1 turn, 0 held, 0 blocked" in checked.output
+    listed = CliRunner().invoke(main, ["tools", "--used", *named])
+    assert listed.exit_code == 0
+    assert "1 tool this model needs (kit metric-home): 1 hex key" in listed.output
+
+
+@pytest.mark.parametrize(
+    "command", [["check"], ["explain", "M3x10 SHCS"], ["tools", "--used"], ["clashes"]]
+)
+@pytest.mark.parametrize(
+    ("written", "said"),
+    [
+        ("400", "checks: step_deg: a swing step is from 0.1 to 30 degrees, not 400"),
+        (".nan", "checks: step_deg: a swing step is from 0.1 to 30 degrees, not nan"),
+        ("yes", "checks: step_deg must be a number of degrees, not True"),
+    ],
+)
+def test_a_sidecar_s_bad_step_is_a_config_error_from_every_command(
+    gap_models, tmp_path, command, written, said
+):
+    _, plain = gap_models
+    sidecar = tmp_path / "bad.yaml"
+    sidecar.write_text(f"checks:\n  step_deg: {written}\n")
+    verb, *rest = command
+    arguments = [verb, *([] if verb == "explain" else rest), str(plain)]
+    arguments += rest if verb == "explain" else []
+    result = CliRunner().invoke(main, [*arguments, "--config", str(sidecar)])
+    assert result.exit_code == EXIT_NOT_COVERED
+    assert isinstance(result.exception, SystemExit)  # said, not a traceback
+    assert f"error: {sidecar}: {said}" in result.output
+
+
+PLUGIN_TEST = """
+def test_every_fastener_reachable(wrenchroom_report):
+    assert wrenchroom_report.step_deg == {step}
+    wrenchroom_report.assert_all_pass()
+"""
+
+
+def test_the_pytest_plugin_checks_at_the_sidecar_s_step(pytester):
+    cad = pytester.path / "cad"
+    cad.mkdir()
+    export_slot(cad / "gap.step", *GAP)
+    pytester.makeini("[pytest]\nwrenchroom_model = cad/gap.step\n")
+    # With no step in a sidecar, the plugin's run is at 15, and the key only holds.
+    pytester.makepyfile(test_design=PLUGIN_TEST.format(step=15.0))
+    coarse = pytester.runpytest()
+    coarse.assert_outcomes(failed=1)
+    coarse.stdout.fnmatch_lines(["*FAIL M3x10 SHCS  hex-key-2.5  blocked*"])
+
+
+def test_the_pytest_plugin_passes_the_model_its_sidecar_s_step_passes(pytester):
+    cad = pytester.path / "cad"
+    cad.mkdir()
+    export_slot(cad / "gap.step", *GAP)
+    (cad / "wrenchroom.yaml").write_text("checks:\n  step_deg: 5\n")
+    pytester.makeini("[pytest]\nwrenchroom_model = cad/gap.step\n")
+    pytester.makepyfile(test_design=PLUGIN_TEST.format(step=5.0))
+    pytester.runpytest().assert_outcomes(passed=1)

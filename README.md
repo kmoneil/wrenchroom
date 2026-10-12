@@ -370,6 +370,7 @@ checks:
   try_states: [lid-off]          # retry each failure in these states
   hand_room: false               # also check room for a hand (untuned, off)
   clashes: false                 # also look for parts drawn into each other (off)
+  step_deg: 15                   # degrees between the positions a swing is tried at
   detect: true                   # find fasteners the rules don't name
 
 build:                           # the order it's built in: see below
@@ -527,6 +528,9 @@ wrenchroom_model = cad/robot.step
 ; wrenchroom_kit, wrenchroom_state, wrenchroom_exact = true, wrenchroom_hand_room = true
 ```
 
+The step its swings are tried at is the sidecar's (`checks: {step_deg: 5}`), as for
+`wrenchroom check`.
+
 ```python
 def test_every_fastener_reachable(wrenchroom_report):
     wrenchroom_report.assert_all_pass()
@@ -571,9 +575,10 @@ reads a sidecar to pass as `check`'s second argument, and a report writes itself
 3. **Orient each one.** Its axis from its geometry, and the end a tool comes from: a
    screw's head, a nut's free face (the end nothing sits against).
 4. **Try the tools.** Each tool the kit has for that drive and size, every way it goes
-   on, swung through its arc in 15 degree steps (`--step-deg` sets them, from 0.1 to
-   30), the tool's own solid tested against the parts at every step. A tool on a hex
-   needs the room the hex's corners sweep, and a socket the room for its wall.
+   on, swung through its arc in 15 degree steps (the sidecar's `checks: {step_deg: 5}`
+   sets them, from 0.1 to 30, or `--step-deg` for one run), the tool's own solid tested
+   against the parts at every step. A tool on a hex needs the room the hex's corners
+   sweep, and a socket the room for its wall.
 5. **Decide.** Turns, held, blocked, stuck or not covered, with what decided it.
    Pairs are resolved together, and failures retried in the states you named.
 

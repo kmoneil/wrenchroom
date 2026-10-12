@@ -208,15 +208,19 @@ Real tools against the real parts:
   any one side, as a thumb wheel is turned through a window. Each is tried in place,
   as a driver is.
 
-A swing is tried at positions round the fastener, 15 degrees apart unless `--step-deg`
-says (`step_deg=` in Python): so many free positions in a row are one step fewer of
-swing. The positions are spaced evenly round the circle, so a step that doesn't
-divide 360 is taken as the nearest that does (20.5 as 18 positions, 20 apart), and an
-arc across 0 is worth what it spans (issue #185); a report says the step it was asked
-for. A finer step finds a narrower arc and takes longer. A step is from 0.1 to 30
-degrees, 30 being the arc a spanner has to show, and any other is a usage error (exit
-2): a wider one could never show a spanner with just its arc to turn, and with one
-position for the whole circle, one free angle read as a full turn (issue #184).
+A swing is tried at positions round the fastener, 15 degrees apart unless the sidecar
+says (`checks: {step_deg: 5}`): so many free positions in a row are one step fewer of
+swing. The sidecar's step is the one for every way of running the check, `check`,
+`explain`, `tools --used` and the pytest plugin, so a model that needs a finer step
+has it everywhere (issue #188); `--step-deg` on `check` and `explain` (`step_deg=` in
+Python) outranks it for one run. The positions are spaced evenly round the circle, so
+a step that doesn't divide 360 is taken as the nearest that does (20.5 as 18
+positions, 20 apart), and an arc across 0 is worth what it spans (issue #185); a
+report says the step it was asked for. A finer step finds a narrower arc and takes
+longer. A step is from 0.1 to 30 degrees, 30 being the arc a spanner has to show, and
+any other is a usage error, or in the sidecar a config error (exit 2 both): a wider
+one could never show a spanner with just its arc to turn, and with one position for
+the whole circle, one free angle read as a full turn (issue #184).
 
 A tool on a hex's flats needs the room the hex's own corners sweep as it turns, and a
 socket the room for its wall round the hex. A part in that first room stops the hex
@@ -547,7 +551,8 @@ report of a private model can't send anything anywhere.
 ## The tools a model needs
 
 `wrenchroom tools --used model.step` checks the model, with `--kit`, `--config` and
-`--state` as `check` takes them, and lists each tool its fasteners were turned or held
+`--state` as `check` takes them and at the sidecar's step, and lists each tool its
+fasteners were turned or held
 with: one line per tool, how many fasteners need it, and why an unusual one is. It
 exits 0 once the check has run; `check` is the one that fails a build. The JSON report
 carries the same list as `tools_used`, the Markdown as a Tools section after its table,
