@@ -406,6 +406,7 @@ def test_the_report_says_the_clashes_in_every_format():
                 "state": None,
                 "hint": None,
                 "by_meshes": False,
+                "unasked": False,
             }
         ],
         "unmatched_allows": [],

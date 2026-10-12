@@ -610,6 +610,7 @@ def test_a_clash_measured_on_the_meshes_says_so(monkeypatch, engine):
             "state": None,
             "hint": None,
             "by_meshes": True,
+            "unasked": False,
         }
     ]
     assert f"| `bar` | `block` | 112.0 | {BY_MESHES} |" in found.markdown()
