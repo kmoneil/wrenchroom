@@ -598,6 +598,19 @@ every run, and every report says it wasn't looked for.
   measures the same way. Where the boolean gives what no solid could be and one of
   the two parts has no closed mesh, the pair can't be measured, and is said: `NOTE
   not measured, the solids' boolean failed and one has no closed mesh: a with b`.
+- **Two parts drawn in one place, one a solid the boolean fails on, are not asked**
+  (issue #179). A kit's model draws the options of one part over each other, each
+  sharing nearly all of itself with the next, and of such a pair OCCT's boolean is
+  slow and comes back with what no solid could be: three cowlings took 21 of a
+  model's 35 seconds, for answers set aside. So where two parts' closed meshes
+  share more than half of each one's volume, and one of the two is invalid as
+  exported, or is one a clash's boolean has already failed on in the run, the
+  boolean isn't asked. What the solids bear out of the meshes' overlap is the
+  measure from the start, as it was in the end, and the clash says so: `CLASH
+  cowl_a into cowl_b  40502.7 mm^3  (measured on their meshes: drawn in one place,
+  and one is a solid the boolean fails on)`. Every other pair is asked as ever: two
+  sound solids in one place, a fastener drawn twice, and an invalid part's clash
+  with any part not drawn in its place.
 - **A fastener is measured past its thread**, as a fastener drawn into a part is
   (issue #63): a screw's head, a nut's body less its bore's thread. A screw in a
   hole drawn at its tap drill or its minor diameter, a bolt in a nut bored at its
@@ -650,7 +663,8 @@ every run, and every report says it wasn't looked for.
 The terminal says each as `CLASH first into second  volume`, the first the part
 drawn into the other: a fastener, else the smaller. The JSON's `clashes` gives the
 pairs, their volumes, a point in each overlap (the middle of its box), the state, the
-hint and `by_meshes` (true where it was measured on the meshes); under `set_in`, the
+hint, `by_meshes` (true where it was measured on the meshes) and `unasked` (true where
+the boolean wasn't asked); under `set_in`, the
 inserts set into their parts, the same way; and under `unsure`, the pairs not measured;
 `wrenchroom clashes --json` and `--md` write the same alone. The 3D view
 (`check --clashes --html`) lists them in its panel: choosing one draws its two parts

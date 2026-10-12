@@ -40,7 +40,7 @@ a boolean, the rest being wholly inside or out, which one point tells.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import cached_property, lru_cache
 from typing import TYPE_CHECKING, ClassVar
 
@@ -109,6 +109,11 @@ WITNESS_RAYS = 24
 WITNESS_POINTS = 6
 WITNESS_LUMPS = 64
 
+#: Two parts whose meshes share more than this fraction of each one's volume are
+#: drawn in one place: two options of one part, as a kit's model draws them over
+#: each other (issue #179). The fraction two fasteners drawn twice share (issue #94).
+ONE_PLACE = 0.5
+
 #: What a tool's piece is called where its solid is asked about as a part's is.
 TOOL = "tool"
 
@@ -167,6 +172,9 @@ class MeshEngine(Engine):
         #: Each pair of parts' verdict for a clash (M8), measured once: whether surely
         #: apart, and what their meshes share, mm^3. The parts ride along.
         self._pairs: dict[tuple[int, int], tuple[Part, Part, bool, float]] = {}
+        #: Parts a clash's boolean has failed on in this run, by identity: its answer
+        #: was what no solid could be, or lost what the solids bear out (issue #179).
+        self._failed: dict[int, Part] = {}
 
     @property
     def meshed(self) -> tuple[str, ...]:
@@ -259,7 +267,50 @@ class MeshEngine(Engine):
         Without a closed mesh of both there is no second opinion: the boolean's
         answer stands, or, being what no solid could be, the pair is noted as not
         measured (:attr:`Engine.unsure`).
+
+        And two parts drawn in one place, one of them a solid the boolean fails on,
+        are not asked at all (:meth:`_unasked`, issue #179): what the solids bear
+        out of the meshes' overlap is the measure from the start, and says so
+        (:attr:`PartOverlap.unasked`).
         """
+        mesh_a, mesh_b = self.part_mesh(first), self.part_mesh(second)
+        both = mesh_a is not None and mesh_b is not None
+        if both and self._unasked(first, second, max(mesh_a.volume(), mesh_b.volume())):
+            borne = self._borne_out(mesh_a ^ mesh_b, first, second)
+            return None if borne is None else replace(borne, unasked=True)
+        held = self._asked(first, second)
+        if held is not None and held.by_meshes:  # the boolean failed on these two
+            self._failed[id(first)], self._failed[id(second)] = first, second
+        return held
+
+    def _unasked(self, first: Part, second: Part, larger: float) -> bool:
+        """Whether two parts' boolean is not asked: drawn in one place, one a solid it fails on.
+
+        A model of a kit draws the options of one part over each other: three
+        cowlings in one place, each sharing nearly all of itself with the next. Of
+        such a pair OCCT's boolean is slow and comes back with what no solid could
+        be: three of them took 21 of a public model's 35 seconds, for answers of
+        -236 mm^3 that were set aside for the meshes' 40,000 (issue #179). So where
+        the two closed meshes say the parts are drawn in one place, sharing more
+        than :data:`ONE_PLACE` of the ``larger`` one's volume, and one of them is a
+        solid the boolean is known to fail on, it isn't asked:
+
+        - a part invalid as exported, which a boolean can only be approximate on
+          (issue #85), and which is noted as any part leaned on so is;
+        - a part a clash's boolean has already failed on in this run, its clash
+          told on the meshes: another of the options drawn over it.
+
+        A sound solid drawn where another is, a fastener drawn twice, is asked as
+        ever, and so is a failing one's clash with any part not drawn in its place.
+        """
+        if self.meshes_share(first, second) <= ONE_PLACE * larger:
+            return False
+        # Each of the two is looked at, so that both are noted where both are invalid.
+        sound = [id(part) not in self._failed and self.part_valid(part) for part in (first, second)]
+        return not all(sound)
+
+    def _asked(self, first: Part, second: Part) -> PartOverlap | None:
+        """The solids' boolean, held to what their meshes share: see :meth:`shared`."""
         exact, sound = measured_common(first.shape, second.shape)
         mesh_a, mesh_b = self.part_mesh(first), self.part_mesh(second)
         if mesh_a is None or mesh_b is None:

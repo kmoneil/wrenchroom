@@ -57,7 +57,8 @@ class PartOverlap:
 
     Measured on the two solids, by a boolean, or where that failed, on their
     meshes (:attr:`mesh`, issue #163): then its volume is good to what the meshes
-    are, and it says so.
+    are, and it says so. Where the boolean was not asked at all (:attr:`unasked`,
+    issue #179), it says that.
     """
 
     volume: float
@@ -68,6 +69,9 @@ class PartOverlap:
     shape: Shape | None = field(default=None, compare=False, repr=False)
     #: The overlap as the two meshes share it, where it was measured on them.
     mesh: Triangles | None = field(default=None, compare=False, repr=False)
+    #: Measured on the meshes with the solids' boolean not asked: the two are drawn
+    #: in one place, and one is a solid the boolean fails on (issue #179).
+    unasked: bool = field(default=False, compare=False)
 
     @property
     def by_meshes(self) -> bool:

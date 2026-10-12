@@ -105,6 +105,7 @@ class ExactEngine(Engine):
 
             self._meshes = MeshEngine()
             self._meshes.unsure = self.unsure
+            self._meshes.share_validity(self)  # an invalid part it leans on is this run's
         return self._meshes
 
 

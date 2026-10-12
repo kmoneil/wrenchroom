@@ -134,6 +134,9 @@ def test_with_every_boolean_failing_the_edges_bench_s_clashes_are_still_told(
     failing = find_clashes(bench_model, config, model_dir=bench_dir, engine=bench_engine)
     assert not any(clash.by_meshes for clash in exact.found)
     assert all(clash.by_meshes for clash in failing.found)
+    # The bench's solids are sound, and a failed boolean marks its own two parts:
+    # none of these goes unasked (issue #179), not twice's screw drawn in one place.
+    assert not any(clash.unasked for clash in (*exact.found, *failing.found))
     told = {(clash.first, clash.second): clash for clash in failing.found}
     measured = {(clash.first, clash.second): clash for clash in exact.found}
     assert sorted(set(measured) - set(told)) == [

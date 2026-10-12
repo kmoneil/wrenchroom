@@ -16,7 +16,8 @@ own nut.
   ``MeshEngine.shared``): OCCT's comes back empty, or with what no solid could be,
   for parts drawn far into each other, and says nothing of it. Where the solids
   themselves bear the meshes out, the clash is told on the meshes' figure, and says
-  so (:data:`BY_MESHES`).
+  so (:data:`BY_MESHES`). Two parts drawn in one place, one a solid the boolean
+  fails on, are measured so without asking it (issue #179, :data:`NOT_ASKED`).
 - A fastener is measured past its thread, as #63's test measures it
   (``checker._measured``): a screw in a hole drawn at its tap drill, a bolt in a nut
   bored at its minor diameter, overlap by design and are no clash. So is a fastener
@@ -97,6 +98,11 @@ DEEP_HINT = "deeper than a knurl: no hole drawn for the insert?"
 #: is theirs, good to what a mesh is.
 BY_MESHES = "measured on their meshes: the solids' boolean failed"
 
+#: What is said of a clash measured on the meshes with the boolean not asked (issue
+#: #179): two options of one part drawn over each other, one of them invalid as
+#: exported or one a boolean has already failed on in the run.
+NOT_ASKED = "measured on their meshes: drawn in one place, and one is a solid the boolean fails on"
+
 #: Words in a part's name that say it is a cable, which a gland or grommet is drawn
 #: round.
 _CABLE_WORDS = frozenset({"cable", "cables", "wire", "wires", "cord", "lead", "leads"})
@@ -120,6 +126,8 @@ class Clash:
         set_in: An insert set into its part, which is no clash: counted apart.
         by_meshes: Measured on the two parts' meshes, the solids' boolean having
             failed (issue #163): its volume is good to what the meshes are.
+        unasked: Measured on the meshes with the boolean not asked: the two are
+            drawn in one place, and one is a solid the boolean fails on (issue #179).
     """
 
     first: str
@@ -133,6 +141,7 @@ class Clash:
     overlap: Shape | Triangles | None = field(default=None, compare=False, repr=False)
     set_in: bool = False
     by_meshes: bool = False
+    unasked: bool = False
 
 
 @dataclass(frozen=True)
@@ -255,6 +264,7 @@ class Clashes:
                     "state": clash.state,
                     "hint": clash.hint,
                     "by_meshes": clash.by_meshes,
+                    "unasked": clash.unasked,
                 }
                 for clash in self.found
             ],
@@ -337,17 +347,22 @@ def _line(word: str, clash: Clash) -> str:
     """``CLASH nut into lid  96.1 mm^3  in state open  (a press fit, 0.03 deep?)``."""
     said = [f"in state {clash.state}"] if clash.state else []
     said += [f"({clash.hint})"] if clash.hint else []
-    said += [f"({BY_MESHES})"] if clash.by_meshes else []
+    said += [f"({_measure(clash)})"] if clash.by_meshes else []
     return "  ".join([f"{word} {clash.first} into {clash.second}", f"{clash.volume:.1f} mm^3"]) + (
         "".join(f"  {part}" for part in said)
     )
+
+
+def _measure(clash: Clash) -> str:
+    """What is said of a clash measured on the meshes: the boolean failed, or wasn't asked."""
+    return NOT_ASKED if clash.unasked else BY_MESHES
 
 
 def _row(clash: Clash) -> str:
     """A clash as a row of its Markdown table."""
     said = [f"in state {md_code(clash.state)}"] if clash.state else []
     said += [md_text(clash.hint)] if clash.hint else []
-    said += [md_text(BY_MESHES)] if clash.by_meshes else []
+    said += [md_text(_measure(clash))] if clash.by_meshes else []
     return (
         f"| {md_code(clash.first)} | {md_code(clash.second)} | {clash.volume:.1f} "
         f"| {'; '.join(said)} |"
@@ -527,6 +542,7 @@ def _made(
         hint or _hint(second, overlap, gland=gland),
         overlap.mesh if overlap.by_meshes else overlap.shape,
         by_meshes=overlap.by_meshes,
+        unasked=overlap.unasked,
     )
 
 
