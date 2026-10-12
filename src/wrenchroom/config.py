@@ -30,6 +30,7 @@ import yaml
 
 from wrenchroom.fasteners import AUTO, Fastener, Head, Kind, Size
 from wrenchroom.tools.custom import CustomTools, parse_tools
+from wrenchroom.tools.sweep import checked_step
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -50,7 +51,7 @@ _SUPPORTED_TOP = {
 _CONNECTOR_KEYS = {"parts", "axis", "travel", "grip", "latch", "mates", "receptacle", "state"}
 _STATE_KEYS = {"remove", "base", "model"}
 _STEP_KEYS = {"step", "add", "model"}
-_CHECKS_KEYS = {"default_state", "try_states", "detect", "hand_room", "clashes"}
+_CHECKS_KEYS = {"default_state", "try_states", "detect", "hand_room", "clashes", "step_deg"}
 _RULE_KEYS = {
     "parts",
     "kind",
@@ -171,6 +172,11 @@ class Config:
     #: (M8); off at first, as a model drawn with shortcuts would fail every run, so
     #: ``checks: {clashes: true}`` (or ``--clashes``) asks for it.
     clashes: bool = False
+    #: The step each swing is sampled at, degrees (``checks: {step_deg: 5}``), for
+    #: every way of running the check: ``check``, ``explain``, ``tools --used`` and
+    #: the pytest plugin, which had only the default (issue #188). ``--step-deg``
+    #: outranks it for one run. None where the sidecar says none: 15.
+    step_deg: float | None = None
     #: Pairs of part globs meant to overlap, never a clash: a press fit, a shaft in
     #: its bearing, a belt round its pulley.
     allow: tuple[tuple[str, str], ...] = ()
@@ -236,7 +242,7 @@ class Config:
                 _as_list(raw.get("connectors", []), f"{source}: connectors")
             )
         )
-        default_state, try_states, detect, hand_room, clashes = _parse_checks(
+        default_state, try_states, detect, hand_room, clashes, step_deg = _parse_checks(
             raw.get("checks", {}), states, source
         )
         try:
@@ -258,6 +264,7 @@ class Config:
             detect=detect,
             hand_room=hand_room,
             clashes=clashes,
+            step_deg=step_deg,
             allow=allow,
             tools=tools,
             build=build,
@@ -568,6 +575,20 @@ def _parse_length(value: object, where: str) -> float | None:
     raise ConfigError(msg)
 
 
+def _parse_step_deg(value: object, where: str) -> float | None:
+    """A swing's step, degrees: a number the swing can be sampled at, or None for none."""
+    if value is None:
+        return None
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        msg = f"{where} must be a number of degrees, not {value!r}"
+        raise ConfigError(msg)
+    try:
+        return checked_step(value)
+    except ValueError as exc:
+        msg = f"{where}: {exc}"
+        raise ConfigError(msg) from exc
+
+
 def _parse_bool(value: object, where: str) -> bool:
     if isinstance(value, bool):
         return value
@@ -708,7 +729,7 @@ def _reject_base_cycles(states: list[StateDef], where: str) -> None:
 
 def _parse_checks(
     raw: object, states: tuple[StateDef, ...], source: str
-) -> tuple[str | None, tuple[str, ...], bool, bool, bool]:
+) -> tuple[str | None, tuple[str, ...], bool, bool, bool, float | None]:
     where = f"{source}: checks"
     if not isinstance(raw, dict):
         msg = f"{where} must be a mapping"
@@ -733,4 +754,5 @@ def _parse_checks(
     detect = _parse_bool(raw.get("detect", True), f"{where}: detect")
     hand_room = _parse_bool(raw.get("hand_room", False), f"{where}: hand_room")
     clashes = _parse_bool(raw.get("clashes", False), f"{where}: clashes")
-    return default_state, try_states, detect, hand_room, clashes
+    step_deg = _parse_step_deg(raw.get("step_deg"), f"{where}: step_deg")
+    return default_state, try_states, detect, hand_room, clashes, step_deg

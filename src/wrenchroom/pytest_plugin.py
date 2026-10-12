@@ -16,7 +16,8 @@ and ask for the report::
         wrenchroom_report.assert_all_pass()
 
 ``assert_all_pass`` fails with the report's summary and its FAIL and WARN lines,
-exactly what ``wrenchroom check`` prints, so the reason is in the test output.
+exactly what ``wrenchroom check`` prints, so the reason is in the test output. The
+run is at the sidecar's step (``checks: {step_deg: 5}``), as ``wrenchroom check``'s is.
 
 Installing wrenchroom registers this plugin with pytest (the ``pytest11`` entry
 point). It does nothing until a test asks for the fixture and imports nothing heavy

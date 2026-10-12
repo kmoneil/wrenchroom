@@ -41,7 +41,10 @@ _HAND_ROOM_HELP = (
     "`checks: {hand_room: true}`); untuned, so off by default."
 )
 
-_STEP_HELP = "Swing sampling step, degrees: from 0.1 to 30."
+_STEP_HELP = (
+    "Swing sampling step, degrees, from 0.1 to 30 (as `checks: {step_deg: 5}`); "
+    "15 unless the sidecar says."
+)
 
 _CLASHES_HELP = (
     "Also look for parts drawn into each other over the whole model (as "
@@ -73,12 +76,15 @@ def _emit(document: str) -> None:
     click.echo(document.encode("utf-8"), nl=False)  # bytes: written as they are
 
 
-def _step(_ctx: click.Context, _param: click.Parameter, value: float) -> float:
+def _step(_ctx: click.Context, _param: click.Parameter, value: float | None) -> float | None:
     """``--step-deg``, refused as the usage error it is, before the model is read.
 
     Any number parses, nan and inf among them, and no swing can be sampled at most
     of them (issue #184): the check itself is :func:`wrenchroom.tools.sweep.checked_step`.
+    Not given, it is None, and the sidecar's step stands (issue #188).
     """
+    if value is None:
+        return None
     from wrenchroom.tools.sweep import checked_step
 
     try:
@@ -137,7 +143,7 @@ def main() -> None:
     type=click.Path(dir_okay=False, allow_dash=True),
     help="Also write the 3D view here: one self-contained file to open in a browser; - for stdout.",
 )
-@click.option("--step-deg", default=15.0, show_default=True, callback=_step, help=_STEP_HELP)
+@click.option("--step-deg", type=float, callback=_step, help=_STEP_HELP)
 @click.option("--only", help="Check only fasteners whose name matches this glob.")
 @click.option("--state", help="Check in this state instead of the config's default.")
 @click.option(
@@ -154,7 +160,7 @@ def check(  # noqa: PLR0913, PLR0917  (Click passes one parameter per option)
     json_path: str | None,
     md_path: str | None,
     html_path: str | None,
-    step_deg: float,
+    step_deg: float | None,
     only: str | None,
     state: str | None,
     exact: bool,
@@ -196,7 +202,7 @@ def _run(  # noqa: PLR0913  (one keyword per check option, as check takes them)
     config_path: Path | None,
     *,
     kit: str = "metric-home",
-    step_deg: float = 15.0,
+    step_deg: float | None = None,
     only: str | None = None,
     state: str | None = None,
     exact: bool = False,
@@ -362,7 +368,7 @@ def detect(model: Path, kit: str) -> None:
     help="Sidecar YAML; default: wrenchroom.yaml beside the model, if present.",
 )
 @click.option("--kit", default="metric-home", show_default=True, help="Which tool kit.")
-@click.option("--step-deg", default=15.0, show_default=True, callback=_step, help=_STEP_HELP)
+@click.option("--step-deg", type=float, callback=_step, help=_STEP_HELP)
 @click.option(
     "--exact",
     is_flag=True,
@@ -380,7 +386,7 @@ def explain(
     fastener: str,
     config_path: Path | None,
     kit: str,
-    step_deg: float,
+    step_deg: float | None,
     exact: bool,
     html_path: str | None,
     hand_room: bool | None,
