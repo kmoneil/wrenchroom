@@ -216,11 +216,11 @@ has it everywhere (issue #188); `--step-deg` on `check` and `explain` (`step_deg
 Python) outranks it for one run. The positions are spaced evenly round the circle, so
 a step that doesn't divide 360 is taken as the nearest that does (20.5 as 18
 positions, 20 apart), and an arc across 0 is worth what it spans (issue #185); a
-report says the step it was asked for. A finer step finds a narrower arc and takes
-longer. A step is from 0.1 to 30 degrees, 30 being the arc a spanner has to show, and
-any other is a usage error, or in the sidecar a config error (exit 2 both): a wider
-one could never show a spanner with just its arc to turn, and with one position for
-the whole circle, one free angle read as a full turn (issue #184).
+report says the step asked for and what it came to. A finer step finds a narrower arc
+and takes longer. A step is from 0.1 to 30 degrees, 30 being the arc a spanner has to
+show, and any other is a usage error, or in the sidecar a config error (exit 2 both):
+a wider one could never show a spanner with just its arc to turn, and with one
+position for the whole circle, one free angle read as a full turn (issue #184).
 
 A tool on a hex's flats needs the room the hex's own corners sweep as it turns, and a
 socket the room for its wall round the hex. A part in that first room stops the hex
@@ -531,7 +531,12 @@ named `-` is `./-`.
 The JSON and the Markdown say how the run was made: its kit, its engine and the step
 its swings were tried at (`kit`, `engine` and `step_deg` in the JSON, one line under
 the Markdown's summary). A coarser step finds less, so two reports compare only at
-one step.
+one step. `step_deg` is the step asked for, and `swing_positions` how many positions
+round the circle it came to: 360 over that is how far apart they were, which is what
+the arcs are counted in, so a step of 20.5 has 18, and its arcs are multiples of 20
+(issue #192). The Markdown says the spacing, and the step asked for where that was
+only near it (`swings tried every 20 deg (20.5 asked)`). An arc in the JSON
+(`swing_deg`) is given to six figures, as the terminal prints it.
 
 Names come from the model, so the terminal shows control characters written out and
 the Markdown puts every name in a code span: a crafted part name can't steer a

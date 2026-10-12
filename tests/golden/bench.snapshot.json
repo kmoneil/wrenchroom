@@ -3,6 +3,7 @@
  "model": "bench.step",
  "kit": "full",
  "step_deg": 15.0,
+ "swing_positions": 24,
  "summary": {
   "fasteners": 180,
   "turns": 134,
