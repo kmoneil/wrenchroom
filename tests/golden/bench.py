@@ -29,6 +29,7 @@ from wrenchroom.assembly import Assembly
 from wrenchroom.checker import check
 from wrenchroom.config import Config
 from wrenchroom.report import md_text
+from wrenchroom.tools.sweep import DEFAULT_STEP_DEG
 
 PITCH = 1000.0
 
@@ -413,7 +414,14 @@ def check_detected(directory, engine="mesh"):
     return check(assembly, config, kit=KIT, model="bench.step", model_dir=directory, engine=engine)
 
 
-def check_bench(directory, config_name="wrenchroom.yaml", engine="mesh", kit=KIT, hand_room=None):
+def check_bench(
+    directory,
+    config_name="wrenchroom.yaml",
+    engine="mesh",
+    kit=KIT,
+    hand_room=None,
+    step_deg=DEFAULT_STEP_DEG,
+):
     """Read the written bench back and check it, as a user would."""
     directory = Path(directory)
     assembly = Assembly.from_step(directory / "bench.step")
@@ -426,4 +434,5 @@ def check_bench(directory, config_name="wrenchroom.yaml", engine="mesh", kit=KIT
         model_dir=directory,
         engine=engine,
         hand_room=hand_room,
+        step_deg=step_deg,
     )

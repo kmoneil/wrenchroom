@@ -571,9 +571,9 @@ reads a sidecar to pass as `check`'s second argument, and a report writes itself
 3. **Orient each one.** Its axis from its geometry, and the end a tool comes from: a
    screw's head, a nut's free face (the end nothing sits against).
 4. **Try the tools.** Each tool the kit has for that drive and size, every way it goes
-   on, swung through its arc in 15 degree steps, the tool's own solid tested against
-   the parts at every step. A tool on a hex needs the room the hex's corners sweep,
-   and a socket the room for its wall.
+   on, swung through its arc in 15 degree steps (`--step-deg` sets them, from 0.1 to
+   30), the tool's own solid tested against the parts at every step. A tool on a hex
+   needs the room the hex's corners sweep, and a socket the room for its wall.
 5. **Decide.** Turns, held, blocked, stuck or not covered, with what decided it.
    Pairs are resolved together, and failures retried in the states you named.
 

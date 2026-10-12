@@ -41,6 +41,8 @@ _HAND_ROOM_HELP = (
     "`checks: {hand_room: true}`); untuned, so off by default."
 )
 
+_STEP_HELP = "Swing sampling step, degrees: from 0.1 to 30."
+
 _CLASHES_HELP = (
     "Also look for parts drawn into each other over the whole model (as "
     "`checks: {clashes: true}`); off by default, since models drawn with shortcuts "
@@ -69,6 +71,20 @@ def _emit(document: str) -> None:
     all three to that).
     """
     click.echo(document.encode("utf-8"), nl=False)  # bytes: written as they are
+
+
+def _step(_ctx: click.Context, _param: click.Parameter, value: float) -> float:
+    """``--step-deg``, refused as the usage error it is, before the model is read.
+
+    Any number parses, nan and inf among them, and no swing can be sampled at most
+    of them (issue #184): the check itself is :func:`wrenchroom.tools.sweep.checked_step`.
+    """
+    from wrenchroom.tools.sweep import checked_step
+
+    try:
+        return checked_step(value)
+    except ValueError as exc:
+        raise click.BadParameter(str(exc)) from exc
 
 
 def _wants_stdout(**outputs: str | None) -> bool:
@@ -121,7 +137,7 @@ def main() -> None:
     type=click.Path(dir_okay=False, allow_dash=True),
     help="Also write the 3D view here: one self-contained file to open in a browser; - for stdout.",
 )
-@click.option("--step-deg", default=15.0, show_default=True, help="Swing sampling step.")
+@click.option("--step-deg", default=15.0, show_default=True, callback=_step, help=_STEP_HELP)
 @click.option("--only", help="Check only fasteners whose name matches this glob.")
 @click.option("--state", help="Check in this state instead of the config's default.")
 @click.option(
@@ -346,7 +362,7 @@ def detect(model: Path, kit: str) -> None:
     help="Sidecar YAML; default: wrenchroom.yaml beside the model, if present.",
 )
 @click.option("--kit", default="metric-home", show_default=True, help="Which tool kit.")
-@click.option("--step-deg", default=15.0, show_default=True, help="Swing sampling step.")
+@click.option("--step-deg", default=15.0, show_default=True, callback=_step, help=_STEP_HELP)
 @click.option(
     "--exact",
     is_flag=True,

@@ -32,6 +32,7 @@ from wrenchroom.tools.sweep import (
     axial_annulus,
     axial_cylinder,
     hand_on_handle,
+    positions,
     radial_cylinder,
     straight_attempt,
 )
@@ -129,7 +130,7 @@ def rim_attempt(
     middle = -grip_depth / 2
     resting = -grip_depth + CONTACT_OFFSET + FINGERTIP_RADIUS
     heights = (middle, resting) if resting > middle else (middle,)
-    steps = max(1, round(FULL_CIRCLE / step_deg))
+    steps = positions(step_deg)
     blockers: list[str] = []
     hand_blockers: list[str] = []
     probes: list[Probe] = []

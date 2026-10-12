@@ -10,7 +10,8 @@ Swing is sampled every ``step_deg`` (default 15). ``k`` consecutive free positio
 prove a swing of ``(k - 1) * step_deg``: the handle moves from the first free
 position to the last. The search stops as soon as the required arc is proven (so
 ``swing_deg`` is what was proven, not the whole free circle), and a free arc
-across 0 degrees counts whole: the scan walks the circle twice.
+across 0 degrees counts whole: the scan walks the circle twice. A step is held to
+:data:`MIN_STEP_DEG` to :data:`MAX_STEP_DEG` (:func:`checked_step`).
 """
 
 from __future__ import annotations
@@ -31,6 +32,17 @@ CONTACT_OFFSET = 0.3
 
 #: Swing sample spacing, degrees, unless the caller says otherwise.
 DEFAULT_STEP_DEG = 15.0
+
+#: The widest step a swing is sampled at, degrees: the arc a ring or an open end has
+#: to show (spanners.py's RING_RESEAT_DEG and OPEN_RESEAT_DEG), so no step is wider
+#: than what a spanner or a key must prove, and one with just its arc can be shown to
+#: turn. Past 240 the circle was one position, which stood for all of it: one free
+#: angle read as a full turn (issue #184).
+MAX_STEP_DEG = 30.0
+
+#: The finest, degrees: 3600 positions round the circle. A finer one only takes
+#: longer, without end as it nears nothing (at 1e-310 the count overflowed).
+MIN_STEP_DEG = 0.1
 
 FULL_CIRCLE = 360.0
 
@@ -129,6 +141,28 @@ class Attempt:
     required_deg: float = 0.0
 
 
+def checked_step(step_deg: float) -> float:
+    """A swing's step as given, refused where no swing can be sampled at it.
+
+    Raises:
+        ValueError: Outside :data:`MIN_STEP_DEG` to :data:`MAX_STEP_DEG`, as a step
+            that is no number (nan) is.
+    """
+    if not MIN_STEP_DEG <= step_deg <= MAX_STEP_DEG:  # no range holds a nan
+        msg = f"a swing step is from {MIN_STEP_DEG:g} to {MAX_STEP_DEG:g} degrees, not {step_deg!r}"
+        raise ValueError(msg)
+    return float(step_deg)
+
+
+def positions(step_deg: float) -> int:
+    """How many positions round the circle a step gives: 24 at the default 15.
+
+    Raises:
+        ValueError: On a step :func:`checked_step` refuses.
+    """
+    return round(FULL_CIRCLE / checked_step(step_deg))
+
+
 def swing_attempt(  # noqa: PLR0913  (keyword-only: one per thing a swing tries)
     *,
     tool: str,
@@ -155,7 +189,11 @@ def swing_attempt(  # noqa: PLR0913  (keyword-only: one per thing a swing tries)
     where the way it came there is clear too: a ring's handle, come down the
     axis with it (issue #143). That way is tested only where the arm is clear,
     and drawn only where it is what stopped the tool.
+
+    Raises:
+        ValueError: On a step :func:`checked_step` refuses, whatever the scene.
     """
+    samples = positions(step_deg)
     blockers: list[str] = []
     hand_blockers: list[str] = []
     grazed: list[str] = []
@@ -167,7 +205,6 @@ def swing_attempt(  # noqa: PLR0913  (keyword-only: one per thing a swing tries)
             return Attempt(tool, way, False, False, 0.0, engagement_hits, tuple(probes))
         _note(grazed, engagement_grazes)
 
-    samples = max(1, round(FULL_CIRCLE / step_deg))
     arm_hits: dict[int, tuple[str, ...]] = {}
     hand_hits: dict[int, tuple[str, ...]] = {}
 
