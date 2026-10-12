@@ -191,7 +191,8 @@ class Report:
     #: The step each swing was sampled at, degrees: ``--step-deg``, 15 unless the run
     #: said otherwise (sweep.py's DEFAULT_STEP_DEG). Recorded as the engine is: a
     #: coarser step finds less, so two reports compare only at one step (issue #184).
-    #: As asked: one that doesn't divide 360 is tried as the nearest that does.
+    #: As asked: one that doesn't divide 360 is tried as the nearest that does, which
+    #: :attr:`swing_positions` and :attr:`spacing_deg` say.
     step_deg: float = 15.0
     unmatched_rules: tuple[str, ...] = ()
     unmatched_ignores: tuple[str, ...] = ()
@@ -286,6 +287,29 @@ class Report:
         return tuple(sorted(failed, key=lambda r: (order[r.verdict], r.fastener.name)))
 
     @property
+    def swing_positions(self) -> int:
+        """How many positions round the circle each swing was tried at: 24 at the default.
+
+        The step asked for (:attr:`step_deg`) is taken as the nearest whole number of
+        positions, evenly spaced (issue #185), so the arcs in a report are counted in
+        these, not in the step: 20.5 is 18 of them, 20 apart (issue #192).
+        """
+        from wrenchroom.tools.sweep import positions  # noqa: PLC0415  (pulls build123d)
+
+        return positions(self.step_deg)
+
+    @property
+    def spacing_deg(self) -> float:
+        """How far apart those positions are, degrees: the step the swings were tried at."""
+        return 360.0 / self.swing_positions
+
+    @property
+    def swings_tried(self) -> str:
+        """The spacing in words, and the step asked for where it was only near it."""
+        spacing, asked = f"{self.spacing_deg:g}", f"{self.step_deg:g}"
+        return f"every {spacing} deg" + ("" if spacing == asked else f" ({asked} asked)")
+
+    @property
     def summary(self) -> dict[str, int]:
         """The counts the summary line and the JSON share."""
         counts = {
@@ -348,6 +372,7 @@ class Report:
             "kit": self.kit,
             "engine": self.engine,
             "step_deg": self.step_deg,
+            "swing_positions": self.swing_positions,
             "tool_version": __version__,
             "summary": self.summary,
             "unmatched_rules": list(self.unmatched_rules),
@@ -480,9 +505,8 @@ class Report:
             "",
             f"**{_summary_text(self.summary)}**",
             "",
-            f"Kit {md_code(self.kit, in_table=False)}, swings tried every "
-            f"{md_text(f'{self.step_deg:g}')} deg, {md_text(self.engine)} engine, "
-            f"wrenchroom {md_text(__version__)}.",
+            f"Kit {md_code(self.kit, in_table=False)}, swings tried {md_text(self.swings_tried)}, "
+            f"{md_text(self.engine)} engine, wrenchroom {md_text(__version__)}.",
             "",
             *(
                 f"The engine: {md_text(note.text)}: {_md_names(note.parts)}.\n"
@@ -617,6 +641,16 @@ class Report:
         write_html(self, path, select=select)
 
 
+def _degrees(angle: float) -> float:
+    """An angle as the JSON has it: to the six figures the terminal prints it to.
+
+    An arc is so many spaces of 360 over a whole number, and one that doesn't come
+    out even carried a float's tail into the report: nine spaces of 51 round the
+    circle were 63.529411764705884 (issue #192). The result keeps the float.
+    """
+    return float(f"{angle:g}")
+
+
 def result_json(result: FastenerResult) -> dict[str, object]:
     """One fastener's result as the JSON report has it: in service, or in the build."""
     fastener = result.fastener
@@ -632,7 +666,7 @@ def result_json(result: FastenerResult) -> dict[str, object]:
         "tool": result.tool,
         "verdict": result.verdict.value,
         "how": result.how,
-        "swing_deg": result.swing_deg,
+        "swing_deg": _degrees(result.swing_deg),
         "state": result.state,
         "pair": result.pair,
         "blocked_by": list(result.blockers),

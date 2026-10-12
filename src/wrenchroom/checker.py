@@ -212,14 +212,18 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
 
     Args:
         assembly: The parts in their assembled positions.
-        config: The sidecar; ``None`` means no fasteners, which still yields a
-            valid (empty, passing) report.
+        config: The sidecar; ``None`` is an empty one (``Config()``). That names no
+            fastener and leaves detection on, so the fasteners the part names and
+            solids give are found and checked, as ``wrenchroom check`` does with no
+            sidecar. No file is read here: a ``wrenchroom.yaml`` beside the model is
+            the command line's to find, so pass ``Config.load(path)`` for one. A run
+            that checks nothing is ``checks: {detect: false}`` with no rules.
         kit: Which tool kit (:mod:`wrenchroom.tools.kits`): only its tools are
             tried, and a fastener needing another is not covered.
         step_deg: Swing sampling step, degrees, from 0.1 to 30
             (:func:`~wrenchroom.tools.sweep.checked_step`); ``None`` takes the
             sidecar's ``checks: {step_deg: ...}``, and 15 where it says none. The
-            report records the one used.
+            report records the one used, and the positions it came to.
         model: The model's name for the report header.
         only: A glob narrowing which fasteners are checked, as ``--only``.
         state: Overrides the config's ``default_state`` for this run.

@@ -15,6 +15,11 @@ and the pytest plugin ran at 15 whatever a project checked at. The sidecar says 
 (``checks: {step_deg: 5}``) for every way of running the check, and ``--step-deg``
 outranks it for one run.
 
+Issue #192: a report said the step asked for, and its arcs were counted in another,
+the spacing the step came to. It says both now (``swing_positions``), its Markdown
+says the spacing, and an arc in the JSON carries no float's tail. And ``check()`` with
+no sidecar finds fasteners, which its docstring had the other way round.
+
 The search's own cases use a scene with no geometry, free at the angles it is told;
 the issue's model is checked on both engines and through the command line.
 """
@@ -540,7 +545,7 @@ def test_a_run_s_report_carries_its_step():
 def test_the_json_records_the_step_beside_the_engine():
     document = check_slot(step_deg=5.0).to_json_dict()
     assert document["step_deg"] == 5.0
-    assert list(document)[:6] == ["schema", "model", "kit", "engine", "step_deg", "tool_version"]
+    assert list(document)[:5] == ["schema", "model", "kit", "engine", "step_deg"]
     assert check_slot().to_json_dict()["step_deg"] == 15.0
     assert json.loads(check_slot(step_deg=7.5).json_text())["step_deg"] == 7.5
 
@@ -1116,3 +1121,165 @@ def test_the_pytest_plugin_passes_the_model_its_sidecar_s_step_passes(pytester):
     pytester.makeini("[pytest]\nwrenchroom_model = cad/gap.step\n")
     pytester.makepyfile(test_design=PLUGIN_TEST.format(step=5.0))
     pytester.runpytest().assert_outcomes(passed=1)
+
+
+# ---------------------------------------------------------------------------
+# What a run says of itself (issue #192): the step asked for, and what it came to.
+# ---------------------------------------------------------------------------
+
+#: A step, the positions round the circle it comes to, and how far apart they are.
+CAME_TO = [
+    (15.0, 24, 15.0),
+    (30.0, 12, 30.0),
+    (0.1, 3600, 0.1),
+    (7.5, 48, 7.5),
+    (20.5, 18, 20.0),
+    (29.0, 12, 30.0),
+    (7.0, 51, 360.0 / 51),
+    (0.7, 514, 360.0 / 514),
+]
+
+
+def open_screw():
+    """The issue's model with no tube round it: the key's arm swings free all round."""
+    return Assembly([Part(n, s) for n, s in slotted_tube().items() if n != "wall"])
+
+
+def check_open(**kwargs):
+    return check(open_screw(), Config.from_dict({"fasteners": [M3_SOCKET]}), **kwargs)
+
+
+@pytest.mark.parametrize(("step", "count", "apart"), CAME_TO)
+def test_a_report_says_the_positions_its_step_came_to_and_how_far_apart(step, count, apart):
+    report = Report(model="m", kit="full", results=(), step_deg=step)
+    assert (report.step_deg, report.swing_positions) == (step, count)
+    assert type(report.swing_positions) is int
+    assert report.spacing_deg == pytest.approx(apart)
+    assert report.swing_positions == positions(step)
+
+
+def test_a_report_made_by_hand_is_at_twenty_four_positions():
+    report = Report(model="m", kit="full", results=())
+    assert (report.swing_positions, report.spacing_deg) == (24, 15.0)
+
+
+@pytest.mark.parametrize(("step", "count", "apart"), CAME_TO)
+def test_the_json_records_the_positions_beside_the_step(step, count, apart):
+    document = check_open(step_deg=step).to_json_dict()
+    assert (document["step_deg"], document["swing_positions"]) == (step, count)
+    assert list(document)[:7] == [
+        "schema",
+        "model",
+        "kit",
+        "engine",
+        "step_deg",
+        "swing_positions",
+        "tool_version",
+    ]
+    # What the count is for: the arc is a whole number of the spaces it gives.
+    arc = document["fasteners"][0]["swing_deg"]
+    assert arc / apart == pytest.approx(round(arc / apart), abs=1e-4)
+    assert json.loads(check_open(step_deg=step).json_text())["swing_positions"] == count
+
+
+@pytest.mark.parametrize(
+    ("step", "arc_in_json", "spaces"),
+    [(20.5, 60.0, 3), (29.0, 60.0, 2), (7.0, 63.5294, 9), (15.0, 60.0, 4), (0.7, 60.2335, 86)],
+)
+def test_an_arc_in_the_json_has_six_figures_and_the_result_keeps_the_float(
+    step, arc_in_json, spaces
+):
+    # The issue's table: at 7 the arc was 63.529411764705884 in the JSON.
+    report = check_open(step_deg=step)
+    (result,) = report.results
+    assert (result.verdict, result.how) == (Verdict.TURNS, "short leg in")
+    assert result.swing_deg == pytest.approx(spaces * 360.0 / positions(step), abs=1e-12)
+    (entry,) = report.to_json_dict()["fasteners"]
+    assert entry["swing_deg"] == arc_in_json
+    assert entry["swing_deg"] == float(f"{result.swing_deg:g}")  # as the terminal prints it
+
+
+def test_an_arc_that_comes_out_even_is_as_it_was_in_the_json():
+    for slot, step, arc in (
+        (WIDE_SLOT, 15.0, 45.0),
+        (WIDE_SLOT, 25.0, 51.4286),
+        ((-5.0, 5.0), 5.0, 0.0),
+    ):
+        (entry,) = check_slot(slot=slot, step_deg=step).to_json_dict()["fasteners"]
+        assert entry["swing_deg"] == arc
+
+
+@pytest.mark.parametrize(
+    ("step", "said"),
+    [
+        (15.0, "every 15 deg"),
+        (5.0, "every 5 deg"),
+        (0.1, "every 0.1 deg"),
+        (7.5, "every 7.5 deg"),
+        (20.5, "every 20 deg (20.5 asked)"),
+        (29.0, "every 30 deg (29 asked)"),
+        (7.0, "every 7.05882 deg (7 asked)"),
+        (0.7, "every 0.700389 deg (0.7 asked)"),
+    ],
+)
+def test_the_markdown_says_the_spacing_and_the_step_asked_where_they_differ(step, said):
+    report = check_open(step_deg=step)
+    assert report.swings_tried == said
+    assert report.markdown().splitlines()[4] == (
+        f"Kit `metric-home`, swings tried {said}, mesh engine, wrenchroom {__version__}."
+    )
+
+
+def test_check_writes_the_positions_and_the_spacing_at_a_step_that_doesn_t_divide_360(
+    wide_slot_step, tmp_path
+):
+    json_path, md_path = tmp_path / "report.json", tmp_path / "report.md"
+    outputs = ["--json", str(json_path), "--md", str(md_path)]
+    result = CliRunner().invoke(
+        main, ["check", str(wide_slot_step), "--step-deg", "20.5", *outputs]
+    )
+    assert result.exit_code == 1
+    document = json.loads(json_path.read_text())
+    assert (document["step_deg"], document["swing_positions"]) == (20.5, 18)
+    assert document["fasteners"][0]["swing_deg"] == 40.0
+    assert "swings tried every 20 deg (20.5 asked), mesh engine" in md_path.read_text()
+
+
+# ---------------------------------------------------------------------------
+# check() with no sidecar (issue #192): an empty one, with detection on.
+# ---------------------------------------------------------------------------
+
+
+def test_check_with_no_sidecar_finds_the_fasteners_the_names_and_solids_give(engine):
+    # Its docstring said None meant no fasteners.
+    found = check(open_screw(), engine=engine)
+    assert found.summary == check(open_screw(), Config(), engine=engine).summary
+    assert found.summary["fasteners"] == 1
+    (result,) = found.results
+    assert (result.fastener.name, result.fastener.source) == ("M3x10 SHCS", "name+geometry")
+    assert (result.verdict, result.tool) == (Verdict.TURNS, "hex-key-2.5")
+
+
+def test_a_run_that_checks_nothing_is_detection_turned_off():
+    nothing = check(open_screw(), Config.from_dict({"checks": {"detect": False}}))
+    assert nothing.summary["fasteners"] == 0
+    assert nothing.exit_code == 0
+
+
+def test_check_reads_no_sidecar_from_the_model_s_folder(tmp_path):
+    # A wrenchroom.yaml beside the model is the command line's to find: this one
+    # would turn detection off and set the step, and check() is told only the folder.
+    (tmp_path / "wrenchroom.yaml").write_text("checks:\n  detect: false\n  step_deg: 5\n")
+    report = check(open_screw(), model_dir=tmp_path)
+    assert report.summary["fasteners"] == 1
+    assert report.step_deg == DEFAULT_STEP_DEG
+    read = check(open_screw(), Config.load(tmp_path / "wrenchroom.yaml"), model_dir=tmp_path)
+    assert (read.summary["fasteners"], read.step_deg) == (0, 5.0)
+
+
+def test_the_command_line_does_read_the_sidecar_beside_the_model(tmp_path):
+    model = export_slot(tmp_path / "slot.step")
+    (tmp_path / "wrenchroom.yaml").write_text("checks:\n  detect: false\n")
+    result = CliRunner().invoke(main, ["check", str(model)])
+    assert result.exit_code == 0
+    assert "0 fasteners" in result.output
