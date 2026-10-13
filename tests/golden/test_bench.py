@@ -74,6 +74,8 @@ def test_round_trip_names(bench_dir):
         "halves_lead#2": "halves_lead",
         "halves_rod#2": "halves_rod",
         "pull_halved_shroud#2": "pull_halved_shroud",
+        "apart_tall_bolt#2": "apart_tall_bolt",
+        "apart_long_bolt#2": "apart_long_bolt",
     }
     assert shells == ["shelled_ceiling", "shelled_decal"]  # the bench's two shells
     assert assembly.surfaces == ("shelled_decal",)  # the open one

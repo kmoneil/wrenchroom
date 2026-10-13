@@ -165,12 +165,12 @@ def find(parts: Iterable[Part]) -> Found:
     for part in parts:
         hint = read_name(part.name)
         if hint is None:
-            look = looks_like(part.shape)
+            look = looks_like(part.whole)
             if look is not None:
                 kind, what = look
                 passed.append(PassedOver(part.name, kind, f"{NOT_NAMED}: {what}", named=False))
             continue
-        reading = read_shape(part.shape, hint.kind, hint.head)
+        reading = read_shape(part.whole, hint.kind, hint.head)
         missing = _missing(hint, reading)
         if missing is None:
             fasteners.append(describe(part, hint, reading))
@@ -241,7 +241,7 @@ def shows_drive(reading: ShapeReading) -> bool:
 
 def describe(part: Part, hint: NameHint, reading: ShapeReading | None = None) -> Fastener:
     """One named fastener, its name's hint completed and checked by its solid."""
-    reading = reading if reading is not None else read_shape(part.shape, hint.kind, hint.head)
+    reading = reading if reading is not None else read_shape(part.whole, hint.kind, hint.head)
     if hint.unless_hex and reading.drive_af is not None:
         # "nut_deep_well_nut": a nut deep in a well, as its hex says (issue #29).
         hint = replace(hint, kind=Kind.NUT)

@@ -167,7 +167,7 @@ def test_the_panel_lists_the_tools_the_report_needs_in_node(bench_page):
     ]
     assert load["panel"]["tools"] == [*lines, *tools["apart"]]
     assert len(tools["uses"]) > 30  # a vacuity guard: the bench needs many tools
-    assert "spanner-13 x31 2 at once on a joint" in load["panel"]["tools"]
+    assert "spanner-13 x33 2 at once on a joint" in load["panel"]["tools"]
     assert load["panel"]["tools"][-1].startswith("blocked, once reached: hex-key-1.5 x1, ")
 
 
@@ -228,20 +228,32 @@ def test_a_fastener_reached_in_another_state_is_drawn_in_it_in_node(
     assert record["tools"]["clear"] > 0
 
 
-def test_a_fastener_s_piece_is_drawn_as_it_in_node(bench_page):
-    # Issue #28: one_part_lock's nut is two solids, the nut and its dome. Both are
-    # painted as the fastener, selected or not; the bench's other parts are not.
+def test_a_fastener_of_two_solids_is_drawn_as_the_one_part_it_is_in_node(bench_page):
+    # Issues #28 and #210: one_part_lock's nut is two solids, the nut and its dome,
+    # and one part as it is checked. The view has it so, with no piece of it to
+    # paint: the part is painted as the fastener, selected or not.
     page, view = bench_page
     name = "one_part_lock_nut"
     index = [f["name"] for f in view["fasteners"]].index(name)
     entry = view["fasteners"][index]
-    piece = [p["name"] for p in view["parts"]].index(f"{name}#2")
+    assert f"{name}#2" not in [p["name"] for p in view["parts"]]
     for load in (_node(page, _hash(name))[0], _node(page, "")[0]):
         drawn = {part: (colour, opacity) for part, colour, opacity in load["drawn"]["parts"]}
-        assert drawn[piece] == drawn[entry["part"]]
-        assert drawn[piece][0] == entry["colour"]
+        assert drawn[entry["part"]][0] == entry["colour"]
     selected = {part: opacity for part, _, opacity in _node(page, _hash(name))[0]["drawn"]["parts"]}
-    assert selected[piece] == 1  # not ghosted as another part would be
+    assert selected[entry["part"]] == 1
+
+
+def test_a_part_s_piece_is_drawn_as_its_part_in_node(bench_page):
+    # A part that is no fastener stays in its solids: halves's lid, a slab and a pad.
+    # Each is painted as the other is, whichever fastener is selected or none.
+    page, view = bench_page
+    names = [p["name"] for p in view["parts"]]
+    whole, piece = names.index("halves_lid"), names.index("halves_lid#2")
+    assert view["parts"][piece]["owner"] == "halves_lid"
+    for load in (_node(page, _hash("halves_mate_screw"))[0], _node(page, "")[0]):
+        drawn = {part: (colour, opacity) for part, colour, opacity in load["drawn"]["parts"]}
+        assert drawn[piece] == drawn[whole]
 
 
 def test_an_unknown_hash_shows_everything_and_says_so_in_node(bench_page):

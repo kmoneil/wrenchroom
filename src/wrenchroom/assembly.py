@@ -38,7 +38,7 @@ import re
 import tempfile
 from collections import Counter
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -84,11 +84,21 @@ class Part:
         piece_of: For a leaf read as several solids, the part its largest solid
             became, on every other solid: one part split for collision, never a
             fastener of its own. None for every other part.
+        leaf: For a leaf read as several solids, on the part its largest solid
+            became: the leaf as it was read, every solid of it. A fastener is read
+            from all of itself and checked as one part (issue #210,
+            :meth:`Assembly.joined`). None for every other part.
     """
 
     name: str
     shape: Shape
     piece_of: str | None = None
+    leaf: Shape | None = field(default=None, compare=False, repr=False)
+
+    @property
+    def whole(self) -> Shape:
+        """All of the part: the leaf it was read from, else its own shape."""
+        return self.leaf if self.leaf is not None else self.shape
 
 
 class Assembly:
@@ -158,6 +168,32 @@ class Assembly:
         """The other solids of the leaf part ``name`` is, in order: often none."""
         return self._pieces.get(name, ())
 
+    def joined(self, names: Iterable[str]) -> Assembly:
+        """This assembly with each part named whole again: its pieces back in it.
+
+        A part read as several solids is its largest and its pieces, which is right
+        for what stands in a tool's way. A fastener is one thing: it is read from all
+        of itself and checked as one part, as ``from_shapes`` keeps a part handed
+        over (issue #210). The parts named that are in no pieces stay as they are,
+        and with none of them in pieces this is the assembly itself.
+        """
+        whole = {name for name in names if self._pieces.get(name)}
+        if not whole:
+            return self
+        parts = [
+            Part(part.name, self._all_of(part)) if part.name in whole else part
+            for part in self.parts
+            if part.piece_of not in whole
+        ]
+        return Assembly(parts, self.surfaces)
+
+    def _all_of(self, part: Part) -> Shape:
+        """A part in pieces as one shape: the leaf it was read from, else its solids together."""
+        if part.leaf is not None:
+            return part.leaf
+        solids = [self[name].shape for name in (part.name, *self._pieces[part.name])]
+        return Compound([solid for shape in solids for solid in shape.solids()])
+
     def __iter__(self) -> Iterator[Part]:
         return iter(self.parts)
 
@@ -177,6 +213,14 @@ class Assembly:
 #: :data:`_SURFACE` for a leaf with no solid.
 _Named = tuple[str, Shape, object | None]
 
+
+@dataclass(frozen=True, eq=False)
+class _Leaf:
+    """The key the solids of one leaf share, and the leaf whole: all of them."""
+
+    shape: Shape
+
+
 #: The leaf key of a leaf drawn as a surface (issue #104).
 _SURFACE = object()
 
@@ -187,15 +231,15 @@ def _split(name: str, shape: Shape) -> Iterator[_Named]:
     A leaf with no solid gives the solids its closed shells bound, if it has any,
     and is otherwise a surface (issue #104).
     """
-    solids = shape.solids()
-    if len(solids) == 1:
+    drawn = shape.solids()
+    if len(drawn) == 1:
         yield name, shape, None
         return
-    solids = solids or _bounded(shape)
+    solids = drawn or _bounded(shape)
     if len(solids) == 1:
         yield name, solids[0], None
     elif solids:
-        leaf = object()
+        leaf = _Leaf(shape if drawn else Compound(solids))  # as from_shapes keeps it whole
         for solid in sorted(solids, key=lambda solid: -solid.volume):
             yield name, solid, leaf
     elif shape.faces():
@@ -271,12 +315,13 @@ def _unique(named: Iterable[_Named], source: str) -> Iterator[Part]:
         empty = False
         seen[name] += 1
         unique_name = name if seen[name] == 1 else f"{name}#{seen[name]}"
-        piece_of = None
+        piece_of, whole = None, None
         if leaf is not None and leaf in firsts:
             piece_of = firsts[leaf]
         elif leaf is not None:
             firsts[leaf] = unique_name
-        yield Part(name=unique_name, shape=shape, piece_of=piece_of)
+            whole = leaf.shape if isinstance(leaf, _Leaf) else None
+        yield Part(name=unique_name, shape=shape, piece_of=piece_of, leaf=whole)
     if empty:
         msg = f"no solids found in {source}"
         raise ValueError(msg)

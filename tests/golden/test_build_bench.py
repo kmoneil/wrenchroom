@@ -122,11 +122,14 @@ def test_the_steps_add_what_the_cells_say(built):
         for step, roles in cell.steps.items():
             assert {f"{cell.name}_{role}" for role in roles} <= set(adds[step]), cell.name
     assert "key_wall_near_screw" in adds[REST]
-    # A part drawn as two solids comes in once, its other solid with it (issue #28).
+    # A fastener drawn as two solids comes in once: one part, as it is checked (#210).
     assert "one_part_lock_nut" in adds[REST]
     assert "one_part_lock_nut#2" not in adds[REST]
     plan = built.build.plan
-    assert plan.added_in["one_part_lock_nut#2"] == plan.added_in["one_part_lock_nut"]
+    assert "one_part_lock_nut#2" not in plan.added_in
+    # And a part that is no fastener, its other solid with it (issue #28).
+    assert "halves_lid#2" not in adds[REST]
+    assert plan.added_in["halves_lid#2"] == plan.added_in["halves_lid"]
     # Ignored parts and the surface no step need add, and none does.
     assert "shelled_decal" not in plan.added_in
     assert (plan.unplaced, plan.twice, plan.unmatched) == ((), (), ())

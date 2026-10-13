@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**182 fasteners: 136 turn, 15 held, 28 blocked, 3 stuck, 0 not covered**
+**184 fasteners: 138 turn, 15 held, 28 blocked, 3 stuck, 0 not covered**
 
 Kit `full`, swings tried every 15 deg, ENGINE engine, wrenchroom VERSION.
 
@@ -66,7 +66,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | M6 socket screw | `hex-key-5` | 20 | 10 of 20 fail |
 | M6 torx screw | `torx-key-T30` | 1 | all pass (short leg in) |
 | M8 hex screw | - | 2 | 1 of 2 fail |
-| M8 hex screw | `spanner-13` | 14 | 1 of 14 fail |
+| M8 hex screw | `spanner-13` | 16 | 1 of 16 fail |
 | M8 nut | - | 1 | 1 of 1 fail |
 | M8 nut | `spanner-13` | 23 | 4 of 23 fail |
 | M8 phillips screw | `driver-ph4` | 1 | all pass (driver straight in) |
@@ -110,7 +110,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `spanner-10` | 10 | 2 at once on a joint |
 | `spanner-10, stubby` | 1 | no full-length spanner swings at `nut_stubby_box_nut` |
 | `spanner-7/16in` | 1 | not in metric-home; only `inch_pair_nut` |
-| `spanner-13` | 31 | 2 at once on a joint |
+| `spanner-13` | 33 | 2 at once on a joint |
 | `spanner-13, stubby` | 1 | no full-length spanner swings at `reach_13_nut` |
 | `spanner-15` | 2 | only `snug_dome_gland`, `wide_dome_gland` |
 | `spanner-16` | 3 |  |

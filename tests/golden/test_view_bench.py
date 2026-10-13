@@ -117,15 +117,16 @@ def test_every_part_is_drawn_and_marked(bench_view, bench_report):
     names = _names(bench_view, overview["parts"])
     assert sorted(names) == sorted(bench_report.models[None].assembly.names)
     roles = {part["name"]: part["role"] for part in bench_view["parts"]}
-    # A fastener's pieces (issue #28: a leaf of several solids) are drawn as it.
+    # A fastener of several solids (issue #28) is one part as it is checked (issue
+    # #210), so none has a piece to draw: one_part_lock's nut is both its solids.
     assembly = bench_report.models[None].assembly
     fastener_names = {r.fastener.name for r in bench_report.results}
-    pieces = {part.name for part in assembly if part.piece_of in fastener_names}
-    assert pieces == {"one_part_lock_nut#2"}
-    assert {n for n, role in roles.items() if role == "fastener"} == fastener_names | pieces
+    assert not {part.name for part in assembly if part.piece_of in fastener_names}
+    assert len(assembly["one_part_lock_nut"].shape.solids()) == 2
+    assert {n for n, role in roles.items() if role == "fastener"} == fastener_names
+    # A part that is no fastener is drawn solid by solid, each piece as its part.
     owners = {part["name"]: part["owner"] for part in bench_view["parts"] if part["owner"]}
     assert owners == {
-        "one_part_lock_nut#2": "one_part_lock_nut",
         "halves_lid#2": "halves_lid",
         "halves_lead#2": "halves_lead",
         "halves_rod#2": "halves_rod",
