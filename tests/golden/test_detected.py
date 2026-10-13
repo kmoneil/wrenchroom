@@ -343,6 +343,7 @@ def test_each_plug_is_found_by_its_name(detected):
         "byname_plug_motor": ("unplugs", "name", ()),
         "byname_screw_terminal_plug": ("unplugs", "name", ()),
         "pull_cable_plug": ("stuck", "name", ("pull_cable_lead",)),
+        "pull_halved_plug": ("unplugs", "name", ()),
         "pull_latch_plug": ("unplugs", "name", ()),
         "pull_open_plug": ("unplugs", "name", ()),
         "pull_shelf_plug": ("stuck", "name", ("pull_shelf_shelf",)),

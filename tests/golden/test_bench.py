@@ -90,8 +90,8 @@ def test_isolation_matches_the_full_bench(bench_json, bench_dir, bench_engine):
 def test_round_trip_names(bench_dir):
     # A part of several solids reads as one per solid, the rest numbered after it
     # and marked as its pieces (issue #28): one_part_lock's nut has two, and halves's
-    # lid, lead and rod (issue #198). A part drawn as a closed shell is its solid; one
-    # drawn as a face, a surface (#104).
+    # lid, lead and rod (issue #198), and pull_halved's shroud (issue #200). A part
+    # drawn as a closed shell is its solid; one drawn as a face, a surface (#104).
     expected, pieces, shells = [], {}, []
     for shape in build():
         if not shape.solids():
@@ -110,6 +110,7 @@ def test_round_trip_names(bench_dir):
         "halves_lid#2": "halves_lid",
         "halves_lead#2": "halves_lead",
         "halves_rod#2": "halves_rod",
+        "pull_halved_shroud#2": "pull_halved_shroud",
     }
     assert shells == ["shelled_ceiling", "shelled_decal"]  # the bench's two shells
     assert assembly.surfaces == ("shelled_decal",)  # the open one
@@ -681,4 +682,4 @@ def test_under_exact_the_bench_s_verdicts_stand_though_every_boolean_comes_back_
     assert {told[name][0] for name in moved} == {Verdict.TURNS}
     plugs = {c.name: (c.verdict, c.axis) for c in measured.connectors.results}
     assert plugs == {c.name: (c.verdict, c.axis) for c in failing.connectors.results}
-    assert len(plugs) == 8
+    assert len(plugs) == 9

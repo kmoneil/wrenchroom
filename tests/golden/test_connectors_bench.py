@@ -5,7 +5,8 @@ shelf; pull_cable's lead, its mate, comes with it through its panel. pull_tight'
 pull_latch's come off too: what fingers make of them is hand room's
 (test_hand_room_bench.py). byname's three are found by their names alone, "plug"
 first in two (issue #157) and a screw terminal's the third (issue #166), and its
-cover, named for a plug, is listed.
+cover, named for a plug, is listed. pull_halved's shroud is two solids of one part,
+and one receptacle (issue #200).
 """
 
 import pytest
@@ -52,8 +53,8 @@ def test_every_connector_the_bench_checks_has_its_truth(plugs, bench_report):
         (),
     )
     assert connectors.summary == {
-        "connectors": 8,
-        "unplugs": 7,
+        "connectors": 9,
+        "unplugs": 8,
         "stuck": 1,
         "no_grip": 0,
         "no_latch_access": 0,
@@ -62,5 +63,5 @@ def test_every_connector_the_bench_checks_has_its_truth(plugs, bench_report):
 
 
 def test_the_bench_says_its_stuck_plug(bench_report):
-    assert "8 connectors: 7 unplug, 1 stuck, 0 not covered" in bench_report.terminal_lines()
+    assert "9 connectors: 8 unplug, 1 stuck, 0 not covered" in bench_report.terminal_lines()
     assert "FAIL pull_shelf_plug  stuck  pull_shelf_shelf" in bench_report.terminal_lines()

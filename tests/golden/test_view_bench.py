@@ -129,6 +129,7 @@ def test_every_part_is_drawn_and_marked(bench_view, bench_report):
         "halves_lid#2": "halves_lid",
         "halves_lead#2": "halves_lead",
         "halves_rod#2": "halves_rod",
+        "pull_halved_shroud#2": "pull_halved_shroud",
     }
     assert {n for n, role in roles.items() if role == "ignored"} == set(bench_report.ignored)
     assert bench_report.ignored  # the bench ignores its hoses and wires
@@ -159,3 +160,15 @@ def test_attempts_record_every_position_they_tested(bench_report):
         if result.way_out is not None and result.verdict == "stuck":
             assert result.way_out.hits == result.stuck_on
     assert checked > 50
+
+
+def test_a_receptacle_in_two_halves_is_drawn_whole(bench_view):
+    # Issue #200: pull_halved's shroud is two solids, named once and both drawn as
+    # what its plug is plugged into.
+    (plug,) = [
+        found for found in bench_view["connectors"]["found"] if found["name"] == "pull_halved_plug"
+    ]
+    assert _names(bench_view, plug["receptacle"]) == [
+        "pull_halved_shroud",
+        "pull_halved_shroud#2",
+    ]

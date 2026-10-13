@@ -3500,3 +3500,33 @@ def halves():
         ("block", Pos(220, 0, 10) * Box(60, 30, 20)),
         ("rod", rod),
     ]
+
+
+@cell(
+    "pull_halved",
+    connectors=[{"parts": "plug"}],
+    plugs={
+        "plug": {
+            "verdict": "unplugs",
+            "receptacle": ["shroud"],
+            "axis": [0.0, 0.0, 1.0],
+            "travel": 10.0,
+            "blocked_by": [],
+        }
+    },
+)
+def pull_halved():
+    """pull_open with its shroud in two halves, the two solids of one part (issue #200).
+
+    Read from STEP the shroud is its larger half, which keeps the name, and a ``#2``
+    piece. The two hold the plug together, in every direction but up, and it comes off
+    as pull_open's does: up, 10. Each half alone held it like the other, so it was not
+    covered, and the part is named once.
+    """
+    left = _shroud() & (Pos(-5.5, 0, 5) * Box(11, 14, 12))
+    right = _shroud() & (Pos(5.5, 0, 5) * Box(9, 14, 12))
+    return [
+        ("board", plate(t=2)),
+        ("shroud", Compound([left.solid(), right.solid()])),
+        ("plug", _plug()),
+    ]

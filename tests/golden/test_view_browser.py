@@ -183,7 +183,10 @@ def test_the_overview_colours_every_fastener_by_its_verdict_in_node(bench_page):
     colour_of |= {p["name"]: p["colour"] for p in view["connectors"]["found"]}
     assert {p["name"]: p["colour"] for p in view["connectors"]["found"]} == {
         "pull_shelf_plug": COLOURS["fails"],
-        **{f"pull_{cell}_plug": COLOURS["turns"] for cell in ("cable", "latch", "open", "tight")},
+        **{
+            f"pull_{cell}_plug": COLOURS["turns"]
+            for cell in ("cable", "halved", "latch", "open", "tight")
+        },
         # byname's, found by their names: "plug" first in two (issue #157).
         "byname_plug_motor": COLOURS["turns"],
         "byname_plug_fan_2": COLOURS["turns"],

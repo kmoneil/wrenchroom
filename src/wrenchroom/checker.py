@@ -670,13 +670,13 @@ def _connector_in_state(
         return ConnectorResult(
             name, ConnectorVerdict.NOT_COVERED, source, reason=str(exc), state=state_name
         )
-    held = tuple(part.name for part in receptacle)
-    scene = space.scene(assembly, own | mates | removed | set(held))
+    held = {part.name for part in receptacle}
+    scene = space.scene(assembly, own | mates | removed | held)
     found = ConnectorResult(
         name,
         ConnectorVerdict.UNPLUGS,
         source,
-        held,
+        _whole_names(receptacle),
         axis,
         travel,
         state=state_name,
@@ -732,7 +732,7 @@ def _seat(
     """
     directions = face_directions(shape)
     if rule.receptacle is not None:
-        receptacle = tuple(part for part in others if fnmatchcase(part.name, rule.receptacle))
+        receptacle = tuple(part for part in others if _named_by(part, rule.receptacle))
         if not receptacle:
             msg = f"its receptacle glob {rule.receptacle!r} names no part (renamed part?)"
             raise Unclear(msg)
@@ -741,9 +741,9 @@ def _seat(
         near = touching(shape, others, engine)
         if not near and rule.axis is not None and rule.travel_mm is not None:
             return (), rule.axis, rule.travel_mm, 0.0  # plugged into nothing drawn: as given
-        part, held = find_receptacle(shape, near, directions, engine)
-        receptacle = (part,)
-    names = listed(tuple(part.name for part in receptacle))
+        found, held = find_receptacle(shape, near, directions, engine)
+        receptacle = tuple(part for part in others if found in {part.name, part.piece_of})
+    names = listed(_whole_names(receptacle))
     if rule.axis is None:
         axis = pull_axis(directions, held, names)
     else:
@@ -756,6 +756,19 @@ def _seat(
     if travel is None:  # to 0.1 mm: the margin is 3, and a report reads 10.0, not 10.0156
         travel = round(engaged + TRAVEL_MARGIN, 1)
     return receptacle, axis, travel, engaged
+
+
+def _named_by(part: Part, glob: str) -> bool:
+    """Whether a glob names a part: by its own name or, for a piece, its part's (issue #200)."""
+    return fnmatchcase(part.name, glob) or (
+        part.piece_of is not None and fnmatchcase(part.piece_of, glob)
+    )
+
+
+def _whole_names(parts: tuple[Part, ...]) -> tuple[str, ...]:
+    """The parts' names, each part said once: a piece goes unsaid where its part is there."""
+    there = {part.name for part in parts}
+    return tuple(part.name for part in parts if part.piece_of not in there)
 
 
 def _with_notes(result: FastenerResult) -> FastenerResult:
