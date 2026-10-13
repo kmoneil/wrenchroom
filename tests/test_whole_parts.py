@@ -96,7 +96,8 @@ def verdict(report):
 
 
 def test_read_in_pieces_the_cover_s_piece_is_what_blocks_the_screw():
-    # The ground the rest stands on: the pad, cover#2, is in the key's way.
+    # The ground the rest stands on: the pad, cover#2, is in the key's way. The
+    # report says the cover is, the part: no piece is named in one (issue #210).
     model = as_step_reads(covered())
     assert [(part.name, part.piece_of) for part in model][2:] == [
         ("cover", None),
@@ -105,7 +106,7 @@ def test_read_in_pieces_the_cover_s_piece_is_what_blocks_the_screw():
     assert verdict(check(model, Config.from_dict({"fasteners": [SCREW]}))) == (
         Verdict.BLOCKED,
         None,
-        ("cover#2",),
+        ("cover",),
     )
 
 
@@ -184,7 +185,7 @@ def test_a_state_that_takes_off_another_part_leaves_this_one_s_piece():
     report = check(lidded(), Config.from_dict(sidecar))
     (result,) = report.results
     assert (result.verdict, result.state) == (Verdict.BLOCKED, None)
-    assert "cover#2" in result.blocked_by
+    assert "cover" in result.blocked_by
     assert report.models["lid-off"].removed == {"lid"}
 
 
@@ -261,7 +262,7 @@ def test_a_mate_takes_no_other_part_s_piece_with_it():
     assert verdict(check(lidded(), Config.from_dict(mated("lid")))) == (
         Verdict.BLOCKED,
         None,
-        ("cover#2",),
+        ("cover",),
     )
 
 
@@ -290,8 +291,9 @@ def test_a_fastener_drawn_into_its_mate_s_piece_is_no_clash(reader, turned, engi
 
 
 def test_without_the_mate_the_piece_is_the_clash():
+    # Told of the cover, the part: the list names no piece (issue #210).
     found = find_clashes(as_step_reads(sunk()), Config.from_dict({"fasteners": [SCREW]}))
-    assert listed(found) == [("bolt", "cover#2", 95.0)]
+    assert listed(found) == [("bolt", "cover", 95.0)]
     inside = check(as_step_reads(sunk()), Config.from_dict(mated("cover")), clashes=True)
     assert listed(inside.clashes) == []
 
@@ -319,11 +321,11 @@ def allowing(*pair):
     return Config.from_dict({"allow": [list(pair)]} if pair else {})
 
 
-def test_read_in_pieces_each_pin_is_a_clash_of_its_own():
-    assert listed(find_clashes(as_step_reads(pinned()), allowing())) == [
-        ("pin", "block", 14.1),
-        ("pin#2", "block", 14.1),
-    ]
+@READERS
+def test_the_two_pins_are_one_clash_of_the_part_however_it_is_read(reader):
+    # Each pin 14.1 into the block: one clash of pin and block, 28.3, the two solids'
+    # together (issue #210). Read in pieces it was two lines, the second of pin#2.
+    assert listed(find_clashes(reader(pinned()), allowing())) == [("pin", "block", 28.3)]
 
 
 @READERS
@@ -339,14 +341,12 @@ def test_an_allow_pair_lets_the_whole_part_in(reader, turned, engine, pair):
 
 def test_an_allow_pair_holds_between_two_parts_pieces():
     model = as_step_reads(pinned(block_in_two=True))
-    assert listed(find_clashes(model, allowing())) == [
-        ("pin", "block", 14.1),
-        ("pin#2", "block#2", 14.1),
-    ]
+    assert listed(find_clashes(model, allowing())) == [("pin", "block", 28.3)]
     assert listed(find_clashes(model, allowing("pin", "block"))) == []
 
 
 def test_an_allow_glob_naming_a_piece_allows_that_solid_alone():
+    # The short pin's share is allowed and the long pin's is told, of the part.
     found = find_clashes(as_step_reads(pinned()), allowing("pin#2", "block"))
     assert listed(found) == [("pin", "block", 14.1)]
 
@@ -388,7 +388,7 @@ def unplugged(report):
 def test_read_in_pieces_the_lead_s_piece_is_in_the_plug_s_way():
     model = as_step_reads(plugged("lead", Box(4, 30, 2)))
     report = check(model, Config.from_dict({"connectors": [{"parts": "plug"}]}))
-    assert unplugged(report) == (ConnectorVerdict.STUCK, None, ("lead#2",))
+    assert unplugged(report) == (ConnectorVerdict.STUCK, None, ("lead",))
 
 
 @READERS
@@ -483,9 +483,9 @@ def test_a_fastener_drawn_into_its_partner_s_piece_is_its_pair_and_none(
 def test_without_the_pair_the_partner_s_piece_is_the_clash():
     # The guards: the same solids with one of the two no fastener, so no pair of it.
     only_nut = Config.from_dict({"fasteners": [NUT], "checks": {"detect": False}})
-    assert listed(find_clashes(as_step_reads(joined()), only_nut)) == [("nut", "bolt#2", 48.0)]
+    assert listed(find_clashes(as_step_reads(joined()), only_nut)) == [("nut", "bolt", 48.0)]
     only_bolt = Config.from_dict({"fasteners": [HEX_BOLT], "checks": {"detect": False}})
-    assert listed(find_clashes(as_step_reads(collared()), only_bolt)) == [("bolt", "nut#2", 31.4)]
+    assert listed(find_clashes(as_step_reads(collared()), only_bolt)) == [("bolt", "nut", 31.4)]
 
 
 def failing(report):
@@ -534,7 +534,7 @@ def test_a_fastener_drawn_into_another_part_s_piece_is_told_by_the_check():
     # and no mate. Passing over a partner's pieces passes over no other part's.
     (result,) = check(as_step_reads(sunk()), Config.from_dict({"fasteners": [SCREW]})).results
     assert result.verdict is Verdict.NOT_COVERED
-    assert result.reason == "drawn into cover#2 (95.0 mm^3): fix the model"
+    assert result.reason == "drawn into cover (95.0 mm^3): fix the model"
 
 
 def test_two_fasteners_each_with_a_pair_of_its_own_are_no_pair():

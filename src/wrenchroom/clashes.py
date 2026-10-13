@@ -397,7 +397,57 @@ def scan(
         clash = _clash(a, b, engine, fasteners, state)
         if clash is not None:
             found.append(clash)
-    return sorted(found, key=lambda clash: (clash.first, clash.second))
+    told = _by_part(found, {part.name: part.piece_of or part.name for part in parts})
+    return sorted(told, key=lambda clash: (clash.first, clash.second))
+
+
+def _by_part(found: list[Clash], part_of: Mapping[str, str]) -> list[Clash]:
+    """One clash to each two parts: a part drawn as several solids is told once (issue #210).
+
+    Read from STEP such a part is measured solid by solid. Its solids' clashes with
+    another part are one clash under the part's own name, their volumes together,
+    which is what the same part handed over whole is told as. The largest of them
+    says which way round it is, where to look and what it may be. An insert's share
+    set into a part stays apart from a share of it that is a clash.
+    """
+    groups: dict[tuple[frozenset[str], bool], list[Clash]] = {}
+    for clash in found:
+        two = frozenset(part_of.get(name, name) for name in (clash.first, clash.second))
+        groups.setdefault((two, clash.set_in), []).append(clash)
+    told = []
+    for group in groups.values():
+        lead = max(group, key=_by_volume)
+        told.append(
+            replace(
+                lead,
+                first=part_of.get(lead.first, lead.first),
+                second=part_of.get(lead.second, lead.second),
+                volume=sum(clash.volume for clash in group),
+                overlap=_overlaps(group, lead),
+                by_meshes=any(clash.by_meshes for clash in group),
+                unasked=any(clash.unasked for clash in group),
+            )
+        )
+    return told
+
+
+def _overlaps(group: list[Clash], lead: Clash) -> Shape | Triangles | None:
+    """What several clashes of two parts share, as one thing to draw: all of it."""
+    shared = [clash.overlap for clash in group if clash.overlap is not None]
+    if len(shared) < 2:  # noqa: PLR2004  (several)
+        return lead.overlap
+    if all(isinstance(overlap, tuple) for overlap in shared):
+        vertices, triangles, start = [], [], 0
+        for points, faces in cast("list[Triangles]", shared):
+            vertices.append(points)
+            triangles.append(faces + start)
+            start += len(points)
+        return np.concatenate(vertices), np.concatenate(triangles)
+    if not any(isinstance(overlap, tuple) for overlap in shared):
+        from build123d import Compound  # noqa: PLC0415  (heavy: only where a clash is drawn)
+
+        return Compound(cast("list[Shape]", shared))
+    return lead.overlap  # measured two ways: the largest's, drawn as it was measured
 
 
 def _clash(

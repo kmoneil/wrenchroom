@@ -158,11 +158,7 @@ def test_a_piece_is_still_to_come_when_its_part_is(main, other, engine):
     # screw goes in, though both are in the step's model.
     report = half_built(main, other, engine=engine)
     assert built(report) == {"bolt": (Verdict.TURNS, "screw", ())}
-    assert verdict(report) == (
-        Verdict.BLOCKED,
-        None,
-        ("cover#2" if main == "in-pieces" else "cover",),
-    )
+    assert verdict(report) == (Verdict.BLOCKED, None, ("cover",))  # the part, either way
     assert report.notes == ()
 
 
@@ -173,8 +169,7 @@ def test_a_jig_of_two_solids_stays_whole_and_is_noted_once(main, other):
     block, bar = Pos(-70, 0, 20) * Box(40, 40, 40), Pos(0, 0, 38) * Box(30, 30, 4)
     jig = Compound([block.solid(), bar.solid()])
     report = half_built(main, other, half=covered(jig=jig))
-    in_the_way = "jig#2" if other == "in-pieces" else "jig"
-    assert built(report) == {"bolt": (Verdict.BLOCKED, "screw", (in_the_way,))}
+    assert built(report) == {"bolt": (Verdict.BLOCKED, "screw", ("jig",))}
     assert report.notes == (
         "build step 'screw': its model half.step has 1 part the main model doesn't: jig",
     )
@@ -289,12 +284,9 @@ def clashes(main, other, state_parts, main_parts=None):
 def test_a_state_s_model_of_the_same_parts_adds_no_clash(main, other):
     # The same parts in the same place: what the main model has by itself is all of it.
     alone = find_clashes(READERS[main](pinned()), Config.from_dict({"checks": {"detect": False}}))
+    # And one clash of the rod, its two pins' together, however it is read (#210).
     found = clashes(main, other, pinned())
-    want = {
-        "in-pieces": [("rod", "block", 28.3, None), ("rod#2", "block", 12.6, None)],
-        "whole": [("rod", "block", 40.8, None)],
-    }
-    assert told(found) == told(alone) == want[main]
+    assert told(found) == told(alone) == [("rod", "block", 40.8, None)]
 
 
 def test_read_one_each_way_the_piece_s_clash_was_the_state_s():
@@ -311,24 +303,20 @@ def test_a_clash_only_the_state_s_model_has_is_said_with_it(main, other):
 
 @EITHER_WAY
 def test_a_part_of_two_solids_that_clashes_in_the_state_alone_is_said_there(main, other):
-    # The rod clear in the main model and down in the state's: told as that model has it.
+    # The rod clear in the main model and down in the state's: one clash, the state's.
     found = clashes(main, other, pinned(), main_parts=pinned(lift=5.0))
-    want = {
-        "in-pieces": [("rod", "block", 28.3, "up"), ("rod#2", "block", 12.6, "up")],
-        "whole": [("rod", "block", 40.8, "up")],
-    }
-    assert told(found) == want[other]
+    assert told(found) == [("rod", "block", 40.8, "up")]
 
 
 @EITHER_WAY
-def test_a_second_solid_s_clash_is_the_state_s_where_both_models_have_the_solids(main, other):
-    # The first pin in the block in both models, the second in the state's alone. Two
-    # models that both have the rod in pieces tell solid from solid, and the second
-    # pin's clash is the state's, as it was. A model with the rod whole has the rod
-    # clashing already, and the pair is said once: so it is for any part, whole.
+def test_a_part_that_clashes_already_is_not_said_again_for_another_solid_of_it(main, other):
+    # The first pin in the block in both models, the second in the state's alone. The
+    # rod and the block clash in the model as given, and a pair is said once: the
+    # state has nothing to add, however either is read. Two models that both had the
+    # rod in pieces said the second pin's clash for the state; a part is told as one
+    # now (issue #210), as it always was handed over whole.
     found = clashes(main, other, pinned(), main_parts=pinned(second=5.0))
-    both_in_pieces = (main, other) == ("in-pieces", "in-pieces")
-    assert in_state(found) == ([("rod#2", "block", 12.6, "up")] if both_in_pieces else [])
+    assert told(found) == [("rod", "block", 28.3, None)]
 
 
 @pytest.mark.parametrize(
@@ -343,8 +331,7 @@ def test_two_states_models_tell_one_clash_once_however_each_is_read(first, secon
         Config.from_dict(config),
         models={"up.step": READERS[first](pinned()), "out.step": READERS[second](pinned())},
     )
-    assert {row[3] for row in told(found)} == {"up"}
-    assert len(told(found)) == {"in-pieces": 2, "whole": 1}[first]
+    assert told(found) == [("rod", "block", 40.8, "up")]
 
 
 def test_a_part_that_only_shares_a_name_is_told_for_itself():

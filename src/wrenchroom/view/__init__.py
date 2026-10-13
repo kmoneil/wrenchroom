@@ -381,7 +381,7 @@ class _Builder:
             "state": printable(clash.state) if clash.state is not None else None,
             "hint": printable(clash.hint) if clash.hint is not None else None,
             "view": view,
-            "parts": _indices((clash.first, clash.second), by_name),
+            "parts": _indices((clash.first, clash.second), by_name, self.parts),
             "overlap": None if arrays is None else self._shape(*arrays),
         }
 
@@ -411,8 +411,8 @@ class _Builder:
             "colour": COLOURS[plug_colour_key(result, self.report.default_state)],
             "reason": printable(result.reason) if result.reason else None,
             "in_way": [printable(n) for n in result.blockers] if failed else [],
-            "highlight": _indices(result.blockers, by_name) if failed else [],
-            "receptacle": _indices(held, by_name),
+            "highlight": _indices(result.blockers, by_name, self.parts) if failed else [],
+            "receptacle": _indices(held, by_name, self.parts),
             "view": view,
             "part": by_name.get(result.name),
             "probes": [
@@ -444,7 +444,7 @@ class _Builder:
         stuck = result.verdict is ConnectorVerdict.STUCK
         return {
             "hit": stuck,
-            "hits": _indices(result.blockers, by_name) if stuck else [],
+            "hits": _indices(result.blockers, by_name, self.parts) if stuck else [],
             "s": shapes,
             "m": _b64(np.array([moved] * len(shapes), dtype="<f4")),
         }
@@ -470,7 +470,7 @@ class _Builder:
             "headline": printable(result.headline),
             "reason": printable(result.reason) if result.reason else None,
             "in_way": [printable(n) for n in in_way] if failed else [],
-            "highlight": _indices(others, by_name) if failed else [],
+            "highlight": _indices(others, by_name, self.parts) if failed else [],
             "view": view,
             "part": by_name.get(name),
             "attempts": [self._attempt(attempt, by_name, name) for attempt in result.attempts],
@@ -481,7 +481,9 @@ class _Builder:
         return {
             "text": printable(attempt_text(attempt)),
             "turns": attempt.turns,
-            "highlight": _indices(tuple(n for n in attempt.blockers if n != own), by_name),
+            "highlight": _indices(
+                tuple(n for n in attempt.blockers if n != own), by_name, self.parts
+            ),
             "probes": [self._probe(probe, by_name) for probe in attempt.probes],
         }
 
@@ -495,14 +497,24 @@ class _Builder:
             matrices.append(placed[:3, :])
         return {
             "hit": bool(probe.hits),
-            "hits": _indices(probe.hits, by_name),
+            "hits": _indices(probe.hits, by_name, self.parts),
             "s": shapes,
             "m": _b64(np.array(matrices, dtype="<f4")),
         }
 
 
-def _indices(names: tuple[str, ...], by_name: dict[str, int]) -> list[int]:
-    return [by_name[name] for name in names if name in by_name]
+def _indices(
+    names: tuple[str, ...], by_name: dict[str, int], parts: list[dict[str, object]]
+) -> list[int]:
+    """Where each part named is in a view, and every piece of it after them.
+
+    A report names a part, and a part drawn as several solids is drawn solid by
+    solid (issue #210): a blocker's every solid is the blocker.
+    """
+    named = [by_name[name] for name in names if name in by_name]
+    owners = set(names)
+    pieces = [index for index in by_name.values() if parts[index]["owner"] in owners]
+    return [*named, *(index for index in pieces if index not in named)]
 
 
 def _digest(arrays: tuple[np.ndarray, np.ndarray] | None) -> str:

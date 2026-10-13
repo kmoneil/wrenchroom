@@ -540,7 +540,10 @@ the part they name: `remove: [cover]` takes the cover off, all of it. A glob tha
 names a piece itself (`cover#2`) is that solid alone, and another part that only
 shares the name, numbered the same way, is no piece. A fastener has no piece to name:
 it is one part as it is checked, so a glob for `nut#2` names nothing there (issue
-#210).
+#210). And no report names a piece: what stands in a tool's way is the part
+(`blocked_by: ["cover"]`, whichever of its solids are met), and the clash list tells
+two parts' clash once, their solids' volumes together, as the same parts handed
+over whole are told.
 
 ## Reports
 
@@ -708,10 +711,10 @@ every run, and every report says it wasn't looked for.
 - **States.** A state with a model of its own (a lever raised) is looked in too,
   and a clash the model as given doesn't have is said with its state
   (`CLASH lever into wall  16.0 mm^3  in state lever-up`). A state that only takes
-  parts away can't add one. With one model from shapes and another read from STEP, a
-  part of several solids is whole in one and in pieces in the other: a clash of two
-  parts the model as given has clashing already is not said again for the piece
-  (issue #209).
+  parts away can't add one. A clash is two parts', by their own names however a model
+  draws them, so one model from shapes and another read from STEP tell it alike, and
+  a pair the model as given has clashing is not said again for a state (issues #209,
+  #210).
 
 The terminal says each as `CLASH first into second  volume`, the first the part
 drawn into the other: a fastener, else the smaller. The JSON's `clashes` gives the
