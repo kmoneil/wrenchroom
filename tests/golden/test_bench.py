@@ -76,6 +76,7 @@ def test_round_trip_names(bench_dir):
         "pull_halved_shroud#2": "pull_halved_shroud",
         "apart_tall_bolt#2": "apart_tall_bolt",
         "apart_long_bolt#2": "apart_long_bolt",
+        "both_over_cover#2": "both_over_cover",
     }
     assert shells == ["shelled_ceiling", "shelled_decal"]  # the bench's two shells
     assert assembly.surfaces == ("shelled_decal",)  # the open one
@@ -608,8 +609,10 @@ def test_the_tools_list_counts_each_passing_fastener_s_tool(bench_report, bench_
     assert sum(len(names) for _, names in used.blocked) == FINAL_COUNTS["blocked"] - 4
     assert {tool for tool, _ in used.blocked if not used.reached(tool)} == {"spanner-36"}
     assert dict(used.blocked)["spanner-36"] == ("big_tube_gland",)
-    # In the report's order, by name: build_buried's two screws under their cover first.
-    assert dict(used.blocked)["hex-key-5"][:3] == (
+    # In the report's order, by name: both_over's screw, then build_buried's two under
+    # their cover.
+    assert dict(used.blocked)["hex-key-5"][:4] == (
+        "both_over_screw",
         "build_buried_early_screw",
         "build_buried_late_screw",
         "key_wall_near_screw",
