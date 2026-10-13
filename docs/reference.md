@@ -341,7 +341,13 @@ and `grazes` in the JSON).
   `model:` path is read as one beside the sidecar, as a path in a config file
   usually is, then beside the model if the sidecar's folder hasn't it (issue #73);
   an absolute one is taken as it is. One found nowhere is an error naming the state,
-  the sidecar entry and where it was looked for. A
+  the sidecar entry and where it was looked for. From Python a state's model, or a
+  build step's, may be handed over as an assembly instead, under the name the sidecar
+  has for it (issue #196): `check(main, config, models={"bench_lever-up.step":
+  raised})` uses it as it is and looks for no file, so a build script checks its own
+  shapes at each position with nothing written, and a part it draws as several solids
+  is one part in every one of them. A name in `models` that no state or step has is
+  refused, as a kit that doesn't exist is. A
   rule's `state:` says a fastener is reached in that state; `checks: {try_states:
   [...]}` retries failures in each state in turn, and says where a fastener passed.
   A state's model is the same parts, moved, and matched by name (issue #74): a
@@ -725,9 +731,10 @@ build:
   unmatched rule is, and fails the run too.
 - **A step's scene** is every part added by then, the step's own included, as they
   go on before their fasteners, and none of the later steps'. A step's `model:` is
-  read as a state's is (beside the sidecar, then beside the model) and matched by
-  name: in it, the later steps' parts are left out, and a part only it has (a jig)
-  stays. One it lacks of the parts added by then is noted.
+  read as a state's is (beside the sidecar, then beside the model, or given as an
+  assembly from Python) and matched by name: in it, the later steps' parts are left
+  out, and a part only it has (a jig) stays. One it lacks of the parts added by then
+  is noted.
 - **Goes in, and turns.** A fastener passes in its step when a tool turns it, or
   holds it while its partner turns, as in `check`, and a screw's way in is clear: a
   screw whose way out is blocked by a part added by then can't have gone in, and is

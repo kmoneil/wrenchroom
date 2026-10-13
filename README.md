@@ -558,11 +558,13 @@ side_bolt: stuck with spanner-10, ring, full length ('cover',)
 ```
 
 From build123d, skip the STEP file: `wr.Assembly.from_shapes([(name, shape), ...])`
-takes the shapes as they are. `wr.Config.load("wrenchroom.yaml")`
-reads a sidecar to pass as `check`'s second argument: `check` reads no file itself,
-and with no sidecar it finds the fasteners by their names and solids, as the command
-line does. A report writes itself with `report.to_json(path)`, `to_markdown(path)`
-and `to_html(path)`.
+takes the shapes as they are. A state's model is given the same way, under the name
+the sidecar has for it: `wr.check(main, config, models={"raised.step": raised})`
+checks the script's own shapes at each position, and no file is written or looked
+for. `wr.Config.load("wrenchroom.yaml")` reads a sidecar to pass as `check`'s second
+argument: `check` reads no sidecar itself, and with none it finds the fasteners by
+their names and solids, as the command line does. A report writes itself with
+`report.to_json(path)`, `to_markdown(path)` and `to_html(path)`.
 
 ## How it works
 

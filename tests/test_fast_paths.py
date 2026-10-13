@@ -74,7 +74,7 @@ def assembly():
 def test_a_scene_from_the_assembly_s_boxes_is_the_scene_from_its_parts(engine):
     model = assembly()
     config = Config.from_dict({"ignore": ["rib"]})
-    space = _StateSpace(model, config, None, make_engine(engine))
+    space = _StateSpace(model, config, None, make_engine(engine), None)
     masked = space.scene(model, {"nut", "bolt"})
     gathered = Scene([model["plate"], model["wall"]], space.engine)
     assert [p.name for p in masked.parts] == ["plate", "wall"]  # assembly order, less
@@ -95,6 +95,6 @@ def test_a_name_on_several_pieces_masks_them_all():
             Part("nut#2", Pos(0, 0, 8) * Cylinder(5, 2), piece_of="nut"),
         ]
     )
-    space = _StateSpace(model, Config(), None, make_engine("mesh"))
+    space = _StateSpace(model, Config(), None, make_engine("mesh"), None)
     names = {p.name for p in space.scene(model, {"nut", "nut#2"}).parts}
     assert names == {"plate"}
