@@ -658,7 +658,9 @@ every run, and every report says it wasn't looked for.
   (issue #63): a screw's head, a nut's body less its bore's thread. A screw in a
   hole drawn at its tap drill or its minor diameter, a bolt in a nut bored at its
   minor, is no clash. Nor is a fastener with its pair, its `mates` or its own
-  pieces, or an ignored part (`--with-ignored` measures those too). A fastener not
+  pieces, or an ignored part (`--with-ignored` measures those too). Its pair is the
+  whole part: a bolt drawn as several solids is passed over in each of them (issue
+  #208). A fastener not
   understood (no axis) can't be measured past its thread, so it is left out, and
   said.
 - **The list and the verdicts agree, to the volume** (issue #156). A fastener is
@@ -701,7 +703,10 @@ every run, and every report says it wasn't looked for.
 - **States.** A state with a model of its own (a lever raised) is looked in too,
   and a clash the model as given doesn't have is said with its state
   (`CLASH lever into wall  16.0 mm^3  in state lever-up`). A state that only takes
-  parts away can't add one.
+  parts away can't add one. With one model from shapes and another read from STEP, a
+  part of several solids is whole in one and in pieces in the other: a clash of two
+  parts the model as given has clashing already is not said again for the piece
+  (issue #209).
 
 The terminal says each as `CLASH first into second  volume`, the first the part
 drawn into the other: a fastener, else the smaller. The JSON's `clashes` gives the

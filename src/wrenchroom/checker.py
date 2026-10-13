@@ -428,12 +428,21 @@ def _clash_run(
     A state that only takes parts away can't add one; a state with a model of its
     own (a lever raised into a wall) can, and its clashes the model as given doesn't
     have are said with it, each pair once.
+
+    Once is told solid for solid where the models draw the two parts in the same
+    solids. Where one has a part whole and another has it in pieces (one from shapes,
+    one read from STEP), their names can't match, and it is the two parts that are
+    told once (issue #209).
     """
     model, _, _ = space.resolve(None)
     found, unmeasured = _clashes_in(
         model, frozenset(), None, space, config, fasteners, pairs, with_ignored
     )
     seen = {frozenset((clash.first, clash.second)) for clash in found}
+    told: dict[frozenset[str], set[_Drawn]] = {}
+    for clash in found:
+        parts, drawn = _drawn(model, clash.first, clash.second)
+        told.setdefault(parts, set()).add(drawn)
     names = set(model.names)
     for state in config.states:
         assembly, removed, same_model = space.resolve(state.name)
@@ -443,10 +452,18 @@ def _clash_run(
         more, _ = _clashes_in(
             assembly, removed, state.name, space, config, fasteners, pairs, with_ignored
         )
+        here: list[tuple[frozenset[str], _Drawn]] = []
         for clash in more:
-            if frozenset((clash.first, clash.second)) not in seen:
-                seen.add(frozenset((clash.first, clash.second)))
+            solids = frozenset((clash.first, clash.second))
+            parts, drawn = _drawn(assembly, clash.first, clash.second)
+            elsewhere = told.get(parts, set())  # as the models before this one drew them
+            again = solids in seen or (bool(elsewhere) and drawn not in elsewhere)
+            seen.add(solids)
+            here.append((parts, drawn))
+            if not again:
                 found.append(clash)
+        for parts, drawn in here:
+            told.setdefault(parts, set()).add(drawn)
     return Clashes(
         tuple(clash for clash in found if not clash.set_in),
         config.unmatched_allows(names),
@@ -454,6 +471,16 @@ def _clash_run(
         tuple(clash for clash in found if clash.set_in),
         tuple(dict.fromkeys(space.engine.unsure)),
     )
+
+
+#: The solids a model draws each of two parts in, by name: how a clash's two were drawn.
+type _Drawn = tuple[tuple[str, ...], ...]
+
+
+def _drawn(assembly: Assembly, first: str, second: str) -> tuple[frozenset[str], _Drawn]:
+    """The two parts a clash's solids belong to, and the solids this model draws them in."""
+    parts = frozenset((assembly[name].piece_of or name) for name in (first, second))
+    return parts, tuple(sorted((part, *assembly.pieces(part)) for part in parts))
 
 
 def _clashes_in(
@@ -499,8 +526,8 @@ def _clashes_in(
     def meant(first: str, second: str) -> bool:
         """A pair, a fastener and its mate or its own piece, or an ``allow:`` pair."""
         return (
-            pairs.get(first) == second
-            or pairs.get(second) == first
+            # A partner is all its solids (#208), and a pair is kept both ways round.
+            pairs.get(leaf[first]) == leaf[second]
             or leaf[first] == leaf[second]
             or any(is_mate(name, mates.get(leaf[first], ())) for name in said(second))
             or any(is_mate(name, mates.get(leaf[second], ())) for name in said(first))
@@ -2113,7 +2140,9 @@ def _clashes(
     measured = Measured(Part(fastener.name, region), Part(fastener.name, past_thread))
     found: list[tuple[str, float]] = []
     for other in scene.parts:
-        if other.name == partner or (among is not None and other.name not in among):
+        if (other.piece_of or other.name) == partner:  # its pair, every solid of it (#208)
+            continue
+        if among is not None and other.name not in among:
             continue
         if not boxes_overlap(box, engine.part_bounds(other)):
             continue

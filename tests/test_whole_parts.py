@@ -16,6 +16,7 @@ same parts given whole, as ``from_shapes`` keeps them, read the same.
 import pytest
 from build123d import Box, Compound, Cylinder, Pos, export_step
 
+from fastener_models import hex_prism
 from wrenchroom.assembly import Assembly
 from wrenchroom.checker import check, find_clashes
 from wrenchroom.config import Config
@@ -431,3 +432,124 @@ def test_the_issue_s_cover_read_from_step_is_as_the_shapes_have_it(tmp_path):
         read, given = check(from_step, config), check(from_shapes, config)
         assert verdict(read) == verdict(given)
         assert verdict(read)[0] is Verdict.TURNS
+
+
+# ---------------------------------------------------------------------------
+# A pair: a bolt and its nut, one drawn into the other (issue #208).
+# ---------------------------------------------------------------------------
+
+HEX_BOLT = {"parts": "bolt", "kind": "screw", "head": "hex", "size": "M8"}
+NUT = {"parts": "nut", "kind": "nut", "size": "M8"}
+
+
+def joined():
+    """An M8 bolt of two solids, its shank the larger, and its nut 0.5 up into its head.
+
+    tests/test_clashes.py has the joint with its bolt one solid: a pair, and none. The
+    nut's hex less its bore, 146.36 - 50.27 mm^2, 0.5 deep: 48.0 mm^3, in the bolt's piece.
+    """
+    head, shank = hex_prism(13, 5.3), Pos(0, 0, -30) * Cylinder(4, 60)
+    nut = Pos(0, 0, -6.3) * (hex_prism(13, 6.8) - Cylinder(4, 30))  # z -6.3 to 0.5
+    return [("bolt", Compound([shank.solid(), head.solid()])), ("nut", nut)]
+
+
+def collared():
+    """The other way about: the nut of two solids, a collar on its hex, 0.5 up into the
+    head of a bolt drawn as one. The collar, 6 out and 4 in, pi 20 mm^2, 0.5 deep: 31.4."""
+    bolt = hex_prism(13, 5.3) + Pos(0, 0, -15) * Cylinder(4, 30)
+    body = Pos(0, 0, -8.3) * (hex_prism(13, 6.8) - Cylinder(4, 30))  # z -8.3 to -1.5
+    collar = Pos(0, 0, -0.5) * (Cylinder(6, 2) - Cylinder(4, 30))  # z -1.5 to 0.5
+    return [("bolt", bolt), ("nut", Compound([body.solid(), collar.solid()]))]
+
+
+def paired():
+    return Config.from_dict({"fasteners": [HEX_BOLT, NUT], "checks": {"detect": False}})
+
+
+JOINTS = pytest.mark.parametrize("joint", [joined, collared], ids=["bolt-in-two", "nut-in-two"])
+
+
+@READERS
+@ORDERS
+@JOINTS
+@pytest.mark.parametrize("engine", ENGINES)
+def test_a_fastener_drawn_into_its_partner_s_piece_is_its_pair_and_none(
+    reader, turned, joint, engine
+):
+    parts = joint()[::-1] if turned else joint()
+    assert listed(find_clashes(reader(parts), paired(), engine=engine)) == []
+
+
+def test_without_the_pair_the_partner_s_piece_is_the_clash():
+    # The guards: the same solids with one of the two no fastener, so no pair of it.
+    only_nut = Config.from_dict({"fasteners": [NUT], "checks": {"detect": False}})
+    assert listed(find_clashes(as_step_reads(joined()), only_nut)) == [("nut", "bolt#2", 48.0)]
+    only_bolt = Config.from_dict({"fasteners": [HEX_BOLT], "checks": {"detect": False}})
+    assert listed(find_clashes(as_step_reads(collared()), only_bolt)) == [("bolt", "nut#2", 31.4)]
+
+
+def failing(report):
+    return {r.fastener.name: (r.verdict, (r.reason or "").split(":")[0]) for r in report.results}
+
+
+@READERS
+@pytest.mark.parametrize("engine", ENGINES)
+def test_the_check_passes_over_its_partner_s_piece_as_it_does_its_partner(reader, engine):
+    # The nut can't turn, its corners in its bolt's head: blocked, as with the bolt one
+    # solid. It was "drawn into bolt#2: fix the model", not covered, read in pieces.
+    report = check(reader(joined()), paired(), kit="full", engine=engine, clashes=True)
+    verdicts = {r.fastener.name: r.verdict for r in report.results}
+    assert verdicts == {"bolt": Verdict.BLOCKED, "nut": Verdict.BLOCKED}
+    assert not any("drawn into" in (r.reason or "") for r in report.results)
+    assert listed(report.clashes) == []
+
+
+@pytest.mark.parametrize("engine", ENGINES)
+def test_the_check_reads_the_two_readers_alike_with_the_nut_in_two(engine):
+    readers = (as_step_reads, Assembly.from_shapes)
+    reports = [check(read(collared()), paired(), kit="full", engine=engine) for read in readers]
+    assert failing(reports[0]) == failing(reports[1])
+    assert not any("drawn into" in (r.reason or "") for report in reports for r in report.results)
+
+
+def test_a_part_that_only_shares_a_partner_s_name_is_no_partner():
+    # A chip named bolt as the bolt is, a part of its own (numbered bolt#2, and no
+    # piece), 1 into the nut's corner and 3 tall, as tests/test_clashes.py draws it:
+    # 5.2 mm^3. The nut's pair is its bolt, and the chip a clash still.
+    corner = 13 / 3**0.5
+    chip = Pos(corner - 1.0 + 5, 0, -6.3 + 3.4) * Box(10, 30, 3)
+    bolt = hex_prism(13, 5.3, z0=2.0) + Pos(0, 0, -15) * Cylinder(4, 34)  # its head clear above
+    nut = Pos(0, 0, -6.3) * (hex_prism(13, 6.8) - Cylinder(4, 30))
+    assembly = as_step_reads([("bolt", bolt), ("nut", nut), ("bolt", chip)])
+    assert [(part.name, part.piece_of) for part in assembly][-1] == ("bolt#2", None)
+    assert listed(find_clashes(assembly, paired())) == [("nut", "bolt#2", 5.2)]
+    # And to the check, which asks it of what stops the nut turning.
+    by_name = {r.fastener.name: r for r in check(assembly, paired(), kit="full").results}
+    assert by_name["nut"].verdict is Verdict.NOT_COVERED
+    assert by_name["nut"].reason == "drawn into bolt#2 (5.2 mm^3): fix the model"
+
+
+def test_a_fastener_drawn_into_another_part_s_piece_is_told_by_the_check():
+    # The cover's pad, its piece, 1 down into the screw's head: no pair of the screw's,
+    # and no mate. Passing over a partner's pieces passes over no other part's.
+    (result,) = check(as_step_reads(sunk()), Config.from_dict({"fasteners": [SCREW]})).results
+    assert result.verdict is Verdict.NOT_COVERED
+    assert result.reason == "drawn into cover#2 (95.0 mm^3): fix the model"
+
+
+def test_two_fasteners_each_with_a_pair_of_its_own_are_no_pair():
+    # Two bolts 14 apart, each with its nut: the hexes' corners, 7.5 out, meet 1 deep,
+    # head into head and nut into nut. Each one's pair is its own, and a fastener
+    # drawn into another joint's is a clash.
+    def joint(x, tag):
+        bolt = hex_prism(13, 5.3, z0=12.0) + Pos(0, 0, 0) * Cylinder(4, 30)
+        nut = Pos(0, 0, -6.3) * (hex_prism(13, 6.8) - Cylinder(4, 30))
+        return [(f"bolt_{tag}", Pos(x, 0, 0) * bolt), (f"nut_{tag}", Pos(x, 0, 0) * nut)]
+
+    rules = [{**HEX_BOLT, "parts": "bolt_*"}, {**NUT, "parts": "nut_*"}]
+    config = Config.from_dict({"fasteners": rules, "checks": {"detect": False}})
+    found = find_clashes(as_step_reads([*joint(0, "a"), *joint(14, "b")]), config)
+    assert [(first, second) for first, second, _ in listed(found)] == [
+        ("bolt_a", "bolt_b"),
+        ("nut_a", "nut_b"),
+    ]

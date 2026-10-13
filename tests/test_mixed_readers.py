@@ -19,7 +19,7 @@ import pytest
 from build123d import Box, Compound, Cylinder, Pos
 
 from wrenchroom.assembly import Assembly
-from wrenchroom.checker import check
+from wrenchroom.checker import check, find_clashes
 from wrenchroom.config import Config
 from wrenchroom.engine import ENGINES
 from wrenchroom.report import Verdict
@@ -246,3 +246,127 @@ def test_a_piece_goes_by_its_part_though_the_main_model_has_a_part_of_its_name()
     assert report.notes == (
         "build step 'screw': its model half.step lacks 1 part added by then: cover#2",
     )
+
+
+# ---------------------------------------------------------------------------
+# The clash list, a state's model beside the main one (issue #209).
+# ---------------------------------------------------------------------------
+
+UP = {"checks": {"detect": False}, "states": {"up": {"model": "up.step"}}}
+
+
+def pinned(lift=0.0, second=0.0, lever=0.0):
+    """A block under z = 0, a rod of two pins, one part, and a lever beside them.
+
+    Each pin is drawn 1 into the block: pi 9 = 28.3 mm^3 of the first, pi 4 = 12.6 of the
+    second, 40.8 of the rod whole. ``lift`` raises the rod and ``second`` its second pin
+    alone, clear of the block; the lever, 2 clear, comes down by ``lever``.
+    """
+    block = Pos(0, 0, -5) * Box(80, 20, 10)
+    first = Pos(-8, 0, 14 + lift) * Cylinder(3, 30)
+    other = Pos(8, 0, 14 + lift + second) * Cylinder(2, 30)
+    arm = Pos(30, 0, 7 + lever) * Box(4, 4, 10)
+    return [("block", block), ("rod", Compound([first.solid(), other.solid()])), ("lever", arm)]
+
+
+def told(found):
+    return [(c.first, c.second, round(c.volume, 1), c.state) for c in found.found]
+
+
+def in_state(found):
+    return [row for row in told(found) if row[3] is not None]
+
+
+def clashes(main, other, state_parts, main_parts=None):
+    return find_clashes(
+        READERS[main](main_parts if main_parts is not None else pinned()),
+        Config.from_dict(UP),
+        models={"up.step": READERS[other](state_parts)},
+    )
+
+
+@EITHER_WAY
+def test_a_state_s_model_of_the_same_parts_adds_no_clash(main, other):
+    # The same parts in the same place: what the main model has by itself is all of it.
+    alone = find_clashes(READERS[main](pinned()), Config.from_dict({"checks": {"detect": False}}))
+    found = clashes(main, other, pinned())
+    want = {
+        "in-pieces": [("rod", "block", 28.3, None), ("rod#2", "block", 12.6, None)],
+        "whole": [("rod", "block", 40.8, None)],
+    }
+    assert told(found) == told(alone) == want[main]
+
+
+def test_read_one_each_way_the_piece_s_clash_was_the_state_s():
+    # The fault, by its figures: the main model from shapes and the state's read from
+    # STEP has no clash in the state. It said CLASH rod#2 into block 12.6 in state up.
+    assert in_state(clashes("whole", "in-pieces", pinned())) == []
+
+
+@EITHER_WAY
+def test_a_clash_only_the_state_s_model_has_is_said_with_it(main, other):
+    # The lever, one solid however it is read, 1 into the block in the state alone.
+    assert in_state(clashes(main, other, pinned(lever=-3.0))) == [("lever", "block", 16.0, "up")]
+
+
+@EITHER_WAY
+def test_a_part_of_two_solids_that_clashes_in_the_state_alone_is_said_there(main, other):
+    # The rod clear in the main model and down in the state's: told as that model has it.
+    found = clashes(main, other, pinned(), main_parts=pinned(lift=5.0))
+    want = {
+        "in-pieces": [("rod", "block", 28.3, "up"), ("rod#2", "block", 12.6, "up")],
+        "whole": [("rod", "block", 40.8, "up")],
+    }
+    assert told(found) == want[other]
+
+
+@EITHER_WAY
+def test_a_second_solid_s_clash_is_the_state_s_where_both_models_have_the_solids(main, other):
+    # The first pin in the block in both models, the second in the state's alone. Two
+    # models that both have the rod in pieces tell solid from solid, and the second
+    # pin's clash is the state's, as it was. A model with the rod whole has the rod
+    # clashing already, and the pair is said once: so it is for any part, whole.
+    found = clashes(main, other, pinned(), main_parts=pinned(second=5.0))
+    both_in_pieces = (main, other) == ("in-pieces", "in-pieces")
+    assert in_state(found) == ([("rod#2", "block", 12.6, "up")] if both_in_pieces else [])
+
+
+@pytest.mark.parametrize(
+    ("first", "second"), [(first, second) for first in READERS for second in READERS]
+)
+def test_two_states_models_tell_one_clash_once_however_each_is_read(first, second):
+    # Clear in the main model and down in both states' models, read alike or one each
+    # way: the first state has it, and the second has nothing more.
+    config = {**UP, "states": {"up": {"model": "up.step"}, "out": {"model": "out.step"}}}
+    found = find_clashes(
+        Assembly.from_shapes(pinned(lift=5.0)),
+        Config.from_dict(config),
+        models={"up.step": READERS[first](pinned()), "out.step": READERS[second](pinned())},
+    )
+    assert {row[3] for row in told(found)} == {"up"}
+    assert len(told(found)) == {"in-pieces": 2, "whole": 1}[first]
+
+
+def test_a_part_that_only_shares_a_name_is_told_for_itself():
+    # Two rods, two parts with one name, so the second is numbered rod#2 and is no
+    # piece; and a block of two solids, whole in the main model and in pieces in the
+    # state's. The first rod is in the block in both; the second comes down into it in
+    # the state alone. That is a clash of its own, the state's, though "rod" and "block"
+    # clash already and the two models draw the block differently.
+    def parts(drop):
+        slab, foot = Pos(0, 0, -5) * Box(80, 20, 10), Pos(0, 0, -20) * Box(10, 10, 4)
+        first, second = Pos(-8, 0, 14) * Cylinder(3, 30), Pos(8, 0, 19 - drop) * Cylinder(2, 30)
+        block = Compound([slab.solid(), foot.solid()])
+        return [("block", block), ("rod", first), ("rod", second)]
+
+    state = in_pieces(parts(5.0))
+    assert [(p.name, p.piece_of) for p in state] == [
+        ("block", None),
+        ("block#2", "block"),
+        ("rod", None),
+        ("rod#2", None),
+    ]
+    found = find_clashes(
+        Assembly.from_shapes(parts(0.0)), Config.from_dict(UP), models={"up.step": state}
+    )
+    assert told(found) == [("rod", "block", 28.3, None), ("rod#2", "block", 12.6, "up")]
