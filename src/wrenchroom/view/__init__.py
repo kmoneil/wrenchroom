@@ -401,6 +401,9 @@ class _Builder:
             ConnectorVerdict.NO_LATCH,
         }
         path = self._pulled(result, by_name)
+        # A receptacle drawn as several solids is named once, and drawn whole (issue #200).
+        pieces = self._model(result.state).assembly.pieces
+        held = tuple(solid for name in result.receptacle for solid in (name, *pieces(name)))
         return {
             "name": result.name,
             "label": printable(result.name),
@@ -409,7 +412,7 @@ class _Builder:
             "reason": printable(result.reason) if result.reason else None,
             "in_way": [printable(n) for n in result.blockers] if failed else [],
             "highlight": _indices(result.blockers, by_name) if failed else [],
-            "receptacle": _indices(result.receptacle, by_name),
+            "receptacle": _indices(held, by_name),
             "view": view,
             "part": by_name.get(result.name),
             "probes": [

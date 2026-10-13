@@ -537,8 +537,12 @@ def holds_in(shape: Shape, part: Part, directions: Sequence[Vec], engine: Engine
 
 def find_receptacle(
     shape: Shape, near: Sequence[Part], directions: Sequence[Vec], engine: Engine
-) -> tuple[Part, set[int]]:
-    """Of the parts a plug touches, the one that holds it in the most directions.
+) -> tuple[str, set[int]]:
+    """Of the parts a plug touches, the one that holds it in the most directions: its name.
+
+    A part drawn as several solids holds the plug with all of them together: a housing
+    in two halves is one receptacle, where each half alone would hold it as the other
+    does (issue #200).
 
     Raises:
         Unclear: When it touches nothing, nothing holds it in more than one direction
@@ -550,21 +554,24 @@ def find_receptacle(
             "say which way it comes off (axis:) and how far (travel:)"
         )
         raise Unclear(msg)
-    held = [(part, holds_in(shape, part, directions, engine)) for part in near]
+    solids: dict[str, list[Part]] = {}
+    for part in near:
+        solids.setdefault(part.piece_of or part.name, []).append(part)
+    held = [
+        (name, set().union(*(holds_in(shape, part, directions, engine) for part in parts)))
+        for name, parts in solids.items()
+    ]
     held.sort(key=lambda found: -len(found[1]))
     best, ways = held[0]
     if len(ways) < 2:  # noqa: PLR2004  (a part beside it, or under it, holds it one way)
-        names = listed(tuple(part.name for part in near))
+        names = listed(tuple(solids))
         msg = (
             f"it only rests against {names}, plugged into none: "
             "say what it plugs into (receptacle:)"
         )
         raise Unclear(msg)
     if len(held) > 1 and len(held[1][1]) == len(ways):
-        msg = (
-            f"{best.name} and {held[1][0].name} hold it alike: "
-            "say which it plugs into (receptacle:)"
-        )
+        msg = f"{best} and {held[1][0]} hold it alike: say which it plugs into (receptacle:)"
         raise Unclear(msg)
     return best, ways
 

@@ -50,6 +50,8 @@ def _by_name(report):
 def test_the_bench_given_as_shapes_is_the_bench_read_from_step(given, bench_report):
     assert given.summary == bench_report.summary == FINAL_COUNTS
     assert (given.warnings, given.notes) == (bench_report.warnings, bench_report.notes)
+    # Its plugs too: pull_halved's shroud is whole here and in two there (issue #200).
+    assert given.connectors.to_json() == bench_report.connectors.to_json()
     ours, theirs = _by_name(given), _by_name(bench_report)
     assert list(ours) == list(theirs)
     differing = {

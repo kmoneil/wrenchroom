@@ -5264,8 +5264,8 @@
     1.0
    ],
    "seat": [
-    4900.0,
-    19000.0,
+    -100.0,
+    20000.0,
     6.0
    ],
    "source": "name+geometry",
@@ -5296,8 +5296,8 @@
     1.0
    ],
    "seat": [
-    5100.0,
-    19000.0,
+    100.0,
+    20000.0,
     6.0
    ],
    "source": "name+geometry",
@@ -6662,8 +6662,8 @@
  "build": null,
  "connectors": {
   "summary": {
-   "connectors": 8,
-   "unplugs": 6,
+   "connectors": 9,
+   "unplugs": 7,
    "stuck": 2,
    "no_grip": 0,
    "no_latch_access": 0,
@@ -6745,6 +6745,25 @@
      "pull_cable_lead"
     ],
     "reason": "pull_cable_lead (its own cable? name it in mates:)",
+    "state": null,
+    "grip": null,
+    "latch": null
+   },
+   {
+    "name": "pull_halved_plug",
+    "source": "name",
+    "verdict": "unplugs",
+    "receptacle": [
+     "pull_halved_shroud"
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "travel": 10.0,
+    "blocked_by": [],
+    "reason": null,
     "state": null,
     "grip": null,
     "latch": null

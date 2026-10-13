@@ -795,7 +795,10 @@ connectors:
   holds it in the most of the directions its faces face (a header's shroud holds it in
   five; a board it rests on, or a neighbour beside it, in one). Touching nothing, only
   resting against parts, or held alike by two, it is not covered, and the reason says
-  what to give (`receptacle:`, or `axis:` and `travel:`).
+  what to give (`receptacle:`, or `axis:` and `travel:`). A receptacle drawn as several
+  solids, a housing in two halves or a header and its pins, is one receptacle (issue
+  #200): its solids hold the plug together, `receptacle:` names them all by the part's
+  name, and the report names the part once.
 - **Its pull axis** is the one of those directions its receptacle leaves it free to
   move in. Free in none, or in several (a slot open at its end as well as its top), it
   is not covered, naming them, asking for `axis:`; an `axis:` that runs into its
