@@ -28,7 +28,8 @@ VENV_BIN = REPO_ROOT / ".venv" / ("Scripts" if sys.platform == "win32" else "bin
 #: bench checked one particular way, say) is then made in that process alone. Every
 #: core a runner counts, two to a physical one where it has them so: a hosted Linux
 #: runner's four are two cores' worth, and `-n auto` would start two workers there.
-PARALLEL = ("-n", "logical", "--dist", "loadfile")
+#: And the slowest tests named at the end, so what the time goes on is in every log.
+PARALLEL = ("-n", "logical", "--dist", "loadfile", "--durations", "20")
 
 
 @dataclass(frozen=True)
