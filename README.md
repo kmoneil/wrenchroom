@@ -540,6 +540,32 @@ A failure prints what `wrenchroom check` prints. The model is checked once per
 session, the plugin loads nothing until a test asks for it, and `-p no:wrenchroom`
 turns it off.
 
+A project whose model is a build script hands it over, with no STEP file written:
+override the plugin's `wrenchroom_assembly` fixture in your `conftest.py`, and
+`wrenchroom_models` for the models your states or build steps name (as `models=`
+does, below):
+
+```python
+# conftest.py
+import pytest
+from robot import parts  # your build script
+from wrenchroom import Assembly
+
+
+@pytest.fixture(scope="session")
+def wrenchroom_assembly():
+    return Assembly.from_shapes(parts(lever=0))
+
+
+@pytest.fixture(scope="session")
+def wrenchroom_models():
+    return {"lever-up.step": Assembly.from_shapes(parts(lever=20))}
+```
+
+The assembly given is the one checked, and `wrenchroom_model` is then optional: set,
+it is the name the report carries and where the sidecar is looked for, and its file
+is not read. Without it the sidecar is `wrenchroom.yaml` beside your pytest settings.
+
 ## From Python
 
 ```python
