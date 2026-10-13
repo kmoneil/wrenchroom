@@ -366,11 +366,12 @@ def test_a_state_model_missing_a_fastener_fails_the_run(bench_dir, tmp_path):
     tried there, which fails the run, and the rename is noted."""
     for name in ("bench.step", "wrenchroom.yaml"):
         shutil.copy(bench_dir / name, tmp_path / name)
-    shapes = []
-    for part in Assembly.from_step(bench_dir / "bench_lever-up.step"):
-        renamed = part.name == "state_lever_screw"
-        part.shape.label = f"{part.name}_renamed" if renamed else part.name
-        shapes.append(part.shape)
+    # Built again, not read back and written solid by solid: that would make a part
+    # of its own of each piece of a part drawn as several, under the piece's name.
+    shapes = build(raised=True)
+    for shape in shapes:
+        if shape.label == "state_lever_screw":
+            shape.label = "state_lever_screw_renamed"
     export_step(Compound(children=shapes), str(tmp_path / "bench_lever-up.step"))
     report = check_bench(tmp_path)
     (screw,) = [r for r in report.results if r.fastener.name == "state_lever_screw"]

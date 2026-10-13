@@ -71,6 +71,35 @@ def test_its_lever_up_fastener_passes_in_the_model_given(given, shapes):
     assert given.models["lever-up"].assembly is shapes[1]
 
 
+def test_from_shapes_beside_its_lever_up_model_from_step_it_is_the_same_bench(
+    shapes, config, given, bench_dir, bench_engine
+):
+    # Issue #199: the two readers in one run. The bench's parts of two solids
+    # (one_part_lock's nut, halves's lid, lead and rod) are whole in the main model and
+    # in pieces in the lever-up model, and no part of either is one the other lacks.
+    report = check(
+        shapes[0], config, kit=KIT, model="bench.step", model_dir=bench_dir, engine=bench_engine
+    )
+    assert (report.warnings, report.notes) == (given.warnings, given.notes)
+    assert _by_name(report) == _by_name(given)
+
+
+def test_from_step_beside_its_lever_up_model_from_shapes_it_is_the_same_bench(
+    shapes, bench_report, bench_dir, bench_engine
+):
+    # And the other way about: in pieces in the main model, whole in the lever-up one.
+    report = check(
+        Assembly.from_step(bench_dir / "bench.step"),
+        Config.load(bench_dir / "wrenchroom.yaml"),
+        kit=KIT,
+        model="bench.step",
+        models={LEVER_UP: shapes[1]},
+        engine=bench_engine,
+    )
+    assert (report.warnings, report.notes) == (bench_report.warnings, bench_report.notes)
+    assert canonical(report.to_json_dict()) == canonical(bench_report.to_json_dict())
+
+
 def test_with_the_model_not_given_there_is_nowhere_to_read_it_from(shapes, config):
     with pytest.raises(ConfigError, match=f"its model '{LEVER_UP}' needs a model directory"):
         check(shapes[0], config, kit=KIT)

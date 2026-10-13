@@ -355,7 +355,10 @@ and `grazes` in the JSON).
   fastener its model lacks isn't tried there, which fails the run (`state
   'lever-up': its model bench_lever-up.step has no part state_lever_screw (renamed?),
   so it wasn't tried there`), and a fastener whose own state it is is not covered,
-  naming the model. Any other part name only one of the two models has is noted.
+  naming the model. Any other part name only one of the two models has is noted. It is
+  parts that are matched, not their solids (issue #199): a part drawn as several
+  solids is whole in a model from shapes and in pieces in one from STEP, and is the
+  same part in both, so a run may hold a model of each.
 - **Narrowing.** `explain` and `check --only` narrow what is reported, not what is
   resolved: a fastener's pair is checked with it, so its verdict is the full run's.
 
@@ -742,8 +745,8 @@ build:
   go on before their fasteners, and none of the later steps'. A step's `model:` is
   read as a state's is (beside the sidecar, then beside the model, or given as an
   assembly from Python) and matched by name: in it, the later steps' parts are left
-  out, and a part only it has (a jig) stays. One it lacks of the parts added by then
-  is noted.
+  out, each with its pieces, and a part only it has (a jig) stays. One it lacks of the
+  parts added by then is noted.
 - **Goes in, and turns.** A fastener passes in its step when a tool turns it, or
   holds it while its partner turns, as in `check`, and a screw's way in is clear: a
   screw whose way out is blocked by a part added by then can't have gone in, and is
