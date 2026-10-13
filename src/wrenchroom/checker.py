@@ -492,15 +492,19 @@ def _clashes_in(
     leaf = {part.name: part.piece_of or part.name for part in assembly}
     mates = {fastener.name: fastener.mates for fastener in fasteners if fastener.mates}
 
+    def said(name: str) -> tuple[str, ...]:
+        """The names a glob may give a solid by: its own and, for a piece, its part's (#198)."""
+        return (name,) if leaf[name] == name else (name, leaf[name])
+
     def meant(first: str, second: str) -> bool:
         """A pair, a fastener and its mate or its own piece, or an ``allow:`` pair."""
         return (
             pairs.get(first) == second
             or pairs.get(second) == first
             or leaf[first] == leaf[second]
-            or is_mate(second, mates.get(leaf[first], ()))
-            or is_mate(first, mates.get(leaf[second], ()))
-            or config.allows(first, second)
+            or any(is_mate(name, mates.get(leaf[first], ())) for name in said(second))
+            or any(is_mate(name, mates.get(leaf[second], ())) for name in said(first))
+            or any(config.allows(a, b) for a in said(first) for b in said(second))
         )
 
     parts = [
@@ -653,7 +657,7 @@ def _connector_in_state(
         reason = f"not in state {state_name!r}, whose model has no part of its name (renamed?)"
         return ConnectorResult(name, ConnectorVerdict.NOT_COVERED, source, reason=reason)
     own = {name, *assembly.pieces(name)}
-    mates = {n for n in assembly.names if is_mate(n, rule.mates)} if rule.mates else set()
+    mates = _mates(assembly, rule.mates)
     shape = plug_shape([assembly[n] for n in (name, *assembly.pieces(name))])
     others = [
         part
@@ -1042,6 +1046,24 @@ def _pieces(assembly: Assembly, name: str) -> tuple[Part, ...]:
     return tuple(assembly[piece] for piece in assembly.pieces(name))
 
 
+def _with_pieces(assembly: Assembly, named: set[str]) -> set[str]:
+    """The parts named and, with each drawn as several solids, the rest of it (issue #198).
+
+    A glob names such a part by the name its largest solid keeps. Its other solids,
+    ``name#2`` and on, are names the model doesn't have and no sidecar would give:
+    they go with it, as they do for an ignore glob and a build step's. A glob that
+    names a piece itself takes that solid alone.
+    """
+    return named | {piece for name in named for piece in assembly.pieces(name)}
+
+
+def _mates(assembly: Assembly, globs: tuple[str, ...]) -> set[str]:
+    """The parts a rule's ``mates:`` name, each whole: a fastener's or a plug's may touch them."""
+    if not globs:
+        return set()
+    return _with_pieces(assembly, {name for name in assembly.names if is_mate(name, globs)})
+
+
 def _frame(part: Part, fastener: Fastener, pieces: tuple[Part, ...] = ()) -> _Frame:
     faces = _faces_of(part)
     axis = _largest_cylinder_axis(faces)
@@ -1359,6 +1381,7 @@ class _StateSpace:
                     f"state {state_name!r}: remove glob {glob!r} matched nothing (renamed part?)"
                 )
             removed |= hits
+        removed = _with_pieces(assembly, removed)  # a part comes off whole (issue #198)
         self.models[state_name] = StateModel(assembly, frozenset(removed))
         return assembly, frozenset(removed), model is None
 
@@ -1677,11 +1700,7 @@ def _scene_of(
     fastener: Fastener, assembly: Assembly, removed: frozenset[str], space: _StateSpace
 ) -> Scene:
     """What a fastener is tried among: every part but itself, its mates and what is off."""
-    mates = (
-        {name for name in assembly.names if is_mate(name, fastener.mates)}
-        if fastener.mates
-        else set()
-    )
+    mates = _mates(assembly, fastener.mates)
     pieces = assembly.pieces(fastener.name)  # its other solids, which go with it
     return space.scene(assembly, {fastener.name, *mates, *pieces} | removed)
 

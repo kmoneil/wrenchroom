@@ -68,6 +68,8 @@ def test_the_bench_s_clashes_are_the_two_drawn_for_them(bench_dir, bench_model, 
         assert not any(name.startswith(f"{cell}_") for name in names), cell
     # pushed's two tubes named inserts, each drawn into the block, the sidecar allows.
     assert not any(name.startswith("pushed_") for name in names)
+    # And halves's rod, both its solids, by the part's name (issue #198).
+    assert not any(name.startswith("halves_") for name in names)
 
 
 def test_the_edges_bench_s_faults_are_each_a_clash(bench_dir, bench_model, bench_engine):
@@ -97,6 +99,8 @@ def test_the_edges_bench_s_faults_are_each_a_clash(bench_dir, bench_model, bench
         ("drawn_in_side_nut", "drawn_in_side_chip", 0.5, None, None),
         ("drawn_in_tapped_screw", "drawn_in_tapped_block", 110.5, None, None),
         ("drawn_in_top_nut", "drawn_in_top_block", 96.1, None, None),
+        ("halves_rod", "halves_block", 14.1, None, None),
+        ("halves_rod#2", "halves_block", 14.1, None, None),
         ("hosted_bare_insert", "hosted_bare_block", 42.2, None, DEEP),
         ("hosted_snug_nut", "hosted_snug_block", 2.3, None, TRAP),
         ("press_fit_allowed_rod", "press_fit_block", 3.8, None, PRESS_FIT),
@@ -143,7 +147,7 @@ def test_with_every_boolean_failing_the_edges_bench_s_clashes_are_still_told(
         ("press_fit_allowed_rod", "press_fit_block"),
         ("press_fit_pressed_rod", "press_fit_block"),
     ]
-    assert len(told) == 22  # the guard: the rest, and no pair the boolean didn't have
+    assert len(told) == 24  # the guard: the rest, and no pair the boolean didn't have
     assert set(told) <= set(measured)
     for pair, clash in told.items():
         assert clash.hint == measured[pair].hint, pair
@@ -187,10 +191,12 @@ def test_every_clash_a_verdict_tells_is_in_the_list_to_the_volume(
     # What the list alone tells: drawn_in's chip (a second part its nut is drawn
     # into, which stops no tool), press_fit's rods (no fasteners), stud_dome's
     # open nut, which turns, hosted's two: an insert holds itself and a trapped
-    # nut is held, whatever they are drawn into; and pushed's two tubes, no
-    # fasteners (issue #178).
+    # nut is held, whatever they are drawn into; pushed's two tubes, no fasteners
+    # (issue #178); and halves's rod, each of its two solids (issue #198).
     assert sorted(set(listed) - set(told)) == [
         ("drawn_in_side_nut", "drawn_in_side_chip"),
+        ("halves_rod", "halves_block"),
+        ("halves_rod#2", "halves_block"),
         ("hosted_bare_insert", "hosted_bare_block"),
         ("hosted_snug_nut", "hosted_snug_block"),
         ("press_fit_allowed_rod", "press_fit_block"),
