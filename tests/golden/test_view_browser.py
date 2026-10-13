@@ -28,7 +28,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from bench import FINAL_COUNTS, check_bench
+from bench import FINAL_COUNTS
 
 from wrenchroom.view import COLOURS, html_text, view_data
 
@@ -58,8 +58,8 @@ def _keep(path, name):
 
 
 @pytest.fixture(scope="module")
-def bench_page(bench_dir, tmp_path_factory):
-    report = check_bench(bench_dir)
+def bench_page(bench_reports, tmp_path_factory):
+    report = bench_reports("mesh")  # the session's, on the default engine
     path = tmp_path_factory.mktemp("view") / "bench.html"
     path.write_text(html_text(report), encoding="utf-8")
     _keep(path, "bench.html")
