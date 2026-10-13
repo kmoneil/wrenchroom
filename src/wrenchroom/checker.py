@@ -1046,6 +1046,11 @@ def _pieces(assembly: Assembly, name: str) -> tuple[Part, ...]:
     return tuple(assembly[piece] for piece in assembly.pieces(name))
 
 
+def _part_names(assembly: Assembly) -> tuple[str, ...]:
+    """The parts' names, in order: a piece of a part drawn as several solids is none."""
+    return tuple(part.name for part in assembly if part.piece_of is None)
+
+
 def _with_pieces(assembly: Assembly, named: set[str]) -> set[str]:
     """The parts named and, with each drawn as several solids, the rest of it (issue #198).
 
@@ -1389,7 +1394,8 @@ class _StateSpace:
         """The assembly a build step sees, the parts still to come, and whether it is the default.
 
         The parts still to come are the ones a later step adds; a part only the step's
-        model has, a jig, say, no step adds, and it stays.
+        model has, a jig, say, no step adds, and it stays. A piece is still to come when
+        its part is, whichever of the two models has the part in pieces (issue #199).
         """
         if index not in self._steps:
             step = steps.steps[index]
@@ -1398,7 +1404,9 @@ class _StateSpace:
                 assembly = self._load(step.model, f"build step {step.name!r}", f"build[{index}]")
                 self._compare_step(index, steps, assembly)
             later = frozenset(
-                name for name in assembly.names if steps.added_in.get(name, index) > index
+                part.name
+                for part in assembly
+                if steps.added_in.get(part.piece_of or part.name, index) > index
             )
             self._steps[index] = (assembly, later, step.model is None)
         return self._steps[index]
@@ -1409,19 +1417,20 @@ class _StateSpace:
         A step's model may well lack the later steps' parts: it is the machine half
         built. One it lacks of its own step's or an earlier one's is a renamed or
         dropped part, more often than not; one the main model hasn't is a jig as often
-        as a rename. Said, as a state's model's are, and not failed for.
+        as a rename. Said, as a state's model's are, and not failed for. Parts are
+        compared, as there: a piece is no part of its own.
         """
         step = steps.steps[index]
-        theirs = set(assembly.names)
+        theirs = set(_part_names(assembly))
         missing = tuple(
             name
-            for name in self._default.names
+            for name in _part_names(self._default)
             if steps.added_in.get(name, index + 1) <= index and name not in theirs
         )
-        main = set(self._default.names)
+        main = set(_part_names(self._default))
         new = tuple(
             name
-            for name in assembly.names
+            for name in _part_names(assembly)
             if name not in main and not self._config.is_ignored(name)
         )
         said = []
@@ -1461,9 +1470,13 @@ class _StateSpace:
         A state's model is meant to be the same parts, moved: a name only one of
         them has is a renamed or dropped part, more often than not. Said, not
         failed for, since a state may also add or take away parts on purpose.
+
+        Parts are compared, not their solids: a part drawn as several is one whole
+        part from shapes and its largest solid and pieces from STEP, and a run may
+        hold a model of each. The piece is no part the other model lacks (issue #199).
         """
-        main = [name for name in self._default.names if not self._config.is_ignored(name)]
-        theirs = [name for name in assembly.names if not self._config.is_ignored(name)]
+        main = [name for name in _part_names(self._default) if not self._config.is_ignored(name)]
+        theirs = [name for name in _part_names(assembly) if not self._config.is_ignored(name)]
         missing = tuple(name for name in main if name not in set(theirs))
         new = tuple(name for name in theirs if name not in set(main))
         said = []
