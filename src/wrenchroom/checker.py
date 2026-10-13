@@ -149,7 +149,7 @@ from wrenchroom.tools.sweep import (
 from wrenchroom.tools.torx_keys import ISO_10664
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Iterator, Mapping
 
     from build123d import Axis, Face
 
@@ -201,6 +201,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     only: str | None = None,
     state: str | None = None,
     model_dir: str | Path | None = None,
+    models: Mapping[str, Assembly] | None = None,
     engine: str = DEFAULT_ENGINE,
     hand_room: bool | None = None,
     clashes: bool | None = None,
@@ -229,6 +230,11 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         state: Overrides the config's ``default_state`` for this run.
         model_dir: Where a state's alternate model files live; the CLI passes
             the model's own directory.
+        models: A state's or a build step's model as an assembly, under the name
+            the sidecar gives it (``model: raised.step``): a build script's own
+            shapes at another position, with no file written (issue #196). One
+            given is used as it is and no file is looked for; any other is read
+            from its file, as before.
         engine: Which collision engine answers the queries: ``mesh`` (the
             default) or ``exact`` (OCP booleans, the referee).
         hand_room: Check room for the hand round each handle (spec 6.4);
@@ -239,9 +245,11 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
             sidecar's ``checks: {clashes: ...}``, off by default.
 
     Raises:
-        ValueError: On a kit, state or engine that doesn't exist (a typo, not a
-            model problem), or a step no swing can be sampled at, whether or not
-            the model has anything to swing a tool on.
+        ValueError: On a kit, state or engine that doesn't exist, or a name in
+            ``models`` the sidecar gives no state or build step as its model (a
+            typo, not a model problem), or a step no swing can be sampled at,
+            whether or not the model has anything to swing a tool on.
+        TypeError: On a model in ``models`` that is no :class:`Assembly`.
     """
     config = config or Config()
     hand = config.hand_room if hand_room is None else hand_room
@@ -249,6 +257,8 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     if engine not in ENGINES:
         msg = f"unknown engine {engine!r}; available: {', '.join(ENGINES)}"
         raise ValueError(msg)
+    # First, so that a model given under a wrong name stops the run before it starts.
+    space = _StateSpace(assembly, config, model_dir, make_engine(engine), models)
     default_state = state if state is not None else config.default_state
     if default_state is not None:
         config.state(default_state)  # raises on a typo
@@ -257,7 +267,6 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     every_fastener = list(fasteners)  # a clash measures both of one drawn twice
     # One fastener drawn twice, over itself, is a fault in the model, said once on
     # the first by name; the other isn't checked again (issue #94).
-    space = _StateSpace(assembly, config, model_dir, make_engine(engine))
     twice = _drawn_twice(fasteners, assembly, space.engine)
     fasteners = [f for f in fasteners if f.name not in twice]
     twin = {kept: other for other, (kept, _) in twice.items()}
@@ -323,7 +332,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     clashed = None
     if config.clashes if clashes is None else clashes:
         clashed = _clash_run(space, config, every_fastener, pairs)
-    models = {None: StateModel(assembly), **space.models}
+    seen = {None: StateModel(assembly), **space.models}
     return Report(
         model=model,
         kit=kit,
@@ -355,10 +364,10 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
         clashes=clashed,
         build=built,
         connectors=connected,
-        models=models,
+        models=seen,
         ignored=frozenset(
             part.name
-            for state_model in models.values()
+            for state_model in seen.values()
             for part in state_model.assembly
             if _ignored(config, part)
         ),
@@ -370,6 +379,7 @@ def find_clashes(
     config: Config | None = None,
     *,
     model_dir: str | Path | None = None,
+    models: Mapping[str, Assembly] | None = None,
     engine: str = DEFAULT_ENGINE,
     with_ignored: bool = False,
 ) -> Clashes:
@@ -383,19 +393,23 @@ def find_clashes(
         config: The sidecar: its fasteners, pairs, mates, ignores, states and
             ``allow:`` pairs.
         model_dir: Where a state's alternate model files live.
+        models: A state's model as an assembly, under the name the sidecar gives
+            it, as :func:`check` takes them: used as it is, and no file looked for.
         engine: Which collision engine measures: ``mesh`` or ``exact``.
         with_ignored: Measure the ignored parts too.
 
     Raises:
-        ValueError: On an engine that doesn't exist.
+        ValueError: On an engine that doesn't exist, or a name in ``models`` the
+            sidecar gives no state or build step as its model.
+        TypeError: On a model in ``models`` that is no :class:`Assembly`.
     """
     config = config or Config()
     if engine not in ENGINES:
         msg = f"unknown engine {engine!r}; available: {', '.join(ENGINES)}"
         raise ValueError(msg)
+    space = _StateSpace(assembly, config, model_dir, make_engine(engine), models)
     matches = config.apply(assembly)
     fasteners, _ = _fasteners(assembly, config, matches.fasteners)
-    space = _StateSpace(assembly, config, model_dir, make_engine(engine))
     frames, _ = _frames(fasteners, assembly, {})
     pairs, _ = _find_pairs(fasteners, frames, config)
     return _clash_run(space, config, fasteners, pairs, with_ignored=with_ignored)
@@ -1257,11 +1271,14 @@ class _StateSpace:
         config: Config,
         model_dir: str | Path | None,
         engine: Engine,
+        models: Mapping[str, Assembly] | None,
     ) -> None:
         self._default = assembly
         self._config = config
         self._model_dir = None if model_dir is None else Path(model_dir)
-        self._models: dict[str, Assembly] = {}
+        #: Each state's or build step's model, by the sidecar's name for it: the ones
+        #: given as assemblies from the start, the others once read from their files.
+        self._models: dict[str, Assembly] = _given_models(models, config)
         self._warned: set[tuple[str, str]] = set()
         self._ignored: dict[str, bool] = {}
         # Per assembly (the assembly rides along, so its id can't be reused):
@@ -1457,7 +1474,10 @@ class _StateSpace:
         folders = [self._config.directory, self._model_dir]
         found = [path] if path.is_absolute() else [d / path for d in folders if d is not None]
         if not found:
-            msg = f"{who}: its model {filename!r} needs a model directory to load from"
+            msg = (
+                f"{who}: its model {filename!r} needs a model directory to load from, "
+                "or an assembly given for it in models"
+            )
             raise ConfigError(msg)
         for candidate in dict.fromkeys(found):
             if candidate.exists():
@@ -1468,6 +1488,40 @@ class _StateSpace:
             f"({self._config.source}, {spot}.model; looked in {where})"
         )
         raise ConfigError(msg)
+
+
+def _given_models(models: Mapping[str, Assembly] | None, config: Config) -> dict[str, Assembly]:
+    """The models handed over as assemblies, each under a name the sidecar gives a model.
+
+    A state's model is first read when a fastener fails and is retried in it, a
+    step's when the build comes to it: a wrong name or a wrong thing would wait till
+    then to be found, or never be. So both are refused before anything is checked. A
+    name no state or build step has is a typo, as a kit that doesn't exist is: the
+    assembly under it would never be used, and a file of the right name read in its
+    place (issue #196).
+
+    Raises:
+        ValueError: On a name no state or build step has as its model.
+        TypeError: On a model that is no assembly: shapes not yet made one, or a path.
+    """
+    given = dict(models or {})
+    named = dict.fromkeys(
+        owner.model for owner in (*config.states, *config.build) if owner.model is not None
+    )
+    for name, assembly in given.items():
+        if name not in named:
+            msg = (
+                f"unknown model {name!r} in models; the sidecar's states and build steps "
+                f"name: {', '.join(named) or 'none'}"
+            )
+            raise ValueError(msg)
+        if not isinstance(assembly, Assembly):
+            msg = (
+                f"models[{name!r}] must be an Assembly, got {type(assembly).__name__} "
+                "(Assembly.from_shapes makes one of shapes, Assembly.from_step of a file)"
+            )
+            raise TypeError(msg)
+    return given
 
 
 def _engine_notes(engine: Engine) -> tuple[EngineNote, ...]:
