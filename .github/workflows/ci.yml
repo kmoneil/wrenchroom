@@ -52,8 +52,10 @@ jobs:
   # The unit suite on every platform and Python the project claims, macOS as above.
   # The HTML view's tests use the Node and Chrome the runner images come with; under
   # CI a missing one fails the run instead of skipping (tests/golden/test_view_browser.py).
-  # One suite takes 17 to 29 minutes by the runner it draws (both on one day, the
-  # bench at 178 fasteners), and a row cancelled at its limit is run again from the
+  # The lane runs a worker to every core the runner counts, a test file to a worker.
+  # A row takes 12 to 19 minutes on Linux by the processor its runner draws (five
+  # models in one day's runs, the bench at 182 fasteners) and 20 on macOS; in one
+  # process it took 23 to 34. A row cancelled at its limit is run again from the
   # start: the limit leaves that spread room, and the bench room to grow.
   fast:
     timeout-minutes: 40
