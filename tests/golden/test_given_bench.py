@@ -12,13 +12,11 @@ seat is measured on the whole.
 """
 
 import pytest
-from bench import FINAL_COUNTS, KIT, build, canonical, sidecar_and_truth
+from bench import FINAL_COUNTS, KIT, LEVER_UP, build, canonical, sidecar_and_truth
 
 from wrenchroom.assembly import Assembly
 from wrenchroom.checker import check, find_clashes
 from wrenchroom.config import Config, ConfigError
-
-LEVER_UP = "bench_lever-up.step"
 
 
 @pytest.fixture(scope="module")

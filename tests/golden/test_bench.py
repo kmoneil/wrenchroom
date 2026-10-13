@@ -1,4 +1,8 @@
-"""Truth per fastener, the whole-bench counts, isolation and the round trip."""
+"""Truth per fastener, the whole-bench counts and the round trip.
+
+Each cell checked alone is test_isolation.py's: the longest test of the bench but
+one, in a file of its own so that it runs beside this one and not after it.
+"""
 
 import shutil
 
@@ -44,47 +48,6 @@ def test_whole_bench_counts(bench_report, bench_engine):
     assert bench_report.summary == FINAL_COUNTS
     assert bench_report.exit_code == 1  # the bench has deliberate failures
     assert bench_report.engine == bench_engine
-
-
-def test_isolation_matches_the_full_bench(bench_json, bench_dir, bench_engine):
-    """Each cell alone (from shapes, no STEP) must agree with the whole bench:
-    a difference means a tool reaches across cells or the STEP path changes
-    something. Twins are excluded: they exist to test the STEP path itself.
-    The states and checks sections ride along so state cells isolate too; the
-    lever retry loads the written lever-up model from bench_dir, same as the
-    full run."""
-    bench_sidecar, _ = sidecar_and_truth()
-    differences = []
-    for cell in CELLS:
-        if not cell.truth:
-            continue
-        shapes = [(f"{cell.name}_{role}", shape) for role, shape in cell.build()]
-        rules = []
-        for rule in cell.rules:
-            entry = dict(rule)
-            entry["parts"] = f"{cell.name}_{entry['parts']}"
-            if "mates" in entry:
-                entry["mates"] = [f"{cell.name}_{m}" for m in entry["mates"]]
-            rules.append(entry)
-        config = Config.from_dict(
-            {
-                "fasteners": rules,
-                "ignore": list(cell.ignore),
-                "states": bench_sidecar["states"],
-                "checks": bench_sidecar["checks"],
-                "tools": bench_sidecar.get("tools", []),
-            }
-        )
-        report = check(
-            Assembly.from_shapes(shapes), config, kit=KIT, model_dir=bench_dir, engine=bench_engine
-        )
-        for result in report.results:
-            alone = (result.verdict.value, result.tool, result.how)
-            entry = bench_json[result.fastener.name]
-            together = (entry["verdict"], entry["tool"], entry["how"])
-            if alone != together:
-                differences.append((result.fastener.name, alone, together))
-    assert not differences
 
 
 def test_round_trip_names(bench_dir):

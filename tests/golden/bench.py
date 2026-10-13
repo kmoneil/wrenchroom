@@ -37,6 +37,9 @@ PITCH = 1000.0
 #: test_kits_bench.py holds what metric-home makes of the bench.
 KIT = "full"
 
+#: The name the bench's sidecar gives its lever-up state's model, written beside it.
+LEVER_UP = "bench_lever-up.step"
+
 #: Grid slots one copy of the bench takes: every cell, then the twins.
 SLOTS = len(CELLS) + 1
 
@@ -140,7 +143,7 @@ def sidecar_and_truth(copies=1, which="all"):
         "ignore": sorted(ignore),
         "states": {
             "lid-off": {"remove": lids},
-            "lever-up": {"model": "bench_lever-up.step"},
+            "lever-up": {"model": LEVER_UP},
         },
         "checks": {"try_states": ["lever-up"]},
         "tools": _bench_tools(which),
@@ -340,7 +343,7 @@ def write(directory, copies=1, which="all"):
     sidecar, truth = sidecar_and_truth(copies, which)
     export_step(Compound(children=build(copies=copies, which=which)), str(directory / "bench.step"))
     raised = Compound(children=build(raised=True, copies=copies, which=which))
-    export_step(raised, str(directory / "bench_lever-up.step"))
+    export_step(raised, str(directory / LEVER_UP))
     (directory / "wrenchroom.yaml").write_text(yaml.safe_dump(sidecar, sort_keys=False))
     (directory / "bench_edges.yaml").write_text(yaml.safe_dump(edges_sidecar(), sort_keys=False))
     if which == "all" and copies == 1:

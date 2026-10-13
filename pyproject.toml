@@ -82,6 +82,7 @@ dev = [
   "markdown-it-py[linkify]>=4.2.0",
   "pillow>=12.3.0",
   "pytest>=8.3",
+  "pytest-xdist>=3.6",
   "ruff>=0.14",
   "ty>=0.0.1a10",
 ]

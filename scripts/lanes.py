@@ -24,6 +24,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VENV_BIN = REPO_ROOT / ".venv" / ("Scripts" if sys.platform == "win32" else "bin")
 
+#: The suite on every core, a file to a process: what a module's fixtures make (the
+#: bench checked one particular way, say) is then made in that process alone. Every
+#: core a runner counts, two to a physical one where it has them so: a hosted Linux
+#: runner's four are two cores' worth, and `-n auto` would start two workers there.
+PARALLEL = ("-n", "logical", "--dist", "loadfile")
+
 
 @dataclass(frozen=True)
 class Lane:
@@ -53,12 +59,12 @@ LANES: tuple[Lane, ...] = (
     Lane(
         name="fast",
         summary="the unit suite, golden bench included",
-        steps=(("pytest",),),
+        steps=(("pytest", *PARALLEL),),
     ),
     Lane(
         name="golden",
         summary="only the golden bench: truth, counts, isolation, snapshot",
-        steps=(("pytest", "tests/golden"),),
+        steps=(("pytest", *PARALLEL, "tests/golden"),),
     ),
     Lane(
         name="perf",

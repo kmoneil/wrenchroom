@@ -622,9 +622,13 @@ $ uv run python scripts/lanes.py          # the table of lanes
 $ uv run python scripts/lanes.py gates    # ruff lint, ruff format, ty
 $ uv run python scripts/lanes.py fast     # the unit suite, golden bench included
 $ uv run python scripts/lanes.py golden   # only the bench: truth, counts, snapshot
+$ uv run pytest tests/test_clash.py       # one file, in one process
 $ uv run python scripts/lanes.py perf     # the bench at 500 fasteners, timed
 $ uv run python scripts/lanes.py release-check  # build the release files and prove them
 ```
+
+The `fast` and `golden` lanes run the suite on every core, a test file to a process;
+`pytest` by itself runs in one.
 
 Releases are a version tag on `main`, published to PyPI by a workflow PyPI trusts;
 [docs/releasing.md](https://github.com/kmoneil/wrenchroom/blob/main/docs/releasing.md)
