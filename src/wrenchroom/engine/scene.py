@@ -258,12 +258,18 @@ class Scene:
         return self.contacts(tool)[0]
 
     def contacts(self, tool: Tool) -> tuple[tuple[str, ...], tuple[str, ...]]:
-        """(the parts the tool overlaps, the parts it only grazes), each in assembly order."""
+        """(the parts the tool overlaps, the parts it only grazes), each in assembly order.
+
+        A part, not a solid: one drawn as several solids is named once, by its own
+        name and never a piece's (issue #210), and is overlapped where any of them is.
+        """
         hits: list[str] = []
         grazes: list[str] = []
         for name, contact in self._scan(tool, stop_at_first=False):
-            (hits if contact is Contact.HIT else grazes).append(name)
-        return tuple(hits), tuple(grazes)
+            met = hits if contact is Contact.HIT else grazes
+            if name not in met:
+                met.append(name)
+        return tuple(hits), tuple(name for name in grazes if name not in hits)
 
     def clear(self, tool: Tool) -> bool:
         """True when the tool overlaps nothing (a graze is clear); stops at the first hit."""
@@ -276,7 +282,7 @@ class Scene:
             part = self.parts[index]
             contact = query.contact(part)
             if contact is not Contact.CLEAR:
-                yield part.name, contact
+                yield part.piece_of or part.name, contact
                 if stop_at_first and contact is Contact.HIT:
                     return
 

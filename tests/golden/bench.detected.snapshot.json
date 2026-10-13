@@ -1684,7 +1684,7 @@
    "state": null,
    "pair": null,
    "blocked_by": [
-    "halves_lid#2"
+    "halves_lid"
    ],
    "deciding": [],
    "stuck_on": [],
@@ -1718,7 +1718,7 @@
    "blocked_by": [],
    "deciding": [],
    "stuck_on": [
-    "halves_lead#2"
+    "halves_lead"
    ],
    "reason": null,
    "grazes": [],

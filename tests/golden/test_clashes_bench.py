@@ -112,8 +112,7 @@ def test_the_edges_bench_s_faults_are_each_a_clash(edges_clashes):
         ("drawn_in_side_nut", "drawn_in_side_chip", 0.5, None, None),
         ("drawn_in_tapped_screw", "drawn_in_tapped_block", 110.5, None, None),
         ("drawn_in_top_nut", "drawn_in_top_block", 96.1, None, None),
-        ("halves_rod", "halves_block", 14.1, None, None),
-        ("halves_rod#2", "halves_block", 14.1, None, None),
+        ("halves_rod", "halves_block", 28.3, None, None),  # its two pins, one part (#210)
         ("hosted_bare_insert", "hosted_bare_block", 42.2, None, DEEP),
         ("hosted_snug_nut", "hosted_snug_block", 2.3, None, TRAP),
         ("press_fit_allowed_rod", "press_fit_block", 3.8, None, PRESS_FIT),
@@ -160,7 +159,7 @@ def test_with_every_boolean_failing_the_edges_bench_s_clashes_are_still_told(
         ("press_fit_allowed_rod", "press_fit_block"),
         ("press_fit_pressed_rod", "press_fit_block"),
     ]
-    assert len(told) == 24  # the guard: the rest, and no pair the boolean didn't have
+    assert len(told) == 23  # the guard: the rest, and no pair the boolean didn't have
     assert set(told) <= set(measured)
     for pair, clash in told.items():
         assert clash.hint == measured[pair].hint, pair
@@ -205,11 +204,10 @@ def test_every_clash_a_verdict_tells_is_in_the_list_to_the_volume(
     # into, which stops no tool), press_fit's rods (no fasteners), stud_dome's
     # open nut, which turns, hosted's two: an insert holds itself and a trapped
     # nut is held, whatever they are drawn into; pushed's two tubes, no fasteners
-    # (issue #178); and halves's rod, each of its two solids (issue #198).
+    # (issue #178); and halves's rod, its two pins as the one part (issues #198, #210).
     assert sorted(set(listed) - set(told)) == [
         ("drawn_in_side_nut", "drawn_in_side_chip"),
         ("halves_rod", "halves_block"),
-        ("halves_rod#2", "halves_block"),
         ("hosted_bare_insert", "hosted_bare_block"),
         ("hosted_snug_nut", "hosted_snug_block"),
         ("press_fit_allowed_rod", "press_fit_block"),
