@@ -3530,3 +3530,34 @@ def pull_halved():
         ("shroud", Compound([left.solid(), right.solid()])),
         ("plug", _plug()),
     ]
+
+
+@cell(
+    "apart",
+    [{"parts": "*_bolt", "kind": "screw", "head": "hex", "size": "M8"}],
+    {
+        "tall_bolt": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
+        "long_bolt": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
+    },
+)
+def apart():
+    """Two M8 hex bolts each drawn as two solids, its head and its shank (issue #210).
+
+    Read from STEP a part of several solids is its largest, which keeps the name, and
+    a ``#2`` piece. tall's head is the larger solid, and long's shank is. Read from
+    its named solid alone, tall was a hex with no axis, not covered, and long a rod
+    with no hex, held in its plate's hole and never tried with a spanner. A fastener
+    is one part, read from all of itself: each turns, as the same shapes handed over
+    whole do.
+    """
+
+    def bolt(tall):
+        head = hex_prism(13, tall)
+        shank = Pos(0, 0, -10) * Cylinder(4, 20)
+        return Compound([head.solid(), shank.solid()])
+
+    return [
+        ("plate", plate(holes=[(-40, 0, 4.5), (40, 0, 4.5)])),
+        ("tall_bolt", Pos(-40, 0, 0) * bolt(8.0)),  # head 1171 mm^3, shank 1005
+        ("long_bolt", Pos(40, 0, 0) * bolt(5.3)),  # head 776 mm^3
+    ]

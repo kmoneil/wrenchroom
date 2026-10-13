@@ -161,15 +161,18 @@ def test_an_ignored_leaf_takes_its_pieces_along(tmp_path):
     assert [r.fastener.name for r in report.results] == ["two_solids_bolt"]
 
 
-def test_the_view_draws_a_piece_as_its_fastener(tmp_path):
-    report = check(from_step(tmp_path, joint(nut_and_dome())), kit="full")
+def test_the_view_draws_a_fastener_of_two_solids_as_the_one_part_it_is(tmp_path):
+    # Read in pieces, checked whole (issue #210): the view has the model as checked,
+    # so the nut is one part of it, its dome in it, and there is no piece to draw.
+    assembly = from_step(tmp_path, joint(nut_and_dome()))
+    assert "two_solids_nut#2" in assembly.names
+    report = check(assembly, kit="full")
     parts = {part["name"]: part for part in view_data(report)["parts"]}
-    assert (parts["two_solids_nut#2"]["owner"], parts["two_solids_nut#2"]["role"]) == (
-        "two_solids_nut",
-        "fastener",
-    )
+    assert "two_solids_nut#2" not in parts
     assert (parts["two_solids_nut"]["owner"], parts["two_solids_nut"]["role"]) == (None, "fastener")
     assert parts["two_solids_plate"]["owner"] is None
+    drawn = report.models[None].assembly["two_solids_nut"].shape
+    assert len(drawn.solids()) == 2
 
 
 @pytest.mark.parametrize("flip", [False, True])

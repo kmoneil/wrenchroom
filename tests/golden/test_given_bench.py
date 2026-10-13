@@ -6,9 +6,10 @@ file is written or read, and the sidecar, from a mapping, has no folder to look 
 The report is then the one the bench read from STEP gets, fastener for fastener, on
 both engines, and so is the clash list: a state's model given is the state's model.
 
-One figure differs, and not by the state: one_part_lock's nut, drawn as two solids,
-is one whole part from shapes and its larger solid from STEP (issue #28), so its
-seat is measured on the whole.
+Nothing differs. One figure did, and not by the state: one_part_lock's nut, drawn as
+two solids, was one whole part from shapes and its larger solid from STEP (issue
+#28), and its seat was measured on each. A fastener is read whole from STEP too now
+(issue #210), and its seat is the whole part's end, its lock ring's, both ways.
 """
 
 import pytest
@@ -57,11 +58,12 @@ def test_the_bench_given_as_shapes_is_the_bench_read_from_step(given, bench_repo
         for name, entry in ours.items()
         if entry != theirs[name]
     }
-    assert differing == {"one_part_lock_nut": ["seat"]}
-    # The whole part's end, its lock ring's, against the nut's own.
+    assert differing == {}
+    # The guard: the nut of two solids, its seat the whole part's end both ways. It
+    # was 5.2 read from STEP, the hex's own (issue #210).
     assert (ours["one_part_lock_nut"]["seat"][2], theirs["one_part_lock_nut"]["seat"][2]) == (
         7.7,
-        5.2,
+        7.7,
     )
 
 

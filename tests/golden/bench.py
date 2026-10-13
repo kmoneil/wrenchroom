@@ -77,10 +77,11 @@ SLOTS = len(CELLS) + 1
 #: 178 with #142's selftap, four tapping screws, 180 with #178's pushed: an insert as
 #: long as a fixed thread comes and its screw (its two tubes named inserts are passed
 #: over), 182 with #198's halves: a screw under a lid of two solids the lid-off state
-#: takes off, and one whose mate is a lead of two.
+#: takes off, and one whose mate is a lead of two, 184 with #210's apart: two hex
+#: bolts, each its head and its shank as two solids.
 FINAL_COUNTS = {
-    "fasteners": 182,
-    "turns": 136,
+    "fasteners": 184,
+    "turns": 138,
     "held": 15,
     "blocked": 28,
     "stuck": 3,

@@ -127,7 +127,7 @@ def _read(part, kind, named, size, listed):
     solid alone reading a machine screw's or none, and its shank its own thread's
     at most."""
     unsized, tapping = listed
-    reading = read_shape(part.shape, kind, named)
+    reading = read_shape(part.whole, kind, named)  # all of it, as a check reads it (#210)
     if size is not None and size.is_tapping:
         tapping.append(part.name)
         assert reading.shank_mm <= size.diameter_mm + 0.05, part.name
@@ -164,7 +164,7 @@ def test_the_step_round_trip_changes_no_reading(bench_parts):
     built = {f"{cell.name}_{role}": shape for cell in CELLS for role, shape in cell.build()}
     for name, rule in _described(built):
         kind = Kind(rule.get("kind", "screw"))
-        from_step = read_shape(bench_parts[name].shape, kind)
+        from_step = read_shape(bench_parts[name].whole, kind)  # every solid of it (#210)
         as_built = read_shape(built[name], kind)
         assert (from_step.head, from_step.size) == (as_built.head, as_built.size), name
         assert from_step.drive_af == pytest.approx(as_built.drive_af, abs=1e-6), name

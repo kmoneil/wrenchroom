@@ -5,8 +5,8 @@
  "step_deg": 15.0,
  "swing_positions": 24,
  "summary": {
-  "fasteners": 182,
-  "turns": 136,
+  "fasteners": 184,
+  "turns": 138,
   "held": 15,
   "blocked": 28,
   "stuck": 3,
@@ -119,6 +119,68 @@
   }
  ],
  "fasteners": [
+  {
+   "name": "apart_long_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    40.0,
+    20000.0,
+    5.3
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "apart_tall_bolt",
+   "kind": "screw",
+   "head": "hex",
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    -40.0,
+    20000.0,
+    8.0
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "apart_long_bolt"
+   ],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
   {
    "name": "badge_boss_insert",
    "kind": "insert",
@@ -2983,7 +3045,7 @@
    "seat": [
     5000.0,
     5000.0,
-    5.2
+    7.7
    ],
    "source": "sidecar",
    "tool": "spanner-10",
@@ -5244,7 +5306,7 @@
     1.0
    ],
    "seat": [
-    -100.0,
+    900.0,
     20000.0,
     6.0
    ],
@@ -5276,7 +5338,7 @@
     1.0
    ],
    "seat": [
-    100.0,
+    1100.0,
     20000.0,
     6.0
    ],
@@ -6128,8 +6190,10 @@
    },
    {
     "tool": "spanner-13",
-    "count": 31,
+    "count": 33,
     "fasteners": [
+     "apart_long_bolt",
+     "apart_tall_bolt",
      "band_agrees_bolt",
      "band_agrees_nut",
      "build_ahead_loose_bolt",

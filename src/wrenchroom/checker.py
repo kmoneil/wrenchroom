@@ -149,10 +149,11 @@ from wrenchroom.tools.sweep import (
 from wrenchroom.tools.torx_keys import ISO_10664
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Mapping
+    from collections.abc import Callable, Iterable, Iterator, Mapping
 
     from build123d import Axis, Face
 
+    from wrenchroom.config import Matches
     from wrenchroom.tools.nut_drivers import NutDriver
     from wrenchroom.tools.sockets import Socket
     from wrenchroom.tools.spanners import Spanner
@@ -262,8 +263,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     default_state = state if state is not None else config.default_state
     if default_state is not None:
         config.state(default_state)  # raises on a typo
-    matches = config.apply(assembly)
-    fasteners, passed_over = _fasteners(assembly, config, matches.fasteners)
+    assembly, matches, fasteners, passed_over = _found(space, assembly, config)
     every_fastener = list(fasteners)  # a clash measures both of one drawn twice
     # One fastener drawn twice, over itself, is a fault in the model, said once on
     # the first by name; the other isn't checked again (issue #94).
@@ -408,8 +408,7 @@ def find_clashes(
         msg = f"unknown engine {engine!r}; available: {', '.join(ENGINES)}"
         raise ValueError(msg)
     space = _StateSpace(assembly, config, model_dir, make_engine(engine), models)
-    matches = config.apply(assembly)
-    fasteners, _ = _fasteners(assembly, config, matches.fasteners)
+    assembly, _, fasteners, _ = _found(space, assembly, config)
     frames, _ = _frames(fasteners, assembly, {})
     pairs, _ = _find_pairs(fasteners, frames, config)
     return _clash_run(space, config, fasteners, pairs, with_ignored=with_ignored)
@@ -508,7 +507,7 @@ def _clashes_in(
         if name not in assembly.names or name in removed:
             continue
         try:
-            frame = _frame(assembly[name], fastener, _pieces(assembly, name))
+            frame = _frame(assembly[name], fastener)
         except NotCovered:
             unmeasured.append(name)
             continue
@@ -526,8 +525,8 @@ def _clashes_in(
     def meant(first: str, second: str) -> bool:
         """A pair, a fastener and its mate or its own piece, or an ``allow:`` pair."""
         return (
-            # A partner is all its solids (#208), and a pair is kept both ways round.
-            pairs.get(leaf[first]) == leaf[second]
+            # A pair is kept both ways round, and a fastener is one part (#208, #210).
+            pairs.get(first) == second
             or leaf[first] == leaf[second]
             or any(is_mate(name, mates.get(leaf[first], ())) for name in said(second))
             or any(is_mate(name, mates.get(leaf[second], ())) for name in said(first))
@@ -958,8 +957,7 @@ def _frames(
             failures[fastener.name] = fastener.not_covered
             continue
         try:
-            pieces = _pieces(assembly, fastener.name)
-            frames[fastener.name] = _frame(assembly[fastener.name], fastener, pieces)
+            frames[fastener.name] = _frame(assembly[fastener.name], fastener)
         except NotCovered as exc:
             failures[fastener.name] = str(exc)
     return frames, failures
@@ -993,6 +991,19 @@ def _ignored(config: Config, part: Part) -> bool:
     return config.is_ignored(part.name) or (
         part.piece_of is not None and config.is_ignored(part.piece_of)
     )
+
+
+def _found(
+    space: _StateSpace, assembly: Assembly, config: Config
+) -> tuple[Assembly, Matches, list[Fastener], tuple[PassedOver, ...]]:
+    """What the sidecar matches, the fasteners, and the model with each of them one part.
+
+    The model given is read as it came. From there on a fastener is one part in
+    every model of the run, however it was read (issue #210, :meth:`_StateSpace.whole`).
+    """
+    matches = config.apply(assembly)
+    fasteners, passed_over = _fasteners(assembly, config, matches.fasteners)
+    return space.whole(fasteners), matches, fasteners, passed_over
 
 
 def _fasteners(
@@ -1040,10 +1051,6 @@ class _Frame:
     flats: tuple[bool, ...] = ()
     #: The part's planar and cylindrical faces, read once (:func:`_faces_of`).
     faces: tuple[_Face, ...] = ()
-    #: Its other solids' vertices, as (projection, radial): a thumb screw's shank
-    #: drawn apart from its knurled head (issue #96). Read only where its own solid
-    #: can't tell which end is its head.
-    pieces: tuple[tuple[float, float], ...] = ()
 
     @property
     def extent(self) -> float:
@@ -1081,11 +1088,6 @@ def _faces_of(part: Part) -> tuple[_Face, ...]:
     return tuple(found)
 
 
-def _pieces(assembly: Assembly, name: str) -> tuple[Part, ...]:
-    """The other solids of a part's leaf, which go with it (issue #28)."""
-    return tuple(assembly[piece] for piece in assembly.pieces(name))
-
-
 def _part_names(assembly: Assembly) -> tuple[str, ...]:
     """The parts' names, in order: a piece of a part drawn as several solids is none."""
     return tuple(part.name for part in assembly if part.piece_of is None)
@@ -1109,14 +1111,19 @@ def _mates(assembly: Assembly, globs: tuple[str, ...]) -> set[str]:
     return _with_pieces(assembly, {name for name in assembly.names if is_mate(name, globs)})
 
 
-def _frame(part: Part, fastener: Fastener, pieces: tuple[Part, ...] = ()) -> _Frame:
+def _frame(part: Part, fastener: Fastener) -> _Frame:
+    """A fastener's frame, read from the whole part: every solid of it (issue #210).
+
+    A head drawn apart from its shank, a nut and its lock ring: the part is one in
+    every model of the run (:meth:`_StateSpace.whole`), so its wide end, its flats
+    and its ends are the whole part's, as they are for a part handed over whole.
+    """
     faces = _faces_of(part)
     axis = _largest_cylinder_axis(faces)
     direction = _axis_direction(axis, fastener)
     origin, vertices = _axis_frame(part, axis)
     projections = tuple(_dot(_sub(v, origin), direction) for v in vertices)
     radials = tuple(_radial(_sub(v, origin), direction) for v in vertices)
-    others = [tuple(v) for piece in pieces for v in piece.shape.vertices()]
     return _Frame(
         part=part,
         direction=direction,
@@ -1127,10 +1134,6 @@ def _frame(part: Part, fastener: Fastener, pieces: tuple[Part, ...] = ()) -> _Fr
         oriented=isinstance(fastener.axis, tuple),
         flats=_on_flats(faces, origin, direction, vertices),
         faces=faces,
-        pieces=tuple(
-            (_dot(_sub(v, origin), direction), _radial(_sub(v, origin), direction))  # type: ignore[arg-type]
-            for v in others
-        ),
     )
 
 
@@ -1346,6 +1349,10 @@ class _StateSpace:
         #: Each state's or build step's model, by the sidecar's name for it: the ones
         #: given as assemblies from the start, the others once read from their files.
         self._models: dict[str, Assembly] = _given_models(models, config)
+        #: The fasteners, each kept whole in every model of the run (:meth:`whole`),
+        #: and each state's or step's model with them so.
+        self._fasteners: frozenset[str] = frozenset()
+        self._joined: dict[str, Assembly] = {}
         self._warned: set[tuple[str, str]] = set()
         self._ignored: dict[str, bool] = {}
         # Per assembly (the assembly rides along, so its id can't be reused):
@@ -1367,6 +1374,18 @@ class _StateSpace:
         #: Every state resolved so far, as the check saw it: kept for the report,
         #: whose HTML view draws a fastener in the state it was reached in.
         self.models: dict[str, StateModel] = {}
+
+    def whole(self, fasteners: Iterable[Fastener]) -> Assembly:
+        """Keep each fastener whole in every model of the run; the main model, so kept.
+
+        Read from STEP, a part drawn as several solids is its largest and its pieces.
+        A fastener is read from all of itself and tried as one part, as a model from
+        shapes has it (issue #210): its pieces go back into it, in the main model and
+        in each state's or build step's as it is loaded.
+        """
+        self._fasteners = frozenset(fastener.name for fastener in fasteners)
+        self._default = self._default.joined(self._fasteners)
+        return self._default
 
     def scene(self, assembly: Assembly, excluded: set[str] | frozenset[str]) -> Scene:
         """The obstacles: every part but the excluded and the ignored ones.
@@ -1530,7 +1549,9 @@ class _StateSpace:
     def _load(self, filename: str, who: str, spot: str) -> Assembly:
         if filename not in self._models:
             self._models[filename] = Assembly.from_step(self._locate(filename, who, spot))
-        return self._models[filename]
+        if filename not in self._joined:
+            self._joined[filename] = self._models[filename].joined(self._fasteners)
+        return self._joined[filename]
 
     def _locate(self, filename: str, who: str, spot: str) -> Path:
         """Where a state's or a build step's model is: beside the sidecar, else the model (#73).
@@ -1729,7 +1750,7 @@ def _try_in(
     frame = default_frame
     if not same_model:  # parts may have moved: measure this model's own copy
         try:
-            frame = _frame(assembly[fastener.name], fastener, _pieces(assembly, fastener.name))
+            frame = _frame(assembly[fastener.name], fastener)
         except NotCovered as exc:
             return _Candidate(fastener, reason=str(exc), state=state_name)
     scene = _scene_of(fastener, assembly, removed, space)
@@ -1754,8 +1775,7 @@ def _scene_of(
 ) -> Scene:
     """What a fastener is tried among: every part but itself, its mates and what is off."""
     mates = _mates(assembly, fastener.mates)
-    pieces = assembly.pieces(fastener.name)  # its other solids, which go with it
-    return space.scene(assembly, {fastener.name, *mates, *pieces} | removed)
+    return space.scene(assembly, {fastener.name, *mates} | removed)
 
 
 def _oriented(
@@ -2140,9 +2160,7 @@ def _clashes(
     measured = Measured(Part(fastener.name, region), Part(fastener.name, past_thread))
     found: list[tuple[str, float]] = []
     for other in scene.parts:
-        if (other.piece_of or other.name) == partner:  # its pair, every solid of it (#208)
-            continue
-        if among is not None and other.name not in among:
+        if other.name == partner or (among is not None and other.name not in among):
             continue
         if not boxes_overlap(box, engine.part_bounds(other)):
             continue
@@ -2519,9 +2537,6 @@ def _head_is_at_bottom(frame: _Frame) -> bool:
     tried from inside the part the screw threads into.
     """
     end = wide_end(frame.projections, frame.radials)
-    if end == 0 and frame.pieces:  # a head drawn apart from its shank (issue #96)
-        along, out = zip(*frame.pieces, strict=True)
-        end = wide_end((*frame.projections, *along), (*frame.radials, *out))
     if end == 0:
         raise NotCovered("cannot tell the head end: both ends look alike")
     return end < 0

@@ -30,7 +30,10 @@ rules and the figures behind them are written down.
 repeats made unique. A part drawn as several solids, a nut and its washer, is one
 part to a rule, to detection and to every glob that names it
 ([the sidecar's globs](#the-sidecars-globs)): its largest solid keeps the name and the
-rest go with it. A part with no name of its own takes its assembly's: the names OCCT makes
+rest go with it. A fastener so drawn, a bolt whose head and shank are two solids, is
+read from all of them and checked as one part, whichever solid is the larger (issue
+#210): its drive, its size, its seat and what is told of it are the whole part's, and
+a report names it and no piece of it. A part with no name of its own takes its assembly's: the names OCCT makes
 up for one (`=>[0:1:1:32]`, `SOLID`, `ASSEMBLY`) say nothing of what it is. From Python, `Assembly.from_shapes([(name, shape), ...])` takes build123d
 shapes as they are, each pair one part.
 
@@ -535,7 +538,9 @@ after it (`cover#2`), names the model doesn't have. An ignore, a state's `remove
 rule's `mates:`, an `allow:` pair and a build step's `add:` each take the pieces with
 the part they name: `remove: [cover]` takes the cover off, all of it. A glob that
 names a piece itself (`cover#2`) is that solid alone, and another part that only
-shares the name, numbered the same way, is no piece.
+shares the name, numbered the same way, is no piece. A fastener has no piece to name:
+it is one part as it is checked, so a glob for `nut#2` names nothing there (issue
+#210).
 
 ## Reports
 
@@ -659,7 +664,7 @@ every run, and every report says it wasn't looked for.
   hole drawn at its tap drill or its minor diameter, a bolt in a nut bored at its
   minor, is no clash. Nor is a fastener with its pair, its `mates` or its own
   pieces, or an ignored part (`--with-ignored` measures those too). Its pair is the
-  whole part: a bolt drawn as several solids is passed over in each of them (issue
+  whole part: a bolt drawn as several solids is one part, all of it (issues #210,
   #208). A fastener not
   understood (no axis) can't be measured past its thread, so it is left out, and
   said.
