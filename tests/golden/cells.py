@@ -90,6 +90,8 @@ class Cell:
     connectors: tuple = ()
     #: Each connector's truth, as its JSON says it: {role: {key: value}}.
     plugs: dict = field(default_factory=dict)
+    #: Its roles the bench's lid-off state takes off.
+    off: tuple = ()
 
 
 M6_SOCKET = {"kind": "screw", "head": "socket", "size": "M6"}
@@ -110,6 +112,7 @@ def cell(  # noqa: PLR0913, PLR0917  (one keyword per Cell field)
     built=None,
     connectors=(),
     plugs=None,
+    off=(),
 ):
     def register(build):
         CELLS.append(
@@ -127,6 +130,7 @@ def cell(  # noqa: PLR0913, PLR0917  (one keyword per Cell field)
                 built or {},
                 tuple(connectors),
                 plugs or {},
+                tuple(off),
             )
         )
         return build
@@ -554,6 +558,7 @@ def free_screw():
             "state": "lid-off",
         }
     },
+    off=["lid"],
 )
 def state_lid():
     """Reached with the lid off: the sidecar's lid-off state removes the lid."""
@@ -3429,4 +3434,69 @@ def pushed():
         ("stout_insert", stout),
         ("stout_plate", cover),
         ("stout_screw", Pos(20, 0, 4) * screw),
+    ]
+
+
+@cell(
+    "halves",
+    [
+        {"parts": "lid_screw", **M6_SOCKET, "state": "lid-off"},
+        {"parts": "mate_screw", **M6_SOCKET, "mates": ["lead"]},
+    ],
+    {
+        "lid_screw": {
+            "verdict": "turns",
+            "tool": "hex-key-5",
+            "how": "driver straight in",
+            "state": "lid-off",
+        },
+        "mate_screw": {"verdict": "turns", "tool": "hex-key-5", "how": "driver straight in"},
+    },
+    allow=[("rod", "block")],
+    off=["lid"],
+)
+def halves():
+    """A part drawn as two solids goes whole wherever the sidecar names it (issue #198).
+
+    Read from STEP, each of three parts here is its larger solid, which keeps the
+    name, and a ``#2`` piece: the smaller solid, and in each the one that matters.
+
+    lid: a slab off to one side of lid_screw and a pad 15 over its head. The
+    sidecar's lid-off state takes the lid off, pad and all, and the screw turns
+    there. It was blocked by the pad, which the glob didn't name.
+
+    lead: a run of cable lying beside mate_screw and a loop of it 15 over the
+    screw's head. It is the screw's mate, which a tool may pass through, and the
+    screw turns. It was blocked by the loop.
+
+    rod: two pins of one part, 6 across, each drawn 0.5 into the block's top, pi 3^2
+    0.5 = 14.14 mm^3 apiece, which the bench's sidecar allows: no clash. The shorter
+    was one still.
+    """
+    lid = Compound(
+        [
+            (Pos(-200, 110, 0) * slab(6 + 15, w=120, d=80)).solid(),
+            (Pos(-200, 0, 0) * slab(6 + 15, w=80, d=80)).solid(),
+        ]
+    )
+    lead = Compound(
+        [
+            (Pos(0, 80, 3) * Box(200, 6, 6)).solid(),
+            (Pos(0, 0, 6 + 15 + 2) * Box(60, 6, 4)).solid(),
+        ]
+    )
+    rod = Compound(
+        [
+            (Pos(205, 0, 19.5 + 10) * Cylinder(3, 20)).solid(),
+            (Pos(235, 0, 19.5 + 5) * Cylinder(3, 10)).solid(),
+        ]
+    )
+    return [
+        ("plate", plate(w=600, d=320, holes=[(-200, 0, 3), (0, 0, 3)])),
+        ("lid_screw", Pos(-200, 0, 0) * socket_screw()),
+        ("lid", lid),
+        ("mate_screw", socket_screw()),
+        ("lead", lead),
+        ("block", Pos(220, 0, 10) * Box(60, 30, 20)),
+        ("rod", rod),
     ]

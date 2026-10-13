@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**180 fasteners: 134 turn, 15 held, 28 blocked, 3 stuck, 0 not covered**
+**182 fasteners: 136 turn, 15 held, 28 blocked, 3 stuck, 0 not covered**
 
 Kit `full`, swings tried every 15 deg, ENGINE engine, wrenchroom VERSION.
 
@@ -63,7 +63,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | M6 shoulder screw | `ball-end-key-4` | 1 | all pass (ball end, 20 deg off the axis) |
 | M6 shoulder screw | `hex-key-4` | 4 | all pass (driver straight in) |
 | M6 socket screw | `ball-end-key-5` | 1 | all pass (ball end, 25 deg off the axis) |
-| M6 socket screw | `hex-key-5` | 18 | 10 of 18 fail |
+| M6 socket screw | `hex-key-5` | 20 | 10 of 20 fail |
 | M6 torx screw | `torx-key-T30` | 1 | all pass (short leg in) |
 | M8 hex screw | - | 2 | 1 of 2 fail |
 | M8 hex screw | `spanner-13` | 14 | 1 of 14 fail |
@@ -93,7 +93,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `hex-key-5/32in` | 1 | not in metric-home; only `std_#10-32x1` |
 | `hex-key-4` | 8 |  |
 | `hex-key-3/16in` | 1 | not in metric-home; only `inch_pair_screw` |
-| `hex-key-5` | 11 |  |
+| `hex-key-5` | 13 |  |
 | `ball-end-key-4` | 1 | not in metric-home; no straight key gets in at `ball_shoulder_screw` |
 | `ball-end-key-5` | 1 | not in metric-home; no straight key gets in at `ball_tilt_screw` |
 | `torx-key-T6` | 1 | not in metric-home; only `small_torx_screw` |

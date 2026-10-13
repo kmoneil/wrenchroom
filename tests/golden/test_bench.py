@@ -89,8 +89,9 @@ def test_isolation_matches_the_full_bench(bench_json, bench_dir, bench_engine):
 
 def test_round_trip_names(bench_dir):
     # A part of several solids reads as one per solid, the rest numbered after it
-    # and marked as its pieces (issue #28): only one_part_lock's nut has two. A part
-    # drawn as a closed shell is its solid; one drawn as a face, a surface (#104).
+    # and marked as its pieces (issue #28): one_part_lock's nut has two, and halves's
+    # lid, lead and rod (issue #198). A part drawn as a closed shell is its solid; one
+    # drawn as a face, a surface (#104).
     expected, pieces, shells = [], {}, []
     for shape in build():
         if not shape.solids():
@@ -104,7 +105,12 @@ def test_round_trip_names(bench_dir):
     assembly = Assembly.from_step(bench_dir / "bench.step")
     assert sorted(assembly.names) == sorted(expected)
     assert {p.name: p.piece_of for p in assembly if p.piece_of} == pieces
-    assert pieces == {"one_part_lock_nut#2": "one_part_lock_nut"}
+    assert pieces == {
+        "one_part_lock_nut#2": "one_part_lock_nut",
+        "halves_lid#2": "halves_lid",
+        "halves_lead#2": "halves_lead",
+        "halves_rod#2": "halves_rod",
+    }
     assert shells == ["shelled_ceiling", "shelled_decal"]  # the bench's two shells
     assert assembly.surfaces == ("shelled_decal",)  # the open one
 

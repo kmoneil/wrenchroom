@@ -5,8 +5,8 @@
  "step_deg": 15.0,
  "swing_positions": 24,
  "summary": {
-  "fasteners": 180,
-  "turns": 134,
+  "fasteners": 182,
+  "turns": 136,
   "held": 15,
   "blocked": 28,
   "stuck": 3,
@@ -1586,6 +1586,66 @@
    "swing_deg": 30.0,
    "state": null,
    "pair": "guessed_bolt",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "halves_lid_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3800.0,
+    19000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": "lid-off",
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "halves_mate_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4000.0,
+    19000.0,
+    6.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
    "blocked_by": [],
    "deciding": [],
    "stuck_on": [],
@@ -5184,7 +5244,7 @@
     1.0
    ],
    "seat": [
-    3900.0,
+    4900.0,
     19000.0,
     6.0
    ],
@@ -5216,7 +5276,7 @@
     1.0
    ],
    "seat": [
-    4100.0,
+    5100.0,
     19000.0,
     6.0
    ],
@@ -5782,11 +5842,13 @@
    },
    {
     "tool": "hex-key-5",
-    "count": 11,
+    "count": 13,
     "fasteners": [
      "build_way_in_over_screw",
      "build_way_in_under_screw",
      "free_screw_screw",
+     "halves_lid_screw",
+     "halves_mate_screw",
      "key_open_screw",
      "key_wall_far_screw",
      "state_lever_screw",

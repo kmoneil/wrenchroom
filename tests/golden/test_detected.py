@@ -14,6 +14,10 @@ only a sidecar can say, and are pinned here so they stay explained:
   `state: lid-off` says. Without it the lid blocks the screw.
 - pan_t40_torx_screw: an M8 pan head with a T40 recess, which only the sidecar's
   `across_flats:` says (issue #82). By its thread it needs a T45, which no kit holds.
+- halves_lid_screw: under a lid of two solids, off in lid-off, as state_lid's is.
+- halves_mate_screw: a loop of its lead is over its head, which only the sidecar's
+  `mates` lets a tool through (issue #198). Without it a ball-end key gets on past the
+  loop, and the screw can't come out.
 
 Since issue #19 the tools agree too, and each screw's head is its rule's: a
 verdict alone let torx_wall_screw pass turned by a hex key that can't drive it.
@@ -40,6 +44,8 @@ NEEDS_THE_SIDECAR = {
     "nyloc_two_bodies_nut": "not-covered",
     "state_lid_screw": "blocked",
     "pan_t40_torx_screw": "not-covered",
+    "halves_lid_screw": "blocked",
+    "halves_mate_screw": "stuck",
 }
 
 
@@ -287,6 +293,7 @@ def test_a_nut_drawn_small_says_so_and_where_its_size_came_from(detected):
         "sunk_cap_cap_nut",
         "ball_tilt_screw",
         "ball_shoulder_screw",
+        "halves_mate_screw",  # a ball end alone gets on, past the loop no mate names here
         "renamed_M3x12_screw",  # drawn 8 long (issue #94)
         "misnamed_M5x16_screw",  # drawn as M3s (issue #117)
         "misnamed_M5x12_phillips_screw",

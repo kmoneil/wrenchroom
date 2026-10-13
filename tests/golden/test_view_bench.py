@@ -13,8 +13,8 @@ from bench import FINAL_COUNTS
 from wrenchroom.view import COLOURS, view_data
 
 #: The cells that pass only in a state other than the run's own (it has none):
-#: the lid-off screw, by its own rule, and the lever screw, by try_states.
-ELSEWHERE = {"state_lid_screw", "state_lever_screw"}
+#: the lid-off screws, by their own rules, and the lever screw, by try_states.
+ELSEWHERE = {"state_lid_screw", "state_lever_screw", "halves_lid_screw"}
 
 
 @pytest.fixture(scope="session")
@@ -101,6 +101,17 @@ def test_the_lid_screw_is_drawn_with_the_lid_off(bench_view):
     assert "state_lid_lid" in _names(bench_view, overview["parts"])
 
 
+def test_a_lid_of_two_solids_is_gone_whole_with_the_lid_off(bench_view):
+    # Issue #198: halves's lid is a slab and a pad, and neither is drawn there.
+    drawn = _fasteners(bench_view)
+    lid_view = bench_view["views"][drawn["halves_lid_screw"]["view"]]
+    assert lid_view["state"] == "lid-off"
+    lid = {"halves_lid", "halves_lid#2"}
+    assert not lid & set(_names(bench_view, lid_view["parts"]))
+    overview = bench_view["views"][bench_view["overview"]]
+    assert lid <= set(_names(bench_view, overview["parts"]))
+
+
 def test_every_part_is_drawn_and_marked(bench_view, bench_report):
     overview = bench_view["views"][bench_view["overview"]]
     names = _names(bench_view, overview["parts"])
@@ -113,7 +124,12 @@ def test_every_part_is_drawn_and_marked(bench_view, bench_report):
     assert pieces == {"one_part_lock_nut#2"}
     assert {n for n, role in roles.items() if role == "fastener"} == fastener_names | pieces
     owners = {part["name"]: part["owner"] for part in bench_view["parts"] if part["owner"]}
-    assert owners == {"one_part_lock_nut#2": "one_part_lock_nut"}
+    assert owners == {
+        "one_part_lock_nut#2": "one_part_lock_nut",
+        "halves_lid#2": "halves_lid",
+        "halves_lead#2": "halves_lead",
+        "halves_rod#2": "halves_rod",
+    }
     assert {n for n, role in roles.items() if role == "ignored"} == set(bench_report.ignored)
     assert bench_report.ignored  # the bench ignores its hoses and wires
     assert all(part["shape"] is not None for part in bench_view["parts"])

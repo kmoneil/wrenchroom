@@ -5,11 +5,11 @@
  "step_deg": 15.0,
  "swing_positions": 24,
  "summary": {
-  "fasteners": 180,
+  "fasteners": 182,
   "turns": 131,
   "held": 15,
-  "blocked": 29,
-  "stuck": 3,
+  "blocked": 30,
+  "stuck": 4,
   "not_covered": 2
  },
  "unmatched_rules": [],
@@ -1596,6 +1596,72 @@
    "notes": [
     "size M8 from its bolt, guessed_bolt (its hex alone said 5/16)",
     "hex drawn undersize: 12.60 across flats, 0.13 under the least its M8 standard allows (12.73); taken as size 13"
+   ]
+  },
+  {
+   "name": "halves_lid_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3800.0,
+    19000.0,
+    6.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "halves_lid#2"
+   ],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "halves_mate_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4000.0,
+    19000.0,
+    6.0
+   ],
+   "source": "name+geometry",
+   "tool": "ball-end-key-5",
+   "verdict": "stuck",
+   "how": "ball end, 25 deg off the axis",
+   "swing_deg": 60.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [
+    "halves_lead#2"
+   ],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "only a ball end turns it (ball end, 25 deg off the axis): a ball end takes much less torque than a straight key, so tightening it to its torque, or breaking it loose, may need a straight key, which can't get in"
    ]
   },
   {
@@ -5198,7 +5264,7 @@
     1.0
    ],
    "seat": [
-    3900.0,
+    4900.0,
     19000.0,
     6.0
    ],
@@ -5230,7 +5296,7 @@
     1.0
    ],
    "seat": [
-    4100.0,
+    5100.0,
     19000.0,
     6.0
    ],
@@ -5841,9 +5907,10 @@
    },
    {
     "tool": "ball-end-key-5",
-    "count": 1,
+    "count": 2,
     "fasteners": [
-     "ball_tilt_screw"
+     "ball_tilt_screw",
+     "halves_mate_screw"
     ],
     "at_once": 1,
     "in_default_kit": false,
@@ -6401,6 +6468,10 @@
     "verdict": "blocked"
    },
    {
+    "name": "halves_lid_screw",
+    "verdict": "blocked"
+   },
+   {
     "name": "head_trap_both_bolt",
     "verdict": "blocked"
    },
@@ -6510,10 +6581,11 @@
    },
    {
     "tool": "hex-key-5",
-    "count": 8,
+    "count": 9,
     "fasteners": [
      "build_buried_early_screw",
      "build_buried_late_screw",
+     "halves_lid_screw",
      "key_wall_near_screw",
      "shelled_screw",
      "state_lid_screw",

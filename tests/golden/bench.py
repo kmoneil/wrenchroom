@@ -73,10 +73,11 @@ SLOTS = len(CELLS) + 1
 #: 174 with #158's hosted: two inserts, a nut pressed into its trap, and their screws,
 #: 178 with #142's selftap, four tapping screws, 180 with #178's pushed: an insert as
 #: long as a fixed thread comes and its screw (its two tubes named inserts are passed
-#: over).
+#: over), 182 with #198's halves: a screw under a lid of two solids the lid-off state
+#: takes off, and one whose mate is a lead of two.
 FINAL_COUNTS = {
-    "fasteners": 180,
-    "turns": 134,
+    "fasteners": 182,
+    "turns": 136,
     "held": 15,
     "blocked": 28,
     "stuck": 3,
@@ -121,6 +122,7 @@ def sidecar_and_truth(copies=1, which="all"):
             connectors += [_named_connector(rule, name) for rule in cell.connectors]
             ignore.update(cell.ignore)
             allow += [[f"{name}_{a}", f"{name}_{b}"] for a, b in cell.allow]
+            lids += [f"{name}_{role}" for role in cell.off]
             for role, expected in cell.truth.items():
                 truth[f"{name}_{role}"] = _named_truth(expected, name)
         if which != "untimed":  # the twins are ordinary: timed with the rest
@@ -133,8 +135,6 @@ def sidecar_and_truth(copies=1, which="all"):
             }
             for role, expected in twins_truth.items():
                 truth[f"{prefix}twins_{role}"] = _named_truth(expected, f"{prefix}twins")
-        if any(c.name == "state_lid" and _chosen(c, which) for c in CELLS):
-            lids.append(f"{prefix}state_lid_lid")
     sidecar = {
         "fasteners": rules,
         "ignore": sorted(ignore),

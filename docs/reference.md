@@ -28,8 +28,9 @@ rules and the figures behind them are written down.
 
 `wrenchroom check model.step` reads a STEP assembly with its part names kept, and
 repeats made unique. A part drawn as several solids, a nut and its washer, is one
-part to a rule and to detection: its largest solid keeps the name and the rest go
-with it. A part with no name of its own takes its assembly's: the names OCCT makes
+part to a rule, to detection and to every glob that names it
+([the sidecar's globs](#the-sidecars-globs)): its largest solid keeps the name and the
+rest go with it. A part with no name of its own takes its assembly's: the names OCCT makes
 up for one (`=>[0:1:1:32]`, `SOLID`, `ASSEMBLY`) say nothing of what it is. From Python, `Assembly.from_shapes([(name, shape), ...])` takes build123d
 shapes as they are, each pair one part.
 
@@ -524,6 +525,14 @@ rule's `mates:` (parts that travel with the fastener and leave its scene, such a
 washer or a nyloc's separate dome) take globs like the rest. A later rule replaces an
 earlier one, whole, for the parts both match, so a broad glob can set the family and
 a narrow one, written out in full, the exception.
+
+A glob names a part, and a part drawn as several solids goes whole (issue #198).
+Read from STEP it is its largest solid, which keeps the name, and pieces numbered
+after it (`cover#2`), names the model doesn't have. An ignore, a state's `remove:`, a
+rule's `mates:`, an `allow:` pair and a build step's `add:` each take the pieces with
+the part they name: `remove: [cover]` takes the cover off, all of it. A glob that
+names a piece itself (`cover#2`) is that solid alone, and another part that only
+shares the name, numbered the same way, is no piece.
 
 ## Reports
 
