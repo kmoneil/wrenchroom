@@ -39,12 +39,17 @@ def test_every_blocked_and_stuck_cell_is_red_with_its_blockers(bench_view, bench
         assert entry["verdict"] == truth["verdict"], name
         assert entry["colour"] == COLOURS["fails"], name
         key = "stuck_on" if truth["verdict"] == "stuck" else "blocked_by"
-        highlighted = _names(bench_view, entry["highlight"])
+        marked = _names(bench_view, entry["highlight"])
+        # A part named is marked in every solid of it (issue #210): its pieces are
+        # the part, and each part in the way is marked once.
+        owner = {part["name"]: part["owner"] or part["name"] for part in bench_view["parts"]}
+        highlighted = sorted({owner[n] for n in marked})
+        assert sorted(marked) == sorted(n for n in owner if owner[n] in highlighted), name
         # A part its own body stops names itself, and is drawn as itself (#47).
         others = sorted(n for n in bench_json[name][key] if n != name)
-        assert sorted(highlighted) == others, name
+        assert highlighted == others, name
         if key in truth:  # hand-worked: the blockers a person would name
-            assert sorted(highlighted) == sorted(n for n in truth[key] if n != name), name
+            assert highlighted == sorted(n for n in truth[key] if n != name), name
         # Each highlighted part is drawn in the fastener's view...
         assert set(entry["highlight"]) <= set(bench_view["views"][entry["view"]]["parts"]), name
         # ...and a drawn tool position ran into it.
@@ -127,6 +132,7 @@ def test_every_part_is_drawn_and_marked(bench_view, bench_report):
     # A part that is no fastener is drawn solid by solid, each piece as its part.
     owners = {part["name"]: part["owner"] for part in bench_view["parts"] if part["owner"]}
     assert owners == {
+        "both_over_cover#2": "both_over_cover",
         "halves_lid#2": "halves_lid",
         "halves_lead#2": "halves_lead",
         "halves_rod#2": "halves_rod",

@@ -3561,3 +3561,25 @@ def apart():
         ("tall_bolt", Pos(-40, 0, 0) * bolt(8.0)),  # head 1171 mm^3, shank 1005
         ("long_bolt", Pos(40, 0, 0) * bolt(5.3)),  # head 776 mm^3
     ]
+
+
+@cell(
+    "both_over",
+    [{"parts": "screw", **M6_SOCKET}],
+    {"screw": {"verdict": "blocked", "tool": "hex-key-5", "blocked_by": ["cover"]}},
+)
+def both_over():
+    """key_wall_near with its wall a cover of two solids, the seam over the screw's axis.
+
+    Both halves are in the key's way down. Read from STEP the cover is its larger half,
+    which keeps the name, and a ``#2`` piece, and a scene holds each for itself: the
+    report said the screw was blocked by ``cover`` and by ``cover#2``, a name the model
+    doesn't have. It is blocked by the cover, said once (issue #210).
+    """
+    left = Pos(-75, 0, 6 + 15 + 5) * Box(150, 300, 10)
+    right = Pos(80, 0, 6 + 15 + 5) * Box(160, 300, 10)  # the larger: it keeps the name
+    return [
+        ("plate", plate(holes=[(0, 0, 3)])),
+        ("screw", socket_screw()),
+        ("cover", Compound([left.solid(), right.solid()])),
+    ]
