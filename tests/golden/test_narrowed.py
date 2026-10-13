@@ -14,7 +14,7 @@ from wrenchroom.config import Config
 from wrenchroom.detect.sidecar import glob_escape
 
 
-def test_every_fastener_narrowed_to_itself_reads_as_in_the_full_run(bench_dir):
+def test_every_fastener_narrowed_to_itself_reads_as_in_the_full_run(bench_dir, bench_models):
     assembly = Assembly.from_step(bench_dir / "bench.step")
     config = Config.load(bench_dir / "wrenchroom.yaml")
     full = check(assembly, config, kit=KIT, model_dir=bench_dir)
@@ -23,7 +23,15 @@ def test_every_fastener_narrowed_to_itself_reads_as_in_the_full_run(bench_dir):
     differ = []
     for whole in full.results:
         name = whole.fastener.name
-        narrowed = check(assembly, config, kit=KIT, model_dir=bench_dir, only=glob_escape(name))
+        # The lever-up model is given, read the once: the full run above read its file.
+        narrowed = check(
+            assembly,
+            config,
+            kit=KIT,
+            model_dir=bench_dir,
+            models=bench_models,
+            only=glob_escape(name),
+        )
         (alone,) = narrowed.results
         want = (whole.verdict, whole.tool, whole.how, whole.pair, whole.reason, whole.blockers)
         got = (alone.verdict, alone.tool, alone.how, alone.pair, alone.reason, alone.blockers)

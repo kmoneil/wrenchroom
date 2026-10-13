@@ -39,6 +39,20 @@ def bench_model(bench_dir):
     return Assembly.from_step(bench_dir / "bench.step")
 
 
+@pytest.fixture(scope="module")
+def edges_clashes(bench_dir, bench_model, bench_engine):
+    """The edges bench's clash list: no ignores and no states, so every fault drawn."""
+    config = Config.from_dict(edges_sidecar(), source="edges")
+    return find_clashes(bench_model, config, model_dir=bench_dir, engine=bench_engine)
+
+
+@pytest.fixture(scope="module")
+def checked_with_clashes(bench_dir, bench_model):
+    """The bench's own check with its clashes asked for, on the default engine."""
+    config = Config.load(bench_dir / "wrenchroom.yaml")
+    return check(bench_model, config, kit="full", model_dir=bench_dir, clashes=True)
+
+
 def said(found):
     return [(c.first, c.second, round(c.volume, 1), c.state, c.hint) for c in found.found]
 
@@ -72,7 +86,7 @@ def test_the_bench_s_clashes_are_the_two_drawn_for_them(bench_dir, bench_model, 
     assert not any(name.startswith("halves_") for name in names)
 
 
-def test_the_edges_bench_s_faults_are_each_a_clash(bench_dir, bench_model, bench_engine):
+def test_the_edges_bench_s_faults_are_each_a_clash(edges_clashes):
     # No ignores and no states: every drawn-in cell's fault, the volumes its cell
     # gives (drawn_in's 5.2, 96.1 and 28.4, twice's 8.9 and its screw drawn twice,
     # all 120.8 of it, cap_dome's 524.3 and 67.0, set_core's 3.9, domed's heads,
@@ -83,8 +97,7 @@ def test_the_edges_bench_s_faults_are_each_a_clash(bench_dir, bench_model, bench
     # And pushed's two tubes, named inserts and no fixed threads, each 0.2 into the
     # block all round, 47.75 and 28.65 mm^3: they were inserts set in, and not told
     # (issue #178).
-    config = Config.from_dict(edges_sidecar(), source="edges")
-    found = find_clashes(bench_model, config, model_dir=bench_dir, engine=bench_engine)
+    found = edges_clashes
     assert said(found) == [
         ("cap_dome_buried_nut", "cap_dome_buried_cover", 524.3, None, None),
         ("cap_dome_dome_nut", "cap_dome_dome_cover", 67.0, None, None),
@@ -117,7 +130,7 @@ def test_the_edges_bench_s_faults_are_each_a_clash(bench_dir, bench_model, bench
 
 
 def test_with_every_boolean_failing_the_edges_bench_s_clashes_are_still_told(
-    bench_dir, bench_model, bench_engine, monkeypatch
+    bench_dir, bench_model, bench_engine, edges_clashes, monkeypatch
 ):
     """Issue #163: a boolean that comes back empty is no proof two parts are apart.
 
@@ -132,7 +145,7 @@ def test_with_every_boolean_failing_the_edges_bench_s_clashes_are_still_told(
     still set into its pocket, and pushed's into its hole.
     """
     config = Config.from_dict(edges_sidecar(), source="edges")
-    exact = find_clashes(bench_model, config, model_dir=bench_dir, engine=bench_engine)
+    exact = edges_clashes  # measured before any boolean is made to fail
     for module in (mesh_module, exact_module):  # whoever asks it
         monkeypatch.setattr(module, "measured_common", lambda a, b: (None, True))
     failing = find_clashes(bench_model, config, model_dir=bench_dir, engine=bench_engine)
@@ -208,11 +221,10 @@ def test_every_clash_a_verdict_tells_is_in_the_list_to_the_volume(
 
 
 def test_the_bench_checked_with_clashes_says_them_and_nothing_else_moves(
-    bench_dir, bench_model, bench_report
+    checked_with_clashes, bench_report
 ):
     # The same check, clashes on: its verdicts are the bench's, its exit still 1.
-    config = Config.load(bench_dir / "wrenchroom.yaml")
-    on = check(bench_model, config, kit="full", model_dir=bench_dir, clashes=True)
+    on = checked_with_clashes
     assert [r.verdict for r in on.results] == [r.verdict for r in bench_report.results]
     assert len(on.clashes.found) == 2
     assert on.exit_code == 1
