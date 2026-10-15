@@ -11,8 +11,9 @@ pull, not a turn: out of its receptacle, along its pull axis, far enough to be f
 - **Its pull axis** is the one direction its receptacle leaves it free to move in,
   among the directions its faces face; ``axis:`` gives it where there are none or
   several.
-- **Its travel** is how far it must move along the axis to be clear of its receptacle,
-  plus :data:`TRAVEL_MARGIN`; ``travel:`` gives it.
+- **Its travel** is how far it must move along the axis to be out of its receptacle,
+  where it holds it across the axis no more, plus :data:`TRAVEL_MARGIN`; ``travel:``
+  gives it.
 - **Its pull path** is its own solid moved along the axis by its travel, tested against
   every other part but its receptacle, its pieces, its ``mates`` (its cable comes with
   it) and the ignored parts: a part in the way leaves it ``stuck``.
@@ -49,7 +50,7 @@ from wrenchroom.tools.fingers import FINGER_REACH
 from wrenchroom.tools.sweep import CONTACT_OFFSET, HAND_LENGTH, Probe, axial_cylinder
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
     from build123d import Shape
 
@@ -67,7 +68,7 @@ TRAVEL_MARGIN = 3.0
 #: Two parts this close, mm, touch: a plug drawn sitting in its receptacle.
 TOUCH_MM = 0.05
 
-#: A plug this far from its receptacle, mm, is out of it: how close its travel is found.
+#: How close a plug's engaged length is found, mm.
 APART_MM = 0.01
 
 #: The steps a plug is moved by, mm, to see which ways its receptacle lets it go: a
@@ -76,6 +77,10 @@ PROBE_STEPS = (0.5, 2.0, 5.0)
 
 #: How far apart two of a plug's face directions must be to count as two, degrees.
 SAME_DIRECTION_DEG = 2.0
+
+#: A way this near square to a plug's axis is across it: under the sine of
+#: :data:`SAME_DIRECTION_DEG` along it.
+_SQUARE = math.sin(math.radians(SAME_DIRECTION_DEG))
 
 #: The faces round an axis, which face every way round it.
 _ROUND = frozenset({GeomType.CYLINDER, GeomType.CONE})
@@ -528,21 +533,27 @@ def holds_in(shape: Shape, part: Part, directions: Sequence[Vec], engine: Engine
     than it does as drawn, past the hit floor. A plug drawn into its receptacle (pins in
     their sockets) overlaps it as drawn, and is held only by what moving adds.
     """
-    query = engine.query(shape)
-    drawn_in = query.contact(part) is Contact.HIT
+    return set(_holding(shape, part, directions, engine))
+
+
+def _holding(shape: Shape, part: Part, directions: Sequence[Vec], engine: Engine) -> Iterator[int]:
+    """:func:`holds_in`'s directions one at a time, each as it is found.
+
+    Asked only as far as a caller needs: whether a part holds a plug at all stops at
+    the first.
+    """
+    drawn_in = engine.query(shape).contact(part) is Contact.HIT
     rest = _shared(engine, shape, part) if drawn_in else 0.0
-    held: set[int] = set()
     for index, direction in enumerate(directions):
         for step in PROBE_STEPS:
             moved = _moved(shape, _scale(direction, step))
             if drawn_in:
                 if _shared(engine, moved, part) > rest + HIT_MIN_VOLUME:
-                    held.add(index)
+                    yield index
                     break
             elif engine.query(moved).contact(part) is Contact.HIT:
-                held.add(index)
+                yield index
                 break
-    return held
 
 
 def find_receptacle(
@@ -607,28 +618,43 @@ def pull_axis(directions: Sequence[Vec], held: set[int], receptacle: str) -> Vec
     raise Unclear(msg)
 
 
-def engaged_length(shape: Shape, receptacle: Sequence[Part], axis: Vec) -> float:
-    """How far a plug must move along its axis before it is clear of its receptacle.
+def engaged_length(
+    shape: Shape, receptacle: Sequence[Part], axis: Vec, directions: Sequence[Vec], engine: Engine
+) -> float:
+    """How far a plug must move along its axis before it is out of its receptacle.
 
-    Clear once :data:`APART_MM` from it, searched by halves to that, between nothing and
-    its own length along the axis and the receptacle's together: past that it can't
-    still be in.
+    Out once its receptacle holds it in none of the ways its faces face across the axis
+    (of ``directions``, those square to it): out of its socket, it could be taken off
+    sideways. Not once it is clear of it: a plug drawn with room round it, as most
+    are, or tapered, is clear of its socket's walls as soon as it lifts, and read as
+    out after 0.01 mm, so a part over it went unmet (issue #225); and one drawn
+    touching it nowhere was out already. Facing no way across the axis (an axis given
+    askew), it is out as soon as it moves. Searched by halves to :data:`APART_MM`,
+    between nothing and its own length along the axis and the receptacle's together:
+    past that it can't still be in.
     """
+    across = [way for way in directions if abs(_dot(way, axis)) < _SQUARE]
+    if not across:
+        return 0.0
     whole = (
         Compound(children=[part.shape for part in receptacle])
         if len(receptacle) > 1
         else receptacle[0].shape
     )
     low, high = 0.0, _length_along(shape, axis) + _length_along(whole, axis)
-    if _distance(shape, whole) > TOUCH_MM:
-        return 0.0
     while high - low > APART_MM:
         middle = (low + high) / 2
-        if _distance(_moved(shape, _scale(axis, middle)), whole) > APART_MM:
-            high = middle
-        else:
+        moved = _moved(shape, _scale(axis, middle))
+        if any(_holds_any(moved, part, across, engine) for part in receptacle):
             low = middle
+        else:
+            high = middle
     return high
+
+
+def _holds_any(shape: Shape, part: Part, directions: Sequence[Vec], engine: Engine) -> bool:
+    """Whether a part stops the plug moving in any of ``directions``: asked to the first."""
+    return next(_holding(shape, part, directions, engine), None) is not None
 
 
 def pull_path(shape: Shape, axis: Vec, travel: float, scene: Scene) -> tuple[str, ...]:

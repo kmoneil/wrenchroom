@@ -754,7 +754,7 @@ def _seat(
         if any(holds_in(shape, part, [axis], engine) for part in receptacle):
             msg = f"its axis {said_direction(axis)} runs into {names}: which way does it come off?"
             raise Unclear(msg)
-    engaged = engaged_length(shape, receptacle, axis)
+    engaged = engaged_length(shape, receptacle, axis, directions, engine)
     travel = rule.travel_mm
     if travel is None:  # to 0.1 mm: the margin is 3, and a report reads 10.0, not 10.0156
         travel = round(engaged + TRAVEL_MARGIN, 1)

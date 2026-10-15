@@ -824,8 +824,10 @@ connectors:
   is not covered, naming them, asking for `axis:`; an `axis:` that runs into its
   receptacle is said too. A plug drawn into its receptacle (pins in their sockets) is
   free the way moving adds no overlap.
-- **Its travel** is how far it must move along the axis to be clear of its receptacle,
-  plus 3 mm, to 0.1 mm.
+- **Its travel** is how far it must move along the axis to be out of its receptacle,
+  plus 3 mm, to 0.1 mm: out once the receptacle holds it in none of the ways across the
+  axis it held it in, where it could be taken off sideways. A plug drawn with room
+  round it, as most are, or tapered, is as deep in as one drawn to fit (issue #225).
 - **Its pull path** is its own solid moved along the axis by its travel, tested against
   every part but its receptacle, its pieces, its `mates` and the ignored parts: a part
   in the way leaves it `stuck`, named. A part in its way that is named like a cable

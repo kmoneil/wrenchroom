@@ -421,13 +421,14 @@ def test_its_own_cable_is_asked_about_in_the_json_and_the_markdown():
 
 def test_a_plug_drawn_into_its_receptacle_comes_off_the_way_moving_leaves_no_more_in(engine):
     # Drawn 0.2 wider than its cavity, a press fit: it is in its shroud as drawn, and
-    # only rising adds no overlap.
+    # only rising adds no overlap. It is 7 in, as one drawn to fit is.
     parts = [("board", board()), ("jack", shroud()), ("plug", plug(grow=0.2))]
     found = result(run(parts, [{"parts": "plug"}], engine), "plug")
-    assert (found.verdict, found.receptacle, found.axis) == (
+    assert (found.verdict, found.receptacle, found.axis, found.travel) == (
         ConnectorVerdict.UNPLUGS,
         ("jack",),
         UP,
+        10.0,
     )
 
 
