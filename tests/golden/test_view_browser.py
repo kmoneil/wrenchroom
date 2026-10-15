@@ -185,7 +185,7 @@ def test_the_overview_colours_every_fastener_by_its_verdict_in_node(bench_page):
         "pull_shelf_plug": COLOURS["fails"],
         **{
             f"pull_{cell}_plug": COLOURS["turns"]
-            for cell in ("cable", "halved", "latch", "open", "tight")
+            for cell in ("cable", "halved", "latch", "open", "round", "tight")
         },
         # byname's, found by their names: "plug" first in two (issue #157).
         "byname_plug_motor": COLOURS["turns"],

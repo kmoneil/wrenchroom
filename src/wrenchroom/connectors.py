@@ -77,6 +77,9 @@ PROBE_STEPS = (0.5, 2.0, 5.0)
 #: How far apart two of a plug's face directions must be to count as two, degrees.
 SAME_DIRECTION_DEG = 2.0
 
+#: The faces round an axis, which face every way round it.
+_ROUND = frozenset({GeomType.CYLINDER, GeomType.CONE})
+
 #: How many of the ways a receptacle lets a plug go a reason names.
 _WAYS_SHOWN = 4
 
@@ -472,16 +475,23 @@ def plug_shape(parts: Sequence[Part]) -> Shape:
 def face_directions(shape: Shape) -> list[Vec]:
     """The ways a plug's faces face, each said once.
 
-    Each flat face's outward normal, and each round face's axis both ways.
+    Each flat face's outward normal, and each round face's axis and two ways square to
+    it, at right angles, each both ways. A round face, a cylinder or a cone (a tapered
+    plug, a chamfer), faces every way round its axis: with its axis alone, a round plug
+    in a round shroud was moved only along it, held one way (its socket's floor), and
+    read as resting on its receptacle, and a cone faced no way at all. Two ways square
+    to it, both ways, find a round shroud holding it as a square one holds a square
+    plug (issue #222).
     """
     found: list[Vec] = []
     for face in shape.faces():
         if face.geom_type is GeomType.PLANE:
             centre = face.center()
             candidates = [_unit(tuple(face.normal_at(centre)))]
-        elif face.geom_type is GeomType.CYLINDER and face.axis_of_rotation is not None:
-            direction = _unit(tuple(face.axis_of_rotation.direction))
-            candidates = [direction, _neg(direction)]
+        elif face.geom_type in _ROUND and face.axis_of_rotation is not None:
+            axis = _unit(tuple(face.axis_of_rotation.direction))
+            across, other = _across(axis, 0.0), _across(axis, math.pi / 2)
+            candidates = [axis, _neg(axis), across, _neg(across), other, _neg(other)]
         else:
             continue
         for direction in candidates:

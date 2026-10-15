@@ -5423,7 +5423,7 @@
     1.0
    ],
    "seat": [
-    3900.0,
+    4900.0,
     20000.0,
     6.0
    ],
@@ -5455,7 +5455,7 @@
     1.0
    ],
    "seat": [
-    4100.0,
+    5100.0,
     20000.0,
     6.0
    ],
@@ -6834,8 +6834,8 @@
  "build": null,
  "connectors": {
   "summary": {
-   "connectors": 9,
-   "unplugs": 7,
+   "connectors": 10,
+   "unplugs": 8,
    "stuck": 2,
    "no_grip": 0,
    "no_latch_access": 0,
@@ -6965,6 +6965,25 @@
     "verdict": "unplugs",
     "receptacle": [
      "pull_open_shroud"
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "travel": 10.0,
+    "blocked_by": [],
+    "reason": null,
+    "state": null,
+    "grip": null,
+    "latch": null
+   },
+   {
+    "name": "pull_round_plug",
+    "source": "name",
+    "verdict": "unplugs",
+    "receptacle": [
+     "pull_round_shroud"
     ],
     "axis": [
      0.0,

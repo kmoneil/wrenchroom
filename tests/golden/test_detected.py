@@ -349,6 +349,7 @@ def test_each_plug_is_found_by_its_name(detected):
         "pull_halved_plug": ("unplugs", "name", ()),
         "pull_latch_plug": ("unplugs", "name", ()),
         "pull_open_plug": ("unplugs", "name", ()),
+        "pull_round_plug": ("unplugs", "name", ()),  # round in a round shroud (issue #222)
         "pull_shelf_plug": ("stuck", "name", ("pull_shelf_shelf",)),
         "pull_tight_plug": ("unplugs", "name", ()),
     }
