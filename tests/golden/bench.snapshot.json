@@ -5401,7 +5401,7 @@
     1.0
    ],
    "seat": [
-    -100.0,
+    900.0,
     21000.0,
     6.0
    ],
@@ -5433,7 +5433,7 @@
     1.0
    ],
    "seat": [
-    100.0,
+    1100.0,
     21000.0,
     6.0
    ],
@@ -6819,8 +6819,8 @@
  "build": null,
  "connectors": {
   "summary": {
-   "connectors": 11,
-   "unplugs": 9,
+   "connectors": 12,
+   "unplugs": 10,
    "stuck": 2,
    "no_grip": 0,
    "no_latch_access": 0,
@@ -6872,6 +6872,25 @@
     "verdict": "unplugs",
     "receptacle": [
      "byname_shroud_c"
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "travel": 10.0,
+    "blocked_by": [],
+    "reason": null,
+    "state": null,
+    "grip": null,
+    "latch": null
+   },
+   {
+    "name": "pull_bored_plug",
+    "source": "sidecar",
+    "verdict": "unplugs",
+    "receptacle": [
+     "pull_bored_block"
     ],
     "axis": [
      0.0,

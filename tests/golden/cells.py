@@ -3707,3 +3707,31 @@ def pull_loose():
         ("plug", Pos(0, 0, 13) * body),
         ("shelf", slab(23 + 8)),
     ]
+
+
+@cell(
+    "pull_bored",
+    connectors=[{"parts": "plug"}],
+    plugs={
+        "plug": {
+            "verdict": "unplugs",
+            "receptacle": ["block"],
+            "axis": [0.0, 0.0, 1.0],
+            "travel": 10.0,
+            "blocked_by": [],
+        }
+    },
+)
+def pull_bored():
+    """pull_round's plug in a bore 7 deep in a block 24 square, turned 20 about the bore.
+
+    The block's sides face no way the plug's faces do, so each adds its normal and the
+    way along it, both ways (issue #227): the bore holds the plug in every one, and it
+    comes off up, 10. Were they left unasked, they would read as ways it goes.
+    """
+    block = Pos(0, 0, 5) * Box(24, 24, 10) - Pos(0, 0, 10 - 3.5) * Cylinder(8, 7.01)
+    return [
+        ("board", plate(t=2)),
+        ("block", Rot(0, 0, 20) * block),
+        ("plug", Pos(0, 0, 13) * Cylinder(8, 20)),
+    ]

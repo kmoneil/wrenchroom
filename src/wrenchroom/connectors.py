@@ -44,7 +44,7 @@ from build123d import Compound, GeomType, Location
 
 from wrenchroom.assembly import Part
 from wrenchroom.detect.names import name_words
-from wrenchroom.engine.scene import HIT_MIN_VOLUME, Contact, shape_bounds
+from wrenchroom.engine.scene import HIT_MIN_VOLUME, Contact, boxes_overlap, shape_bounds
 from wrenchroom.report import listed, md_code, md_text, shortlist
 from wrenchroom.tools.fingers import FINGER_REACH
 from wrenchroom.tools.sweep import CONTACT_OFFSET, HAND_LENGTH, Probe, axial_cylinder
@@ -52,9 +52,10 @@ from wrenchroom.tools.sweep import CONTACT_OFFSET, HAND_LENGTH, Probe, axial_cyl
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
-    from build123d import Shape
+    from build123d import Face, Shape
 
     from wrenchroom.engine.scene import Engine, Scene
+    from wrenchroom.solids import Bounds
 
 Vec = tuple[float, float, float]
 
@@ -81,6 +82,9 @@ SAME_DIRECTION_DEG = 2.0
 #: A way this near square to a plug's axis is across it: under the sine of
 #: :data:`SAME_DIRECTION_DEG` along it.
 _SQUARE = math.sin(math.radians(SAME_DIRECTION_DEG))
+
+#: Two ways nearer each other than :data:`SAME_DIRECTION_DEG`: their dot over this.
+_SAME = math.cos(math.radians(SAME_DIRECTION_DEG))
 
 #: The faces round an axis, which face every way round it.
 _ROUND = frozenset({GeomType.CYLINDER, GeomType.CONE})
@@ -491,20 +495,95 @@ def face_directions(shape: Shape) -> list[Vec]:
     found: list[Vec] = []
     for face in shape.faces():
         if face.geom_type is GeomType.PLANE:
-            centre = face.center()
-            candidates = [_unit(tuple(face.normal_at(centre)))]
-        elif face.geom_type in _ROUND and face.axis_of_rotation is not None:
-            axis = _unit(tuple(face.axis_of_rotation.direction))
+            candidates = [_normal(face)]
+        elif (axis := _round_axis(face)) is not None:
             across, other = _across(axis, 0.0), _across(axis, math.pi / 2)
             candidates = [axis, _neg(axis), across, _neg(across), other, _neg(other)]
         else:
             continue
-        for direction in candidates:
-            if not any(
-                _dot(direction, seen) > math.cos(math.radians(SAME_DIRECTION_DEG)) for seen in found
-            ):
-                found.append(direction)
+        for way in candidates:
+            if _new(way, found):
+                found.append(way)
     return found
+
+
+def receptacle_ways(
+    shape: Shape, receptacle: Sequence[Part], directions: Sequence[Vec]
+) -> list[Vec]:
+    """Ways round a round plug its receptacle's sides face, that its own faces don't.
+
+    A round face stands for every way round its axis by two (:func:`face_directions`),
+    the model's own where its axis is one of the model's: an opening at its side the
+    plug's width, off those two, goes unseen, and the plug reads as coming off one way
+    (issue #227). The opening's sides are the receptacle's flat faces near the plug,
+    square to its round faces' axes: each one's normal, and the way along it, square
+    to both, each both ways. Near is within the farthest probe step of the plug's box.
+    Those its faces face already, and a plug with no round face, add none.
+    """
+    axes = _round_axes(shape)
+    if not axes:
+        return []
+    found: list[Vec] = []
+    for normal in _near_sides(receptacle, shape_bounds(shape)):
+        for axis in axes:
+            if abs(_dot(normal, axis)) >= _SQUARE:
+                continue
+            along = _unit(_cross(axis, normal))
+            for way in (normal, _neg(normal), along, _neg(along)):
+                if _new(way, directions) and _new(way, found):
+                    found.append(way)
+    return found
+
+
+def _round_axes(shape: Shape) -> list[Vec]:
+    """The ways a plug's round faces' axes run, each said once."""
+    axes: list[Vec] = []
+    for face in shape.faces():
+        axis = _round_axis(face)
+        if axis is not None and _new(axis, axes):
+            axes.append(axis)
+    return axes
+
+
+def _near_sides(receptacle: Sequence[Part], box: Bounds) -> Iterator[Vec]:
+    """The normals of a receptacle's flat faces within the farthest probe step of a box."""
+    reach = PROBE_STEPS[-1]
+    for part in receptacle:
+        for face in part.shape.faces():
+            if face.geom_type is GeomType.PLANE and boxes_overlap(box, shape_bounds(face), reach):
+                yield _normal(face)
+
+
+def with_receptacle_ways(
+    shape: Shape,
+    receptacle: Sequence[Part],
+    directions: Sequence[Vec],
+    held: set[int],
+    engine: Engine,
+) -> tuple[list[Vec], set[int]]:
+    """A plug's ways and those its receptacle holds it in, with :func:`receptacle_ways`."""
+    extra = receptacle_ways(shape, receptacle, directions)
+    if not extra:
+        return list(directions), held
+    more = set().union(*(holds_in(shape, part, extra, engine) for part in receptacle))
+    return [*directions, *extra], held | {len(directions) + index for index in more}
+
+
+def _round_axis(face: Face) -> Vec | None:
+    """A round face's axis, as a unit vector; None for any other face."""
+    if face.geom_type not in _ROUND or face.axis_of_rotation is None:
+        return None
+    return _unit(tuple(face.axis_of_rotation.direction))
+
+
+def _normal(face: Face) -> Vec:
+    """A flat face's outward normal, at its centre."""
+    return _unit(tuple(face.normal_at(face.center())))
+
+
+def _new(way: Vec, seen: Sequence[Vec]) -> bool:
+    """Whether a way is none of ``seen``: more than :data:`SAME_DIRECTION_DEG` from each."""
+    return not any(_dot(way, other) > _SAME for other in seen)
 
 
 def touching(shape: Shape, parts: Sequence[Part], engine: Engine) -> list[Part]:
@@ -698,7 +777,7 @@ def said_direction(direction: Vec) -> str:
     for index, letter in enumerate("xyz"):
         if abs(abs(direction[index]) - 1) < 1e-6:  # noqa: PLR2004
             return ("+" if direction[index] > 0 else "-") + letter
-    return "[" + ", ".join(f"{c:g}" for c in (round(c, 2) for c in direction)) + "]"
+    return "[" + ", ".join(f"{c:g}" for c in (round(c, 2) + 0.0 for c in direction)) + "]"  # no -0
 
 
 def _unit(vector: Sequence[float]) -> Vec:

@@ -673,4 +673,4 @@ def test_under_exact_the_bench_s_verdicts_stand_though_every_boolean_comes_back_
     assert {told[name][0] for name in moved} == {Verdict.TURNS}
     plugs = {c.name: (c.verdict, c.axis) for c in measured.connectors.results}
     assert plugs == {c.name: (c.verdict, c.axis) for c in failing.connectors.results}
-    assert len(plugs) == 11
+    assert len(plugs) == 12
