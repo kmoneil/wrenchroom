@@ -3652,3 +3652,28 @@ def lone():
         ("stud", Pos(0, 0, 7.5) * Cylinder(4, 35)),
         ("nut", _faced_nut()),
     ]
+
+
+@cell(
+    "pull_round",
+    connectors=[{"parts": "plug"}],
+    plugs={
+        "plug": {
+            "verdict": "unplugs",
+            "receptacle": ["shroud"],
+            "axis": [0.0, 0.0, 1.0],
+            "travel": 10.0,
+            "blocked_by": [],
+        }
+    },
+)
+def pull_round():
+    """pull_open drawn round: a plug 16 across, 7 in a shroud 20 across. Its shroud holds
+    it every way but up, round as square, and it comes off up, 10 (7, plus 3).
+
+    A round face's only ways were its axis, both ways: the plug was moved only along
+    it, held one way (its socket's floor), and read as resting on its shroud, plugged
+    into none (issue #222).
+    """
+    shroud = Pos(0, 0, 5) * Cylinder(10, 10) - Pos(0, 0, 10 - 3.5) * Cylinder(8, 7.01)
+    return [("board", plate(t=2)), ("shroud", shroud), ("plug", Pos(0, 0, 13) * Cylinder(8, 20))]
