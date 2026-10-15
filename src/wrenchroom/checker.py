@@ -1804,7 +1804,7 @@ def _try_tools(
         if candidate.reason is not None:
             candidate.tool = None  # no tool is the question until the model is fixed
             return
-    candidate.notes = _attempt_notes(fastener, candidate, geometry)
+    candidate.notes = _attempt_notes(candidate)
     if fastener.kind is Kind.SCREW and (candidate.turns or candidate.hold):
         candidate.way_out = _way_out(fastener, frame, geometry, mount, scene)
         candidate.extraction_blocked = candidate.way_out.hits if candidate.way_out else ()
@@ -1925,6 +1925,8 @@ def _blocked_reason(candidate: _Candidate) -> str | None:
         hand = candidate.deciding or candidate.no_hand_room
         where = " on its best arc" if candidate.deciding else ""
         return f"no room for a hand: the hand hits {listed(hand, candidate.attempts)}{where}"
+    if not candidate.blockers:  # nothing in the way: its own body kept them off (#221)
+        return _kept_off(candidate.attempts)
     return None
 
 
@@ -2148,19 +2150,12 @@ def _clashes(
     return list(found.items())
 
 
-def _attempt_notes(
-    fastener: Fastener, candidate: _Candidate, geometry: _Geometry
-) -> tuple[str, ...]:
+def _attempt_notes(candidate: _Candidate) -> tuple[str, ...]:
     """What the attempts leave a person to know: a body no ring gets over, a ball end only."""
     notes = []
-    # Only its own body puts the part's name among an attempt's blockers: the
-    # scene never holds the part itself.
-    if any(attempt.blockers == (fastener.name,) for attempt in candidate.attempts):
-        notes.append(
-            f"no ring, socket or nut driver gets on: past its hex the part is "
-            f"{2 * geometry.cap_radius:.2f} across, wider than their bore round the hex; "
-            "only an open end grips it, from the side"
-        )
+    kept_off = _kept_off(candidate.attempts)
+    if kept_off is not None:
+        notes.append(kept_off)
     if candidate.turns and (candidate.tool or "").startswith("ball-end-key"):
         notes.append(
             f"only a ball end turns it ({candidate.how}): a ball end takes much less "
@@ -2168,6 +2163,20 @@ def _attempt_notes(
             "loose, may need a straight key, which can't get in"
         )
     return tuple(notes)
+
+
+def _kept_off(attempts: tuple[Attempt, ...]) -> str | None:
+    """What keeps a ring, socket or nut driver off the part, in a sentence; None if nothing.
+
+    A dome or a washer drawn with it, wider than their bore round the hex (issue #47).
+    """
+    attempt = next((attempt for attempt in attempts if attempt.kept_off), None)
+    if attempt is None:
+        return None
+    return (
+        f"no ring, socket or nut driver gets on: {attempt.kept_off}, wider than their "
+        "bore round the hex; only an open end grips it, from the side"
+    )
 
 
 def _run_attempts(candidate: _Candidate, attempts_iter: Iterator[Attempt]) -> None:
@@ -2357,7 +2366,7 @@ def _finish(
         state=candidate.state,
         pair=partner_name,
         grazes=grazes if verdict in {Verdict.TURNS, Verdict.STUCK, Verdict.HELD} else (),
-        notes=candidate.notes,
+        notes=tuple(note for note in candidate.notes if note != reason),  # said once
         deciding=candidate.deciding if verdict is Verdict.BLOCKED else (),
     )
 
@@ -2385,7 +2394,7 @@ class _Geometry:
     #: How far the part reaches from the axis past its band, toward the seat:
     #: what a ring or socket must pass to get on (a gland's dome; issue #47).
     cap_radius: float = 0.0
-    #: The part's own name, for an attempt its own body stops.
+    #: The part's own name: what a tool's probe meets where its own body keeps it off.
     part_name: str = ""
     #: The drive's across-flats as the solid shows it (a hex, a hex socket), read only
     #: where a rule names a tool, which may fit it (issue #72); None elsewhere.
@@ -3199,14 +3208,19 @@ def _gets_over(geometry: _Geometry, af: float) -> bool:
 def _cannot_get_on(
     mount: Mount, af: float, geometry: _Geometry, tool: str, ways: tuple[str, ...]
 ) -> Iterator[Attempt]:
-    """Each way a covering tool would try, failed on the part's own body past its hex."""
+    """Each way a covering tool would try, kept off by the part's own body past its hex.
+
+    The part is not in its own way: the attempt says how wide it is past its hex, and
+    has no blockers (issue #221). Its probe, where the tool would go on, meets the part.
+    """
     inner = af / math.sqrt(3) + RING_CLEARANCE
     path = mount.place(
         axial_annulus(inner, geometry.cap_radius, geometry.band_top, -geometry.band_top)
     )
-    own = (geometry.part_name,)
+    probe = Probe(path, (geometry.part_name,))
+    kept_off = f"past its hex the part is {2 * geometry.cap_radius:.2f} across"
     for way in ways:
-        yield Attempt(tool, way, False, False, 0.0, own, (Probe(path, own),))
+        yield Attempt(tool, way, False, False, 0.0, (), (probe,), kept_off=kept_off)
 
 
 def _forced_attempts(

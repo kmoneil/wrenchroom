@@ -128,6 +128,10 @@ class Attempt:
             stopped; and where the tool alone would turn or hold and the hand
             can't follow it, what the hand ran into along the tool's best arc.
         required_deg: The arc the tool needs to turn, for a swing search.
+        kept_off: What keeps a ring, socket or nut driver from getting on at all,
+            where it is the fastener's own body past its hex (a dome, a washer drawn
+            with it): ``past its hex the part is 16.00 across``. The part is never
+            its own blocker (issue #221); "" for a tool nothing of its own stops.
     """
 
     tool: str
@@ -142,6 +146,7 @@ class Attempt:
     grazes: tuple[str, ...] = ()
     bounds: tuple[str, ...] = ()
     required_deg: float = 0.0
+    kept_off: str = ""
 
 
 def checked_step(step_deg: float) -> float:

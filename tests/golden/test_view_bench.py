@@ -145,17 +145,22 @@ def test_every_part_is_drawn_and_marked(bench_view, bench_report):
 
 def test_attempts_record_every_position_they_tested(bench_report):
     """The probes are the attempt, position by position: its blockers are their
-    hits in order, an engagement that hits stops it, and nothing turns on a hit."""
+    hits in order, an engagement that hits stops it, and nothing turns on a hit.
+    A probe meets the fastener itself only where its own body keeps the tool off,
+    and the part is no blocker of its own (issue #221)."""
     checked = 0
     for result in bench_report.results:
+        own = result.fastener.name
         for attempt in result.attempts:
-            assert attempt.probes, (result.fastener.name, attempt)
+            assert attempt.probes, (own, attempt)
             seen = []
             for probe in attempt.probes:
                 for name in probe.hits:
                     if name not in seen:
                         seen.append(name)
-            assert tuple(seen) == attempt.blockers, (result.fastener.name, attempt.way)
+            assert (own in seen) == bool(attempt.kept_off), (own, attempt.way)
+            others = tuple(name for name in seen if name != own)
+            assert others == attempt.blockers, (own, attempt.way)
             if attempt.probes[0].hits:
                 assert len(attempt.probes) == 1
                 assert not attempt.turns

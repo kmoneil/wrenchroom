@@ -129,13 +129,21 @@ def attempt_text(attempt: Attempt) -> str:
             line += f", the hand stopped by {', '.join(attempt.bounds)} on its best arc"
     elif attempt.bounds:
         line += f", {bounded(attempt.bounds)}"
+    return line + _met(attempt)
+
+
+def _met(attempt: Attempt) -> str:
+    """How an attempt's line ends: what kept the tool off, what it and the hand hit."""
+    tail = ""
+    if attempt.kept_off:  # its own body: no part of the model is in the way (#221)
+        tail += f"; doesn't get on: {attempt.kept_off}"
     if attempt.blockers:
-        line += f"; hit {', '.join(attempt.blockers)}"
+        tail += f"; hit {', '.join(attempt.blockers)}"
     if attempt.hand_blockers:
-        line += f"; the hand hit {', '.join(attempt.hand_blockers)}"
+        tail += f"; the hand hit {', '.join(attempt.hand_blockers)}"
     if attempt.grazes and (attempt.turns or attempt.holds):
-        line += f"; grazed {', '.join(attempt.grazes)}"
-    return line
+        tail += f"; grazed {', '.join(attempt.grazes)}"
+    return tail
 
 
 @dataclass(frozen=True)

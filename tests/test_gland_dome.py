@@ -11,7 +11,8 @@ for the free end". Three things were wrong:
   where the part has flats parallel to its axis, the band is theirs now;
 - a ring, socket or nut driver goes on along the axis, over the dome: one wider
   than their bore round the hex keeps them off, and only an open end, from the
-  side, grips the hex. The result says so.
+  side, grips the hex. The result says so, and the gland is not in its own way
+  (issue #221): where nothing else is, that is the reason it fails.
 
 The worked gland: a 15 mm hex 3 high (corners 8.66 from the axis; a ring's or
 socket's bore round them, 8.96) on a wall, a dome 7 high on top.
@@ -54,6 +55,14 @@ def run(assembly, engine="mesh", rules=None, kit="full"):
     return result
 
 
+def kept_off(across):
+    """What a result says of a dome ``across`` wide, as a note or as its reason."""
+    return (
+        f"no ring, socket or nut driver gets on: past its hex the part is {across:.2f} "
+        "across, wider than their bore round the hex; only an open end grips it, from the side"
+    )
+
+
 def ring_z(result, bore=BORE):
     """The world heights of the ring on the hex in the turning attempt's engagement."""
     (turning,) = [a for a in result.attempts if a.turns]
@@ -91,11 +100,13 @@ def test_a_dome_wider_than_the_ring_s_bore_leaves_the_open_end(engine, dome):
     )
     rings = [a for a in result.attempts if a.way in RING_WAYS]
     assert [a.way for a in rings] == list(RING_WAYS)
-    assert all(a.blockers == ("gland",) and not a.turns and not a.holds for a in rings)
-    assert result.notes == (
-        f"no ring, socket or nut driver gets on: past its hex the part is {dome:.2f} "
-        "across, wider than their bore round the hex; only an open end grips it, from the side",
-    )
+    for ring in rings:
+        assert (ring.turns, ring.holds) == (False, False)
+        # Not in its own way (issue #221); the probe, where it would go on, meets it.
+        assert ring.blockers == ()
+        assert ring.kept_off == f"past its hex the part is {dome:.2f} across"
+        assert [probe.hits for probe in ring.probes] == [("gland",)]
+    assert result.notes == (kept_off(dome),)
 
 
 def test_the_ring_sits_on_the_hex_under_a_dome_about_as_wide():
@@ -109,10 +120,13 @@ def test_a_socket_cannot_get_on_either():
     rules = {"fasteners": [{"parts": "gland", "kind": "nut", "size": "M10", "tool": "socket-15"}]}
     result = run(on_wall(gland(20.0)), rules=rules)
     assert result.verdict is Verdict.BLOCKED
-    assert result.blockers == ("gland",)
+    # Nothing is in its way but itself, which is no blocker: the reason says why, and
+    # no note says it again (issue #221).
+    assert (result.blockers, result.deciding) == ((), ())
+    assert (result.reason, result.notes) == (kept_off(20.0), ())
     (attempt,) = result.attempts
     assert (attempt.tool, attempt.way) == ("socket-15", "socket on ratchet")
-    assert result.notes[0].startswith("no ring, socket or nut driver gets on")
+    assert (attempt.blockers, attempt.kept_off) == ((), "past its hex the part is 20.00 across")
 
 
 def test_a_forced_spanner_still_tries_its_open_end():
@@ -128,9 +142,10 @@ def test_a_nut_driver_cannot_get_on():
         "fasteners": [{"parts": "gland", "kind": "nut", "size": "M6", "tool": "nut-driver-10"}]
     }
     result = run(on_wall(shape), rules=rules)
-    assert result.verdict is Verdict.BLOCKED
+    assert (result.verdict, result.blockers, result.reason) == (Verdict.BLOCKED, (), kept_off(14))
     (attempt,) = result.attempts
-    assert (attempt.way, attempt.blockers) == ("nut driver straight in", ("gland",))
+    assert (attempt.way, attempt.blockers) == ("nut driver straight in", ())
+    assert attempt.kept_off == "past its hex the part is 14.00 across"
 
 
 def test_a_bored_gland_too(engine):
