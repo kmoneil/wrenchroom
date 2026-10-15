@@ -823,7 +823,11 @@ connectors:
   move in. Free in none, or in several (a slot open at its end as well as its top), it
   is not covered, naming them, asking for `axis:`; an `axis:` that runs into its
   receptacle is said too. A plug drawn into its receptacle (pins in their sockets) is
-  free the way moving adds no overlap.
+  free the way moving adds no overlap. A round plug's two ways across stand for every
+  way round it, but an opening at its receptacle's side faces its own way: the
+  receptacle's flat faces near the plug, square to its axis, are probed too, each
+  one's normal and the way along it, so an opening off the model's axes is asked about
+  as one along them is (issue #227).
 - **Its travel** is how far it must move along the axis to be out of its receptacle,
   plus 3 mm, to 0.1 mm: out once the receptacle holds it in none of the ways across the
   axis it held it in, where it could be taken off sideways. A plug drawn with room

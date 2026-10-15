@@ -66,6 +66,7 @@ from wrenchroom.connectors import (
     said_direction,
     thumb,
     touching,
+    with_receptacle_ways,
 )
 from wrenchroom.detect import find
 from wrenchroom.detect.geometry import read_shape, wide_end
@@ -748,7 +749,8 @@ def _seat(
         receptacle = tuple(part for part in others if found in {part.name, part.piece_of})
     names = listed(_whole_names(receptacle))
     if rule.axis is None:
-        axis = pull_axis(directions, held, names)
+        ways, held_ways = with_receptacle_ways(shape, receptacle, directions, held, engine)
+        axis = pull_axis(ways, held_ways, names)
     else:
         axis = rule.axis
         if any(holds_in(shape, part, [axis], engine) for part in receptacle):

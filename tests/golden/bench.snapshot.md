@@ -173,7 +173,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 
 #### Connectors
 
-**11 connectors: 9 unplug, 2 stuck, 0 not covered**
+**12 connectors: 10 unplug, 2 stuck, 0 not covered**
 
 | Connector | Verdict | In the way, or why |
 | --- | --- | --- |
