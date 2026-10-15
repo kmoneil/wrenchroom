@@ -176,9 +176,9 @@ def test_a_round_plug_turned_comes_off_along_its_own_axis(engine):
 
 def test_a_round_plug_drawn_into_its_jack_comes_off_up(engine):
     # Drawn 0.2 wider than its socket, a press fit: in its jack as drawn, and only
-    # rising adds no overlap, round as square.
+    # rising adds no overlap, round as square; and in it, 20, until it is out.
     for name, entry in found(run(pairs(grow=0.2), engine)).items():
-        assert entry[:3] == (ConnectorVerdict.UNPLUGS, (name.replace("plug", "jack"),), UP)
+        assert entry[:4] == (ConnectorVerdict.UNPLUGS, (name.replace("plug", "jack"),), UP, 23.0)
 
 
 def test_a_barrel_plug_over_its_jack_s_pin_comes_off_up(engine):
@@ -198,8 +198,8 @@ def test_a_barrel_plug_over_its_jack_s_pin_comes_off_up(engine):
 
 
 def test_a_tapered_plug_in_a_tapered_socket_comes_off_up(engine):
-    # Cones and flat ends only: it read as resting on its jack. Its travel is 3.1, not
-    # the 20 it sits in, as any plug's that its socket's walls don't touch (issue #225).
+    # Cones and flat ends only: it read as resting on its jack. It sits 20 in, held
+    # across till it is out, though it leaves the walls as it lifts (issue #225).
     taper = Pos(0, 0, 15) * Cone(11, 13, 20)
     tapered_jack = Pos(0, 0, 12.5) * Cylinder(15, 25) - taper
     parts = [
@@ -207,10 +207,11 @@ def test_a_tapered_plug_in_a_tapered_socket_comes_off_up(engine):
         ("tapered_jack", tapered_jack),
         ("tapered_plug", taper + Pos(0, 0, 35) * Cone(13, 12, 20)),
     ]
-    assert found(run(parts, engine))["tapered_plug"][:3] == (
+    assert found(run(parts, engine))["tapered_plug"][:4] == (
         ConnectorVerdict.UNPLUGS,
         ("tapered_jack",),
         UP,
+        23.0,
     )
 
 

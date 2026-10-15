@@ -35,6 +35,7 @@ from build123d import (
     Shell,
     Sphere,
     Torus,
+    chamfer,
     extrude,
 )
 from parts import (
@@ -3677,3 +3678,32 @@ def pull_round():
     """
     shroud = Pos(0, 0, 5) * Cylinder(10, 10) - Pos(0, 0, 10 - 3.5) * Cylinder(8, 7.01)
     return [("board", plate(t=2)), ("shroud", shroud), ("plug", Pos(0, 0, 13) * Cylinder(8, 20))]
+
+
+@cell(
+    "pull_loose",
+    connectors=[{"parts": "plug"}],
+    plugs={
+        "plug": {
+            "verdict": "stuck",
+            "receptacle": ["shroud"],
+            "axis": [0.0, 0.0, 1.0],
+            "travel": 10.0,
+            "blocked_by": ["shelf"],
+        }
+    },
+)
+def pull_loose():
+    """pull_shelf with its plug drawn 0.1 off its socket's walls all round, its foot
+    bevelled 1, as most plugs are drawn: it is 7 in still, must come 10, and the shelf
+    8 over its top stops it. Clear of the walls as soon as it lifted, it read as in by
+    nothing: travel 3, the shelf unmet, and it came off (issue #225). Its bevels face
+    slant to its axis, no way across it.
+    """
+    body = chamfer(Box(15.8, 7.8, 20).edges().group_by(Axis.Z)[0], 1.0)
+    return [
+        ("board", plate(t=2)),
+        ("shroud", _shroud()),
+        ("plug", Pos(0, 0, 13) * body),
+        ("shelf", slab(23 + 8)),
+    ]

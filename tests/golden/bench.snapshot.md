@@ -173,10 +173,11 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 
 #### Connectors
 
-**10 connectors: 9 unplug, 1 stuck, 0 not covered**
+**11 connectors: 9 unplug, 2 stuck, 0 not covered**
 
 | Connector | Verdict | In the way, or why |
 | --- | --- | --- |
+| `pull_loose_plug` | stuck | `pull_loose_shelf` |
 | `pull_shelf_plug` | stuck | `pull_shelf_shelf` |
 
 - 1 part named like a connector, not checked: `byname_plug_cover` (a name doesn't say which half comes off: list the plugs under connectors:)

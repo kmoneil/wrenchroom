@@ -7,7 +7,8 @@ pull_latch's come off too: what fingers make of them is hand room's
 first in two (issue #157) and a screw terminal's the third (issue #166), and its
 cover, named for a plug, is listed. pull_halved's shroud is two solids of one part,
 and one receptacle (issue #200). pull_round's plug and shroud are round, and it comes
-off as pull_open's does (issue #222).
+off as pull_open's does (issue #222). pull_loose's plug, drawn with room round it, is
+as deep in its shroud as pull_shelf's, and stuck under its shelf (issue #225).
 """
 
 import pytest
@@ -54,15 +55,17 @@ def test_every_connector_the_bench_checks_has_its_truth(plugs, bench_report):
         (),
     )
     assert connectors.summary == {
-        "connectors": 10,
+        "connectors": 11,
         "unplugs": 9,
-        "stuck": 1,
+        "stuck": 2,
         "no_grip": 0,
         "no_latch_access": 0,
         "not_covered": 0,
     }
 
 
-def test_the_bench_says_its_stuck_plug(bench_report):
-    assert "10 connectors: 9 unplug, 1 stuck, 0 not covered" in bench_report.terminal_lines()
-    assert "FAIL pull_shelf_plug  stuck  pull_shelf_shelf" in bench_report.terminal_lines()
+def test_the_bench_says_its_stuck_plugs(bench_report):
+    lines = bench_report.terminal_lines()
+    assert "11 connectors: 9 unplug, 2 stuck, 0 not covered" in lines
+    assert "FAIL pull_shelf_plug  stuck  pull_shelf_shelf" in lines
+    assert "FAIL pull_loose_plug  stuck  pull_loose_shelf" in lines

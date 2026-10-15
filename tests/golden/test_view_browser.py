@@ -172,7 +172,8 @@ def test_the_panel_lists_the_tools_the_report_needs_in_node(bench_page):
 
 
 def test_the_overview_colours_every_fastener_by_its_verdict_in_node(bench_page):
-    # And each plug by its own (M9): pull_shelf's stuck, red; the rest come off, green.
+    # And each plug by its own (M9): pull_shelf's and pull_loose's stuck, red; the rest
+    # come off, green.
     page, view = bench_page
     (load,) = _node(page, "")
     record = load["drawn"]
@@ -183,6 +184,7 @@ def test_the_overview_colours_every_fastener_by_its_verdict_in_node(bench_page):
     colour_of |= {p["name"]: p["colour"] for p in view["connectors"]["found"]}
     assert {p["name"]: p["colour"] for p in view["connectors"]["found"]} == {
         "pull_shelf_plug": COLOURS["fails"],
+        "pull_loose_plug": COLOURS["fails"],
         **{
             f"pull_{cell}_plug": COLOURS["turns"]
             for cell in ("cable", "halved", "latch", "open", "round", "tight")

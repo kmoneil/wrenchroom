@@ -5423,8 +5423,8 @@
     1.0
    ],
    "seat": [
-    4900.0,
-    20000.0,
+    -100.0,
+    21000.0,
     6.0
    ],
    "source": "name+geometry",
@@ -5455,8 +5455,8 @@
     1.0
    ],
    "seat": [
-    5100.0,
-    20000.0,
+    100.0,
+    21000.0,
     6.0
    ],
    "source": "name+geometry",
@@ -6834,9 +6834,9 @@
  "build": null,
  "connectors": {
   "summary": {
-   "connectors": 10,
+   "connectors": 11,
    "unplugs": 8,
-   "stuck": 2,
+   "stuck": 3,
    "no_grip": 0,
    "no_latch_access": 0,
    "not_covered": 0
@@ -6954,6 +6954,27 @@
     ],
     "travel": 10.0,
     "blocked_by": [],
+    "reason": null,
+    "state": null,
+    "grip": null,
+    "latch": null
+   },
+   {
+    "name": "pull_loose_plug",
+    "source": "name",
+    "verdict": "stuck",
+    "receptacle": [
+     "pull_loose_shroud"
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "travel": 10.0,
+    "blocked_by": [
+     "pull_loose_shelf"
+    ],
     "reason": null,
     "state": null,
     "grip": null,

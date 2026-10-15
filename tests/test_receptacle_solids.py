@@ -125,15 +125,17 @@ def test_two_parts_that_only_share_a_name_are_two_receptacles_still():
 def test_a_receptacle_s_other_solid_leaves_the_plug_s_way_with_it(reader):
     # The whole shroud, and a bar of the same part across the plug's path, 5 over its
     # top and touching it nowhere: the part is the receptacle, bar and all, as it is
-    # when given whole, and the plug's travel is to clear all of it: from its foot at 3
-    # past the bar's top at 30, and 3 more. A bar that is another part's stops the plug.
+    # when given whole, and no part of its receptacle is in a plug's way (a latch's
+    # hook, a key over it). A bar that is another part's stops the plug. Its travel is
+    # out of its socket, 7 and 3 more: the bar holds it across in no way (issue #225).
+    # It was to clear the bar too, from its foot at 3 past the bar's top at 30.
     bar = Pos(0, 0, 29) * Box(30, 4, 2)
     of_the_jack = plugged(Compound([shroud().solid(), bar.solid()]))
     assert seated(check(reader(of_the_jack), connector())) == (
         ConnectorVerdict.UNPLUGS,
         ("jack",),
         UP,
-        30.0,
+        10.0,
         (),
         None,
     )
