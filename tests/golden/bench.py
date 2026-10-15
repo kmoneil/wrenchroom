@@ -79,12 +79,13 @@ SLOTS = len(CELLS) + 1
 #: over), 182 with #198's halves: a screw under a lid of two solids the lid-off state
 #: takes off, and one whose mate is a lead of two, 184 with #210's apart: two hex
 #: bolts, each its head and its shank as two solids, 185 with its both_over: a screw
-#: under a cover of two solids, both in its key's way.
+#: under a cover of two solids, both in its key's way, 187 with #221's faced and lone:
+#: two nuts drawn with their washers, two solids each, which keep a ring and socket off.
 FINAL_COUNTS = {
-    "fasteners": 185,
+    "fasteners": 187,
     "turns": 138,
     "held": 15,
-    "blocked": 29,
+    "blocked": 31,
     "stuck": 3,
     "not_covered": 0,
 }

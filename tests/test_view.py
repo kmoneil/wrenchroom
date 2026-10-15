@@ -82,8 +82,8 @@ def test_a_blocked_screw_is_red_and_highlights_its_wall(engine):
 
 def test_a_part_stopped_by_its_own_body_is_drawn_as_itself_not_its_blocker():
     # A cap nut sunk in a counterbore, its dome wider than a ring's or socket's
-    # bore (issue #47): it names itself in the way, and is drawn red as the
-    # fastener, never magenta as its own blocker; the counterbore is.
+    # bore (issue #47): it is drawn red as the fastener, never magenta as its own
+    # blocker; the counterbore is. Nor is it in its own way (issue #221).
     from build123d import Cylinder  # noqa: PLC0415
 
     from fastener_models import hex_prism  # noqa: PLC0415
@@ -97,12 +97,16 @@ def test_a_part_stopped_by_its_own_body_is_drawn_as_itself_not_its_blocker():
     )
     data = view_data(report)
     cap = _fastener(data, "cap_nut")
-    assert cap["in_way"] == ["cap_nut", "plate"]
+    assert cap["in_way"] == ["plate"]
     assert _part_names(data, cap["highlight"]) == ["plate"]
     for attempt in cap["attempts"]:
         assert "cap_nut" not in _part_names(data, attempt["highlight"])
     ring = cap["attempts"][0]
-    assert ring["text"] == "spanner-16, ring, full length: blocked; hit cap_nut"
+    assert ring["text"] == (
+        "spanner-16, ring, full length: blocked; doesn't get on: "
+        "past its hex the part is 20.00 across"
+    )
+    assert _part_names(data, ring["highlight"]) == []
     assert [p["hit"] for p in ring["probes"]] == [True]  # its path over the dome, drawn
 
 

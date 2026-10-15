@@ -247,7 +247,10 @@ turn and can never come apart: both fail (`nothing in the joint turns`).
 A tool grips the hex where its flats are, not the part's widest region (a flange, or
 a gland's dome), and a ring, socket or nut driver has to get on over whatever the
 part has past its hex: a dome wider than their bore leaves only the open end, and the
-report says so.
+report says so. A fastener is never in its own way (issue #221): `explain` says the
+ring and socket don't get on (`doesn't get on: past its hex the part is 16.00
+across`), so a nut drawn with its washer is blocked by whatever stops its open end,
+and where nothing else is in the way (a rule's socket) that is the reason it fails.
 
 A rule's `tool:` picks the one tool tried, and it must fit (issue #72): of the kind
 the drive takes (a spanner, socket or nut driver on a hex; a hex key in a hex socket;

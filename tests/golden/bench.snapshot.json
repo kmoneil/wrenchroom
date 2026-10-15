@@ -5,10 +5,10 @@
  "step_deg": 15.0,
  "swing_positions": 24,
  "summary": {
-  "fasteners": 185,
+  "fasteners": 187,
   "turns": 138,
   "held": 15,
-  "blocked": 29,
+  "blocked": 31,
   "stuck": 3,
   "not_covered": 0
  },
@@ -1225,6 +1225,40 @@
    "notes": []
   },
   {
+   "name": "faced_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    20000.0,
+    8.45
+   ],
+   "source": "sidecar",
+   "tool": "spanner-13",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "faced_wall"
+   ],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": [
+    "no ring, socket or nut driver gets on: past its hex the part is 16.00 across, wider than their bore round the hex; only an open end grips it, from the side"
+   ]
+  },
+  {
    "name": "flange_nut_nut",
    "kind": "nut",
    "head": null,
@@ -2428,6 +2462,36 @@
    "deciding": [],
    "stuck_on": [],
    "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "lone_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    20000.0,
+    8.45
+   ],
+   "source": "sidecar",
+   "tool": "socket-13",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": "no ring, socket or nut driver gets on: past its hex the part is 16.00 across, wider than their bore round the hex; only an open end grips it, from the side",
    "grazes": [],
    "notes": []
   },
@@ -4760,7 +4824,6 @@
    "state": null,
    "pair": null,
    "blocked_by": [
-    "sunk_cap_cap_nut",
     "sunk_cap_plate"
    ],
    "deciding": [],
@@ -5338,7 +5401,7 @@
     1.0
    ],
    "seat": [
-    1900.0,
+    3900.0,
     20000.0,
     6.0
    ],
@@ -5370,7 +5433,7 @@
     1.0
    ],
    "seat": [
-    2100.0,
+    4100.0,
     20000.0,
     6.0
    ],
@@ -6554,6 +6617,10 @@
     "verdict": "blocked"
    },
    {
+    "name": "faced_nut",
+    "verdict": "blocked"
+   },
+   {
     "name": "flat_deep_screw",
     "verdict": "blocked"
    },
@@ -6571,6 +6638,10 @@
    },
    {
     "name": "key_wall_near_screw",
+    "verdict": "blocked"
+   },
+   {
+    "name": "lone_nut",
     "verdict": "blocked"
    },
    {
@@ -6682,10 +6753,11 @@
    },
    {
     "tool": "spanner-13",
-    "count": 5,
+    "count": 6,
     "fasteners": [
      "channel_nut",
      "corner_touch_nut",
+     "faced_nut",
      "pair_both_hold_bolt",
      "pair_both_hold_nut",
      "post_ring_nut"
@@ -6722,6 +6794,14 @@
     "count": 1,
     "fasteners": [
      "big_tube_gland"
+    ],
+    "only_blocked": true
+   },
+   {
+    "tool": "socket-13",
+    "count": 1,
+    "fasteners": [
+     "lone_nut"
     ],
     "only_blocked": true
    },

@@ -17,7 +17,7 @@ from wrenchroom.checker import check
 from wrenchroom.config import Config, ConfigError
 from wrenchroom.engine import exact as exact_module
 from wrenchroom.engine import mesh as mesh_module
-from wrenchroom.report import Verdict, md_text
+from wrenchroom.report import Verdict, attempt_text, md_text
 
 
 def _truth_params():
@@ -77,6 +77,8 @@ def test_round_trip_names(bench_dir):
         "apart_tall_bolt#2": "apart_tall_bolt",
         "apart_long_bolt#2": "apart_long_bolt",
         "both_over_cover#2": "both_over_cover",
+        "faced_nut#2": "faced_nut",
+        "lone_nut#2": "lone_nut",
     }
     assert shells == ["shelled_ceiling", "shelled_decal"]  # the bench's two shells
     assert assembly.surfaces == ("shelled_decal",)  # the open one
@@ -443,6 +445,24 @@ def test_a_note_two_fasteners_share_is_said_once(bench_report):
     ]
 
 
+def test_no_fastener_is_in_its_own_way(bench_report):
+    """Issue #221: a ring or socket its own dome or washer keeps off says so, and names
+    nothing; the part is never among what stopped it, in a report or an attempt."""
+    kept_off = set()
+    for result in bench_report.results:
+        name = result.fastener.name
+        assert name not in result.blockers + result.deciding + result.stuck_on, name
+        for attempt in result.attempts:
+            assert name not in attempt.blockers + attempt.bounds + attempt.hand_blockers, name
+            if attempt.kept_off:  # as explain says it
+                assert attempt_text(attempt).endswith(f"; doesn't get on: {attempt.kept_off}")
+                kept_off.add(name)
+    # Not vacuous: the bench's four whose own shape keeps the ring and socket off.
+    assert kept_off == {"faced_nut", "lone_nut", "sunk_cap_cap_nut", "wide_dome_gland"}
+    faced = next(result for result in bench_report.results if result.fastener.name == "faced_nut")
+    assert faced.blockers == ("faced_wall",)
+
+
 def test_the_undersize_nut_is_noted_in_every_format(bench_report, bench_json):
     """Issue #50: the one note on the described bench, as each report gives it."""
     note = (
@@ -461,6 +481,7 @@ def test_the_undersize_nut_is_noted_in_every_format(bench_report, bench_json):
         "w10642_screw",  # its socket drawn loose (issue #82)
         "wide_dome_gland",
         "sunk_cap_cap_nut",
+        "faced_nut",  # its washer (issue #221)
         "ball_tilt_screw",
         "ball_shoulder_screw",
         "cross_drawn_m4_screw",  # a cross drawn for PH1 (issue #125)
@@ -604,11 +625,13 @@ def test_the_tools_list_counts_each_passing_fastener_s_tool(bench_report, bench_
     assert len(used.no_tool) == 13
     assert len(used.without) == FINAL_COUNTS["blocked"] + FINAL_COUNTS["not_covered"]
     # Issue #136: each blocked fastener's tool, once reached, apart from the reached:
-    # all 28 but the four in joints nothing turns, which no tool was tried on; and the
-    # one tool only a blocked fastener needs, big_tube's 36.
+    # all but the four in joints nothing turns, which no tool was tried on; and the
+    # two tools only a blocked fastener needs, big_tube's 36 and lone's socket-13.
     assert sum(len(names) for _, names in used.blocked) == FINAL_COUNTS["blocked"] - 4
-    assert {tool for tool, _ in used.blocked if not used.reached(tool)} == {"spanner-36"}
+    only_blocked = {tool for tool, _ in used.blocked if not used.reached(tool)}
+    assert only_blocked == {"spanner-36", "socket-13"}
     assert dict(used.blocked)["spanner-36"] == ("big_tube_gland",)
+    assert dict(used.blocked)["socket-13"] == ("lone_nut",)
     # In the report's order, by name: both_over's screw, then build_buried's two under
     # their cover.
     assert dict(used.blocked)["hex-key-5"][:4] == (

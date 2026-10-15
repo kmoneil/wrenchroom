@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**185 fasteners: 138 turn, 15 held, 29 blocked, 3 stuck, 0 not covered**
+**187 fasteners: 138 turn, 15 held, 31 blocked, 3 stuck, 0 not covered**
 
 Kit `full`, swings tried every 15 deg, ENGINE engine, wrenchroom VERSION.
 
@@ -68,7 +68,8 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | M8 hex screw | - | 2 | 1 of 2 fail |
 | M8 hex screw | `spanner-13` | 16 | 1 of 16 fail |
 | M8 nut | - | 1 | 1 of 1 fail |
-| M8 nut | `spanner-13` | 23 | 4 of 23 fail |
+| M8 nut | `socket-13` | 1 | 1 of 1 fail |
+| M8 nut | `spanner-13` | 24 | 5 of 24 fail |
 | M8 phillips screw | `driver-ph4` | 1 | all pass (driver straight in) |
 | M8 socket screw | `stubby-key-6` | 1 | all pass (short leg in) |
 | M8 torx screw | `torx-key-T40` | 1 | all pass (driver straight in) |
@@ -128,8 +129,8 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 
 - By hand: 3 (`grip_thumb_screw`, `grip_wheel_thumbscrew`, `grip_wing_nut`)
 - No tool needed: 13, held by themselves or a trap
-- No tool yet: 29 blocked (wrenchroom check says why)
-- Blocked, once reached: `hex-key-1.5` x1, `hex-key-2.5` x3, `hex-key-4` x1, `hex-key-5` x8, `spanner-5.5` x1, `spanner-13` x5, `spanner-15` x1, `spanner-16` x2, `spanner-24` x1, `spanner-36` x1 (only blocked fasteners need it: `big_tube_gland`), `driver-ph2` x1
+- No tool yet: 31 blocked (wrenchroom check says why)
+- Blocked, once reached: `hex-key-1.5` x1, `hex-key-2.5` x3, `hex-key-4` x1, `hex-key-5` x8, `spanner-5.5` x1, `spanner-13` x6, `spanner-15` x1, `spanner-16` x2, `spanner-24` x1, `spanner-36` x1 (only blocked fasteners need it: `big_tube_gland`), `socket-13` x1 (only blocked fasteners need it: `lone_nut`), `driver-ph2` x1
 
 #### Failures
 
@@ -145,11 +146,13 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `channel_nut` | `spanner-13` | blocked | `channel_left`, `channel_right` |
 | `corner_touch_nut` | `spanner-13` | blocked | `the nut's corners hit corner_touch_block as it turns` |
 | `dome_rib_gland` | `spanner-15` | blocked | `only holds, and it has no nut; best arc bounded by dome_rib_rib` |
+| `faced_nut` | `spanner-13` | blocked | `faced_wall` |
 | `flat_deep_screw` | `hex-key-2.5` | blocked | `flat_deep_under`, `flat_deep_lid` |
 | `gland_rib_gland` | `spanner-24` | blocked | `only holds, and it has no nut; best arc bounded by gland_rib_rib` |
 | `head_trap_both_bolt` | - | blocked | `held by its trap in head_trap_plate, and its nut (head_trap_both_nut) is held by its trap in head_trap_base: nothing in the joint turns` |
 | `head_trap_both_nut` | - | blocked | `held by its trap in head_trap_base, and its bolt (head_trap_both_bolt) is held by its trap in head_trap_plate: nothing in the joint turns` |
 | `key_wall_near_screw` | `hex-key-5` | blocked | `key_wall_near_wall` |
+| `lone_nut` | `socket-13` | blocked | `no ring, socket or nut driver gets on: past its hex the part is 16.00 across, wider than their bore round the hex; only an open end grips it, from the side` |
 | `pair_both_hold_bolt` | `spanner-13` | blocked | `only holds, and its partner pair_both_hold_nut does not turn; best arc bounded by pair_both_hold_pocket_high` |
 | `pair_both_hold_nut` | `spanner-13` | blocked | `only holds, and its partner pair_both_hold_bolt does not turn; best arc bounded by pair_both_hold_pocket_low` |
 | `phillips_shelf_screw` | `driver-ph2` | blocked | `phillips_shelf_shelf` |
@@ -157,7 +160,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `reach_55_nut` | `spanner-5.5` | blocked | `reach_55_wall`, `reach_55_shelf` |
 | `set_sunk_screw` | `hex-key-1.5` | blocked | `set_sunk_hub` |
 | `shelled_screw` | `hex-key-5` | blocked | `shelled_ceiling` |
-| `sunk_cap_cap_nut` | `spanner-16` | blocked | `sunk_cap_plate`, `sunk_cap_cap_nut` |
+| `sunk_cap_cap_nut` | `spanner-16` | blocked | `sunk_cap_plate` |
 | `tail_too_long_nut` | `spanner-16` | blocked | `tail_too_long_collar`, `tail_too_long_bolt` |
 | `tapped_hold_screw` | `hex-key-5` | blocked | `only holds, and it has no nut; best arc bounded by tapped_hold_slot` |
 | `tee_hold_screw` | `hex-key-5` | blocked | `only holds, and it screws into a fixed thread (tee_hold_tnut), so it must turn; best arc bounded by tee_hold_slot` |
@@ -183,6 +186,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 - `ball_shoulder_screw`: only a ball end turns it (ball end, 20 deg off the axis): a ball end takes much less torque than a straight key, so tightening it to its torque, or breaking it loose, may need a straight key, which can't get in
 - `ball_tilt_screw`: only a ball end turns it (ball end, 25 deg off the axis): a ball end takes much less torque than a straight key, so tightening it to its torque, or breaking it loose, may need a straight key, which can't get in
 - `cross_drawn_m4_screw`: cross drawn for PH1 (3.00 across its wings), where an M4's standard gives PH2: taken as drawn
+- `faced_nut`: no ring, socket or nut driver gets on: past its hex the part is 16.00 across, wider than their bore round the hex; only an open end grips it, from the side
 - `hosted_snug_nut`: drawn 2.3 mm^3 into its trap: a press fit, or a clash to fix
 - `sunk_cap_cap_nut`, `wide_dome_gland`: no ring, socket or nut driver gets on: past its hex the part is 20.00 across, wider than their bore round the hex; only an open end grips it, from the side
 - `undersize_nut`: hex drawn undersize: 12.60 across flats, 0.13 under the least its M8 standard allows (12.73); taken as size 13

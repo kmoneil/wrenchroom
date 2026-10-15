@@ -1318,7 +1318,7 @@ def dome_rib():
         "cap_nut": {
             "verdict": "blocked",
             "tool": "spanner-16",
-            "blocked_by": ["cap_nut", "plate"],
+            "blocked_by": ["plate"],
         }
     },
 )
@@ -1327,8 +1327,9 @@ def sunk_cap():
     counterbore 24 across and 3.5 deep. The open end's jaw can't get into the
     counterbore; the socket's wall (r 10.8) could, but neither it nor the ring
     gets on over the dome, wider than their bore round the hex (r 9.54): blocked,
-    by the plate and by its own dome (issue #47). It used to turn with the socket,
-    drawn round the dome as if the dome weren't there.
+    by the plate, and its own dome keeps the ring and socket off (issue #47). It
+    used to turn with the socket, drawn round the dome as if the dome weren't there,
+    and then named itself in its own way (issue #221).
     """
     nut = hex_prism(16, 3, -3.5) + Pos(0, 0, 3) * Cylinder(10, 7)
     return [
@@ -3582,4 +3583,72 @@ def both_over():
         ("plate", plate(holes=[(0, 0, 3)])),
         ("screw", socket_screw()),
         ("cover", Compound([left.solid(), right.solid()])),
+    ]
+
+
+#: What faced's and lone's nuts say of their washers: a note, or lone's reason.
+_FACED = (
+    "no ring, socket or nut driver gets on: past its hex the part is 16.00 across, wider "
+    "than their bore round the hex; only an open end grips it, from the side"
+)
+
+
+def _faced_nut():
+    """An M8 nut, 13 hex 6.8 high, its washer 16 across on its outer face, 0.05 clear:
+    one part of two solids."""
+    washer = Pos(0, 0, 6.85 + 0.8) * (Cylinder(8, 1.6) - Cylinder(4.2, 1.6))
+    return Compound([hex_nut(8, 13, 6.8).solid(), washer.solid()])
+
+
+@cell(
+    "faced",
+    [{"parts": "nut", "kind": "nut", "size": "M8"}],
+    {
+        "nut": {
+            "verdict": "blocked",
+            "tool": "spanner-13",
+            "blocked_by": ["wall"],
+            "reason": None,
+            "notes": [_FACED],
+        }
+    },
+)
+def faced():
+    """An M8 nut drawn with its washer on its outer face, one part of two solids.
+
+    The washer, 16 across, keeps the ring and the socket off (issue #47), and a
+    square wall round it, 15 out, keeps the open end from swinging: blocked by the
+    wall. Read whole from STEP (issue #210), the ring and socket named the nut itself
+    in their way: ``blocked  wall, nut`` (issue #221).
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 4)])),
+        ("stud", Pos(0, 0, 7.5) * Cylinder(4, 35)),
+        ("nut", _faced_nut()),
+        ("wall", Pos(0, 0, 10) * (Box(40, 40, 20) - Box(30, 30, 20))),
+    ]
+
+
+@cell(
+    "lone",
+    [{"parts": "nut", "kind": "nut", "size": "M8", "tool": "socket-13"}],
+    {
+        "nut": {
+            "verdict": "blocked",
+            "tool": "socket-13",
+            "blocked_by": [],
+            "reason": _FACED,
+            "notes": [],
+        }
+    },
+)
+def lone():
+    """faced's nut in the open, a socket its rule's tool: nothing is in its way but the
+    nut itself, which is no blocker. Its reason says why the socket doesn't get on, and
+    no note says it again; it named itself in its way (issue #221).
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 4)])),
+        ("stud", Pos(0, 0, 7.5) * Cylinder(4, 35)),
+        ("nut", _faced_nut()),
     ]

@@ -367,7 +367,11 @@ def test_a_custom_socket_cannot_get_on_over_a_dome_wider_than_its_bore():
     socket = {"name": "deep-15", "type": "socket", "across_flats": 15}
     (result,) = run([plate(), Part("nut", domed)], [rule], [socket])
     assert result.verdict is Verdict.BLOCKED
-    assert result.blockers == ("nut",)
+    assert result.blockers == ()  # not in its own way (issue #221): the reason says it
+    assert result.reason.startswith("no ring, socket or nut driver gets on: past its hex")
+    assert [attempt.kept_off for attempt in result.attempts] == [
+        "past its hex the part is 20.00 across"
+    ]
 
 
 # ---------------------------------------------------------------------------

@@ -46,6 +46,7 @@ NEEDS_THE_SIDECAR = {
     "pan_t40_torx_screw": "not-covered",
     "halves_lid_screw": "blocked",
     "halves_mate_screw": "stuck",
+    "lone_nut": "turns",  # its rule's socket can't get on; the open end it isn't given can
 }
 
 
@@ -291,6 +292,8 @@ def test_a_nut_drawn_small_says_so_and_where_its_size_came_from(detected):
         "odd_head_screw",
         "wide_dome_gland",
         "sunk_cap_cap_nut",
+        "faced_nut",  # its washer keeps the ring and socket off (issue #221)
+        "lone_nut",
         "ball_tilt_screw",
         "ball_shoulder_screw",
         "halves_mate_screw",  # a ball end alone gets on, past the loop no mate names here
