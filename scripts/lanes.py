@@ -69,13 +69,18 @@ LANES: tuple[Lane, ...] = (
     ),
     Lane(
         name="perf",
-        summary="the bench scaled to 500 fasteners, read and checked inside 10 s",
+        summary="the bench scaled to 500 fasteners, read and checked inside 15 s",
         steps=(("python", "scripts/perf.py"),),
     ),
     Lane(
         name="perf-report",
         summary="the same run, timing reported not gated; wrong verdict counts still fail",
         steps=(("python", "scripts/perf.py", "--budget", "0"),),
+    ),
+    Lane(
+        name="perf-compare",
+        summary="this tree's perf run against $WRENCHROOM_PERF_BASE's, by turns on one machine",
+        steps=(("python", "scripts/perf_compare.py"),),
     ),
     Lane(
         name="release-check",

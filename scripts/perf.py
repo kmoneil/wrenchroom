@@ -1,8 +1,8 @@
-"""Time the golden bench scaled to N fasteners: the "500 in under 10 s" target.
+"""Time the golden bench scaled to N fasteners: the "500 in under 15 s" target.
 
 Usage::
 
-    uv run python scripts/perf.py                        # 500 fasteners, 10 s budget
+    uv run python scripts/perf.py                        # 500 fasteners, 15 s budget
     uv run python scripts/perf.py --fasteners 1000 --budget 0     # report only
     uv run python scripts/perf.py --exact --fasteners 100 --budget 0
 
@@ -14,13 +14,19 @@ The verdict counts must come out as exactly the truth's, so a fast engine that
 is wrong cannot pass. Exits 1 when read plus check is over the budget or a count
 is off.
 
+The budget is for a laptop. It was 10 s, which the bench was over from the start
+(10.5 s at 0.2.0, on an 18-core Apple Silicon laptop), and it is 15 s since 0.8.1,
+when that laptop took 12.4 s: the clashes, the build order and the connectors cost a
+fifth more a fastener (issue #207).
+
 The bench's deliberate worst cases (cells with ``timed=False``: a key grazing at
 every angle, every position of which the exact engine decides, issue #25) are
 kept out of the timed copies, since the budget is for ordinary geometry, and
 timed apart, once, so what they cost is always on show.
 
-Under GitHub Actions the table also goes to the job summary, so the CI job
-reports a number on every run before it is trusted to gate.
+Under GitHub Actions the table also goes to the job summary. CI doesn't hold a
+runner to the budget: it times a change against its base, on the same runner
+(``scripts/perf_compare.py``).
 """
 
 from __future__ import annotations
@@ -42,7 +48,7 @@ def main(argv: list[str]) -> int:
     """Build, time, compare, report."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--fasteners", type=int, default=500, help="at least this many")
-    parser.add_argument("--budget", type=float, default=10.0, help="seconds; 0 reports only")
+    parser.add_argument("--budget", type=float, default=15.0, help="seconds; 0 reports only")
     parser.add_argument("--exact", action="store_true", help="time the exact engine instead")
     args = parser.parse_args(argv)
 

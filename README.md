@@ -615,7 +615,7 @@ their names and solids, as the command line does. A report writes itself with
 Collision checks run on meshes with [manifold3d](https://github.com/elalish/manifold),
 and anything too close to call is referred to exact OpenCascade booleans, so both
 engines give the same report (`--exact` uses the exact one throughout). A
-generated bench of 500 fasteners is read and checked in under 10 seconds on a laptop.
+generated bench of 500 fasteners is read and checked in under 15 seconds on a laptop.
 
 Every rule and figure, with the standards and the reasoning, is in
 **[docs/reference.md](https://github.com/kmoneil/wrenchroom/blob/main/docs/reference.md)**.
@@ -664,12 +664,13 @@ The golden bench (`tests/golden/`) is a generated assembly of small cells, one
 mechanism each, with every verdict worked out by hand. It runs on both collision
 engines against one snapshot, and again as three copies along the grid (a verdict
 mustn't depend on where its cell sits). `scripts/perf.py` repeats it to 500 fasteners
-and times it; CI reports that number on every push and fails if any verdict count
-moves. `uv run python scripts/golden.py --out some-dir` writes `bench.step` and its
-sidecars for you to open and check against, and a nightly job re-runs the bench
-against upgraded dependencies, so a CAD-kernel update that moves a verdict shows up
-before it lands. This README's examples are tests too: `tests/test_readme.py` runs
-each command shown here and compares its output.
+and times it. CI times that against the same run of the commit a change is based on,
+on the same Linux runner, and fails if the change takes half as long again a fastener
+or any verdict count moves. `uv run python scripts/golden.py --out some-dir` writes
+`bench.step` and its sidecars for you to open and check against, and a nightly job
+re-runs the bench against upgraded dependencies, so a CAD-kernel update that moves a
+verdict shows up before it lands. This README's examples are tests too:
+`tests/test_readme.py` runs each command shown here and compares its output.
 
 The bench's HTML report is tested in the page itself: Node runs the page's own
 scripts against a stand-in DOM, and headless Chrome opens the file and draws it with

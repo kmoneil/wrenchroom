@@ -88,15 +88,20 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  # The speed target: the golden bench scaled to 500 fasteners, read and checked
-  # inside 10 s. The timing REPORTS for now (the perf-report lane writes it to
-  # the run summary and doesn't gate on it): hosted runners are slower and
-  # noisier than the laptop the target is set for. The verdict counts DO gate,
-  # so this is also a 500-fastener correctness run on every push. Once a few
-  # weeks of numbers show where the runners sit, switch to the gating perf lane
-  # with the budget those numbers support. macOS as above.
+  # The speed. The perf lane's budget (the golden bench scaled to 500 fasteners, read
+  # and checked inside 15 s) is for a laptop: a hosted runner takes two to four times
+  # as long, and which runner a job gets moves that by as much again. So on Linux this
+  # times the change against the commit it is based on, by turns on the runner the job
+  # got, and fails when the change takes half as long again a fastener (the
+  # perf-compare lane; both timings go to the run summary). Two runs on one Linux
+  # runner come within 3% of each other. The base is a pull request's base branch, a
+  # push's previous main, or for a manual run where the branch left main. A macOS
+  # runner varies as much within a job as between jobs (25 to 43 s for one commit), so
+  # there the run is timed once and reported (perf-report). The verdict counts gate
+  # everywhere, so this is also a 500-fastener correctness run on every push. macOS as
+  # above.
   perf:
-    timeout-minutes: 20
+    timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -104,9 +109,30 @@ jobs:
         os: ${{ fromJSON(github.event_name == 'push' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the base commit, for its own run
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: true
       - run: uv python install 3.13
       - run: uv sync --frozen --python 3.13
-      - run: uv run --frozen python scripts/lanes.py perf-report
+      - name: Check out the base and sync it
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          case "$EVENT" in
+            pull_request) base="$PR_BASE" ;;
+            push) base="$BEFORE" ;;
+            *) base="$(git merge-base origin/main HEAD)" ;;
+          esac
+          git worktree add --detach "$RUNNER_TEMP/base" "$base"
+          uv sync --frozen --python 3.13 --project "$RUNNER_TEMP/base"
+      - if: matrix.os == 'ubuntu-latest'
+        run: uv run --frozen python scripts/lanes.py perf-compare
+        env:
+          WRENCHROOM_PERF_BASE: ${{ runner.temp }}/base
+      - if: matrix.os != 'ubuntu-latest'
+        run: uv run --frozen python scripts/lanes.py perf-report
