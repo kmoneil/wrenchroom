@@ -917,7 +917,7 @@ which parts are invalid B-reps as exported, whose collisions are approximate (`N
 part didn't mesh into a closed solid ...`, and `engine_notes` in the JSON).
 
 The golden bench scaled to over 500 fasteners is read and checked with the full kit
-in under 10 s on a laptop, the target. Its graze cells, deliberate worst cases in
+in under 15 s on a laptop, the target. Its graze cells, deliberate worst cases in
 which the exact engine decides every position of a key grazing all the way round, are
 kept out of that figure and timed apart. The bench is dense with fasteners that fail,
 and a failing one tries every tool it has: open ends, and ball-end keys leant every
