@@ -77,6 +77,28 @@ def test_an_inch_spanner_near_the_size_is_still_the_wrong_one():
     )
 
 
+def test_the_across_flats_the_reason_asks_for_is_read_as_it_says_it():
+    # A 3/8-16 nut (9/16 in) given spanner-1/2in: the reason says "give its rule
+    # across_flats: 1/2in", which a rule refused till issue #233.
+    pair = nut_with_bolt_through(af=9 / 16 * 25.4, nut_h=8.3, bolt_d=9.525)
+    rule = {**NUT, "size": "3/8-16", "tool": "spanner-1/2in"}
+    misfit = result_of(run(pair, rule), "nut")
+    assert misfit.reason == (
+        "its tool: spanner-1/2in is 1/2in across flats, but the nut (3/8) takes 9/16in; "
+        "give its rule across_flats: 1/2in if its hex really is 1/2in"
+    )
+    named = result_of(run(pair, {**rule, "across_flats": "1/2in"}), "nut")
+    assert not (named.reason or "").startswith("its tool:")
+    assert named.fastener.drive_af == pytest.approx(12.7)
+    in_mm = result_of(run(pair, {**rule, "across_flats": 12.7}), "nut")
+    assert (named.verdict, named.tool, named.how, named.reason) == (
+        in_mm.verdict,
+        in_mm.tool,
+        in_mm.how,
+        in_mm.reason,
+    )
+
+
 def test_a_wrong_size_is_said_before_the_kit_is_asked():
     # metric-home has no 24 mm spanner, but the misfit is the first thing wrong.
     assert nut_reason("spanner-24", kit="metric-home").reason.startswith(

@@ -18,6 +18,11 @@ sidecar's order; and a rule's ``tool:`` may name one outright. Its name is its
 own, never a built-in family's (``spanner-13``), so a report can't be read as
 meaning a tool the tables describe. Lengths are mm.
 
+An ``across_flats`` is a number of mm or a size's name, as tools are named
+(``9/16in``). One within :data:`~wrenchroom.tools.sizes.SAME_MM` of a size the
+tables hold is that size: 9/16 in written 14.29 is 14.2875 (issue #233), and
+takes the built-in tool's numbers for it.
+
 The kinds and their numbers (required, then optional with what they default to):
 
 - ``hex-key``: ``across_flats``, ``long``, ``short``; ``across_corners`` (the
@@ -45,7 +50,9 @@ from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 
 from wrenchroom.tools.drivers import SHAFT_LENGTH, SHAFT_RADIUS
+from wrenchroom.tools.hex_keys import HEX_KEYS
 from wrenchroom.tools.nut_drivers import NUT_DRIVERS, NutDriver
+from wrenchroom.tools.sizes import FLATS, same_size, size_name, written_mm
 from wrenchroom.tools.sockets import Socket, socket_for
 from wrenchroom.tools.spanners import Spanner, spanner_for
 from wrenchroom.tools.torx_keys import ISO_10664
@@ -72,6 +79,15 @@ BUILT_IN_FAMILIES = (
 
 #: A spanner's ends, as ``ends:`` names them.
 ENDS = ("ring", "open")
+
+#: Every size the tables hold a tool of, mm: a size written within ``SAME_MM`` of
+#: one is taken as it.
+TABLE_SIZES: tuple[float, ...] = tuple(sorted({*FLATS, *HEX_KEYS}))
+
+#: A sidecar's tool this close to a fastener's size and not on it is named in the
+#: reason that fastener is not covered, mm: one written a little off, most often
+#: (issue #233). Under the half millimetre between the closest metric sizes.
+NEAR_MM = 0.5
 
 
 @dataclass(frozen=True)
@@ -151,7 +167,7 @@ class CustomTools:
         return tuple(
             t
             for t in self.tools
-            if isinstance(t, CustomKey) and t.kind == "hex-key" and _same(t.af, af)
+            if isinstance(t, CustomKey) and t.kind == "hex-key" and same_size(t.af, af)
         )
 
     def torx_keys(self, size: str) -> tuple[CustomKey, ...]:
@@ -165,19 +181,19 @@ class CustomTools:
     def spanners(self, af: float) -> tuple[CustomSpanner, ...]:
         """The custom spanners of an across-flats size."""
         return tuple(
-            t for t in self.tools if isinstance(t, CustomSpanner) and _same(t.spanner.af, af)
+            t for t in self.tools if isinstance(t, CustomSpanner) and same_size(t.spanner.af, af)
         )
 
     def sockets(self, af: float) -> tuple[CustomSocket, ...]:
         """The custom sockets of an across-flats size."""
         return tuple(
-            t for t in self.tools if isinstance(t, CustomSocket) and _same(t.socket.af, af)
+            t for t in self.tools if isinstance(t, CustomSocket) and same_size(t.socket.af, af)
         )
 
     def nut_drivers(self, af: float) -> tuple[CustomNutDriver, ...]:
         """The custom nut drivers of an across-flats size."""
         return tuple(
-            t for t in self.tools if isinstance(t, CustomNutDriver) and _same(t.driver.af, af)
+            t for t in self.tools if isinstance(t, CustomNutDriver) and same_size(t.driver.af, af)
         )
 
     def drivers(self, tip: str) -> tuple[CustomDriver, ...]:
@@ -190,11 +206,48 @@ class CustomTools:
 
     def flat_sizes(self) -> tuple[float, ...]:
         """Every custom spanner's, socket's and nut driver's across-flats."""
-        sizes = (_flat_af(tool) for tool in self.tools)
+        sizes = (flat_af(tool) for tool in self.tools)
         return tuple(af for af in sizes if af is not None)
 
+    def near(self, af: float, kinds: tuple[str, ...]) -> tuple[tuple[str, float], ...]:
+        """The tools of ``kinds`` a little off a size, by name and size: within NEAR_MM.
 
-def _flat_af(tool: CustomTool) -> float | None:
+        ``kinds`` as ``type:`` names them (``spanner``, ``hex-key``): those a fastener
+        of the size would try. Written a little off, such a tool is never tried, and a
+        reason that names only the kit's tools leaves it unmentioned (issue #233).
+        """
+        return tuple(
+            (tool.name, size)
+            for tool in self.tools
+            if kind_of(tool) in kinds
+            and (size := tool_af(tool)) is not None
+            and not same_size(size, af)
+            and abs(size - af) < NEAR_MM
+        )
+
+
+def kind_of(tool: CustomTool) -> str:
+    """A custom tool's kind, as its ``type:`` names it."""
+    if isinstance(tool, CustomKey):
+        return tool.kind
+    if isinstance(tool, CustomSpanner):
+        return "spanner"
+    if isinstance(tool, CustomSocket):
+        return "socket"
+    if isinstance(tool, CustomNutDriver):
+        return "nut-driver"
+    return "driver"
+
+
+def tool_af(tool: CustomTool) -> float | None:
+    """A custom tool's across-flats, mm: a hex key's, spanner's, socket's or nut driver's."""
+    if isinstance(tool, CustomKey):
+        return tool.af if tool.kind == "hex-key" else None
+    return flat_af(tool)
+
+
+def flat_af(tool: CustomTool) -> float | None:
+    """A custom spanner's, socket's or nut driver's across-flats; None for another tool."""
     if isinstance(tool, CustomSpanner):
         return tool.spanner.af
     if isinstance(tool, CustomSocket):
@@ -202,11 +255,6 @@ def _flat_af(tool: CustomTool) -> float | None:
     if isinstance(tool, CustomNutDriver):
         return tool.driver.af
     return None
-
-
-def _same(a: float, b: float) -> bool:
-    """Two across-flats sizes, in mm, are one: a tool's size as written and as measured."""
-    return abs(a - b) < 1e-6  # noqa: PLR2004  (sizes as written, not measured)
 
 
 # ---------------------------------------------------------------------------
@@ -297,6 +345,20 @@ def _name(value: object, where: str) -> str:
     return value
 
 
+def _af(entry: dict, where: str) -> float:
+    """``across_flats``: mm or a size's name, and a size the tables hold when within SAME_MM."""
+    value = entry["across_flats"]
+    try:
+        af = written_mm(value)
+    except ValueError:
+        msg = (
+            f"{where}: across_flats must be a positive number of mm or a size's name "
+            f"(9/16in), got {value!r}"
+        )
+        raise ValueError(msg) from None
+    return next((size for size in TABLE_SIZES if same_size(size, af)), af)
+
+
 def _mm(entry: dict, key: str, where: str, default: float | None = None) -> float:
     value = entry.get(key, default)
     if isinstance(value, bool) or not isinstance(value, int | float) or not value > 0:
@@ -309,13 +371,13 @@ def _mm(entry: dict, key: str, where: str, default: float | None = None) -> floa
 
 
 def _hex_key(name: str, entry: dict, where: str) -> CustomKey:
-    af = _mm(entry, "across_flats", where)
+    af = _af(entry, where)
     section = _mm(entry, "across_corners", where, af * 2 / math.sqrt(3))
     if section < af:
         msg = f"{where}: across_corners ({section:g}) is less than across_flats ({af:g})"
         raise ValueError(msg)
     long, short = _arms(entry, where)
-    return CustomKey(name, "hex-key", f"{af:g}", af, long, short, section)
+    return CustomKey(name, "hex-key", size_name(af), af, long, short, section)
 
 
 def _torx_key(name: str, entry: dict, where: str) -> CustomKey:
@@ -343,7 +405,7 @@ def _arms(entry: dict, where: str) -> tuple[float, float]:
 
 
 def _spanner(name: str, entry: dict, where: str) -> CustomSpanner:
-    af = _mm(entry, "across_flats", where)
+    af = _af(entry, where)
     base = spanner_for(af)
     ends = entry.get("ends", list(ENDS))
     if (
@@ -372,7 +434,7 @@ def _spanner(name: str, entry: dict, where: str) -> CustomSpanner:
 
 
 def _socket(name: str, entry: dict, where: str) -> CustomSocket:
-    af = _mm(entry, "across_flats", where)
+    af = _af(entry, where)
     base = socket_for(af)
     socket = replace(
         base,
@@ -387,7 +449,7 @@ def _socket(name: str, entry: dict, where: str) -> CustomSocket:
 
 
 def _nut_driver(name: str, entry: dict, where: str) -> CustomNutDriver:
-    af = _mm(entry, "across_flats", where)
+    af = _af(entry, where)
     base = NUT_DRIVERS.get(af)
     if base is None and "outer_radius" not in entry:
         msg = f"{where}: no built-in nut driver is {af:g} mm; give outer_radius"
@@ -447,10 +509,12 @@ def _describe(tool: CustomTool) -> str:
     if isinstance(tool, CustomSpanner):
         s = tool.spanner
         stubby = f", stubby {s.stubby_length:g}" if s.stubby_length else ""
-        return f"spanner {s.af:g}, {' and '.join(tool.ends)} end, length {s.length:g}{stubby}"
+        ends = " and ".join(tool.ends)
+        return f"spanner {size_name(s.af)}, {ends} end, length {s.length:g}{stubby}"
     if isinstance(tool, CustomSocket):
         s = tool.socket
-        return f"socket {s.af:g}, outer r {s.outer_radius:g}, length {s.length:g}"
+        return f"socket {size_name(s.af)}, outer r {s.outer_radius:g}, length {s.length:g}"
     if isinstance(tool, CustomNutDriver):
-        return f"nut driver {tool.driver.af:g}, outer r {tool.driver.outer_radius:g}"
+        d = tool.driver
+        return f"nut driver {size_name(d.af)}, outer r {d.outer_radius:g}"
     return f"driver {tool.tip}, shaft r {tool.shaft_radius:g}, length {tool.shaft_length:g}"
