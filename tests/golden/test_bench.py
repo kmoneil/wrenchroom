@@ -634,10 +634,11 @@ def test_the_tools_list_counts_each_passing_fastener_s_tool(bench_report, bench_
     assert only_blocked == {"spanner-36", "socket-13"}
     assert dict(used.blocked)["spanner-36"] == ("big_tube_gland",)
     assert dict(used.blocked)["socket-13"] == ("lone_nut",)
-    # In the report's order, by name: both_over's screw, then build_buried's two under
-    # their cover.
-    assert dict(used.blocked)["hex-key-5"][:4] == (
+    # In the report's order, by name: both_over's screw, build_benched's under its
+    # frame (issue #235), then build_buried's two under their cover.
+    assert dict(used.blocked)["hex-key-5"][:5] == (
         "both_over_screw",
+        "build_benched_screw",
         "build_buried_early_screw",
         "build_buried_late_screw",
         "key_wall_near_screw",

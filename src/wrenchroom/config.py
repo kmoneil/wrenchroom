@@ -51,7 +51,7 @@ _SUPPORTED_TOP = {
 }
 _CONNECTOR_KEYS = {"parts", "axis", "travel", "grip", "latch", "mates", "receptacle", "state"}
 _STATE_KEYS = {"remove", "base", "model"}
-_STEP_KEYS = {"step", "add", "except", "model"}
+_STEP_KEYS = {"step", "add", "except", "model", "bench"}
 _CHECKS_KEYS = {"default_state", "try_states", "detect", "hand_room", "clashes", "step_deg"}
 _RULE_KEYS = {
     "parts",
@@ -146,13 +146,15 @@ class BuildStep:
 
     ``model`` is the mechanism as it sits during the step, as a state's is: None for
     the model as given. ``except_`` (``except:``) leaves out parts ``add`` names: a step
-    that is all of a family but a few (issue #236).
+    that is all of a family but a few (issue #236). ``bench`` names the bench a step is
+    done on, off the machine (issue #235): None for a step done in it.
     """
 
     name: str
     add: tuple[str, ...]
     model: str | None = None
     except_: tuple[str, ...] = ()
+    bench: str | None = None
 
 
 @dataclass(frozen=True)
@@ -729,7 +731,13 @@ def _parse_step(entry: object, where: str) -> BuildStep:
         for i, glob in enumerate(_as_list(entry.get("except", []), f"{where}: except"))
     )
     model = entry.get("model")
-    return BuildStep(name, add, None if model is None else str(model), except_)
+    bench = None
+    if "bench" in entry:
+        bench = _as_str(entry["bench"], f"{where}: bench")
+        if not bench.strip():
+            msg = f"{where}: bench needs a name"
+            raise ConfigError(msg)
+    return BuildStep(name, add, None if model is None else str(model), except_, bench)
 
 
 def _reject_base_cycles(states: list[StateDef], where: str) -> None:

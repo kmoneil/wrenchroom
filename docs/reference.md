@@ -800,6 +800,34 @@ build:
   names is a mistake, as an unmatched `add:` glob is, and fails the run (`WARN build:
   step 'motors': except glob 'motor_bracket_scew_*' matched none of its add parts
   (renamed part?)`).
+- **On the bench.** Much of a machine is put together off it: a drive built on the
+  bench and lowered on, a box's glands fitted before the box is mounted. A step's
+  `bench:` says so (issue #235):
+
+  ```yaml
+  build:
+    - step: frame
+      add: ["frame_*"]
+    - step: left drive
+      bench: drives
+      add: ["left_*"]
+    - step: right drive
+      bench: drives                # the same bench: it has the left drive's parts
+      add: ["right_*"]
+    - step: drives on
+      add: ["drive_bolt_*"]        # in the machine: both drives are in, fitted
+  ```
+
+  A step on a bench is checked among its own parts and those of the earlier steps on
+  the same bench, as they are drawn, and no others: the machine isn't there. Every
+  later step in the machine has them, carried over and fitted. With `model:` too, the
+  bench's parts are as that model draws them, and the machine's parts in it are left
+  out; those it lacks aren't noted. A joint is made where both its members are: a nut
+  put on at a bench step whose bolt went in in the machine, or on another bench, is
+  not covered (`added on bench nuts, where its partner bolt (added in first, in the
+  machine) isn't: a joint is made where both its members are`), which fails the run
+  as a sidecar mistake does. The terminal's step line, the JSON's step (`bench`) and
+  the Markdown say which bench a step was on.
 - **A step's scene** is every part added by then, the step's own included, as they
   go on before their fasteners, and none of the later steps'. A step's `model:` is
   read as a state's is (beside the sidecar, then beside the model, or given as an

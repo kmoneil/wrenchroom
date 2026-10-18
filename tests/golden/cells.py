@@ -142,7 +142,10 @@ def cell(  # noqa: PLR0913, PLR0917  (one keyword per Cell field)
 
 #: The build steps the bench's build sidecar has, in order, before the one adding the
 #: rest (M8).
-BUILD_STEPS = ("first", "second", "third")
+BUILD_STEPS = ("first", "second", "third", "aside")
+
+#: The bench's build steps done off the machine, and the bench each is on (issue #235).
+BENCHES = {"aside": "aside"}
 
 #: A cell's step adding every role of its own but its other steps' (issue #236).
 EVERY = "*"
@@ -3792,4 +3795,32 @@ def inch_large():
         ("plate", plate(holes=[(0, 0, 0.75 * IN / 2 + 0.8)])),
         ("stud", Pos(0, 0, 5) * Cylinder(0.75 * IN / 2, 40)),
         ("nut", hex_nut(0.75 * IN, 1.125 * IN, 41 / 64 * IN)),
+    ]
+
+
+@cell(
+    "build_benched",
+    [{"parts": "screw", **M6_SOCKET}],
+    {"screw": {"verdict": "blocked", "tool": "hex-key-5", "blocked_by": ["frame"]}},
+    steps={"first": ["frame"], "aside": ["plate", "screw"]},
+    built={
+        "screw": {
+            "verdict": "turns",
+            "tool": "hex-key-5",
+            "how": "driver straight in",
+            "step": "aside",
+            "checked_in": "aside",
+        }
+    },
+)
+def build_benched():
+    """build_buried's cover as a frame the machine has from the first step, 15 over an
+    M6 socket head: in service no key gets on. The screw and its plate are put together
+    on the bench, in the step aside (issue #235), where the frame isn't, and the driver
+    turns it; checked in the machine, as a step without bench: is, it is blocked.
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 3)])),
+        ("screw", socket_screw()),
+        ("frame", slab(6 + 15)),
     ]

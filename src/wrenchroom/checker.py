@@ -855,6 +855,11 @@ def _placed(
     added = steps.added_in[name]
     joint = added if partner is None else max(added, steps.added_in[partner])
     step, last = steps.steps[added].name, steps.steps[joint].name
+    apart = _joined_apart(name, partner, steps)
+    if apart is not None:
+        return Placed(
+            _with_notes(_finish(_Candidate(fastener, reason=apart), partner, None)), step, step
+        )
     if partner is None or added == joint:
         alongside = candidate(partner, added) if partner is not None else None
         return Placed(_with_notes(_finish(candidate(name, added), partner, alongside)), step, step)
@@ -875,6 +880,31 @@ def _placed(
             return Placed(_with_notes(went), step, step)
     whole = _finish(candidate(name, joint), partner, candidate(partner, joint))
     return Placed(_with_notes(whole), step, last)
+
+
+def _joined_apart(name: str, partner: str | None, steps: Plan) -> str | None:
+    """Why a joint can't be made, its last member's step not having the other; else None.
+
+    A step on a bench has the earlier steps' parts on that bench alone (issue #235):
+    a nut put on there can't meet a bolt in the machine or on another bench. The
+    steps are the sidecar's mistake, as a nut put in before its bolt is.
+    """
+    if partner is None:
+        return None
+    mine, theirs = steps.added_in[name], steps.added_in[partner]
+    last, first = max(mine, theirs), min(mine, theirs)
+    if steps.sees(last, first):
+        return None
+    joined = steps.steps[last]
+    earlier = steps.steps[first]
+    at = f"on bench {earlier.bench}" if earlier.bench else "in the machine"
+    if mine == last:
+        said = f"added on bench {joined.bench}, where its partner {partner} (added in "
+        said += f"{earlier.name}, {at}) isn't"
+    else:
+        said = f"its partner {partner} is added in {joined.name} on bench {joined.bench}, "
+        said += f"where this, added in {earlier.name} {at}, isn't"
+    return f"{said}: a joint is made where both its members are"
 
 
 def _try_in_step(
@@ -1449,10 +1479,10 @@ class _StateSpace:
             if step.model is not None:
                 assembly = self._load(step.model, f"build step {step.name!r}", f"build[{index}]")
                 self._compare_step(index, steps, assembly)
-            later = frozenset(
+            later = frozenset(  # still to come, or on a bench this step isn't on (#235)
                 part.name
                 for part in assembly
-                if steps.added_in.get(part.piece_of or part.name, index) > index
+                if not steps.sees(index, steps.added_in.get(part.piece_of or part.name, index))
             )
             self._steps[index] = (assembly, later, step.model is None)
         return self._steps[index]
@@ -1471,7 +1501,9 @@ class _StateSpace:
         missing = tuple(
             name
             for name in _part_names(self._default)
-            if steps.added_in.get(name, index + 1) <= index and name not in theirs
+            if name in steps.added_in
+            and steps.sees(index, steps.added_in[name])
+            and name not in theirs
         )
         main = set(_part_names(self._default))
         new = tuple(

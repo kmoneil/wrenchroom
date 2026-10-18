@@ -18,9 +18,15 @@ not.
   no other step adds. An ``add:`` glob naming nothing is a renamed part, as an
   unmatched rule is.
 - A step's ``except:`` leaves out of it parts its ``add:`` names (issue #236): every
-  ``el_*`` but the arm's screws. Each part is added once, counted after that. An
+  ``gear_*`` but the screws bolting it on. Each part is added once, counted after that. An
   ``except:`` glob naming none of its step's ``add:`` parts is a mistake, as an
   unmatched ``add:`` glob is.
+- A step's ``bench:`` says it is done off the machine, on a bench of that name (issue
+  #235): a drive built and then lowered on. Its scene is its own parts and the earlier
+  steps' on the same bench, and no others; every later step in the machine has them,
+  carried over and fitted. A joint is made where both its members are: one whose
+  last member's step doesn't have the other (on another bench, or in the machine
+  while it is on a bench) is the sidecar's mistake, as a nut put in before its bolt is.
 
 A screw can pass in the build and fail in service, buried by a part put on after it,
 or the other way round, where a state takes off for service a part put on before it:
@@ -65,11 +71,13 @@ class Step:
             once: its other solids go with it).
         model: The mechanism as it sits during the step, as a state's model is; None
             for the model as given.
+        bench: The bench it is done on, off the machine; None for one done in it.
     """
 
     name: str
     parts: tuple[str, ...]
     model: str | None = None
+    bench: str | None = None
 
 
 @dataclass(frozen=True)
@@ -98,6 +106,15 @@ class Plan:
     def sound(self) -> bool:
         """Whether every part is added by one step exactly, so the build can be checked."""
         return not (self.unplaced or self.twice)
+
+    def sees(self, at: int, added: int) -> bool:
+        """Whether step ``at``'s scene has the parts step ``added`` adds (issue #235).
+
+        A step in the machine has every earlier step's, those done on a bench among
+        them; one on a bench has the earlier steps' on that bench alone.
+        """
+        bench = self.steps[at].bench
+        return added <= at and (bench is None or self.steps[added].bench == bench)
 
 
 def plan(steps: tuple[BuildStep, ...], assembly: Assembly, ignored: Callable[[str], bool]) -> Plan:
@@ -137,6 +154,7 @@ def plan(steps: tuple[BuildStep, ...], assembly: Assembly, ignored: Callable[[st
                 step.name,
                 tuple(name for name in leaves if adding.get(name) == [index]),
                 step.model,
+                step.bench,
             )
             for index, step in enumerate(steps)
         ),
@@ -265,7 +283,8 @@ class Build:
             if total
             else "no fasteners"
         )
-        return said + (f", in {step.model}" if step.model else "")
+        bench = f", on bench {step.bench}" if step.bench else ""
+        return said + bench + (f", in {step.model}" if step.model else "")
 
     def added(self, name: str) -> str | None:
         """The step that adds a part, by name; None for one no step adds."""
@@ -367,6 +386,7 @@ class Build:
                 {
                     "step": step.name,
                     "model": step.model,
+                    "bench": step.bench,
                     "adds": list(step.parts),
                     "summary": self.step_counts(step.name),
                 }

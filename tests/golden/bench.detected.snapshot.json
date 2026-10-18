@@ -6,10 +6,10 @@
  "swing_positions": 24,
  "kit_added": [],
  "summary": {
-  "fasteners": 189,
+  "fasteners": 190,
   "turns": 136,
   "held": 15,
-  "blocked": 32,
+  "blocked": 33,
   "stuck": 4,
   "not_covered": 2
  },
@@ -666,6 +666,38 @@
    "state": null,
    "pair": "build_behind_bolt",
    "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "build_benched_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3000.0,
+    21000.0,
+    6.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "build_benched_frame"
+   ],
    "deciding": [],
    "stuck_on": [],
    "reason": null,
@@ -5484,7 +5516,7 @@
     1.0
    ],
    "seat": [
-    2900.0,
+    3900.0,
     21000.0,
     6.0
    ],
@@ -5516,7 +5548,7 @@
     1.0
    ],
    "seat": [
-    3100.0,
+    4100.0,
     21000.0,
     6.0
    ],
@@ -6691,6 +6723,10 @@
     "verdict": "blocked"
    },
    {
+    "name": "build_benched_screw",
+    "verdict": "blocked"
+   },
+   {
     "name": "build_buried_early_screw",
     "verdict": "blocked"
    },
@@ -6844,9 +6880,10 @@
    },
    {
     "tool": "hex-key-5",
-    "count": 10,
+    "count": 11,
     "fasteners": [
      "both_over_screw",
+     "build_benched_screw",
      "build_buried_early_screw",
      "build_buried_late_screw",
      "halves_lid_screw",
