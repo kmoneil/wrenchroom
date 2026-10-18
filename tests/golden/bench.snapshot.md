@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**188 fasteners: 139 turn, 15 held, 31 blocked, 3 stuck, 0 not covered**
+**189 fasteners: 140 turn, 15 held, 31 blocked, 3 stuck, 0 not covered**
 
 Kit `full`, swings tried every 15 deg, ENGINE engine, wrenchroom VERSION.
 
@@ -17,6 +17,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | 1/4 nut | `spanner-7/16in` | 1 | all pass (ring, full length) |
 | 1/4 socket screw | `hex-key-3/16in` | 1 | all pass (driver straight in) |
 | 15 AF gland | `spanner-15` | 3 | 1 of 3 fail |
+| 3/4 nut | `spanner-1-1/8in` | 1 | all pass (ring, full length) |
 | 3/8 nut | `short-ring-9/16in` | 1 | all pass (ring, full length) |
 | 41 AF gland | `spanner-41` | 1 | all pass (ring, full length) |
 | M1.6 nut | `spanner-3.2` | 1 | all pass (ring, full length) |
@@ -81,7 +82,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 
 #### Tools
 
-43 tools this model needs (kit full): 11 hex keys, 2 ball-end keys, 6 Torx keys, 14 spanners, 1 socket, 1 nut driver, 5 drivers, 3 others.
+44 tools this model needs (kit full): 11 hex keys, 2 ball-end keys, 6 Torx keys, 15 spanners, 1 socket, 1 nut driver, 5 drivers, 3 others.
 
 | Tool | Fasteners | |
 | --- | ---: | --- |
@@ -117,6 +118,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `spanner-15` | 2 | only `snug_dome_gland`, `wide_dome_gland` |
 | `spanner-16` | 3 |  |
 | `spanner-24` | 5 | not in metric-home |
+| `spanner-1-1/8in` | 1 | not in metric-home; only `inch_large_nut` |
 | `spanner-41` | 1 | not in metric-home; only `big_gland_gland` |
 | `socket-16` | 2 | only `nut_deep_well_nut`, `tail_in_socket_nut` |
 | `nut-driver-10` | 1 | not in metric-home; only `nut_tube_nut` |
@@ -125,9 +127,9 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `driver-ph1` | 5 |  |
 | `driver-ph2` | 3 |  |
 | `driver-ph4` | 1 | not in metric-home; only `ph4_screw` |
-| `stubby-key-6` | 1 | not in metric-home; only `short_key_screw` |
-| `short-ring-9/16in` | 1 | not in metric-home; only `inch_shop_nut` |
 | `short-ring-18` | 1 | not in metric-home; only `shop_spanner_nut` |
+| `short-ring-9/16in` | 1 | not in metric-home; only `inch_shop_nut` |
+| `stubby-key-6` | 1 | not in metric-home; only `short_key_screw` |
 
 - By hand: 3 (`grip_thumb_screw`, `grip_wheel_thumbscrew`, `grip_wing_nut`)
 - No tool needed: 13, held by themselves or a trap

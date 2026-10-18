@@ -9,9 +9,10 @@ the kit that has it; the sidecar's `tool:` can pick a tool but not add one.
 import re
 
 import pytest
-from build123d import Compound, export_step
+from build123d import Box, Compound, Cylinder, Pos, export_step
 from click.testing import CliRunner
 
+from fastener_models import hex_prism
 from fixture_models import (
     gland_on_wall,
     nut_on_plate,
@@ -34,6 +35,7 @@ from wrenchroom.tools.kits import (
     Kit,
     kit_named,
     missing,
+    split_tool,
 )
 from wrenchroom.tools.sizes import METRIC_FLATS, size_mm, size_name
 
@@ -118,11 +120,96 @@ def test_every_kit_size_is_a_real_tool():
         ("wrench-10", False, False),
         ("hex-key-7", False, False),  # no ISO 2936 row
         ("", False, False),
+        # A size with a dash of its own, split at its family (issue #240).
+        ("spanner-1-1/8in", False, True),
+        ("socket-1-1/2in", False, True),
+        ("spanner-1-1/16in", False, True),
+        ("spanner-1-3/4in", False, False),  # past the tables
+        ("spanner-1", False, False),
     ],
 )
 def test_holds_reads_tool_names_as_the_report_writes_them(tool, home, full):
     assert METRIC_HOME.holds(tool) is home
     assert FULL.holds(tool) is full
+
+
+_FIELDS = {
+    "hex-key": "hex_keys",
+    "spanner": "spanners",
+    "socket": "sockets",
+    "driver": "drivers",
+    "torx-key": "torx_keys",
+    "ball-end-key": "ball_end_keys",
+    "nut-driver": "nut_drivers",
+}
+
+
+@pytest.mark.parametrize("kit", list(KITS.values()), ids=list(KITS))
+def test_every_tool_a_kit_lists_is_one_it_holds(kit):
+    # Inch sizes over an inch have a dash of their own: read at the last dash, no kit
+    # held spanner-1-1/8in, full included (issue #240).
+    names = [
+        f"{family}-{size}" for family, field in _FIELDS.items() for size in getattr(kit, field)
+    ]
+    assert len(names) > 30  # a vacuity guard: every home kit lists dozens
+    assert [name for name in names if not kit.holds(name)] == []
+    assert [split_tool(name) for name in names] == [
+        (family, size) for family, field in _FIELDS.items() for size in getattr(kit, field)
+    ]
+
+
+def test_full_lists_the_inch_sizes_over_an_inch():
+    over = ["1-1/16in", "1-1/8in", "1-1/4in", "1-5/16in", "1-3/8in", "1-7/16in", "1-1/2in"]
+    assert [size for size in FULL.spanners if "-" in size] == over
+    assert [size for size in FULL.sockets if "-" in size] == over
+
+
+@pytest.mark.parametrize(
+    ("name", "split"),
+    [
+        ("spanner-13", ("spanner", "13")),
+        ("spanner-1-1/8in", ("spanner", "1-1/8in")),
+        ("socket-1-1/2in", ("socket", "1-1/2in")),
+        ("hex-key-0.050in", ("hex-key", "0.050in")),
+        ("ball-end-key-5", ("ball-end-key", "5")),
+        ("nut-driver-10", ("nut-driver", "10")),
+        ("driver-ph2", ("driver", "ph2")),
+        ("torx-key-T30", ("torx-key", "T30")),
+        ("shop-spanner-24", ("", "shop-spanner-24")),  # no family's: a sidecar's own
+        ("hand", ("", "hand")),
+        ("spanner-", ("spanner", "")),
+    ],
+)
+def test_a_tool_s_name_is_split_at_its_family(name, split):
+    assert split_tool(name) == split
+
+
+def three_quarter_nut():
+    """A 3/4 hex nut (ASME B18.2.2: 1-1/8 across flats, 41/64 thick) on a plate."""
+    nut = hex_prism(1.125 * 25.4, 41 / 64 * 25.4) - Cylinder(0.375 * 25.4, 60)
+    return Assembly([Part("nut", nut), Part("plate", Pos(0, 0, -5) * Box(300, 300, 10))])
+
+
+def test_a_nut_past_an_inch_turns_with_full_s_spanner():
+    nut = {"parts": "nut", "kind": "nut", "size": "3/4"}
+    (result,) = run(three_quarter_nut(), nut, kit="full").results
+    assert (result.verdict, result.tool, result.how) == (
+        Verdict.TURNS,
+        "spanner-1-1/8in",
+        "ring, full length",
+    )
+    (home,) = run(three_quarter_nut(), nut, kit="imperial-home").results
+    assert home.reason == (
+        "needs spanner-1-1/8in or socket-1-1/8in, which kit imperial-home does not hold "
+        "(full has it)"
+    )
+
+
+@pytest.mark.parametrize("tool", ["spanner-1-1/8in", "socket-1-1/8in"])
+def test_a_rule_may_name_a_tool_past_an_inch(tool):
+    nut = {"parts": "nut", "kind": "nut", "size": "3/4", "tool": tool}
+    (result,) = run(three_quarter_nut(), nut, kit="full").results
+    assert (result.verdict, result.tool) == (Verdict.TURNS, tool)
 
 
 def test_the_reason_names_the_tool_and_the_kit_that_has_it():
@@ -276,3 +363,14 @@ def test_the_full_kit_s_summary_reaches_its_largest_tools():
     for af in (36.0, *METRIC_FLATS[METRIC_FLATS.index(36.0) + 1 :]):
         assert re.search(rf"\b{af:g}\b", kits.FULL.summary), af
     assert max(METRIC_FLATS) == 50.0
+
+
+def test_a_rule_s_tool_past_an_inch_of_the_wrong_size_is_said_so():
+    # Its family read, it is held to the nut's size (issue #72) as any other is.
+    nut = {"parts": "nut", "kind": "nut", "size": "3/4", "tool": "spanner-1-1/4in"}
+    (result,) = run(three_quarter_nut(), nut, kit="full").results
+    assert result.verdict is Verdict.NOT_COVERED
+    assert result.reason == (
+        "its tool: spanner-1-1/4in is 1-1/4in across flats, but the nut (3/4) takes 1-1/8in; "
+        "give its rule across_flats: 1-1/4in if its hex really is 1-1/4in"
+    )

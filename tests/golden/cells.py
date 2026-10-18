@@ -3774,3 +3774,22 @@ def inch_shop():
         ("nut", hex_nut(0.375 * IN, 9 / 16 * IN, 21 / 64 * IN)),
         ("wall", Pos(0, 0, 200) * (Cylinder(100, 400) - Cylinder(90, 401))),
     ]
+
+
+@cell(
+    "inch_large",
+    [{"parts": "nut", "kind": "nut", "size": "3/4"}],
+    {"nut": {"verdict": "turns", "tool": "spanner-1-1/8in", "how": "ring, full length"}},
+)
+def inch_large():
+    """A 3/4 hex nut (ASME B18.2.2: 1-1/8 across flats, 41/64 thick) on a stud, nothing
+    near it: the full kit's 1-1/8 in spanner turns it, ring, full length. The size has a
+    dash of its own, and read at its last dash the spanner was the family spanner-1,
+    which no kit held: the nut was not covered under full (issue #240). imperial-home's
+    spanners and sockets stop at 3/4 in (test_kits_bench.py).
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 0.75 * IN / 2 + 0.8)])),
+        ("stud", Pos(0, 0, 5) * Cylinder(0.75 * IN / 2, 40)),
+        ("nut", hex_nut(0.75 * IN, 1.125 * IN, 41 / 64 * IN)),
+    ]

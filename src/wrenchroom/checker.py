@@ -126,7 +126,7 @@ from wrenchroom.tools.custom import (
 from wrenchroom.tools.drivers import SHAFT_RADIUS, driver_attempt
 from wrenchroom.tools.fingers import HAND, finger_attempts
 from wrenchroom.tools.hex_keys import HEX_KEYS, HexKey, hex_key_attempts
-from wrenchroom.tools.kits import DEFAULT_KIT, Kit, kit_named, missing
+from wrenchroom.tools.kits import DEFAULT_KIT, Kit, kit_named, missing, split_tool
 from wrenchroom.tools.nut_drivers import NUT_DRIVERS, nut_driver_attempt
 from wrenchroom.tools.sizes import FLATS, is_inch, same_size, size_mm, size_name, snap
 from wrenchroom.tools.sockets import socket_attempts, socket_for
@@ -3364,7 +3364,7 @@ def _tool_drive(name: str, tools: _Tools) -> _Drive | None:
     custom = tools.custom.by_name.get(name)
     if custom is not None:
         return _custom_drive(custom)
-    family, _, size_text = name.rpartition("-")
+    family, size_text = split_tool(name)
     if family == "driver":
         return _tip_drive(size_text) if size_text in SHAFT_RADIUS else None
     if family not in _TOOL_FAMILIES:
@@ -3497,7 +3497,7 @@ def _forced_key(
 ) -> Iterator[Attempt] | None:
     """hex-key-5, hex-key-5/32in, torx-key-T30; None for another family."""
     del geometry  # the keys need only the mount
-    family, _, size_text = name.rpartition("-")
+    family, size_text = split_tool(name)
     if family == "hex-key":
         key = HEX_KEYS.get(_tool_mm(size_text, name))
         if key is None:
@@ -3517,7 +3517,7 @@ def _forced_flats(
     name: str, mount: Mount, geometry: _Geometry, scene: Scene, tools: _Tools
 ) -> Iterator[Attempt] | None:
     """spanner-13, socket-7/16in, nut-driver-10; None for another family."""
-    family, _, size_text = name.rpartition("-")
+    family, size_text = split_tool(name)
     if family not in {"spanner", "socket", "nut-driver"}:
         return None
     if geometry.band_height <= _MIN_BAND:
@@ -3538,7 +3538,7 @@ def _forced_driver(
 ) -> Iterator[Attempt] | None:
     """driver-ph2, driver-slotted; None for another family."""
     del geometry  # a driver needs only the mount
-    family, _, size_text = name.rpartition("-")
+    family, size_text = split_tool(name)
     if family != "driver":
         return None
     radius = SHAFT_RADIUS.get(size_text)

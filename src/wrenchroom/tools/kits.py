@@ -44,6 +44,22 @@ from wrenchroom.tools.torx_keys import ISO_10664
 
 _HOME_DRIVERS = ("ph1", "ph2", "ph3", "slotted")
 
+#: The tool families, as a tool's name begins: ``spanner-13``, ``nut-driver-10``.
+FAMILIES = ("hex-key", "spanner", "socket", "driver", "torx-key", "ball-end-key", "nut-driver")
+
+
+def split_tool(name: str) -> tuple[str, str]:
+    """A tool's family and size, by name: ``("spanner", "1-1/8in")``; ``("", name)`` for none.
+
+    Split at the family, never at the last dash: an inch size over an inch has a dash
+    of its own, and ``spanner-1-1/8in`` read as the family ``spanner-1`` was a tool no
+    kit held (issue #240).
+    """
+    for family in FAMILIES:
+        if name.startswith(f"{family}-"):
+            return family, name[len(family) + 1 :]
+    return "", name
+
 
 @dataclass(frozen=True)
 class Kit:
@@ -79,7 +95,7 @@ class Kit:
         """
         if tool == HAND:
             return True
-        family, _, size = tool.rpartition("-")
+        family, size = split_tool(tool)
         sizes = {
             "hex-key": self.hex_keys,
             "spanner": self.spanners,
