@@ -67,19 +67,21 @@ def test_every_build_cell_fastener_has_its_truth(built_json):
         *sorted(name for name, entry in truth.items() if entry["step"] == "first"),
         *sorted(name for name, entry in truth.items() if entry["step"] == "second"),
         *sorted(name for name, entry in truth.items() if entry["step"] == "third"),
+        *sorted(name for name, entry in truth.items() if entry["step"] == "aside"),
     ]
-    assert len(truth) == 10
+    assert len(truth) == 11
 
 
 def test_the_build_is_said_step_by_step(built):
     # The loose nut, put in before its bolt, fails the run as a sidecar problem does.
     lines = built.terminal_lines()
-    start = lines.index("build: 4 steps, 10 fasteners; the first failure is in first")
-    assert lines[start : start + 8] == [
-        "build: 4 steps, 10 fasteners; the first failure is in first",
+    start = lines.index("build: 5 steps, 11 fasteners; the first failure is in first")
+    assert lines[start : start + 9] == [
+        "build: 5 steps, 11 fasteners; the first failure is in first",
         "  first   6 fasteners: 2 turn, 2 held, 1 stuck, 1 not covered",
         "  second  3 fasteners: 3 turn",
         "  third   1 fastener: 1 blocked",
+        "  aside   1 fastener: 1 turn, on bench aside",  # the frame isn't there (#235)
         "  rest    no fasteners",  # its own, every other cell's: not chosen
         "FAIL first: build_way_in_under_screw  hex-key-5  stuck  its way in is blocked: "
         "build_way_in_under (added in first)",
@@ -159,7 +161,7 @@ def test_a_bench_with_no_step_adding_the_rest_is_not_built(bench_dir, bench_mode
     assert report.build.placed == ()
     assert "key_wall_near_plate" in report.build.plan.unplaced
     lines = report.terminal_lines()
-    assert "build: 3 steps, not checked: every part must be added by one step exactly" in lines
+    assert "build: 4 steps, not checked: every part must be added by one step exactly" in lines
     (warn,) = [line for line in lines if line.startswith("WARN build: no step adds")]
     count = len(report.build.plan.unplaced)
     assert warn.startswith(f"WARN build: no step adds {count} parts: ")

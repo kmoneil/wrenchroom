@@ -21,7 +21,7 @@ from pathlib import Path
 
 import yaml
 from build123d import Compound, Location, Pos, export_step
-from cells import BUILD_STEPS, CELLS, EVERY
+from cells import BENCHES, BUILD_STEPS, CELLS, EVERY
 from parts import plate, slab, socket_screw
 
 from wrenchroom import __version__
@@ -82,12 +82,13 @@ SLOTS = len(CELLS) + 1
 #: under a cover of two solids, both in its key's way, 187 with #221's faced and lone:
 #: two nuts drawn with their washers, two solids each, which keep a ring and socket off,
 #: 188 with #233's inch_shop: a 3/8 nut the sidecar's ring written 14.29 for 9/16 in turns,
-#: 189 with #240's inch_large: a 3/4 nut, which only a tool past an inch turns.
+#: 189 with #240's inch_large: a 3/4 nut, which only a tool past an inch turns, 190 with
+#: #235's build_benched: a screw blocked in service, put in on the bench.
 FINAL_COUNTS = {
-    "fasteners": 189,
+    "fasteners": 190,
     "turns": 140,
     "held": 15,
-    "blocked": 31,
+    "blocked": 32,
     "stuck": 3,
     "not_covered": 0,
 }
@@ -217,7 +218,12 @@ def build_sidecar():
         for role, expected in cell.built.items():
             truth[f"{cell.name}_{role}"] = _named_truth(expected, cell.name)
     steps = [
-        {"step": step, "add": adds[step], **({"except": leave[step]} if leave[step] else {})}
+        {
+            "step": step,
+            "add": adds[step],
+            **({"except": leave[step]} if leave[step] else {}),
+            **({"bench": BENCHES[step]} if step in BENCHES else {}),
+        }
         for step in BUILD_STEPS
     ]
     sidecar["build"] = [*steps, {"step": REST, "add": ["*"]}]

@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**189 fasteners: 140 turn, 15 held, 31 blocked, 3 stuck, 0 not covered**
+**190 fasteners: 140 turn, 15 held, 32 blocked, 3 stuck, 0 not covered**
 
 Kit `full`, swings tried every 15 deg, ENGINE engine, wrenchroom VERSION.
 
@@ -65,7 +65,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | M6 shoulder screw | `ball-end-key-4` | 1 | all pass (ball end, 20 deg off the axis) |
 | M6 shoulder screw | `hex-key-4` | 4 | all pass (driver straight in) |
 | M6 socket screw | `ball-end-key-5` | 1 | all pass (ball end, 25 deg off the axis) |
-| M6 socket screw | `hex-key-5` | 21 | 11 of 21 fail |
+| M6 socket screw | `hex-key-5` | 22 | 12 of 22 fail |
 | M6 torx screw | `torx-key-T30` | 1 | all pass (short leg in) |
 | M8 hex screw | - | 2 | 1 of 2 fail |
 | M8 hex screw | `spanner-13` | 16 | 1 of 16 fail |
@@ -133,8 +133,8 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 
 - By hand: 3 (`grip_thumb_screw`, `grip_wheel_thumbscrew`, `grip_wing_nut`)
 - No tool needed: 13, held by themselves or a trap
-- No tool yet: 31 blocked (wrenchroom check says why)
-- Blocked, once reached: `hex-key-1.5` x1, `hex-key-2.5` x3, `hex-key-4` x1, `hex-key-5` x8, `spanner-5.5` x1, `spanner-13` x6, `spanner-15` x1, `spanner-16` x2, `spanner-24` x1, `spanner-36` x1 (only blocked fasteners need it: `big_tube_gland`), `socket-13` x1 (only blocked fasteners need it: `lone_nut`), `driver-ph2` x1
+- No tool yet: 32 blocked (wrenchroom check says why)
+- Blocked, once reached: `hex-key-1.5` x1, `hex-key-2.5` x3, `hex-key-4` x1, `hex-key-5` x9, `spanner-5.5` x1, `spanner-13` x6, `spanner-15` x1, `spanner-16` x2, `spanner-24` x1, `spanner-36` x1 (only blocked fasteners need it: `big_tube_gland`), `socket-13` x1 (only blocked fasteners need it: `lone_nut`), `driver-ph2` x1
 
 #### Failures
 
@@ -143,6 +143,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `ball_button_screw` | `hex-key-4` | blocked | `ball_button_ceiling` |
 | `big_tube_gland` | `spanner-36` | blocked | `big_tube_wall` |
 | `both_over_screw` | `hex-key-5` | blocked | `both_over_cover` |
+| `build_benched_screw` | `hex-key-5` | blocked | `build_benched_frame` |
 | `build_buried_early_screw` | `hex-key-5` | blocked | `build_buried_cover` |
 | `build_buried_late_screw` | `hex-key-5` | blocked | `build_buried_cover` |
 | `carriage_trap_bolt` | - | blocked | `holds itself, and its nut (carriage_trap_nut) is held by its trap in carriage_trap_base: nothing in the joint turns` |

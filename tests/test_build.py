@@ -87,6 +87,7 @@ def test_the_build_is_read_in_order():
                 {"step": "frame", "add": ["frame_*", "rail_*"]},
                 {"step": "cover", "add": ["cover", "*"], "model": "cover_up.step"},
                 {"step": "drive", "add": ["drive_*"], "except": ["drive_cap*"]},
+                {"step": "gear", "add": ["gear_*"], "bench": "drives"},
             ]
         }
     )
@@ -94,6 +95,7 @@ def test_the_build_is_read_in_order():
         BuildStep("frame", ("frame_*", "rail_*")),
         BuildStep("cover", ("cover", "*"), "cover_up.step"),
         BuildStep("drive", ("drive_*",), None, ("drive_cap*",)),
+        BuildStep("gear", ("gear_*",), None, (), "drives"),
     )
 
 
@@ -118,6 +120,8 @@ def test_no_build_is_none():
         ([{"step": "a", "add": "frame"}], r"build\[0\]: add must be a list"),
         ([{"step": "a", "add": [3]}], r"build\[0\]: add\[0\] must be a string"),
         ([{"step": "a", "add": ["*"], "except": "x"}], r"build\[0\]: except must be a list"),
+        ([{"step": "a", "add": ["*"], "bench": 3}], r"build\[0\]: bench must be a string"),
+        ([{"step": "a", "add": ["*"], "bench": " "}], r"build\[0\]: bench needs a name"),
         (
             [{"step": "a", "add": ["*"], "except": ["x", 3]}],
             r"build\[0\]: except\[1\] must be a string",
@@ -777,6 +781,196 @@ def test_a_step_s_model_lacking_parts_says_so_and_its_fastener_is_not_covered(tm
 
 
 # ---------------------------------------------------------------------------
+# A step done on the bench, off the machine (issue #235).
+# ---------------------------------------------------------------------------
+
+
+def benched():
+    """A screw on its plate, built on the bench, under a frame the machine has first.
+
+    The frame is 15 over the screw's seat: in the machine no key gets on; on the
+    bench, where the frame isn't, the key goes straight in.
+    """
+    return [("frame", slab(6 + 15)), ("plate", plate(0)), ("screw", socket_screw(0))]
+
+
+SCREW = [{"parts": "screw*", **M6_SOCKET}]
+ON_THE_BENCH = [
+    {"step": "frame", "add": ["frame"]},
+    {"step": "drive", "bench": "drives", "add": ["plate", "screw"]},
+]
+
+
+def test_a_step_on_the_bench_is_checked_without_the_machine(engine):
+    report = run(benched(), SCREW, ON_THE_BENCH, engine)
+    assert built(report) == {"screw": (Verdict.TURNS, "drive", "drive")}
+    assert service(report) == {"screw": Verdict.BLOCKED}  # the frame is over it in service
+    # Without its bench, the same step is in the machine, the frame over the screw.
+    machine = [{"step": "frame", "add": ["frame"]}, {"step": "drive", "add": ["plate", "screw"]}]
+    inside = run(benched(), SCREW, machine, engine)
+    assert built(inside) == {"screw": (Verdict.BLOCKED, "drive", "drive")}
+    assert inside.build.placed[0].result.blockers == ("frame",)
+
+
+def test_a_later_step_in_the_machine_has_the_bench_s_parts():
+    # The cover is put on the drive on the bench; a screw the machine adds later under
+    # it meets it: the drive was carried over and fitted.
+    parts = [
+        ("frame", slab(-30, x=300, width=10)),
+        ("plate", plate(-100, 100)),
+        ("cover", slab(6 + 15)),
+        ("screw_late", socket_screw(100)),
+    ]
+    steps = [
+        {"step": "frame", "add": ["frame"]},
+        {"step": "drive", "bench": "drives", "add": ["plate", "cover"]},
+        {"step": "late", "add": ["screw_late"]},
+    ]
+    report = run(parts, SCREW, steps)
+    assert built(report) == {"screw_late": (Verdict.BLOCKED, "late", "late")}
+    assert build_lines(report)[-1] == (
+        "FAIL late: screw_late  hex-key-5  blocked  cover (added in drive)"
+    )
+
+
+def test_a_bench_has_its_own_earlier_steps_and_no_other_bench_s():
+    parts = [
+        ("plate", plate(-100, 100)),
+        ("cover", slab(6 + 15)),
+        ("screw_a", socket_screw(-100)),
+        ("screw_b", socket_screw(100)),
+    ]
+    steps = [
+        {"step": "base", "bench": "a", "add": ["plate", "cover"]},
+        {"step": "first", "bench": "a", "add": ["screw_a"]},  # the cover is on bench a
+        {"step": "second", "bench": "b", "add": ["screw_b"]},  # and not on bench b
+    ]
+    report = run(parts, SCREW, steps)
+    assert built(report) == {
+        "screw_a": (Verdict.BLOCKED, "first", "first"),
+        "screw_b": (Verdict.TURNS, "second", "second"),
+    }
+
+
+def test_a_joint_made_on_a_bench_its_other_member_isn_t_on_is_the_sidecar_s_mistake():
+    steps = [
+        {"step": "first", "add": ["upper", "lower", "pocket", "bolt"]},
+        {"step": "second", "bench": "nuts", "add": ["nut"]},
+    ]
+    report = run(slotted(), JOINT, steps)
+    assert built(report) == {
+        "bolt": (Verdict.NOT_COVERED, "first", "first"),
+        "nut": (Verdict.NOT_COVERED, "second", "second"),
+    }
+    by_name = {p.result.name: p.result for p in report.build.placed}
+    assert by_name["nut"].reason == (
+        "added on bench nuts, where its partner bolt (added in first, in the machine) "
+        "isn't: a joint is made where both its members are"
+    )
+    assert by_name["bolt"].reason == (
+        "its partner nut is added in second on bench nuts, where this, added in first "
+        "in the machine, isn't: a joint is made where both its members are"
+    )
+    assert (report.build.exit_code, report.exit_code) == (2, 2)
+
+
+def test_a_joint_across_two_benches_is_said_so():
+    steps = [
+        {"step": "first", "bench": "a", "add": ["upper", "lower", "pocket", "bolt"]},
+        {"step": "second", "bench": "b", "add": ["nut"]},
+    ]
+    nut = next(
+        p.result for p in run(slotted(), JOINT, steps).build.placed if p.result.name == "nut"
+    )
+    assert nut.reason == (
+        "added on bench b, where its partner bolt (added in first, on bench a) isn't: "
+        "a joint is made where both its members are"
+    )
+
+
+def test_a_joint_begun_on_the_bench_is_finished_in_the_machine(engine):
+    # The bolt goes in on the bench; its nut, in the machine, finds it carried over.
+    steps = [
+        {"step": "first", "bench": "parts", "add": ["upper", "lower", "pocket", "bolt"]},
+        {"step": "second", "add": ["nut"]},
+    ]
+    report = run(slotted(), JOINT, steps, engine)
+    plain = [
+        {"step": "first", "add": ["upper", "lower", "pocket", "bolt"]},
+        {"step": "second", "add": ["nut"]},
+    ]
+    assert (
+        built(report)
+        == built(run(slotted(), JOINT, plain, engine))
+        == {
+            "bolt": (Verdict.TURNS, "first", "second"),
+            "nut": (Verdict.HELD, "second", "second"),
+        }
+    )
+
+
+def test_the_reports_say_which_bench_a_step_was_on():
+    report = run(benched(), SCREW, ON_THE_BENCH)
+    assert build_lines(report)[1:3] == [
+        "  frame  no fasteners",
+        "  drive  1 fastener: 1 turn, on bench drives",
+    ]
+    steps = report.to_json_dict()["build"]["steps"]
+    assert [(step["step"], step["bench"]) for step in steps] == [
+        ("frame", None),
+        ("drive", "drives"),
+    ]
+    assert "| `drive` | 2 parts | 1 fastener: 1 turn, on bench drives |" in report.markdown()
+
+
+def test_a_bench_step_s_model_has_its_own_parts_as_it_draws_them():
+    # The way three projects did it by hand: the bench's parts moved 2 m down, clear
+    # of the machine, in a model of its own. With bench:, the machine's parts in it
+    # are left out, and those it lacks aren't noted as missing.
+    down = [(name, Pos(0, 0, -2000) * shape) for name, shape in benched()[1:]]
+    steps = [
+        {"step": "frame", "add": ["frame"]},
+        {"step": "drive", "bench": "drives", "add": ["plate", "screw"], "model": "drives.step"},
+    ]
+    config = Config.from_dict({"fasteners": SCREW, "build": steps})
+    for model in (down, [benched()[0], *down], [*benched()[1:]]):
+        report = check(
+            Assembly([Part(n, s) for n, s in benched()]),
+            config,
+            kit="full",
+            models={"drives.step": Assembly([Part(n, s) for n, s in model])},
+        )
+        assert built(report) == {"screw": (Verdict.TURNS, "drive", "drive")}, model
+        assert not any("lacks" in note for note in report.notes), report.notes
+    # In the machine, a model lacking the frame added by then is noted.
+    in_machine = [{**steps[0]}, {**steps[1], "bench": None}]
+    in_machine[1].pop("bench")
+    report = check(
+        Assembly([Part(n, s) for n, s in benched()]),
+        Config.from_dict({"fasteners": SCREW, "build": in_machine}),
+        kit="full",
+        models={"drives.step": Assembly([Part(n, s) for n, s in down])},
+    )
+    assert "build step 'drive': its model drives.step lacks 1 part added by then: frame" in (
+        report.notes
+    )
+
+
+def test_which_steps_a_step_sees():
+    steps = (
+        BuildStep("frame", ("frame*",)),
+        BuildStep("left", ("left*",), bench="drives"),
+        BuildStep("right", ("right*",), bench="drives"),
+        BuildStep("box", ("box",), bench="boxes"),
+        BuildStep("box in", ("box_shaft",)),
+    )
+    found = plan(steps, boxes("frame", "left", "right", "box", "box_shaft"), _no)
+    seen = [[added for added in range(5) if found.sees(at, added)] for at in range(5)]
+    assert seen == [[0], [1], [1, 2], [3], [0, 1, 2, 3, 4]]
+    assert [step.bench for step in found.steps] == [None, "drives", "drives", "boxes", None]
+
+
+# ---------------------------------------------------------------------------
 # The steps wrong: the build isn't checked.
 # ---------------------------------------------------------------------------
 
@@ -882,6 +1076,7 @@ def test_the_json_has_the_build_step_by_step():
         {
             "step": "base",
             "model": None,
+            "bench": None,
             "adds": ["plate", "early"],
             "summary": {
                 "fasteners": 1,
@@ -895,6 +1090,7 @@ def test_the_json_has_the_build_step_by_step():
         {
             "step": "cover",
             "model": None,
+            "bench": None,
             "adds": ["cover"],
             "summary": {
                 "fasteners": 0,
@@ -908,6 +1104,7 @@ def test_the_json_has_the_build_step_by_step():
         {
             "step": "late",
             "model": None,
+            "bench": None,
             "adds": ["late"],
             "summary": {
                 "fasteners": 1,
