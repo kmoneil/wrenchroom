@@ -743,8 +743,9 @@ build:
     add: ["frame_*", "rail_*", "frame_bolt_*", "frame_nut_*"]
   - step: motors
     add: ["motor_*"]
+    except: ["motor_bracket_screw_*"]   # bolted on at the cover step
   - step: cover
-    add: [cover, "cover_screw_*"]
+    add: [cover, "cover_screw_*", "motor_bracket_screw_*"]
     model: build_lever-up.step     # the mechanism as it sits during this step
   - step: rest
     add: ["*"]                     # every part no other step adds
@@ -757,6 +758,14 @@ build:
   2. `add: ["*"]`, in one step only, takes every part no other step adds. An ignored
   part need not be added. An `add:` glob that names no part is a renamed part, as an
   unmatched rule is, and fails the run too.
+- **All but a few.** A step's `except:` leaves out of it parts its `add:` names, so a
+  step that is every `motor_` part but the screws bolting the motors on later is two
+  globs, not one per part kept in. A step adds what its `add:` names and its
+  `except:` doesn't (the catch-all, the rest so), and every part being added once is
+  counted after that. An `except:` glob naming none of the parts its step's `add:`
+  names is a mistake, as an unmatched `add:` glob is, and fails the run (`WARN build:
+  step 'motors': except glob 'motor_bracket_scew_*' matched none of its add parts
+  (renamed part?)`).
 - **A step's scene** is every part added by then, the step's own included, as they
   go on before their fasteners, and none of the later steps'. A step's `model:` is
   read as a state's is (beside the sidecar, then beside the model, or given as an

@@ -83,7 +83,8 @@ class Cell:
     raised: object = None
     #: The build steps its roles are added in (M8): {step: [role glob, ...]}, the
     #: bench's build sidecar adding them in BUILD_STEPS' order; every other part
-    #: comes in its last step, which adds the rest.
+    #: comes in its last step, which adds the rest. A step's [EVERY] is every role of
+    #: the cell its other steps don't name, which the sidecar says with an except:.
     steps: dict = field(default_factory=dict)
     #: The build's truth, as truth's, with each fastener's step and checked_in.
     built: dict = field(default_factory=dict)
@@ -142,6 +143,9 @@ def cell(  # noqa: PLR0913, PLR0917  (one keyword per Cell field)
 #: The build steps the bench's build sidecar has, in order, before the one adding the
 #: rest (M8).
 BUILD_STEPS = ("first", "second", "third")
+
+#: A cell's step adding every role of its own but its other steps' (issue #236).
+EVERY = "*"
 
 
 # ---------------------------------------------------------------- 5.1 keys, drivers, spanners
@@ -2979,7 +2983,7 @@ def build_ahead():
         "bolt": {"verdict": "held", "tool": "spanner-13", "pair": "nut"},
         "nut": {"verdict": "turns", "tool": "spanner-13", "how": "ring, full length"},
     },
-    steps={"first": ["upper", "lower", "pocket", "bolt"], "second": ["nut"]},
+    steps={"first": [EVERY], "second": ["nut"]},  # every part but the nut: an except:
     built={
         "bolt": {
             "verdict": "held",

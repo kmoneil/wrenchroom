@@ -17,6 +17,10 @@ not.
   problem too, and the build isn't checked; ``add: ["*"]`` in one step takes every part
   no other step adds. An ``add:`` glob naming nothing is a renamed part, as an
   unmatched rule is.
+- A step's ``except:`` leaves out of it parts its ``add:`` names (issue #236): every
+  ``el_*`` but the arm's screws. Each part is added once, counted after that. An
+  ``except:`` glob naming none of its step's ``add:`` parts is a mistake, as an
+  unmatched ``add:`` glob is.
 
 A screw can pass in the build and fail in service, buried by a part put on after it,
 or the other way round, where a state takes off for service a part put on before it:
@@ -79,6 +83,8 @@ class Plan:
         unplaced: Parts no step adds.
         twice: Parts more than one step adds, each with those steps' names.
         unmatched: ``(step, glob)`` for each ``add:`` glob that names no part.
+        unmatched_except: ``(step, glob)`` for each ``except:`` glob that names none of
+            the parts its step's ``add:`` names.
     """
 
     steps: tuple[Step, ...]
@@ -86,6 +92,7 @@ class Plan:
     unplaced: tuple[str, ...] = ()
     twice: tuple[tuple[str, tuple[str, ...]], ...] = ()
     unmatched: tuple[tuple[str, str], ...] = ()
+    unmatched_except: tuple[tuple[str, str], ...] = ()
 
     @property
     def sound(self) -> bool:
@@ -98,7 +105,9 @@ def plan(steps: tuple[BuildStep, ...], assembly: Assembly, ignored: Callable[[st
 
     An ignored part is in no scene, so no step need add it, and one that does adds
     nothing. A glob is matched against every name the model has, ignored parts and
-    surfaces among them: one naming only those adds nothing, and names something.
+    surfaces among them: one naming only those adds nothing, and names something. A
+    step adds what its ``add:`` names and its ``except:`` doesn't, the catch-all the
+    rest so; an ``except:`` glob must name one of the names its ``add:`` does.
 
     Args:
         steps: The sidecar's ``build:``, in order.
@@ -110,12 +119,13 @@ def plan(steps: tuple[BuildStep, ...], assembly: Assembly, ignored: Callable[[st
     for index, step in enumerate(steps):
         globs = [glob for glob in step.add if glob != CATCH_ALL]
         for name in leaves:
-            if any(fnmatchcase(name, glob) for glob in globs):
+            if _named(name, globs) and not _named(name, step.except_):
                 adding.setdefault(name, []).append(index)
     rest = next((index for index, step in enumerate(steps) if CATCH_ALL in step.add), None)
     if rest is not None:
         for name in leaves:
-            adding.setdefault(name, [rest])
+            if name not in adding and not _named(name, steps[rest].except_):
+                adding[name] = [rest]
     added_in = {name: found[0] for name, found in adding.items()}
     for part in assembly:
         if part.piece_of is not None and part.piece_of in added_in:
@@ -143,7 +153,18 @@ def plan(steps: tuple[BuildStep, ...], assembly: Assembly, ignored: Callable[[st
             for glob in step.add
             if glob != CATCH_ALL and not any(fnmatchcase(name, glob) for name in names)
         ),
+        unmatched_except=tuple(
+            (step.name, glob)
+            for step in steps
+            for glob in step.except_
+            if not any(fnmatchcase(name, glob) for name in names if _named(name, step.add))
+        ),
     )
+
+
+def _named(name: str, globs: tuple[str, ...] | list[str]) -> bool:
+    """Whether any of ``globs`` names a part."""
+    return any(fnmatchcase(name, glob) for glob in globs)
 
 
 @dataclass(frozen=True)
@@ -193,7 +214,13 @@ class Build:
     def exit_code(self) -> int:
         """2 for a problem with the steps or a fastener not covered, 1 for one failing, else 0."""
         verdicts = {placed.result.verdict for placed in self.placed}
-        if not self.plan.sound or self.plan.unmatched or Verdict.NOT_COVERED in verdicts:
+        plan = self.plan
+        if (
+            not plan.sound
+            or plan.unmatched
+            or plan.unmatched_except
+            or Verdict.NOT_COVERED in verdicts
+        ):
             return 2
         return 1 if self.failures() else 0
 
@@ -326,6 +353,10 @@ class Build:
             f"step {step!r}: add glob {glob!r} matched nothing (renamed part?)"
             for step, glob in self.plan.unmatched
         ]
+        problems += [
+            f"step {step!r}: except glob {glob!r} matched none of its add parts (renamed part?)"
+            for step, glob in self.plan.unmatched_except
+        ]
         return problems
 
     def to_json(self) -> dict[str, object]:
@@ -348,6 +379,9 @@ class Build:
             "unplaced": list(self.plan.unplaced),
             "twice": [{"part": name, "steps": list(steps)} for name, steps in self.plan.twice],
             "unmatched": [{"step": step, "glob": glob} for step, glob in self.plan.unmatched],
+            "unmatched_except": [
+                {"step": step, "glob": glob} for step, glob in self.plan.unmatched_except
+            ],
         }
 
     def markdown(self) -> list[str]:

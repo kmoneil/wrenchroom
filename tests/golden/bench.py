@@ -21,7 +21,7 @@ from pathlib import Path
 
 import yaml
 from build123d import Compound, Location, Pos, export_step
-from cells import BUILD_STEPS, CELLS
+from cells import BUILD_STEPS, CELLS, EVERY
 from parts import plate, slab, socket_screw
 
 from wrenchroom import __version__
@@ -198,13 +198,26 @@ def build_sidecar():
     """
     sidecar, _ = sidecar_and_truth()
     adds = {step: [] for step in BUILD_STEPS}
+    leave = {step: [] for step in BUILD_STEPS}
     truth = {}
     for cell in CELLS:
         for step, roles in cell.steps.items():
-            adds[step] += [f"{cell.name}_{role}" for role in roles]
+            if roles == [EVERY]:  # all its roles but its other steps': an except: (#236)
+                adds[step].append(f"{cell.name}_*")
+                leave[step] += [
+                    f"{cell.name}_{role}"
+                    for other, theirs in cell.steps.items()
+                    if other != step
+                    for role in theirs
+                ]
+            else:
+                adds[step] += [f"{cell.name}_{role}" for role in roles]
         for role, expected in cell.built.items():
             truth[f"{cell.name}_{role}"] = _named_truth(expected, cell.name)
-    steps = [{"step": step, "add": adds[step]} for step in BUILD_STEPS]
+    steps = [
+        {"step": step, "add": adds[step], **({"except": leave[step]} if leave[step] else {})}
+        for step in BUILD_STEPS
+    ]
     sidecar["build"] = [*steps, {"step": REST, "add": ["*"]}]
     return sidecar, truth
 
