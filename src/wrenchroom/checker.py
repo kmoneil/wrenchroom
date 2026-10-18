@@ -3428,9 +3428,18 @@ def _sized(called: str, size: float | str | None) -> str:
     if size is None:
         return called
     noun = called.removeprefix("a ")
-    if isinstance(size, float):
-        return f"a {size_name(size)}{'' if is_inch(size) else ' mm'} {noun}"
-    return f"a {str(size).upper()} {noun}"
+    said = (
+        f"{size_name(size)}{'' if is_inch(size) else ' mm'}"
+        if isinstance(size, float)
+        else str(size).upper()
+    )
+    return f"{_article(said)} {said} {noun}"
+
+
+def _article(said: str) -> str:
+    """``an`` before a size said with a vowel: 8, 11 and 18 (11/16in among them); else ``a``."""
+    eleven = said[:2] in ("11", "18") and not said[2:3].isdigit()  # eleven, eighteen; not 110
+    return "an" if said.startswith("8") or eleven else "a"
 
 
 def _tip_drive(tip: str) -> _Drive:
