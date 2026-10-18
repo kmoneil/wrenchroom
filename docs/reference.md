@@ -158,7 +158,8 @@ standard gives PH2: taken as drawn`). A span between two ranges says nothing, an
 the thread's number stands (issue #125).
 
 A sidecar rule still describes a part outright, `across_flats:` gives a hex its
-measured size, and `checks: {detect: false}` turns detection off. With every
+measured size (in mm, or by its name: `9/16in`), and `checks: {detect: false}` turns
+detection off. With every
 fastener rule removed, the golden bench's described fasteners are all found with the
 right kind and size, each screw with its rule's head, and its plates, blocks and
 studs named for their cells are passed over.
@@ -502,11 +503,21 @@ tool's for the size):
 | `nut-driver` | across_flats (outer_radius, handle_radius, handle_length) |
 | `driver` | tip (shaft_radius, shaft_length) |
 
+An `across_flats:` is a number of mm or a size's name, as tools are named (`13`,
+`9/16in`), so an inch tool needn't be written in mm. One within 0.005 mm of a size
+the tables hold is that size, and has the built-in tool's numbers for it: 9/16 in
+written 14.29 is 14.2875, and a 3/8 nut takes it. The tables' two closest sizes are
+0.0125 apart, so no size written is two of them.
+
 Anything else in an entry is an error, as elsewhere in the sidecar, and so is a key
 whose short arm is longer than its long one (swapped, most likely). A tool of a kind
 and size no fastener in the model takes, and no rule names, is noted (`tool
 unused-key: no fastener here takes a 7 mm hex key`): written with the wrong size,
-most often. One the kit's own tool beat to it is taken, and not noted.
+most often. One the kit's own tool beat to it is taken, and not noted. Where a
+fastener is not covered and the sidecar has a tool it would try a little off its
+size, within half a millimetre, the reason names it: `needs spanner-9/16in or
+socket-9/16in, which kit metric-home does not hold (imperial-home and full have it);
+the sidecar's ub-spanner is 14.4 across flats, not 14.2875 (9/16in)`.
 
 ## Room for a hand
 

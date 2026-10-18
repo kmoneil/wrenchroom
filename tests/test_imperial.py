@@ -23,9 +23,11 @@ from wrenchroom.tools.sizes import (
     METRIC_FLATS,
     inch_mm,
     inches,
+    same_size,
     size_mm,
     size_name,
     snap,
+    written_mm,
 )
 
 IN = 25.4
@@ -77,6 +79,41 @@ def test_a_measurement_is_the_nearest_real_size(measured, named):
     snapped = snap(measured, sizes)
     assert snapped is not None
     assert size_name(snapped) == named
+
+
+@pytest.mark.parametrize(
+    ("value", "mm"),
+    [
+        (13, 13.0),
+        (5.5, 5.5),
+        ("13", 13.0),
+        ("5.5", 5.5),
+        ("9/16in", 9 / 16 * IN),
+        (" 9/16in ", 9 / 16 * IN),
+        ("1-1/16in", 17 / 16 * IN),
+        ("0.050in", 0.05 * IN),
+    ],
+)
+def test_a_size_is_written_in_mm_or_by_its_name(value, mm):
+    # As a sidecar's across_flats: may give it (issue #233).
+    assert written_mm(value) == pytest.approx(mm)
+
+
+@pytest.mark.parametrize(
+    "bad", ["9/16", "13mm", "", "in", "seven", "0", "-1", "0in", "nan", "inf", True, None, [13], 0]
+)
+def test_what_is_no_size_is_refused(bad):
+    with pytest.raises(ValueError, match="not a size"):
+        written_mm(bad)
+
+
+def test_two_sizes_are_one_within_five_thousandths_of_a_millimetre():
+    assert same_size(14.29, 14.2875)
+    assert same_size(14.2875 + 0.0049, 14.2875)
+    assert same_size(14.2875 - 0.0049, 14.2875)
+    assert not same_size(14.2875 + 0.0051, 14.2875)
+    assert not same_size(14.2875 - 0.0051, 14.2875)
+    assert not same_size(27.0, inch_mm("1-1/16"))  # the tables' closest two, 0.0125 apart
 
 
 def test_a_measurement_far_from_every_size_is_none():

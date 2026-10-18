@@ -118,6 +118,25 @@ def test_axis_spellings():
     assert b.axis == (0.0, 0.6, 0.8)  # normalised
 
 
+@pytest.mark.parametrize(
+    ("given", "mm"), [(24, 24.0), (25.5, 25.5), ("24", 24.0), ("9/16in", 14.2875), ("1/2in", 12.7)]
+)
+def test_a_rule_s_across_flats_is_mm_or_a_size_s_name(given, mm):
+    # A misfit's reason says "give its rule across_flats: 1/2in" (issue #233).
+    config = Config.from_dict({"fasteners": [{"parts": "nut", "across_flats": given}]})
+    assert config.rules[0].drive_af == pytest.approx(mm)
+
+
+@pytest.mark.parametrize("given", ["9/16", "24mm", "", "0", -3, 0, True, "nan", "inf", [24]])
+def test_a_rule_s_across_flats_that_is_no_size_is_refused(given):
+    with pytest.raises(ConfigError) as caught:
+        Config.from_dict({"fasteners": [{"parts": "nut", "across_flats": given}]}, source="w.yaml")
+    assert str(caught.value) == (
+        "w.yaml: fasteners[0]: across_flats must be a positive number of millimetres "
+        "or a size's name (9/16in)"
+    )
+
+
 def test_socket_false_for_glands():
     config = Config.from_dict({"fasteners": [{"parts": "*_gland_*", "socket": False}]})
     assert config.rules[0].socket_allowed is False

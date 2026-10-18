@@ -10,6 +10,7 @@ millimetres into its name, and a measured across-flats into the size it is.
 
 from __future__ import annotations
 
+import math
 from fractions import Fraction
 
 MM_PER_INCH = 25.4
@@ -87,6 +88,12 @@ INCH_FLATS: tuple[str, ...] = (
 #: Models carry exact sizes; the nearest size wins, so 19.05 is 3/4 in, not 19.
 SNAP_MM = 0.05
 
+#: Two tool sizes are one when they lie this close, mm: a size as a sidecar writes
+#: it and as the tables hold it, 9/16 in written 14.29 for 14.2875 (issue #233).
+#: The tables' two closest sizes, 1-1/16 in and 27, are 0.0125 apart, so no size
+#: written is ever two of them.
+SAME_MM = 0.005
+
 
 def inches(text: str) -> float:
     """An inch size as written in the trade, in inches: ``1-1/8`` is 1.125.
@@ -153,3 +160,32 @@ def snap(measured: float, sizes: tuple[float, ...]) -> float | None:
         return None
     nearest = min(sizes, key=lambda size: abs(size - measured))
     return nearest if abs(nearest - measured) <= SNAP_MM else None
+
+
+def same_size(a: float, b: float) -> bool:
+    """Two tool sizes, in mm, are one: within :data:`SAME_MM` of each other."""
+    return abs(a - b) < SAME_MM
+
+
+def written_mm(value: object) -> float:
+    """A size as a sidecar writes it, in mm: a number of mm or a size's name.
+
+    A name is as tools are named (``13``, ``5.5``, ``9/16in``), so an inch size
+    needn't be written in mm at all.
+
+    Raises:
+        ValueError: On anything else, and on a size that isn't positive and finite.
+    """
+    msg = f"not a size: {value!r}"
+    if isinstance(value, str):
+        try:
+            mm = size_mm(value.strip())
+        except ValueError:
+            raise ValueError(msg) from None
+    elif isinstance(value, int | float) and not isinstance(value, bool):
+        mm = float(value)
+    else:
+        raise ValueError(msg)  # noqa: TRY004  (the callers say where, as for any bad value)
+    if not (math.isfinite(mm) and mm > 0):
+        raise ValueError(msg)
+    return mm

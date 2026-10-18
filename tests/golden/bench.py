@@ -80,10 +80,11 @@ SLOTS = len(CELLS) + 1
 #: takes off, and one whose mate is a lead of two, 184 with #210's apart: two hex
 #: bolts, each its head and its shank as two solids, 185 with its both_over: a screw
 #: under a cover of two solids, both in its key's way, 187 with #221's faced and lone:
-#: two nuts drawn with their washers, two solids each, which keep a ring and socket off.
+#: two nuts drawn with their washers, two solids each, which keep a ring and socket off,
+#: 188 with #233's inch_shop: a 3/8 nut the sidecar's ring written 14.29 for 9/16 in turns.
 FINAL_COUNTS = {
-    "fasteners": 187,
-    "turns": 138,
+    "fasteners": 188,
+    "turns": 139,
     "held": 15,
     "blocked": 31,
     "stuck": 3,

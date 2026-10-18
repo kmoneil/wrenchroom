@@ -298,6 +298,24 @@ def test_a_set_screw_whose_key_no_table_holds_names_it():
     )
 
 
+def test_a_key_of_that_size_from_the_sidecar_turns_it_and_one_off_it_is_named():
+    # Written within 0.005 of the 0.7 the tables hold no key of, it is that size;
+    # 0.05 off, it is named where the screw is not covered (issue #233).
+    rule = {"parts": "set", "kind": "screw", "head": "set", "size": "M1.6"}
+    small = set_screw(d=1.6, length=3.0, key=0.7, depth=0.7)
+    key = {"name": "tiny-key", "type": "hex-key", "long": 30, "short": 8}
+    tools = [{**key, "across_flats": 0.7012}]
+    config = Config.from_dict({"fasteners": [rule], "tools": tools})
+    (result,) = check(Assembly([Part("set", small)]), config, kit="full").results
+    assert (result.verdict, result.tool) == (Verdict.TURNS, "tiny-key")
+    config = Config.from_dict({"fasteners": [rule], "tools": [{**key, "across_flats": 0.75}]})
+    (result,) = check(Assembly([Part("set", small)]), config, kit="full").results
+    assert result.reason == (
+        "needs hex-key-0.7, which kit full does not hold; no kit has it; "
+        "the sidecar's tiny-key is 0.75 across flats, not 0.7"
+    )
+
+
 def test_an_m14_set_screw_has_no_standard_key():
     rule = {"parts": "set", "kind": "screw", "head": "set", "size": "M14"}
     results, _ = checked([("set", set_screw(d=14.0, length=10.0, key=6.0))], [rule], kit="full")

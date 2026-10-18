@@ -128,7 +128,7 @@ from wrenchroom.tools.fingers import HAND, finger_attempts
 from wrenchroom.tools.hex_keys import HEX_KEYS, HexKey, hex_key_attempts
 from wrenchroom.tools.kits import DEFAULT_KIT, Kit, kit_named, missing
 from wrenchroom.tools.nut_drivers import NUT_DRIVERS, nut_driver_attempt
-from wrenchroom.tools.sizes import FLATS, is_inch, size_mm, size_name, snap
+from wrenchroom.tools.sizes import FLATS, is_inch, same_size, size_mm, size_name, snap
 from wrenchroom.tools.sockets import socket_attempts, socket_for
 from wrenchroom.tools.spanners import (
     RING_CLEARANCE,
@@ -2634,17 +2634,43 @@ class _Tools:
     #: The sidecar's own tools (spec 5.3): they join whatever kit is used.
     custom: CustomTools = field(default_factory=CustomTools)
 
-    def need(self, *wanted: str) -> tuple[str, ...]:
+    def need(
+        self, *wanted: str, af: float | None = None, kinds: tuple[str, ...] = ()
+    ) -> tuple[str, ...]:
         """Those of ``wanted`` the kit or the sidecar holds, in order; not covered when none.
 
         Raises:
             NotCovered: When the kit holds none of them, naming them and the kit
-                that does.
+                that does, and the sidecar's own of ``kinds`` a little off ``af``.
         """
         held = tuple(tool for tool in wanted if self.kit.holds(tool) or tool in self.custom)
         if not held:
-            raise NotCovered(missing(wanted, self.kit))
+            raise NotCovered(missing(wanted, self.kit) + self.off_size(af, kinds))
         return held
+
+    def off_size(self, af: float | None, kinds: tuple[str, ...]) -> str:
+        """The sidecar's own tools a little off the size wanted, as a reason ends with them.
+
+        ``; the sidecar's ub-spanner and ub-socket are 14.4 across flats, not 14.2875
+        (9/16in)``: written for the fastener, most often, and never tried for being off
+        its size, which a reason naming only the kit's tools left unsaid (issue #233).
+        """
+        near = self.custom.near(af, kinds) if af is not None else ()
+        if af is None or not near:
+            return ""
+        by_size: dict[float, list[str]] = {}
+        for name, size in near:
+            by_size.setdefault(size, []).append(name)
+        (first, names), *rest = by_size.items()
+        said = [f"{_joined(names)} {'is' if len(names) == 1 else 'are'} {first:g} across flats"]
+        said += [f"{_joined(others)} {size:g}" for size, others in rest]
+        inch = f" ({size_name(af)})" if is_inch(af) else ""
+        return f"; the sidecar's {_joined(said)}, not {af:g}{inch}"
+
+
+def _joined(items: list[str]) -> str:
+    """``a``, ``a and b``, ``a, b and c``."""
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} and {items[-1]}"
 
 
 def _attempts_for(
@@ -2954,7 +2980,7 @@ def _keyed_attempts(
     ball = BALL_END_KEYS.get(af) if key and fastener.head in _BALL_END_HEADS else None
     customs = tools.custom.hex_keys(af)
     wanted = [k.name for k in (key, ball) if k is not None] + [c.name for c in customs]
-    held = tools.need(*wanted)
+    held = tools.need(*wanted, af=af, kinds=("hex-key",))
     return _keys(held, key, ball, customs, mount, scene, tools)
 
 
@@ -2970,7 +2996,8 @@ def _key_af(fastener: Fastener, tools: _Tools) -> float:
             raise NotCovered(no_such_head(fastener.head, size))
         if af not in HEX_KEYS and not tools.custom.hex_keys(af):
             # Its standard's key, whose L-key no table here holds: an M1.6 set screw's 0.7
-            raise NotCovered(missing((f"hex-key-{size_name(af)}",), tools.kit))
+            wanted = (f"hex-key-{size_name(af)}",)
+            raise NotCovered(missing(wanted, tools.kit) + tools.off_size(af, ("hex-key",)))
     return af
 
 
@@ -3078,7 +3105,8 @@ def _hex_flats_attempts(
         if af in NUT_DRIVERS:
             wanted.append(NUT_DRIVERS[af].name)
     wanted += [custom.name for custom in _custom_flats(af, fastener.socket_allowed, tools)]
-    held = tools.need(*wanted)
+    kinds = ("spanner", "socket", "nut-driver") if fastener.socket_allowed else ("spanner",)
+    held = tools.need(*wanted, af=af, kinds=kinds)
     return _hex_flats_tools(held, mount, af, geometry, scene, tools)
 
 
@@ -3325,8 +3353,9 @@ def _drawn_size(
 
 
 def _same_size(a: float | str, b: float | str) -> bool:
+    """Two drive sizes are one: across flats as a custom tool's are matched (issue #233)."""
     if isinstance(a, float) and isinstance(b, float):
-        return math.isclose(a, b, abs_tol=0.01)
+        return same_size(a, b)
     return str(a).lower() == str(b).lower()
 
 

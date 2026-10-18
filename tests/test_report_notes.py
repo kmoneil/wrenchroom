@@ -51,9 +51,18 @@ def run(parts, tools, rules=(M6_SOCKET,)):
             "a 24 mm spanner",
         ),
         (
-            # 7/16 in, given in mm as every custom tool's size is.
+            # 7/16 in, given in mm, or by its name (issue #233).
             {"name": "inch-ring", "type": "spanner", "across_flats": 11.1125, "length": 150},
             "a 7/16in spanner",
+        ),
+        (
+            {"name": "inch-ring", "type": "spanner", "across_flats": "7/16in", "length": 150},
+            "a 7/16in spanner",
+        ),
+        (
+            # Written 0.0025 off 9/16 in, as 14.29: the size it is taken as.
+            {"name": "inch-ring", "type": "spanner", "across_flats": 14.29, "length": 150},
+            "a 9/16in spanner",
         ),
         (
             {"name": "t30", "type": "torx-key", "size": "T30", "long": 80, "short": 20},

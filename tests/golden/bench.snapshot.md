@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**187 fasteners: 138 turn, 15 held, 31 blocked, 3 stuck, 0 not covered**
+**188 fasteners: 139 turn, 15 held, 31 blocked, 3 stuck, 0 not covered**
 
 Kit `full`, swings tried every 15 deg, ENGINE engine, wrenchroom VERSION.
 
@@ -17,6 +17,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | 1/4 nut | `spanner-7/16in` | 1 | all pass (ring, full length) |
 | 1/4 socket screw | `hex-key-3/16in` | 1 | all pass (driver straight in) |
 | 15 AF gland | `spanner-15` | 3 | 1 of 3 fail |
+| 3/8 nut | `short-ring-9/16in` | 1 | all pass (ring, full length) |
 | 41 AF gland | `spanner-41` | 1 | all pass (ring, full length) |
 | M1.6 nut | `spanner-3.2` | 1 | all pass (ring, full length) |
 | M10 hex screw | `spanner-16` | 3 | all pass (ring, full length) |
@@ -80,7 +81,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 
 #### Tools
 
-42 tools this model needs (kit full): 11 hex keys, 2 ball-end keys, 6 Torx keys, 14 spanners, 1 socket, 1 nut driver, 5 drivers, 2 others.
+43 tools this model needs (kit full): 11 hex keys, 2 ball-end keys, 6 Torx keys, 14 spanners, 1 socket, 1 nut driver, 5 drivers, 3 others.
 
 | Tool | Fasteners | |
 | --- | ---: | --- |
@@ -125,6 +126,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `driver-ph2` | 3 |  |
 | `driver-ph4` | 1 | not in metric-home; only `ph4_screw` |
 | `stubby-key-6` | 1 | not in metric-home; only `short_key_screw` |
+| `short-ring-9/16in` | 1 | not in metric-home; only `inch_shop_nut` |
 | `short-ring-18` | 1 | not in metric-home; only `shop_spanner_nut` |
 
 - By hand: 3 (`grip_thumb_screw`, `grip_wheel_thumbscrew`, `grip_wing_nut`)

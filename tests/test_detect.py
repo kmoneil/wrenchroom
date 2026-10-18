@@ -272,13 +272,14 @@ def test_an_inch_socket_takes_its_inch_key():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("value", [24, 24.0, 5.5])
+@pytest.mark.parametrize("value", [24, 24.0, 5.5, "24"])
 def test_across_flats_takes_a_positive_number(value):
+    # Or a size's name, as a tool is named: "24", "9/16in" (issue #233).
     config = Config.from_dict({"fasteners": [{"parts": "g", "kind": "nut", "across_flats": value}]})
     assert config.rules[0].drive_af == float(value)
 
 
-@pytest.mark.parametrize("value", [0, -3, "24", True])
+@pytest.mark.parametrize("value", [0, -3, "24mm", True])
 def test_across_flats_refuses_anything_else(value):
     with pytest.raises(ConfigError, match="across_flats"):
         Config.from_dict({"fasteners": [{"parts": "g", "kind": "nut", "across_flats": value}]})

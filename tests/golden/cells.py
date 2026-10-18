@@ -3735,3 +3735,38 @@ def pull_bored():
         ("block", Rot(0, 0, 20) * block),
         ("plug", Pos(0, 0, 13) * Cylinder(8, 20)),
     ]
+
+
+#: A short ring spanner for 9/16 in, written 14.29 as most people write it: 0.0025
+#: off the 14.2875 the tables hold, and of a size no other cell needs.
+_INCH_RING = {
+    "name": "short-ring-9/16in",
+    "type": "spanner",
+    "across_flats": 14.29,
+    "length": 80,
+    "ends": ["ring"],
+}
+
+
+@cell(
+    "inch_shop",
+    [{"parts": "nut", "kind": "nut", "size": "3/8", "tool": "short-ring-9/16in"}],
+    {"nut": {"verdict": "turns", "tool": "short-ring-9/16in", "how": "ring, full length"}},
+    tools=[_INCH_RING],
+)
+def inch_shop():
+    """shop_spanner's in inches: a 3/8-16 nut (ASME B18.2.2: 9/16 across flats, 21/64
+    thick) on a stud inside a round wall 90 from its axis and 400 tall. The kit's 9/16
+    spanner (225.4 long, reach 191.6) and its stubby (116.8, reach 99.3) meet the wall
+    at every angle, every socket stands inside it with the ratchet's handle meeting
+    it, and no nut driver is 9/16; the sidecar's own 80 mm ring (reach 68) turns it.
+    Its size is written 14.29, which is 9/16 in to 0.005 (issue #233): matched at
+    1e-6, it was never tried, and the detected run, with no rule naming it, came out
+    blocked with nothing said of it.
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 0.375 * IN / 2 + 0.4)])),
+        ("stud", Pos(0, 0, 2.5) * Cylinder(0.375 * IN / 2, 25)),
+        ("nut", hex_nut(0.375 * IN, 9 / 16 * IN, 21 / 64 * IN)),
+        ("wall", Pos(0, 0, 200) * (Cylinder(100, 400) - Cylinder(90, 401))),
+    ]

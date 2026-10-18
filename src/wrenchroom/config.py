@@ -30,6 +30,7 @@ import yaml
 
 from wrenchroom.fasteners import AUTO, Fastener, Head, Kind, Size
 from wrenchroom.tools.custom import CustomTools, parse_tools
+from wrenchroom.tools.sizes import written_mm
 from wrenchroom.tools.sweep import checked_step
 
 if TYPE_CHECKING:
@@ -462,7 +463,7 @@ def _parse_rule(entry: object, index: int, source: str) -> Rule:
             for i, m in enumerate(_as_list(entry.get("mates", []), f"{where}: mates"))
         ),
         state=None if entry.get("state") is None else str(entry["state"]),
-        drive_af=_parse_positive(entry.get("across_flats"), f"{where}: across_flats"),
+        drive_af=_parse_size(entry.get("across_flats"), f"{where}: across_flats"),
     )
 
 
@@ -564,6 +565,17 @@ def _parse_positive(value: object, where: str) -> float | None:
         return float(value)
     msg = f"{where} must be a positive number of millimetres"
     raise ConfigError(msg)
+
+
+def _parse_size(value: object, where: str) -> float | None:
+    """A rule's ``across_flats:``: mm, or a size's name (``9/16in``), as a misfit's says it."""
+    if value is None:
+        return None
+    try:
+        return written_mm(value)
+    except ValueError:
+        msg = f"{where} must be a positive number of millimetres or a size's name (9/16in)"
+        raise ConfigError(msg) from None
 
 
 def _parse_length(value: object, where: str) -> float | None:

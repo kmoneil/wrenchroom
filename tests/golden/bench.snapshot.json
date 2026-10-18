@@ -5,8 +5,8 @@
  "step_deg": 15.0,
  "swing_positions": 24,
  "summary": {
-  "fasteners": 187,
-  "turns": 138,
+  "fasteners": 188,
+  "turns": 139,
   "held": 15,
   "blocked": 31,
   "stuck": 3,
@@ -2276,6 +2276,36 @@
    "swing_deg": 360.0,
    "state": null,
    "pair": "inch_pair_nut",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "inch_shop_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "3/8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    1000.0,
+    21000.0,
+    8.33
+   ],
+   "source": "sidecar",
+   "tool": "short-ring-9/16in",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
    "blocked_by": [],
    "deciding": [],
    "stuck_on": [],
@@ -5401,7 +5431,7 @@
     1.0
    ],
    "seat": [
-    900.0,
+    1900.0,
     21000.0,
     6.0
    ],
@@ -5433,7 +5463,7 @@
     1.0
    ],
    "seat": [
-    1100.0,
+    2100.0,
     21000.0,
     6.0
    ],
@@ -6527,6 +6557,22 @@
     "count": 1,
     "fasteners": [
      "short_key_screw"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "short-ring-9/16in",
+    "count": 1,
+    "fasteners": [
+     "inch_shop_nut"
     ],
     "at_once": 1,
     "in_default_kit": false,
