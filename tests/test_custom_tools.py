@@ -490,6 +490,29 @@ def test_a_gland_names_a_spanner_off_its_size_and_no_socket():
     )
 
 
+@pytest.mark.parametrize(
+    ("kind", "of_size"),
+    [
+        ({"type": "spanner", "length": 200}, "spanners"),
+        ({"type": "socket"}, "sockets"),
+        ({"type": "nut-driver", "outer_radius": 20}, "nut_drivers"),
+        ({"type": "hex-key", "long": 200, "short": 50}, "hex_keys"),
+    ],
+)
+def test_two_tools_written_within_same_mm_of_each_other_are_one_size(kind, of_size):
+    # 25.501 and 25.504: no table holds 25.5, so neither is taken as a table's size,
+    # and a hex measured as either is the other's size too.
+    tools = parse_tools(
+        [
+            {"name": "a", "across_flats": 25.501, **kind},
+            {"name": "b", "across_flats": 25.504, **kind},
+        ],
+        "tools",
+    )
+    assert [tool.name for tool in getattr(tools, of_size)(25.501)] == ["a", "b"]
+    assert [tool.name for tool in getattr(tools, of_size)(25.507)] == ["b"]
+
+
 def test_near_is_off_the_size_and_not_on_it():
     tools = parse_tools([*written(14.29), {**UB_SPANNER, "name": "x", "across_flats": 14.4}], "")
     assert tools.near(14.2875, ("spanner", "socket")) == (("x", 14.4),)
