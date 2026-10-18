@@ -8,7 +8,7 @@ what the bench's other cells make of a build is the unit tests', not the bench's
 
 import pytest
 from bench import KIT, REST, build_sidecar
-from cells import BUILD_STEPS, CELLS
+from cells import BUILD_STEPS, CELLS, EVERY
 
 from wrenchroom.assembly import Assembly
 from wrenchroom.checker import check
@@ -120,7 +120,16 @@ def test_the_steps_add_what_the_cells_say(built):
     assert list(adds) == STEPS
     for cell in CELLS:
         for step, roles in cell.steps.items():
-            assert {f"{cell.name}_{role}" for role in roles} <= set(adds[step]), cell.name
+            if roles != [EVERY]:
+                assert {f"{cell.name}_{role}" for role in roles} <= set(adds[step]), cell.name
+    # build_behind's first step is every part of it but the nut, by except: (#236).
+    assert {name for name in adds["first"] if name.startswith("build_behind_")} == {
+        "build_behind_upper",
+        "build_behind_lower",
+        "build_behind_pocket",
+        "build_behind_bolt",
+    }
+    assert "build_behind_nut" in adds["second"]
     assert "key_wall_near_screw" in adds[REST]
     # A fastener drawn as two solids comes in once: one part, as it is checked (#210).
     assert "one_part_lock_nut" in adds[REST]

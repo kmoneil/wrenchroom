@@ -86,12 +86,14 @@ def test_the_build_is_read_in_order():
             "build": [
                 {"step": "frame", "add": ["frame_*", "rail_*"]},
                 {"step": "cover", "add": ["cover", "*"], "model": "cover_up.step"},
+                {"step": "drive", "add": ["drive_*"], "except": ["drive_cap*"]},
             ]
         }
     )
     assert config.build == (
         BuildStep("frame", ("frame_*", "rail_*")),
         BuildStep("cover", ("cover", "*"), "cover_up.step"),
+        BuildStep("drive", ("drive_*",), None, ("drive_cap*",)),
     )
 
 
@@ -115,6 +117,11 @@ def test_no_build_is_none():
         ([{"step": 3, "add": ["*"]}], r"build\[0\]: step must be a string"),
         ([{"step": "a", "add": "frame"}], r"build\[0\]: add must be a list"),
         ([{"step": "a", "add": [3]}], r"build\[0\]: add\[0\] must be a string"),
+        ([{"step": "a", "add": ["*"], "except": "x"}], r"build\[0\]: except must be a list"),
+        (
+            [{"step": "a", "add": ["*"], "except": ["x", 3]}],
+            r"build\[0\]: except\[1\] must be a string",
+        ),
         ([{"step": "a", "add": []}], r"build\[0\]: step 'a' adds nothing"),
         (
             [{"step": "a", "add": ["x"]}, {"step": "a", "add": ["y"]}],
@@ -197,6 +204,133 @@ def test_a_glob_naming_only_a_surface_names_something():
     assembly = Assembly([Part("x", Box(5, 5, 5))], surfaces=("decal",))
     found = plan((BuildStep("a", ("x", "decal")),), assembly, lambda _: False)
     assert found.unmatched == ()
+
+
+#: A drive built on the bench, then bolted on by its low screws and bearing, and an
+#: encoder's parts fitted with the caps: the shape of issue #236's case, generic names.
+DRIVE = (
+    "gear_plate_hi",
+    "gear_plate_lo",
+    "gear_plate_screw_hi",
+    "gear_plate_screw_lo",
+    "gear_worm",
+    "gear_wheel",
+    "gear_bearing_hi",
+    "gear_bearing_lo",
+    "gear_cap",
+    "gear_board_1",
+    "gear_encoder_1",
+    "shaft",
+)
+
+
+def test_except_leaves_parts_out_of_what_a_step_s_add_names():
+    excepting = (
+        BuildStep(
+            "drive",
+            ("gear_*", "shaft"),
+            None,
+            ("gear_plate_screw_lo", "gear_bearing_lo", "gear_cap", "gear_board_*", "gear_enc*"),
+        ),
+        BuildStep("on the arm", ("gear_plate_screw_lo", "gear_bearing_lo")),
+        BuildStep("caps", ("gear_cap", "gear_board_*", "gear_encoder_*")),
+    )
+    found = plan(excepting, boxes(*DRIVE), lambda _: False)
+    assert found.steps == (
+        Step(
+            "drive",
+            (
+                *("gear_plate_hi", "gear_plate_lo", "gear_plate_screw_hi", "gear_worm"),
+                *("gear_wheel", "gear_bearing_hi", "shaft"),
+            ),
+        ),
+        Step("on the arm", ("gear_plate_screw_lo", "gear_bearing_lo")),
+        Step("caps", ("gear_cap", "gear_board_1", "gear_encoder_1")),
+    )
+    assert (found.unplaced, found.twice, found.unmatched, found.unmatched_except) == (
+        (),
+        (),
+        (),
+        (),
+    )
+    # The same plan as the globs that keep the few out by the shapes of their names.
+    shaped = (
+        BuildStep(
+            "drive",
+            (
+                *("gear_plate_[hl][io]", "gear_plate_screw_*hi", "gear_worm", "gear_wheel"),
+                *("gear_bearing_*hi*", "shaft"),
+            ),
+        ),
+        *excepting[1:],
+    )
+    assert plan(shaped, boxes(*DRIVE), lambda _: False) == found
+
+
+def test_a_part_a_step_leaves_out_and_no_other_adds_is_in_no_step():
+    found = plan((BuildStep("a", ("gear_*",), None, ("gear_cap",)),), boxes(*DRIVE[:9]), _no)
+    assert found.unplaced == ("gear_cap",)
+    assert not found.sound
+
+
+def test_the_catch_all_leaves_out_what_its_except_names():
+    steps = (
+        BuildStep("rest", ("*",), None, ("gear_cap", "gear_b*")),
+        BuildStep("caps", ("gear_c*",)),
+    )
+    found = plan(steps, boxes("gear_worm", "gear_cap", "gear_board_1", "gear_cog"), _no)
+    # gear_cog: caps adds it, and the catch-all takes only what no other step adds.
+    assert found.steps == (Step("rest", ("gear_worm",)), Step("caps", ("gear_cap", "gear_cog")))
+    assert found.unplaced == ("gear_board_1",)  # the catch-all left it out, and none adds it
+    assert (found.twice, found.unmatched_except) == ((), ())
+
+
+def test_an_except_glob_naming_none_of_its_step_s_parts_is_said():
+    steps = (
+        BuildStep("drive", ("gear_*",), None, ("gear_lid", "shaft", "gear_c?p")),
+        BuildStep("rest", ("shaft", "gear_cap")),
+    )
+    found = plan(steps, boxes("gear_worm", "gear_cap", "shaft"), _no)
+    # gear_lid names nothing; shaft names a part, but not one drive's add names.
+    assert found.unmatched_except == (("drive", "gear_lid"), ("drive", "shaft"))
+    assert found.sound  # its parts are still each added once
+    assert found.steps[0] == Step("drive", ("gear_worm",))
+
+
+def test_an_except_glob_naming_an_ignored_part_or_a_surface_names_something():
+    assembly = Assembly(
+        [Part("gear_worm", Box(5, 5, 5)), Part("gear_cable", Pos(20, 0, 0) * Box(5, 5, 5))],
+        surfaces=("gear_decal",),
+    )
+    steps = (BuildStep("a", ("gear_*",), None, ("gear_cable", "gear_decal")),)
+    found = plan(steps, assembly, lambda name: name == "gear_cable")
+    assert (found.unmatched_except, found.unplaced) == ((), ())
+    assert found.steps == (Step("a", ("gear_worm",)),)
+
+
+def test_the_catch_all_s_except_may_name_any_part():
+    found = plan(
+        (BuildStep("all", ("*",), None, ("x",)), BuildStep("x", ("x",))), boxes("x", "y"), _no
+    )
+    assert (found.unmatched_except, found.steps[0].parts, found.added_in["x"]) == ((), ("y",), 1)
+
+
+def test_a_part_left_out_takes_its_other_solids_with_it():
+    assembly = Assembly(
+        [
+            Part("gear_worm", Box(5, 5, 5)),
+            Part("gear_lock", Pos(20, 0, 0) * Box(5, 5, 5)),
+            Part("gear_lock#2", Pos(40, 0, 0) * Box(5, 5, 5), piece_of="gear_lock"),
+        ]
+    )
+    steps = (BuildStep("a", ("gear_*",), None, ("gear_lock",)), BuildStep("b", ("gear_lock",)))
+    found = plan(steps, assembly, _no)
+    assert found.steps == (Step("a", ("gear_worm",)), Step("b", ("gear_lock",)))
+    assert (found.added_in["gear_lock#2"], found.unmatched_except) == (1, ())
+
+
+def _no(_name):
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -684,6 +818,45 @@ def test_a_glob_naming_nothing_fails_a_build_that_is_checked():
     assert (report.build.exit_code, report.exit_code) == (2, 2)
 
 
+def test_a_step_s_except_is_checked_as_its_globs_would_be(engine):
+    # Every part but the cover and the late screw in the first step: BURIED_STEPS.
+    steps = [
+        {"step": "base", "add": ["*"], "except": ["cover", "late"]},
+        *BURIED_STEPS[1:],
+    ]
+    report = run(buried(), BURIED_RULES, steps, engine)
+    plain = run(buried(), BURIED_RULES, BURIED_STEPS, engine)
+    assert built(report) == built(plain)
+    assert build_lines(report) == build_lines(plain)
+    assert report.to_json_dict()["build"] == plain.to_json_dict()["build"]
+
+
+def test_an_except_glob_naming_none_of_its_step_s_parts_fails_the_run():
+    steps = [
+        {"step": "base", "add": ["plate", "early"], "except": ["late", "gone_*"]},
+        *BURIED_STEPS[1:],
+    ]
+    report = run(buried(), BURIED_RULES, steps)
+    assert len(report.build.placed) == 2  # checked: each part is added once
+    assert build_lines(report)[-2:] == [
+        "WARN build: step 'base': except glob 'late' matched none of its add parts (renamed part?)",
+        "WARN build: step 'base': except glob 'gone_*' matched none of its add parts "
+        "(renamed part?)",
+    ]
+    assert (report.build.exit_code, report.exit_code) == (2, 2)
+    build = report.to_json_dict()["build"]
+    assert build["unmatched_except"] == [
+        {"step": "base", "glob": "late"},
+        {"step": "base", "glob": "gone_*"},
+    ]
+    assert build["unmatched"] == []
+    assert "- `step 'base': except glob 'gone_*' matched none of its add parts" in (
+        report.markdown()
+    )
+    with pytest.raises(AssertionError, match="except glob 'late'"):
+        report.assert_all_pass()
+
+
 # ---------------------------------------------------------------------------
 # What the report says of the build.
 # ---------------------------------------------------------------------------
@@ -750,6 +923,7 @@ def test_the_json_has_the_build_step_by_step():
     assert (late["name"], late["verdict"], late["blocked_by"]) == ("late", "blocked", ["cover"])
     assert (late["step"], late["checked_in"], late["state"]) == ("late", "late", None)
     assert (build["unplaced"], build["twice"], build["unmatched"]) == ([], [], [])
+    assert build["unmatched_except"] == []
     json.dumps(document)  # it is JSON
 
 
