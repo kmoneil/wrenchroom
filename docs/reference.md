@@ -420,6 +420,27 @@ A fastener that needs a tool the kit lacks is not covered, and the reason names 
 tool and the kits that have it (`needs spanner-24, which kit metric-home does not hold
 (full has it)`).
 
+A kit is taken whole, but the sidecar can add built-in tools to it by name (issue
+#234): a metric machine with a few inch nuts takes `metric-home` and the 9/16 in
+spanner and socket, not `full` and every tool there is, and still finds the fastener
+that needs a tool the owner hasn't got.
+
+```yaml
+tools:
+  - spanner-9/16in              # a built-in tool, as the tables have it
+  - socket-9/16in
+  - {name: shop-spanner-24, type: spanner, across_flats: 24, length: 300}
+```
+
+Each joins whichever kit is used and is tried as the kit's own (the sidecar's own
+tools come after). A name that is no built-in tool is an error naming the nearest
+(`'spaner-9/16in' is no built-in tool; the nearest: spanner-9/16in, ...`); one the kit
+holds already is noted, not failed, as one sidecar may serve several kits (`tool
+spanner-13: kit full holds it already`), and so is one no fastener in the model takes
+(`tool spanner-9/16in, added to the kit: no fastener here takes a 9/16in spanner`).
+The JSON's `kit_added` lists the tools added, the Markdown says them after the kit,
+and `wrenchroom tools --config wrenchroom.yaml` lists them after the kit's own.
+
 Inch tools carry their unit (`spanner-7/16in`), and inch fasteners (`#10`, `1/4`,
 `3/4`; UNC and UNF alike) take their ASME tools: socket, button and flat heads
 (B18.3), nuts (B18.2.2, B18.6.3) and hex heads (B18.2.1), which part ways with their
@@ -475,7 +496,9 @@ thin-wall socket, a long screwdriver) go in the sidecar's `tools:` list, each by
 numbers the built-in tables hold for its kind, and swept the same way. They join
 whatever kit is used: a fastener of their kind and size tries the kit's own tools
 first, then the sidecar's, in its order, and a rule's `tool:` may name one.
-`wrenchroom tools --config wrenchroom.yaml` lists them after the kit's own.
+`wrenchroom tools --config wrenchroom.yaml` lists them after the kit's own. A tool
+the tables hold already goes in by its name ([Kits](#kits)): a custom tool named
+like one (`spanner-1/2in`) is an error that says so.
 
 ```yaml
 tools:

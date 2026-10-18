@@ -4,6 +4,7 @@
  "kit": "full",
  "step_deg": 15.0,
  "swing_positions": 24,
+ "kit_added": [],
  "summary": {
   "fasteners": 189,
   "turns": 136,

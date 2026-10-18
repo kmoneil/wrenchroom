@@ -120,13 +120,14 @@ def test_a_socket_a_nut_driver_and_a_driver_default_to_the_built_in_ones():
 @pytest.mark.parametrize(
     ("entry", "says"),
     [
-        ("long-key", "must be a mapping"),
+        # A string is a built-in tool's name (issue #234), and this one is none.
+        ("long-key", "'long-key' is no built-in tool"),
         ({"type": "hex-key"}, "name must be"),
         ({**STUBBY, "name": ""}, "name must be"),
         ({**STUBBY, "name": "key 5"}, "name must be"),
         ({**STUBBY, "name": "\x1b[31mkey"}, "name must be"),
         ({**STUBBY, "name": "k" * 65}, "name must be"),
-        ({**STUBBY, "name": "spanner-24"}, "named like a built-in tool"),
+        ({**STUBBY, "name": "spanner-24"}, "'spanner-24' is a built-in tool (full): list it"),
         ({**STUBBY, "name": "hex-key-5-long"}, "named like a built-in tool"),
         ({**STUBBY, "type": "crowsfoot"}, "type must be one of"),
         ({"name": "k", "type": "hex-key", "across_flats": 5, "long": 60}, "needs short"),
@@ -663,4 +664,4 @@ def test_the_tools_command_refuses_a_bad_sidecar(tmp_path):
     sidecar.write_text("tools:\n  - {name: spanner-24, type: spanner, across_flats: 24}\n")
     result = CliRunner().invoke(main, ["tools", "--config", str(sidecar)])
     assert result.exit_code == 2
-    assert "named like a built-in tool" in result.output
+    assert "'spanner-24' is a built-in tool (full): list it by name" in result.output

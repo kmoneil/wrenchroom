@@ -193,6 +193,9 @@ class Report:
     model: str
     kit: str
     results: tuple[FastenerResult, ...]
+    #: The built-in tools the sidecar's ``tools:`` added to the kit, those it didn't
+    #: hold already (issue #234): the kit is ``kit`` and these.
+    kit_added: tuple[str, ...] = ()
     #: The collision engine that answered: ``mesh`` by default, ``exact`` under
     #: ``--exact``. Recorded so a report says how it was computed.
     engine: str = "mesh"
@@ -382,6 +385,7 @@ class Report:
             "step_deg": self.step_deg,
             "swing_positions": self.swing_positions,
             "tool_version": __version__,
+            "kit_added": list(self.kit_added),
             "summary": self.summary,
             "unmatched_rules": list(self.unmatched_rules),
             "unmatched_ignores": list(self.unmatched_ignores),
@@ -496,6 +500,14 @@ class Report:
 
     # -------------------------------------------------------------- Markdown
 
+    def _md_added(self) -> str:
+        """`` with `spanner-9/16in` added``: the sidecar's built-in tools, after the kit."""
+        if not self.kit_added:
+            return ""
+        names = [md_code(name, in_table=False) for name in self.kit_added]
+        joined = names[0] if len(names) == 1 else f"{', '.join(names[:-1])} and {names[-1]}"
+        return f" with {joined} added"
+
     def markdown(self) -> str:
         """The terminal report as Markdown, for a CI job summary or a PR comment.
 
@@ -513,8 +525,9 @@ class Report:
             "",
             f"**{_summary_text(self.summary)}**",
             "",
-            f"Kit {md_code(self.kit, in_table=False)}, swings tried {md_text(self.swings_tried)}, "
-            f"{md_text(self.engine)} engine, wrenchroom {md_text(__version__)}.",
+            f"Kit {md_code(self.kit, in_table=False)}{self._md_added()}, swings tried "
+            f"{md_text(self.swings_tried)}, {md_text(self.engine)} engine, wrenchroom "
+            f"{md_text(__version__)}.",
             "",
             *(
                 f"The engine: {md_text(note.text)}: {_md_names(note.parts)}.\n"
