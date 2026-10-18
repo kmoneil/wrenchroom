@@ -114,6 +114,8 @@ def test_two_sizes_are_one_within_five_thousandths_of_a_millimetre():
     assert not same_size(14.2875 + 0.0051, 14.2875)
     assert not same_size(14.2875 - 0.0051, 14.2875)
     assert not same_size(27.0, inch_mm("1-1/16"))  # the tables' closest two, 0.0125 apart
+    assert not same_size(0.0, 0.005)  # within, not at: 0.005 apart are two sizes
+    assert same_size(0.0, 0.0049)
 
 
 def test_a_measurement_far_from_every_size_is_none():
