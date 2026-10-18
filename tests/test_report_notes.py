@@ -81,6 +81,23 @@ def test_a_custom_tool_no_fastener_takes_is_noted(tool, said):
     assert report.exit_code == 0  # noted, not failed
 
 
+@pytest.mark.parametrize(
+    ("af", "said"),
+    [
+        (8, "an 8 mm hex key"),
+        (11, "an 11 mm hex key"),
+        (18, "an 18 mm hex key"),
+        (12, "a 12 mm hex key"),
+        (1.5, "a 1.5 mm hex key"),
+        (11 / 16 * 25.4, "an 11/16in hex key"),
+        (1 / 8 * 25.4, "a 1/8in hex key"),
+    ],
+)
+def test_a_size_said_with_a_vowel_takes_an(af, said):
+    tool = {"name": "k", "type": "hex-key", "across_flats": af, "long": 80, "short": 20}
+    assert run(screws(), [tool]).notes == (f"tool k: no fastener here takes {said}",)
+
+
 def test_one_the_kit_s_own_tool_beat_is_still_taken():
     # A short 5 mm key: the screws take a 5 mm key, the kit's own turns them first,
     # and the custom one waits its turn. Taken, so not noted.
