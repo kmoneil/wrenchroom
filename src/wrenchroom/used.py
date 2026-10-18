@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING
 
 from wrenchroom.report import Verdict, listed, md_code, md_text, shortlist
 from wrenchroom.tools.fingers import HAND
-from wrenchroom.tools.kits import DEFAULT_KIT, kit_named
+from wrenchroom.tools.kits import DEFAULT_KIT, kit_named, split_tool
 from wrenchroom.tools.sizes import size_mm
 
 if TYPE_CHECKING:
@@ -307,7 +307,7 @@ def _only_way(result: FastenerResult) -> bool:
 
 def _family(tool: str) -> str:
     """``spanner`` for ``spanner-13`` (and its stubby); '' for a sidecar's own tool."""
-    family = tool.partition(",")[0].rpartition("-")[0]
+    family = split_tool(tool.partition(",")[0])[0]
     return family if family in {f for f, _, _ in _FAMILIES} else ""
 
 
@@ -316,7 +316,7 @@ def _order(tool: str) -> tuple[int, float, str]:
     family = _family(tool)
     families = [f for f, _, _ in _FAMILIES]
     rank = families.index(family) if family else len(families)
-    size_text = tool.partition(",")[0].rpartition("-")[2]
+    size_text = split_tool(tool.partition(",")[0])[1]
     try:
         size = size_mm(size_text.lstrip("Tph"))
     except ValueError:

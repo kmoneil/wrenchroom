@@ -5,8 +5,8 @@
  "step_deg": 15.0,
  "swing_positions": 24,
  "summary": {
-  "fasteners": 188,
-  "turns": 135,
+  "fasteners": 189,
+  "turns": 136,
   "held": 15,
   "blocked": 32,
   "stuck": 4,
@@ -2227,6 +2227,36 @@
    "swing_deg": 360.0,
    "state": null,
    "pair": "hosted_snug_nut",
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "inch_large_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "3/4",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    2000.0,
+    21000.0,
+    16.27
+   ],
+   "source": "name+geometry",
+   "tool": "spanner-1-1/8in",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
    "blocked_by": [],
    "deciding": [],
    "stuck_on": [],
@@ -5453,7 +5483,7 @@
     1.0
    ],
    "seat": [
-    1900.0,
+    2900.0,
     21000.0,
     6.0
    ],
@@ -5485,7 +5515,7 @@
     1.0
    ],
    "seat": [
-    2100.0,
+    3100.0,
     21000.0,
     6.0
    ],
@@ -6433,6 +6463,22 @@
     ]
    },
    {
+    "tool": "spanner-1-1/8in",
+    "count": 1,
+    "fasteners": [
+     "inch_large_nut"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
     "tool": "spanner-41",
     "count": 1,
     "fasteners": [
@@ -6562,10 +6608,10 @@
     ]
    },
    {
-    "tool": "stubby-key-6",
+    "tool": "short-ring-18",
     "count": 1,
     "fasteners": [
-     "short_key_screw"
+     "shop_spanner_nut"
     ],
     "at_once": 1,
     "in_default_kit": false,
@@ -6594,10 +6640,10 @@
     ]
    },
    {
-    "tool": "short-ring-18",
+    "tool": "stubby-key-6",
     "count": 1,
     "fasteners": [
-     "shop_spanner_nut"
+     "short_key_screw"
     ],
     "at_once": 1,
     "in_default_kit": false,

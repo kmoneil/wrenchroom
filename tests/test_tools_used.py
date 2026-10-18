@@ -63,6 +63,23 @@ def test_one_line_per_tool_counting_its_fasteners_family_by_family_smallest_firs
     assert listing.families == "3 hex keys, 1 spanner, 1 driver"
 
 
+def test_a_tool_past_an_inch_is_a_spanner_after_the_smaller_ones():
+    # Read at its last dash, spanner-1-1/8in was no family's (issue #240).
+    listing = used(
+        result("a", tool="spanner-1-1/8in", how="ring, full length"),
+        result("b", tool="spanner-15/16in", how="ring, full length"),
+        result("c", tool="socket-1-1/2in", how="socket"),
+        result("d", tool="spanner-13", how="ring, full length"),
+    )
+    assert [use.tool for use in listing.uses] == [
+        "spanner-13",
+        "spanner-15/16in",
+        "spanner-1-1/8in",
+        "socket-1-1/2in",
+    ]
+    assert listing.families == "3 spanners, 1 socket"
+
+
 def test_a_held_fastener_counts_its_holding_tool_and_a_joint_needs_two_at_once():
     listing = used(
         result("bolt", tool="spanner-13", how="ring, full length", pair="nut"),

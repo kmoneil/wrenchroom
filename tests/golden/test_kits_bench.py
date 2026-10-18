@@ -58,6 +58,10 @@ PAST_HOME = {
         "needs hex-key-0.035in, which kit metric-home does not hold (full has it)"
     ),
     "small_torx_screw": "needs torx-key-T6, which kit metric-home does not hold (full has it)",
+    # Issue #240: past an inch, full's alone.
+    "inch_large_nut": (
+        "needs spanner-1-1/8in or socket-1-1/8in, which kit metric-home does not hold (full has it)"
+    ),
     "small_phillips_screw": "needs driver-ph0, which kit metric-home does not hold (full has it)",
     # Issue #82: a T40 recess on an M8, by its across_flats.
     "pan_t40_torx_screw": "needs torx-key-T40, which kit metric-home does not hold (full has it)",
@@ -103,6 +107,11 @@ INCH = {"inch_pair_screw", "inch_pair_nut", "small_inch_socket_screw", "std_#10-
 INCH_PAST_HOME = {
     "small_inch_button_screw": (
         "needs hex-key-0.035in, which kit imperial-home does not hold (full has it)"
+    ),
+    # Issue #240: imperial-home's spanners and sockets stop at 3/4 in.
+    "inch_large_nut": (
+        "needs spanner-1-1/8in or socket-1-1/8in, which kit imperial-home does not hold "
+        "(full has it)"
     ),
 }
 
