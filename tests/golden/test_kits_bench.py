@@ -12,10 +12,11 @@ cell comes out as under `full` in each.
 """
 
 import pytest
+import yaml
 from bench import KIT, check_bench, sidecar_and_truth
 from cells import FUSION_TAPPING
 
-from wrenchroom.tools.kits import IMPERIAL_HOME, METRIC_HOME
+from wrenchroom.tools.kits import FULL, IMPERIAL_HOME, METRIC_HOME
 
 _GLAND = "needs spanner-24, which kit metric-home does not hold (full has it)"
 _PH0 = "needs driver-ph0, which kit metric-home does not hold (full has it)"
@@ -208,3 +209,34 @@ def test_imperial_home_covers_nothing_metric_but_drivers(inch_json, bench_json):
     # (issue #158), selftap's ST2.9, a PH1 (issue #142), and pushed's insert, as
     # long as a fixed thread comes (issue #178).
     assert unsized == 30
+
+
+@pytest.mark.parametrize("home", [METRIC_HOME, IMPERIAL_HOME], ids=lambda kit: kit.name)
+def test_a_home_kit_with_every_tool_it_lacks_added_is_the_full_kit(
+    home, bench_dir, bench_engine, bench_report, bench_json
+):
+    # A sidecar's tools: may name built-in tools, which join the kit as its own
+    # (issue #234): with every one the home kit lacks, the bench is full's, fastener
+    # for fastener, and the report says what was added.
+    sidecar = yaml.safe_load((bench_dir / "wrenchroom.yaml").read_text())
+    lacking = [tool for tool in FULL.tool_names() if not home.holds(tool)]
+    assert len(lacking) > 100  # a vacuity guard: most of full
+    sidecar["tools"] = [*lacking, *sidecar["tools"]]
+    name = f"added-{home.name}.yaml"
+    (bench_dir / name).write_text(yaml.safe_dump(sidecar))
+    report = check_bench(bench_dir, name, engine=bench_engine, kit=home.name)
+    assert (report.kit, report.kit_added) == (home.name, tuple(lacking))
+    assert {entry["name"]: entry for entry in report.to_json_dict()["fasteners"]} == bench_json
+    assert report.summary == bench_report.summary
+    # The bench's own notes, and one for each tool added that no fastener here takes;
+    # none held already.
+    extra = [note for note in report.notes if note not in bench_report.notes]
+    assert [note for note in report.notes if note in bench_report.notes] == list(bench_report.notes)
+    assert extra
+    assert all(", added to the kit: no fastener here takes " in note for note in extra)
+    # Noted are those no fastener's drive takes, by kind and size: never one a fastener
+    # turned with, and not each one left unused (a 10 mm socket where a spanner won).
+    noted = {note.split()[1].rstrip(",") for note in extra}
+    used = {entry["tool"] for entry in bench_json.values()}
+    assert noted <= set(lacking) - used
+    assert len(noted) > 20  # most of the inch and the big sizes

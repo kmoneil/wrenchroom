@@ -18,6 +18,10 @@ sidecar's order; and a rule's ``tool:`` may name one outright. Its name is its
 own, never a built-in family's (``spanner-13``), so a report can't be read as
 meaning a tool the tables describe. Lengths are mm.
 
+An entry that is a built-in tool's name, ``- spanner-9/16in``, adds that tool, as
+the tables have it, to whichever kit is used (issue #234): a metric kit and the
+few inch tools a machine's inch nuts need, not ``full``'s every tool.
+
 An ``across_flats`` is a number of mm or a size's name, as tools are named
 (``9/16in``). One within :data:`~wrenchroom.tools.sizes.SAME_MM` of a size the
 tables hold is that size: 9/16 in written 14.29 is 14.2875 (issue #233), and
@@ -44,6 +48,7 @@ The kinds and their numbers (required, then optional with what they default to):
 
 from __future__ import annotations
 
+import difflib
 import math
 import re
 from dataclasses import dataclass, field, replace
@@ -51,6 +56,7 @@ from typing import TYPE_CHECKING
 
 from wrenchroom.tools.drivers import SHAFT_LENGTH, SHAFT_RADIUS
 from wrenchroom.tools.hex_keys import HEX_KEYS
+from wrenchroom.tools.kits import FULL, holding
 from wrenchroom.tools.nut_drivers import NUT_DRIVERS, NutDriver
 from wrenchroom.tools.sizes import FLATS, same_size, size_name, written_mm
 from wrenchroom.tools.sockets import Socket, socket_for
@@ -148,9 +154,14 @@ type CustomTool = CustomKey | CustomSpanner | CustomSocket | CustomNutDriver | C
 
 @dataclass(frozen=True)
 class CustomTools:
-    """A sidecar's custom tools, in its order, and what the check asks of them."""
+    """A sidecar's custom tools, in its order, and what the check asks of them.
+
+    ``built_in`` holds the built-in tools it lists by name, which join the kit
+    (:meth:`~wrenchroom.tools.kits.Kit.adding`).
+    """
 
     tools: tuple[CustomTool, ...] = ()
+    built_in: tuple[str, ...] = ()
     by_name: dict[str, CustomTool] = field(default_factory=dict, compare=False)
 
     def __post_init__(self) -> None:
@@ -160,7 +171,7 @@ class CustomTools:
         return name in self.by_name
 
     def __len__(self) -> int:
-        return len(self.tools)
+        return len(self.tools) + len(self.built_in)
 
     def hex_keys(self, af: float) -> tuple[CustomKey, ...]:
         """The custom hex keys of an across-flats size."""
@@ -296,15 +307,34 @@ def parse_tools(raw: object, where: str) -> CustomTools:
         msg = f"{where}: must be a list of tools"
         raise ValueError(msg)  # noqa: TRY004  (the caller turns it into a ConfigError)
     tools: list[CustomTool] = []
+    built_in: list[str] = []
     seen: set[str] = set()
     for index, entry in enumerate(raw):
-        tool = _parse_tool(entry, f"{where}[{index}]")
-        if tool.name in seen:
-            msg = f"{where}[{index}]: a second tool named {tool.name!r}"
+        if isinstance(entry, str):
+            name = _built_in(entry, f"{where}[{index}]")
+            built_in.append(name)
+        else:
+            tool = _parse_tool(entry, f"{where}[{index}]")
+            name = tool.name
+            tools.append(tool)
+        if name in seen:
+            msg = f"{where}[{index}]: a second tool named {name!r}"
             raise ValueError(msg)
-        seen.add(tool.name)
-        tools.append(tool)
-    return CustomTools(tuple(tools))
+        seen.add(name)
+    return CustomTools(tuple(tools), tuple(built_in))
+
+
+def _built_in(name: str, where: str) -> str:
+    """A built-in tool listed by name, to add to the kit: one the tables hold (issue #234)."""
+    if FULL.holds(name):
+        return name
+    nearest = difflib.get_close_matches(name, FULL.tool_names(), n=3)
+    said = f"; the nearest: {', '.join(nearest)}" if nearest else ""
+    msg = (
+        f"{where}: {name!r} is no built-in tool{said} (`wrenchroom tools --kit full` "
+        "lists them; a tool of your own is a mapping with a name and a type)"
+    )
+    raise ValueError(msg)
 
 
 def _parse_tool(entry: object, where: str) -> CustomTool:
@@ -334,6 +364,12 @@ def _name(value: object, where: str) -> str:
         msg = (
             f"{where}: name must be 1 to 64 letters, digits and . _ / + -, starting "
             f"with a letter or digit, got {value!r}"
+        )
+        raise ValueError(msg)
+    if FULL.holds(value):
+        msg = (
+            f"{where}: {value!r} is a built-in tool ({', '.join(holding(value))}): list it "
+            "by name to add it to the kit, or give a custom tool a name of its own"
         )
         raise ValueError(msg)
     if value.startswith(BUILT_IN_FAMILIES):
@@ -494,7 +530,7 @@ _BUILDERS = {
 
 def listing(tools: CustomTools, source: str) -> Iterator[str]:
     """The custom tools and their numbers, one a line, after the kit's own."""
-    if not tools:
+    if not tools.tools:
         return
     yield f"custom tools, from {source} (tried after the kit's own; mm):"
     for tool in tools.tools:

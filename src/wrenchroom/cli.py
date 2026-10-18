@@ -476,7 +476,7 @@ def tools(
         raise click.UsageError("--state and --exact go with --used MODEL: they say how to check it")
     from wrenchroom.config import Config, ConfigError
     from wrenchroom.tools import custom
-    from wrenchroom.tools.kits import kit_named, listing
+    from wrenchroom.tools.kits import added_listing, kit_named, listing
 
     try:
         chosen = kit_named(kit)
@@ -486,7 +486,12 @@ def tools(
         sys.exit(EXIT_NOT_COVERED)
     for line in listing(chosen):
         _say(line)
-    if config is not None and config.tools:
+    source = config_path.name if config_path else ""
+    if config is not None and config.tools.built_in:
         _say("")
-        for line in custom.listing(config.tools, config_path.name if config_path else ""):
+        for line in added_listing(chosen, config.tools.built_in, source):
+            _say(line)
+    if config is not None and config.tools.tools:
+        _say("")
+        for line in custom.listing(config.tools, source):
             _say(line)

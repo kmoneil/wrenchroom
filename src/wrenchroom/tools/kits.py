@@ -26,11 +26,16 @@ over a home kit stretched to 24 mm):
 A measured across-flats that is no tool's size (a 22.5 mm gland) stays not covered,
 as it would at a bench, unless it lies in a nut standard's band just below a
 spanner size (an M8 nut drawn at 12.8 takes the 13: see fasteners.HEX_AF_MIN).
+
+A sidecar's ``tools:`` may name built-in tools, which join whichever kit is used as
+its own (issue #234): a metric machine with a few inch nuts takes metric-home and the
+two 9/16 in tools, not ``full`` and every tool there is.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from typing import TYPE_CHECKING
 
 from wrenchroom.tools.ball_end import BALL_END_KEYS
 from wrenchroom.tools.drivers import SHAFT_RADIUS
@@ -42,10 +47,25 @@ from wrenchroom.tools.sockets import EXTENSION_LENGTHS, socket_for
 from wrenchroom.tools.spanners import spanner_for
 from wrenchroom.tools.torx_keys import ISO_10664
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
 _HOME_DRIVERS = ("ph1", "ph2", "ph3", "slotted")
 
-#: The tool families, as a tool's name begins: ``spanner-13``, ``nut-driver-10``.
-FAMILIES = ("hex-key", "spanner", "socket", "driver", "torx-key", "ball-end-key", "nut-driver")
+#: Each tool family, as a tool's name begins (``spanner-13``, ``nut-driver-10``), and
+#: the kit's field holding its sizes.
+_FIELDS = {
+    "hex-key": "hex_keys",
+    "spanner": "spanners",
+    "socket": "sockets",
+    "driver": "drivers",
+    "torx-key": "torx_keys",
+    "ball-end-key": "ball_end_keys",
+    "nut-driver": "nut_drivers",
+}
+
+#: The tool families, as a tool's name begins.
+FAMILIES = tuple(_FIELDS)
 
 
 def split_tool(name: str) -> tuple[str, str]:
@@ -76,6 +96,8 @@ class Kit:
         torx_keys: Torx L-key sizes (``T30``); the full kit's alone.
         ball_end_keys: Ball-end hex key sizes; the full kit's alone.
         nut_drivers: Nut driver sizes; the full kit's alone.
+        added: Built-in tools a sidecar adds to the kit by name (issue #234), each
+            one the kit's own families don't hold; tried as its own.
     """
 
     name: str
@@ -87,25 +109,34 @@ class Kit:
     torx_keys: tuple[str, ...] = ()
     ball_end_keys: tuple[str, ...] = ()
     nut_drivers: tuple[str, ...] = ()
+    added: tuple[str, ...] = ()
 
     def holds(self, tool: str) -> bool:
         """True when a tool, named as the report names it (``spanner-13``), is in the kit.
 
         Every kit comes with hands: a thumb screw's tool (issue #96).
         """
-        if tool == HAND:
+        if tool == HAND or tool in self.added:
             return True
         family, size = split_tool(tool)
-        sizes = {
-            "hex-key": self.hex_keys,
-            "spanner": self.spanners,
-            "socket": self.sockets,
-            "driver": self.drivers,
-            "torx-key": self.torx_keys,
-            "ball-end-key": self.ball_end_keys,
-            "nut-driver": self.nut_drivers,
-        }
-        return size in sizes.get(family, ())
+        field = _FIELDS.get(family)
+        return field is not None and size in getattr(self, field)
+
+    def tool_names(self) -> tuple[str, ...]:
+        """Every tool the kit holds by name, family by family, then those added."""
+        own = (
+            f"{family}-{size}" for family, field in _FIELDS.items() for size in getattr(self, field)
+        )
+        return (*own, *self.added)
+
+    def adding(self, tools: Iterable[str]) -> Kit:
+        """The kit with built-in tools added by name: those its families don't hold.
+
+        Each must be a tool the tables hold (:data:`FULL` does); the sidecar's reader
+        says so first, naming the nearest.
+        """
+        new = tuple(tool for tool in dict.fromkeys(tools) if not self.holds(tool))
+        return replace(self, added=(*self.added, *new)) if new else self
 
 
 def _names(sizes_mm: tuple[float, ...]) -> tuple[str, ...]:
@@ -178,6 +209,11 @@ KITS: dict[str, Kit] = {kit.name: kit for kit in (METRIC_HOME, IMPERIAL_HOME, FU
 DEFAULT_KIT = METRIC_HOME.name
 
 
+def holding(tool: str) -> tuple[str, ...]:
+    """The kits that hold a tool, by name: ``("imperial-home", "full")``."""
+    return tuple(kit.name for kit in KITS.values() if kit.holds(tool))
+
+
 def kit_named(name: str) -> Kit:
     """The kit called ``name``.
 
@@ -216,7 +252,35 @@ def missing(tools: tuple[str, ...], kit: Kit) -> str:
 def listing(kit: Kit) -> list[str]:
     """The kit's tools and their dimensions, family by family, a blank line between."""
     lines = [f"kit {kit.name}: {kit.summary}"]
-    for section in (
+    for section in _sections(kit):
+        lines += ["", *section]
+    return lines
+
+
+def added_listing(kit: Kit, tools: tuple[str, ...], source: str) -> list[str]:
+    """The built-in tools a sidecar adds to the kit, as the kit's own are listed (#234).
+
+    ``kit`` is the kit as chosen, before them: one it holds already is said so.
+    """
+    if not tools:
+        return []
+    held = [tool for tool in tools if kit.holds(tool)]
+    added = kit.adding(tools).added[len(kit.added) :]
+    lines = [f"added to kit {kit.name}, from {source} (tried as its own):"]
+    by_family = {field: [] for field in _FIELDS.values()}
+    for tool in added:
+        family, size = split_tool(tool)
+        by_family[_FIELDS[family]].append(size)
+    alone = Kit("", "", **{field: tuple(sizes) for field, sizes in by_family.items()})
+    for section in _sections(alone):
+        lines += ["", *section]
+    if held:
+        lines += ["", f"already in kit {kit.name}: {', '.join(held)}"]
+    return lines
+
+
+def _sections(kit: Kit) -> list[list[str]]:
+    sections = (
         _hex_keys(kit),
         _spanners(kit),
         _sockets(kit),
@@ -224,10 +288,8 @@ def listing(kit: Kit) -> list[str]:
         _ball_end_keys(kit),
         _nut_drivers(kit),
         _torx_keys(kit),
-    ):
-        if section:
-            lines += ["", *section]
-    return lines
+    )
+    return [section for section in sections if section]
 
 
 def _hex_keys(kit: Kit) -> list[str]:

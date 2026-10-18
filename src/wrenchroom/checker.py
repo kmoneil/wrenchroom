@@ -255,7 +255,10 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     """
     config = config or Config()
     hand = config.hand_room if hand_room is None else hand_room
-    tools = _Tools(kit_named(kit), _step_for(step_deg, config), hand, config.tools)
+    kit_as_named = kit_named(kit)
+    tools = _Tools(
+        kit_as_named.adding(config.tools.built_in), _step_for(step_deg, config), hand, config.tools
+    )
     if engine not in ENGINES:
         msg = f"unknown engine {engine!r}; available: {', '.join(ENGINES)}"
         raise ValueError(msg)
@@ -337,6 +340,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     return Report(
         model=model,
         kit=kit,
+        kit_added=tools.kit.added,
         engine=engine,
         step_deg=tools.step_deg,
         results=tuple(results),
@@ -355,7 +359,11 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
             + space.warnings
             + _surface_warnings(tuple(rule.parts for rule in matches.unmatched_rules), assembly)
         ),
-        notes=(*space.notes, *_unused_tools(fasteners, tools)),
+        notes=(
+            *space.notes,
+            *_held_already(kit_as_named, config.tools.built_in),
+            *_unused_tools(fasteners, tools),
+        ),
         engine_notes=_engine_notes(space.engine),
         # A part checked as a plug is accounted for: a screw terminal's plug is no
         # screw passed over (issue #166).
@@ -3380,6 +3388,14 @@ def _tool_drive(name: str, tools: _Tools) -> _Drive | None:
     return (kind, af, called) if af in tables else None  # else the table says so
 
 
+def _held_already(kit: Kit, built_in: tuple[str, ...]) -> list[str]:
+    """The built-in tools a sidecar adds that the kit holds already (issue #234).
+
+    Noted, not failed: one sidecar may serve several kits.
+    """
+    return [f"tool {name}: kit {kit.name} holds it already" for name in built_in if kit.holds(name)]
+
+
 def _unused_tools(fasteners: list[Fastener], tools: _Tools) -> list[str]:
     """The sidecar's own tools no fastener here takes and no rule names (issue #75).
 
@@ -3387,17 +3403,23 @@ def _unused_tools(fasteners: list[Fastener], tools: _Tools) -> list[str]:
     of the same size waits behind it. One of a kind and size no fastener takes is
     one written wrong, most often its size, and a run that never says so would
     leave it looking used. Noted, not failed: one sidecar may serve several models.
+    A built-in tool the sidecar adds to the kit is noted so too (issue #234).
     """
     named = {fastener.tool for fastener in fasteners if fastener.tool}
     drives = [drive for f in fasteners if (drive := _fastener_drive(f, tools)) is not None]
+    own = [(custom.name, _custom_drive(custom), "") for custom in tools.custom.tools]
+    added = [
+        (name, drive, ", added to the kit")
+        for name in tools.kit.added
+        if (drive := _tool_drive(name, tools)) is not None
+    ]
     unused = []
-    for custom in tools.custom.tools:
-        kind, size, called = _custom_drive(custom)
+    for name, (kind, size, called), said in (*own, *added):
         taken = any(
             k == kind and (size is None or s is None or _same_size(size, s)) for k, s, _ in drives
         )
-        if custom.name not in named and not taken:
-            unused.append(f"tool {custom.name}: no fastener here takes {_sized(called, size)}")
+        if name not in named and not taken:
+            unused.append(f"tool {name}{said}: no fastener here takes {_sized(called, size)}")
     return unused
 
 
