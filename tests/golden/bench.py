@@ -83,10 +83,11 @@ SLOTS = len(CELLS) + 1
 #: two nuts drawn with their washers, two solids each, which keep a ring and socket off,
 #: 188 with #233's inch_shop: a 3/8 nut the sidecar's ring written 14.29 for 9/16 in turns,
 #: 189 with #240's inch_large: a 3/4 nut, which only a tool past an inch turns, 190 with
-#: #235's build_benched: a screw blocked in service, put in on the bench.
+#: #235's build_benched: a screw blocked in service, put in on the bench, 192 with #237's
+#: written: an M8 nut and an M5 socket head, turned by the inch tools their rules size.
 FINAL_COUNTS = {
-    "fasteners": 190,
-    "turns": 140,
+    "fasteners": 192,
+    "turns": 142,
     "held": 15,
     "blocked": 32,
     "stuck": 3,

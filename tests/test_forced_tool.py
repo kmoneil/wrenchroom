@@ -19,6 +19,9 @@ from wrenchroom.assembly import Assembly, Part
 from wrenchroom.checker import check
 from wrenchroom.config import Config
 from wrenchroom.report import Verdict
+from wrenchroom.tools.hex_keys import HEX_KEYS
+from wrenchroom.tools.kits import split_tool
+from wrenchroom.tools.sizes import FLATS, is_inch, size_name
 
 NUT = {"parts": "nut", "kind": "nut", "size": "M8", "axis": [0, 0, 1]}
 M6_SOCKET = {"parts": "bolt", "kind": "screw", "head": "socket", "size": "M6"}
@@ -275,3 +278,225 @@ def test_the_solid_is_read_again_only_where_a_rule_forces_a_tool(monkeypatch):
     assert len(reads) == 1
     run(m8_pair(), {**NUT, "tool": "spanner-13", "across_flats": 13})
     assert len(reads) == 1  # across_flats: says the size; nothing to read
+
+
+# ---------------------------------------------------------------------------
+# A size the rule gives, as written (issue #237).
+# ---------------------------------------------------------------------------
+
+IN = 25.4
+
+#: Nuts of each system, their hex across flats and thread, mm (ISO 4032, ASME B18.2.2).
+NUTS = {
+    "M5": (8.0, 5.0),
+    "M6": (10.0, 6.0),
+    "M8": (13.0, 8.0),
+    "M10": (16.0, 10.0),
+    "M12": (18.0, 12.0),
+    "M14": (21.0, 14.0),
+    "M16": (24.0, 16.0),
+    "M20": (30.0, 20.0),
+    "1/4": (7 / 16 * IN, 0.25 * IN),
+    "5/16": (0.5 * IN, 5 / 16 * IN),
+    "3/8": (9 / 16 * IN, 0.375 * IN),
+    "7/16": (11 / 16 * IN, 7 / 16 * IN),
+    "1/2": (0.75 * IN, 0.5 * IN),
+    "5/8": (15 / 16 * IN, 0.625 * IN),
+}
+
+#: Socket heads of each system and their key, mm (ISO 4762, ASME B18.3).
+SOCKETS = {
+    "M3": 2.5,
+    "M4": 3.0,
+    "M5": 4.0,
+    "M6": 5.0,
+    "M8": 6.0,
+    "M10": 8.0,
+    "M12": 10.0,
+    "#4": 3 / 32 * IN,
+    "#6": 7 / 64 * IN,
+    "#8": 9 / 64 * IN,
+    "#10": 5 / 32 * IN,
+    "1/4": 3 / 16 * IN,
+    "5/16": 0.25 * IN,
+    "3/8": 5 / 16 * IN,
+    "1/2": 0.375 * IN,
+}
+
+
+def _near(drives, sizes, family, within):
+    """Each drive, with each tool of the other system within ``within`` mm of its size."""
+    return [
+        (size, f"{family}-{size_name(tool)}")
+        for size, drive in drives.items()
+        for tool in sizes
+        if is_inch(tool) is size.startswith("M") and abs(tool - drive) <= within
+    ]
+
+
+NEAR_SPANNERS = _near({size: af for size, (af, _) in NUTS.items()}, FLATS, "spanner", 1.5)
+NEAR_KEYS = _near(SOCKETS, tuple(HEX_KEYS), "hex-key", 0.6)
+
+#: Those of them the bands read back as the drive's own size: given alone as an
+#: across_flats:, its rule naming no tool, the check takes another tool. Each was
+#: refused, its rule given that across_flats:, asking for it again (issue #237).
+READ_BACK = {
+    ("M5", "spanner-5/16in"),
+    ("M6", "spanner-3/8in"),
+    ("M8", "spanner-1/2in"),
+    ("M10", "spanner-5/8in"),
+    ("M12", "spanner-11/16in"),
+    ("M12", "spanner-3/4in"),  # read as DIN 934's 19
+    ("M14", "spanner-13/16in"),
+    ("M16", "spanner-15/16in"),
+    ("1/4", "spanner-11"),
+    ("5/16", "spanner-14"),  # read as a heavy nut's 9/16
+    ("3/8", "spanner-14"),
+    ("7/16", "spanner-17"),
+    ("1/2", "spanner-19"),
+    ("M3", "hex-key-5/64in"),
+    ("M4", "hex-key-1/8in"),
+    ("M5", "hex-key-5/32in"),
+    ("#4", "hex-key-2"),
+    ("#4", "hex-key-2.5"),
+    ("#6", "hex-key-2.5"),
+    ("#8", "hex-key-4"),
+    ("#10", "hex-key-4"),
+    ("3/8", "hex-key-8"),
+}
+
+
+def drive_case(size, tool):
+    """The model and the rule for one of NEAR's: a nut on its bolt, or a socket head."""
+    if tool.startswith("spanner-"):
+        af, d = NUTS[size]
+        pair = nut_with_bolt_through(af=af, nut_h=0.8 * d, bolt_d=d)
+        return pair, {**NUT, "size": size, "tool": tool}, "nut"
+    return screw_facing_wall(50), {**M6_SOCKET, "size": size, "tool": tool}, "bolt"
+
+
+def test_the_bands_read_back_the_sizes_the_misfits_asked_for():
+    # A vacuity guard for the next test: without the fix, every one of these is
+    # refused again with the across_flats: its reason asks for.
+    read_back = set()
+    for size, tool in NEAR_SPANNERS + NEAR_KEYS:
+        model, rule, part = drive_case(size, tool)
+        del rule["tool"]
+        alone = result_of(run(model, {**rule, "across_flats": split_tool(tool)[1]}), part)
+        if alone.tool != tool:
+            read_back.add((size, tool))
+    assert read_back == READ_BACK
+    assert len(NEAR_SPANNERS) == 35
+    assert len(NEAR_KEYS) == 25
+
+
+@pytest.mark.parametrize(("size", "tool"), NEAR_SPANNERS + NEAR_KEYS)
+def test_the_across_flats_a_misfit_asks_for_is_taken(size, tool):
+    model, rule, part = drive_case(size, tool)
+    refused = result_of(run(model, rule), part)
+    assert refused.verdict is Verdict.NOT_COVERED
+    asked = refused.reason.partition("; give its rule across_flats: ")[2]
+    given = split_tool(tool)[1]
+    assert asked == f"{given} if its hex really is {given}"
+    taken = result_of(run(model, {**rule, "across_flats": given}), part)
+    assert not (taken.reason or "").startswith("its tool:"), taken.reason
+    assert taken.tool == tool
+    assert {attempt.tool for attempt in taken.attempts} == {tool}
+
+
+@pytest.mark.parametrize(
+    ("size", "tool", "given"),
+    [
+        ("M8", "spanner-1/2in", 12.7),
+        ("M8", "spanner-1/2in", "1/2in"),
+        ("M8", "socket-1/2in", "1/2in"),
+        ("M10", "spanner-5/8in", 15.875),
+        ("M12", "spanner-11/16in", 17.4625),
+    ],
+)
+def test_the_issue_s_nuts_turn_with_the_tool_their_rules_give_on_each_engine(
+    size, tool, given, engine
+):
+    # The issue's table: each refused with its own across_flats: till #237.
+    af, d = NUTS[size]
+    pair = nut_with_bolt_through(af=af, nut_h=0.8 * d, bolt_d=d)
+    rule = {**NUT, "size": size, "tool": tool, "across_flats": given}
+    config = Config.from_dict({"fasteners": [rule], "checks": {"detect": False}})
+    result = result_of(check(pair, config, kit="full", engine=engine), "nut")
+    assert (result.verdict, result.tool, result.reason, result.notes) == (
+        Verdict.TURNS,
+        tool,
+        None,
+        (),
+    )
+
+
+@pytest.mark.parametrize("given", ["5/32in", 3.969, 3.96875])
+def test_a_key_of_the_size_its_rule_gives_goes_in_as_written(given, engine):
+    # An M5 socket takes a 4 mm key, 0.03 over 5/32 in: within a few hundredths, so
+    # read as the 4 it snaps to; 3.969 is 5/32 in to 0.005 (issue #233).
+    rule = {**M6_SOCKET, "size": "M5", "tool": "hex-key-5/32in"}
+    config = Config.from_dict({"fasteners": [{**rule, "across_flats": given}]})
+    (result,) = check(screw_facing_wall(50), config, kit="full", engine=engine).results
+    assert (result.verdict, result.tool, result.reason) == (
+        Verdict.TURNS,
+        "hex-key-5/32in",
+        None,
+    )
+
+
+def test_as_written_is_to_the_same_five_thousandths_as_a_custom_tool_s_size():
+    # same_size (issue #233): 12.704 is 1/2 in, 12.706 is not, and the bands read it
+    # as the M8's 13, so the rule's spanner-1/2in is refused again.
+    close = nut_reason("spanner-1/2in", across_flats=12.704)
+    assert (close.verdict, close.tool) == (Verdict.TURNS, "spanner-1/2in")
+    far = nut_reason("spanner-1/2in", across_flats=12.706)
+    assert far.reason == (
+        "its tool: spanner-1/2in is 1/2in across flats, but the nut (M8) takes 13; "
+        "give its rule across_flats: 1/2in if its hex really is 1/2in"
+    )
+
+
+def test_a_tool_of_another_size_than_the_rule_gives_is_held_to_the_bands():
+    # Only the tool the given size is: a 12 against across_flats: 1/2in is held to
+    # the 13 the bands read 12.7 as, as before.
+    assert nut_reason("spanner-12", across_flats="1/2in").reason == (
+        "its tool: spanner-12 is 12 across flats, but the nut (M8) takes 13; "
+        "give its rule across_flats: 12 if its hex really is 12"
+    )
+
+
+def test_a_rule_that_names_no_tool_still_reads_its_size_through_the_bands():
+    # Only a rule's tool: and across_flats: together say the size outright: alone,
+    # an across_flats: of 12.7 on an M8 is its 13 drawn undersize, as #50 has it.
+    rule = {**NUT, "across_flats": "1/2in"}
+    result = result_of(run(m8_pair(), rule), "nut")
+    assert (result.verdict, result.tool) == (Verdict.TURNS, "spanner-13")
+    assert result.notes == (
+        "hex drawn undersize: 12.70 across flats, 0.03 under the least its M8 standard "
+        "allows (12.73); taken as size 13",
+    )
+
+
+def test_the_kind_is_held_to_before_the_size_the_rule_gives():
+    # A key the size of the nut's given hex is still a key on a nut.
+    assert nut_reason("hex-key-10", across_flats=10).reason == (
+        "its tool: hex-key-10 is a hex key, which doesn't fit the nut (M8)"
+    )
+    rule = {**M6_SOCKET, "tool": "spanner-5", "across_flats": 5}
+    (result,) = run(screw_facing_wall(50), rule).results
+    assert (
+        result.reason == "its tool: spanner-5 is a spanner, which doesn't fit the socket head (M6)"
+    )
+
+
+def test_a_sidecar_s_own_tool_of_the_size_its_rule_gives_is_taken_as_written():
+    tools = [{"name": "shop-half", "type": "spanner", "across_flats": "1/2in", "length": 150}]
+    refused = result_of(run(m8_pair(), {**NUT, "tool": "shop-half"}, tools=tools), "nut")
+    assert refused.reason == (
+        "its tool: shop-half is 1/2in across flats, but the nut (M8) takes 13; "
+        "give its rule across_flats: 1/2in if its hex really is 1/2in"
+    )
+    rule = {**NUT, "tool": "shop-half", "across_flats": "1/2in"}
+    taken = result_of(run(m8_pair(), rule, tools=tools), "nut")
+    assert (taken.verdict, taken.tool) == (Verdict.TURNS, "shop-half")

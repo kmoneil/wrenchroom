@@ -8,7 +8,10 @@ standard head its outline fits instead. guessed's nut, drawn a little under its
 band on a bore of no standard size, can't say its size alone: its band guesses
 another, and only its bolt gives the rule's (issue #50). plain_pin's and
 stepped_pin's shoulder screws are ISO 7379's by their outlines (issue #48);
-odd_head's fits no standard head, and is the one guess. And the reading from
+odd_head's fits no standard head, and is the one guess. written's nut and screw are
+drawn with inch drives on metric threads, which their rules size and name the inch
+tools of (issue #237): by their drives alone they read a 5/16 nut and a No. 10
+screw. And the reading from
 STEP must equal the reading from the shape as built: the round trip changes
 nothing a tool depends on.
 
@@ -36,6 +39,7 @@ from wrenchroom.fasteners import (
     in_hex_band,
     spanner_af,
 )
+from wrenchroom.tools.sizes import written_mm
 
 
 def _rules():
@@ -58,7 +62,7 @@ def bench_parts(bench_dir):
 
 def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
     wrong, banded, outlined, guessed, unmatched, bored = [], [], [], [], [], []
-    unsized, tapping = [], []
+    unsized, tapping, written = [], [], []
     for name, rule in _described(bench_parts):
         kind = Kind(rule.get("kind", "screw"))
         size = Size.parse(rule["size"]) if "size" in rule else None  # a gland may give none
@@ -66,7 +70,8 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
         # A shoulder screw's head is the one only its name can tell (issue #40), and
         # named_head's outline is a socket head's, the name's button standing (#81).
         named = head if head is Head.SHOULDER or name in _BY_NAME else None
-        reading = _read(bench_parts[name], kind, named, size, (unsized, tapping))
+        listed = (unsized, tapping, written)
+        reading = _read(bench_parts[name], kind, named, size, listed, rule.get("tool"))
         expected_af = _expected_af(rule, kind, size, head)
         got = (reading.head, reading.drive_af and round(reading.drive_af, 6), reading.size)
         want = (head, expected_af and round(expected_af, 6), size)  # inch sizes in mm
@@ -118,15 +123,17 @@ def test_every_bench_fastener_reads_as_its_rule_says(bench_parts):
     assert bored == ["badge_boss_insert", "tee_hold_tnut"]
     # Issue #135: three M3s drawn with 2.9 shanks, on neither M3's 3 nor #4's 2.845.
     assert unsized == [f"unsized_M5x6_{head}_screw" for head in ("phillips", "torx", "slotted")]
+    assert written == ["written_nut", "written_screw"]
 
 
-def _read(part, kind, named, size, listed):
+def _read(part, kind, named, size, listed, tool):
     """The part's reading; one whose shank is on no size takes the rule's, and is
     listed in ``unsized``: a recess, or a name, sizes it (issue #135). So does a
     tapping screw, listed in ``tapping`` (issue #142): its size is its name's, its
     solid alone reading a machine screw's or none, and its shank its own thread's
-    at most."""
-    unsized, tapping = listed
+    at most. So does one drawn with the other system's drive, listed in ``written``,
+    whose rule names that drive's tool (issue #237): its drive alone sizes it."""
+    unsized, tapping, written = listed
     reading = read_shape(part.whole, kind, named)  # all of it, as a check reads it (#210)
     if size is not None and size.is_tapping:
         tapping.append(part.name)
@@ -134,6 +141,9 @@ def _read(part, kind, named, size, listed):
         return replace(reading, size=size)
     if reading.size is None and size is not None and reading.shank_mm is not None:
         unsized.append(part.name)
+        return replace(reading, size=size)
+    if tool is not None and reading.size_from_drive and reading.size not in (None, size):
+        written.append(part.name)
         return replace(reading, size=size)
     return reading
 
@@ -143,8 +153,10 @@ _STANDARD = {Head.BUTTON: "ISO 7380-1", Head.SHOULDER: "ISO 7379"}
 
 def _expected_af(rule, kind, size, head):
     """The drive the rule implies: its across_flats, else its size's hex or key."""
-    if rule.get("across_flats") is not None or size is None:
-        return rule.get("across_flats")
+    if rule.get("across_flats") is not None:
+        return written_mm(rule["across_flats"])  # a number of mm or a size's name
+    if size is None:
+        return None
     if kind is Kind.NUT or head is Head.HEX:
         return spanner_af(size, head=size.is_tapping)  # a tapping screw's hex is its head's
     return hex_key_af(head, size) if head is not None else None
