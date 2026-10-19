@@ -3360,6 +3360,10 @@ def _forced_misfit(
     Unchecked, a typo passed (spanner-10 on a 13 mm hex) and a key was swept into a
     nut's bore. A tool the tables don't hold is left to say so itself, and where no
     size is known only the kind is held to.
+
+    A rule whose ``across_flats:`` is its tool's size means that size, as written:
+    read through the bands, 1/2 in on an M8 nut was its 13 drawn undersize, and the
+    reason asked for the very ``across_flats:`` it then refused (issue #237).
     """
     tool, drive = _tool_drive(name, tools), _fastener_drive(fastener, tools)
     if tool is None or drive is None:
@@ -3367,6 +3371,9 @@ def _forced_misfit(
     (tool_kind, tool_size, called), (kind, size, what) = tool, drive
     if tool_kind != kind:
         return f"its tool: {name} is {called}, which doesn't fit {what}"
+    written = fastener.drive_af
+    if isinstance(tool_size, float) and written is not None and _same_size(tool_size, written):
+        return None
     drawn = _drawn_size(kind, fastener, tools, drawn_af)
     takes = [s for s in (size, drawn) if s is not None]
     if tool_size is None or not takes or any(_same_size(tool_size, s) for s in takes):

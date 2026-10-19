@@ -259,8 +259,10 @@ a Torx key in a Torx recess; the driver of the right tip), at a size the fastene
 takes, either the one the unforced check would choose (a given hex, else the thread's
 standard one) or the hex the solid shows. One that doesn't fit is not covered, and
 says so (`its tool: spanner-10 is 10 across flats, but the nut (M8) takes 13`); where
-the model's hex really is another size, `across_flats:` in the rule says so. A tool
-the tables don't hold says that instead. `tool: hand` says the fastener is turned by
+the model's hex really is another size, `across_flats:` in the rule says so, and a
+tool of the size it gives fits as written: 1/2 in on an M8 nut is not read back as
+the nut's 13 drawn undersize (issue #237). A tool the tables don't hold says that
+instead. `tool: hand` says the fastener is turned by
 hand.
 
 A fastener nothing turns, or whose free face can't be told, is measured against the

@@ -3824,3 +3824,36 @@ def build_benched():
         ("screw", socket_screw()),
         ("frame", slab(6 + 15)),
     ]
+
+
+@cell(
+    "written",
+    [
+        {"parts": "nut", **_M8_NUT, "tool": "spanner-1/2in", "across_flats": 12.7},
+        {
+            "parts": "screw",
+            **M6_SOCKET,
+            "size": "M5",
+            "tool": "hex-key-5/32in",
+            "across_flats": "5/32in",
+        },
+    ],
+    {
+        "nut": {"verdict": "turns", "tool": "spanner-1/2in", "how": "ring, full length"},
+        "screw": {"verdict": "turns", "tool": "hex-key-5/32in", "how": "driver straight in"},
+    },
+)
+def written():
+    """An M8 nut drawn 1/2 in across flats, 6.8 thick, on a stud, and 300 from it an M5
+    socket head (ISO 4762's 8.5 by 5) drawn for a 5/32 in key, nothing near either: each
+    rule names the inch tool and gives its size as across_flats:, the nut's in mm and
+    the screw's by name, and the ring and the key turn them. Read through the bands,
+    12.7 was the nut's 13 drawn undersize and 5/32 in (3.969) the screw's 4: each tool
+    was refused, its reason asking for the very across_flats: it had (issue #237).
+    """
+    return [
+        ("plate", plate(w=500, holes=[(-150, 0, 4.4), (150, 0, 2.7)])),
+        ("stud", Pos(-150, 0, 2.5) * Cylinder(4, 25)),
+        ("nut", Pos(-150, 0, 0) * hex_nut(8, 0.5 * IN, 6.8)),
+        ("screw", Pos(150, 0, 0) * vendor_socket_screw("M5", key=5 / 32 * IN)),
+    ]

@@ -64,6 +64,13 @@ PAST_HOME = {
         "needs spanner-1-1/8in or socket-1-1/8in, which kit metric-home does not hold (full has it)"
     ),
     "small_phillips_screw": "needs driver-ph0, which kit metric-home does not hold (full has it)",
+    # Issue #237: metric threads whose rules give the inch tool and its size.
+    "written_nut": (
+        "needs spanner-1/2in, which kit metric-home does not hold (imperial-home and full have it)"
+    ),
+    "written_screw": (
+        "needs hex-key-5/32in, which kit metric-home does not hold (imperial-home and full have it)"
+    ),
     # Issue #82: a T40 recess on an M8, by its across_flats.
     "pan_t40_torx_screw": "needs torx-key-T40, which kit metric-home does not hold (full has it)",
     # Issue #101: an M8 Phillips takes PH4, which the home drivers stop short of.
@@ -101,8 +108,16 @@ HOME_BLOCKED = {
     "nut_tube_nut": ["nut_tube_tube"],
 }
 
-#: The bench's inch fasteners imperial-home can turn: all but the one past it.
-INCH = {"inch_pair_screw", "inch_pair_nut", "small_inch_socket_screw", "std_#10-32x1"}
+#: The bench's inch fasteners imperial-home can turn: all but the one past it. And
+#: written's, metric threads whose rules give an inch tool and its size (issue #237).
+INCH = {
+    "inch_pair_screw",
+    "inch_pair_nut",
+    "small_inch_socket_screw",
+    "std_#10-32x1",
+    "written_nut",
+    "written_screw",
+}
 
 #: An inch fastener whose tool is past imperial-home's 13 keys (issue #83).
 INCH_PAST_HOME = {

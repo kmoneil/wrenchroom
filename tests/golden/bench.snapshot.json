@@ -6,8 +6,8 @@
  "swing_positions": 24,
  "kit_added": [],
  "summary": {
-  "fasteners": 190,
-  "turns": 140,
+  "fasteners": 192,
+  "turns": 142,
   "held": 15,
   "blocked": 32,
   "stuck": 3,
@@ -5494,7 +5494,7 @@
     1.0
    ],
    "seat": [
-    3900.0,
+    4900.0,
     21000.0,
     6.0
    ],
@@ -5526,7 +5526,7 @@
     1.0
    ],
    "seat": [
-    4100.0,
+    5100.0,
     21000.0,
     6.0
    ],
@@ -5909,6 +5909,66 @@
    "reason": null,
    "grazes": [],
    "notes": []
+  },
+  {
+   "name": "written_nut",
+   "kind": "nut",
+   "head": null,
+   "size": "M8",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    3850.0,
+    21000.0,
+    6.8
+   ],
+   "source": "sidecar",
+   "tool": "spanner-1/2in",
+   "verdict": "turns",
+   "how": "ring, full length",
+   "swing_deg": 30.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
+   "name": "written_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M5",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    4150.0,
+    21000.0,
+    5.0
+   ],
+   "source": "sidecar",
+   "tool": "hex-key-5/32in",
+   "verdict": "turns",
+   "how": "driver straight in",
+   "swing_deg": 360.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
   }
  ],
  "tools_used": {
@@ -6040,9 +6100,10 @@
    },
    {
     "tool": "hex-key-5/32in",
-    "count": 1,
+    "count": 2,
     "fasteners": [
-     "std_#10-32x1"
+     "std_#10-32x1",
+     "written_screw"
     ],
     "at_once": 1,
     "in_default_kit": false,
@@ -6365,6 +6426,22 @@
     "count": 1,
     "fasteners": [
      "inch_pair_nut"
+    ],
+    "at_once": 1,
+    "in_default_kit": false,
+    "unusual": [
+     "outside_default_kit",
+     "few"
+    ],
+    "states": [
+     null
+    ]
+   },
+   {
+    "tool": "spanner-1/2in",
+    "count": 1,
+    "fasteners": [
+     "written_nut"
     ],
     "at_once": 1,
     "in_default_kit": false,

@@ -603,7 +603,7 @@ def test_the_tools_list_counts_each_passing_fastener_s_tool(bench_report, bench_
         *("ball-end-key-4", "ball-end-key-5", "driver-ph0", "driver-ph4", "nut-driver-10"),
         *("hex-key-0.035in", "hex-key-0.050in", "hex-key-1.3", "hex-key-3/16in"),
         *("hex-key-5/32in", "spanner-24", "spanner-3.2", "spanner-41", "spanner-5"),
-        "spanner-1-1/8in",
+        *("spanner-1-1/8in", "spanner-1/2in"),
         *("spanner-7/16in", "torx-key-T10", "torx-key-T20", "torx-key-T25", "torx-key-T30"),
         *("torx-key-T40", "torx-key-T6"),
         *("short-ring-18", "short-ring-9/16in", "stubby-key-6"),  # the sidecar's own

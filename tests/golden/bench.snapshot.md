@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**190 fasteners: 140 turn, 15 held, 32 blocked, 3 stuck, 0 not covered**
+**192 fasteners: 142 turn, 15 held, 32 blocked, 3 stuck, 0 not covered**
 
 Kit `full`, swings tried every 15 deg, ENGINE engine, wrenchroom VERSION.
 
@@ -54,6 +54,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | M5 nut | `spanner-8` | 1 | all pass (ring, full length) |
 | M5 phillips screw | `driver-ph2` | 1 | all pass (driver straight in) |
 | M5 socket screw | `hex-key-4` | 1 | all pass (driver straight in) |
+| M5 socket screw | `hex-key-5/32in` | 1 | all pass (driver straight in) |
 | M6 button screw | `hex-key-4` | 4 | 1 of 4 fail |
 | M6 carriage screw | - | 2 | 1 of 2 fail |
 | M6 hex screw | `spanner-10` | 5 | all pass (ring, full length) |
@@ -71,6 +72,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | M8 hex screw | `spanner-13` | 16 | 1 of 16 fail |
 | M8 nut | - | 1 | 1 of 1 fail |
 | M8 nut | `socket-13` | 1 | 1 of 1 fail |
+| M8 nut | `spanner-1/2in` | 1 | all pass (ring, full length) |
 | M8 nut | `spanner-13` | 24 | 5 of 24 fail |
 | M8 phillips screw | `driver-ph4` | 1 | all pass (driver straight in) |
 | M8 socket screw | `stubby-key-6` | 1 | all pass (short leg in) |
@@ -82,7 +84,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 
 #### Tools
 
-44 tools this model needs (kit full): 11 hex keys, 2 ball-end keys, 6 Torx keys, 15 spanners, 1 socket, 1 nut driver, 5 drivers, 3 others.
+45 tools this model needs (kit full): 11 hex keys, 2 ball-end keys, 6 Torx keys, 16 spanners, 1 socket, 1 nut driver, 5 drivers, 3 others.
 
 | Tool | Fasteners | |
 | --- | ---: | --- |
@@ -93,7 +95,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `hex-key-2` | 1 | only `dome_tip_screw` |
 | `hex-key-2.5` | 16 |  |
 | `hex-key-3` | 5 |  |
-| `hex-key-5/32in` | 1 | not in metric-home; only `std_#10-32x1` |
+| `hex-key-5/32in` | 2 | not in metric-home; only `std_#10-32x1`, `written_screw` |
 | `hex-key-4` | 8 |  |
 | `hex-key-3/16in` | 1 | not in metric-home; only `inch_pair_screw` |
 | `hex-key-5` | 13 |  |
@@ -113,6 +115,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `spanner-10` | 10 | 2 at once on a joint |
 | `spanner-10, stubby` | 1 | no full-length spanner swings at `nut_stubby_box_nut` |
 | `spanner-7/16in` | 1 | not in metric-home; only `inch_pair_nut` |
+| `spanner-1/2in` | 1 | not in metric-home; only `written_nut` |
 | `spanner-13` | 33 | 2 at once on a joint |
 | `spanner-13, stubby` | 1 | no full-length spanner swings at `reach_13_nut` |
 | `spanner-15` | 2 | only `snug_dome_gland`, `wide_dome_gland` |

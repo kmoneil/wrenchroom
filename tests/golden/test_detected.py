@@ -91,8 +91,16 @@ def test_detection_finds_the_bench_with_no_rules(detected):
     # size, and named M5: its slot says no size, so the name's stands, and is said
     # to be no thread its shank could be (issue #135).
     slotted = "unsized_M5x6_slotted_screw"
-    assert sorted(right) == sorted(name for name in described if name != slotted)
+    # And written's, drawn with inch drives on metric threads, which only their rules
+    # say (issue #237): by its 1/2 in hex the nut is a 5/16 one, on a stud no rule
+    # names, and the screw by its 5/32 in socket a No. 10. Each turns with its tool.
+    written = {"written_nut": "5/16", "written_screw": "#10"}
+    assert sorted(right) == sorted(
+        name for name in described if name != slotted and name not in written
+    )
     assert by_name[slotted].fastener.size.designation == "M5"
+    for name, size in written.items():
+        assert by_name[name].fastener.size.designation == size, name
 
 
 def test_nothing_found_is_skipped_silently(detected):
