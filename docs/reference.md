@@ -159,7 +159,10 @@ the thread's number stands (issue #125).
 
 A sidecar rule still describes a part outright, `across_flats:` gives a hex its
 measured size (in mm, or by its name: `9/16in`), and `checks: {detect: false}` turns
-detection off. With every
+detection off. A nut's is wider than its thread and its bore as drawn, or it is a
+slip, and the nut is not covered, saying so (`its rule's across_flats: 1.3 is no hex
+on its M8 thread, 8.00 across`): read as written, 1.3 for 13 came out held by a trap
+that was its own bolt (issue #244). With every
 fastener rule removed, the golden bench's described fasteners are all found with the
 right kind and size, each screw with its rule's head, and its plates, blocks and
 studs named for their cells are passed over.

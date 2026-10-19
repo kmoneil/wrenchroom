@@ -329,6 +329,26 @@ def test_a_rule_s_tool_that_can_t_drive_its_fastener_is_not_covered(edges_report
     assert (drawn.verdict.value, drawn.tool) == ("turns", "spanner-15")
 
 
+def test_a_nut_s_across_flats_no_hex_on_it_is_not_covered(edges_report):
+    """Issue #244: slipped's nuts, which only the edges sidecar keeps. Read as written,
+    each hex lay inside its stud, which held the nut as its trap: a pass."""
+    by_name = {r.fastener.name: r for r in edges_report.results}
+    reasons = {
+        "sized": "its rule's across_flats: 1.3 is no hex on its M8 thread, 8.00 across: "
+        "a nut's hex is wider than its thread",
+        "bare": "its rule's across_flats: 5 is no hex on its bore as drawn, 8.00 across: "
+        "a nut's hex is wider than its bore",
+    }
+    for role, reason in reasons.items():
+        result = by_name[f"slipped_{role}_nut"]
+        assert (result.verdict.value, result.attempts, result.how, result.reason) == (
+            "not-covered",
+            (),
+            None,
+            reason,
+        ), role
+
+
 def test_a_state_model_missing_a_fastener_fails_the_run(bench_dir, tmp_path):
     """Issue #74, as reported: the bench with state_lever_screw renamed in its
     lever-up model. The screw passes only with the lever up; renamed there, it isn't

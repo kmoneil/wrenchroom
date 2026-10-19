@@ -330,6 +330,9 @@ def edges_sidecar():
             {"parts": "stud_dome_*_nut", "kind": "nut", "size": "M8"},
             # wrong_tool's fasteners, each with a tool its rule names (issue #72).
             *(_wrong_tool(role, rule) for role, rule in WRONG_TOOL.items()),
+            # slipped's nuts, each given a hex no nut on its thread is (issue #244).
+            {"parts": "slipped_sized_nut", "kind": "nut", "size": "M8", "across_flats": 1.3},
+            {"parts": "slipped_bare_nut", "kind": "nut", "across_flats": 5},
         ],
         "ignore": ["*_hose"],
         # wrong_tool's custom_nut names it; no bench fastener takes a 23 mm spanner,

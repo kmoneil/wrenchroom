@@ -3857,3 +3857,24 @@ def written():
         ("nut", Pos(-150, 0, 0) * hex_nut(8, 0.5 * IN, 6.8)),
         ("screw", Pos(150, 0, 0) * vendor_socket_screw("M5", key=5 / 32 * IN)),
     ]
+
+
+@cell("slipped", ignore=["*slipped_*"], timed=False)
+def slipped():
+    """Nuts whose rules give an across_flats: no hex on them is (issue #244). Each is not
+    covered, saying so, and nothing is swept. Not covered fails a run, so the bench's own
+    runs ignore the cell and the edges sidecar describes it, as for wrong_tool.
+
+    sized_nut is an M8 nut (13 across flats, bored 8) on a stud, its rule's M8 with 1.3,
+    a slip for 13: read as written, its corners lay inside the stud, which held it as
+    its trap, a pass. bare_nut is the same nut, its rule giving no size and 5: no hex on
+    its bore as drawn, which held it the same way.
+    """
+    holes = [(x, 0, 4.4) for x in (-60, 60)]
+    parts = [("plate", plate(w=240, holes=holes))]
+    for name, x in (("sized", -60), ("bare", 60)):
+        parts += [
+            (f"{name}_stud", Pos(x, 0, 2.5) * Cylinder(4, 25)),
+            (f"{name}_nut", Pos(x, 0, 0) * hex_nut(8, 13, 6.8)),
+        ]
+    return parts
