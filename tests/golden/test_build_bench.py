@@ -16,6 +16,7 @@ from wrenchroom.config import Config
 
 STEPS = [*BUILD_STEPS, REST]
 ONLY = "build_*"
+FAILED = {"blocked", "stuck"}
 
 
 def _truth_params():
@@ -147,10 +148,31 @@ def test_the_steps_add_what_the_cells_say(built):
 
 
 def test_service_is_the_bench_s_own_whatever_the_build(built, bench_json):
-    # The build changes nothing of the check itself: each verdict is the bench's.
+    # The build changes nothing of the check itself: each verdict is the bench's, but
+    # build_benched's screw's, which its state on bench aside reaches (issue #249).
+    # Every other build cell's failure is retried there too, and none is on the bench:
+    # none is tried there. Tried, each would turn, in the air.
+    benched = "build_benched_screw"
     for result in built.results:
         entry = bench_json[result.name]
-        assert (result.verdict.value, result.tool) == (entry["verdict"], entry["tool"])
+        if result.name != benched:
+            assert (result.verdict.value, result.tool) == (entry["verdict"], entry["tool"])
+            assert result.state == entry["state"], result.name
+    by_name = {result.name: result for result in built.results}
+    assert bench_json[benched]["verdict"] == "blocked"
+    assert (by_name[benched].verdict.value, by_name[benched].state) == ("turns", "aside-bench")
+    assert by_name[benched].how == "driver straight in"
+    # The retries' vacuity guard: these fail in service, so each was retried.
+    failing = {r.name for r in built.results if bench_json[r.name]["verdict"] in FAILED}
+    assert failing == {
+        benched,
+        "build_buried_early_screw",
+        "build_buried_late_screw",
+        "build_way_in_over_screw",
+        "build_way_in_under_screw",
+    }
+    assert built.models["aside-bench"].removed >= {"build_benched_frame", "key_wall_near_screw"}
+    assert not {"build_benched_plate", benched} & built.models["aside-bench"].removed
 
 
 def test_a_bench_with_no_step_adding_the_rest_is_not_built(bench_dir, bench_model, bench_engine):

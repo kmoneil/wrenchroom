@@ -188,7 +188,7 @@ def test_each_sidecar_snippet_is_a_sidecar_wrenchroom_reads(snippet):
 
 def test_the_sidecar_snippets_are_found():
     assert len(sidecars()) >= 3  # the README's full one and its tools; the reference's
-    (full,) = [s for s in sidecars() if "states:" in s]
+    (full,) = [s for s in sidecars() if "lid-off:" in s]
     config = Config.from_dict(yaml.safe_load(full))
     assert {state.name for state in config.states} == {"lid-off", "lever-up"}
     assert config.try_states == ("lid-off",)
