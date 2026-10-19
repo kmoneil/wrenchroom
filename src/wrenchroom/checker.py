@@ -640,11 +640,22 @@ def _check_connector(
     default_state: str | None,
     hand_room: bool,
 ) -> ConnectorResult:
-    """One plug, in its own state, then each of ``try_states`` until it comes off."""
+    """One plug, in its own state, then each of ``try_states`` until it comes off.
+
+    A state that takes the plug off is passed over, and one whose own state takes it
+    off is not covered (:meth:`_StateSpace.off_in`).
+    """
     own = rule.state if rule.state is not None else default_state
     order: list[str | None] = [own, *(s for s in config.try_states if s != own)]
     first: ConnectorResult | None = None
     for index, state_name in enumerate(order):
+        off = space.off_in(state_name, name)
+        if off is not None:
+            if index == 0:
+                return ConnectorResult(
+                    name, ConnectorVerdict.NOT_COVERED, source, reason=off, state=state_name
+                )
+            continue
         where = (state_name, space, config)
         result = _connector_in_state(name, rule, source, where, hand_room)
         if first is None:
@@ -1494,6 +1505,25 @@ class _StateSpace:
         self.models[state_name] = StateModel(assembly, frozenset(removed))
         return assembly, frozenset(removed), model is None
 
+    def off_in(self, state_name: str | None, name: str) -> str | None:
+        """Why a state has a fastener or a plug off, said as its own state's; else None.
+
+        A part a state takes off is in none of its scenes, and it isn't tried there
+        either: a screw can't be reached for undoing in a state it is off in already
+        (issue #250). A retry passes over such a state; a part whose own state it is
+        is not covered, for this reason.
+        """
+        if state_name is None:
+            return None
+        _, removed, _ = self.resolve(state_name)
+        if name not in removed:
+            return None
+        glob = next(g for g in self._config.state_removes(state_name) if fnmatchcase(name, g))
+        return (
+            f"its own state {state_name!r} takes it off (remove glob {glob!r}), "
+            "so it can't be reached there"
+        )
+
     def resolve_step(self, index: int, steps: Plan) -> tuple[Assembly, frozenset[str], bool]:
         """The assembly a build step sees, the parts still to come, and whether it is the default.
 
@@ -1747,6 +1777,11 @@ def _check_fastener(
     order += [s for s in config.try_states if s != own_state]
     first: _Candidate | None = None
     for index, state_name in enumerate(order):
+        off = space.off_in(state_name, fastener.name)
+        if off is not None:  # nothing to reach there: passed over, or not covered (#250)
+            if index == 0:
+                return _Candidate(fastener, reason=off, state=state_name)
+            continue
         candidate = _try_in_state(fastener, frame, state_name, space, tools, partner)
         if candidate.absent and index > 0 and state_name is not None:
             space.warn_absent(state_name, fastener.name)  # a retry it can't have (#74)

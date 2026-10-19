@@ -1,6 +1,6 @@
 ### wrenchroom: `bench.step`
 
-**192 fasteners: 142 turn, 15 held, 32 blocked, 3 stuck, 0 not covered**
+**193 fasteners: 142 turn, 15 held, 33 blocked, 3 stuck, 0 not covered**
 
 Kit `full`, swings tried every 15 deg, ENGINE engine, wrenchroom VERSION.
 
@@ -66,7 +66,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | M6 shoulder screw | `ball-end-key-4` | 1 | all pass (ball end, 20 deg off the axis) |
 | M6 shoulder screw | `hex-key-4` | 4 | all pass (driver straight in) |
 | M6 socket screw | `ball-end-key-5` | 1 | all pass (ball end, 25 deg off the axis) |
-| M6 socket screw | `hex-key-5` | 22 | 12 of 22 fail |
+| M6 socket screw | `hex-key-5` | 23 | 13 of 23 fail |
 | M6 torx screw | `torx-key-T30` | 1 | all pass (short leg in) |
 | M8 hex screw | - | 2 | 1 of 2 fail |
 | M8 hex screw | `spanner-13` | 16 | 1 of 16 fail |
@@ -136,8 +136,8 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 
 - By hand: 3 (`grip_thumb_screw`, `grip_wheel_thumbscrew`, `grip_wing_nut`)
 - No tool needed: 13, held by themselves or a trap
-- No tool yet: 32 blocked (wrenchroom check says why)
-- Blocked, once reached: `hex-key-1.5` x1, `hex-key-2.5` x3, `hex-key-4` x1, `hex-key-5` x9, `spanner-5.5` x1, `spanner-13` x6, `spanner-15` x1, `spanner-16` x2, `spanner-24` x1, `spanner-36` x1 (only blocked fasteners need it: `big_tube_gland`), `socket-13` x1 (only blocked fasteners need it: `lone_nut`), `driver-ph2` x1
+- No tool yet: 33 blocked (wrenchroom check says why)
+- Blocked, once reached: `hex-key-1.5` x1, `hex-key-2.5` x3, `hex-key-4` x1, `hex-key-5` x10, `spanner-5.5` x1, `spanner-13` x6, `spanner-15` x1, `spanner-16` x2, `spanner-24` x1, `spanner-36` x1 (only blocked fasteners need it: `big_tube_gland`), `socket-13` x1 (only blocked fasteners need it: `lone_nut`), `driver-ph2` x1
 
 #### Failures
 
@@ -170,6 +170,7 @@ Not checked: room for a hand (`checks: {hand_room: true}` turns it on); parts dr
 | `shelled_screw` | `hex-key-5` | blocked | `shelled_ceiling` |
 | `sunk_cap_cap_nut` | `spanner-16` | blocked | `sunk_cap_plate` |
 | `tail_too_long_nut` | `spanner-16` | blocked | `tail_too_long_collar`, `tail_too_long_bolt` |
+| `taken_off_screw` | `hex-key-5` | blocked | `taken_off_guard` |
 | `tapped_hold_screw` | `hex-key-5` | blocked | `only holds, and it has no nut; best arc bounded by tapped_hold_slot` |
 | `tee_hold_screw` | `hex-key-5` | blocked | `only holds, and it screws into a fixed thread (tee_hold_tnut), so it must turn; best arc bounded by tee_hold_slot` |
 | `torus_deep_screw` | `hex-key-2.5` | blocked | `torus_deep_under`, `torus_deep_lid` |

@@ -370,7 +370,12 @@ and `grazes` in the JSON).
   naming the model. Any other part name only one of the two models has is noted. It is
   parts that are matched, not their solids (issue #199): a part drawn as several
   solids is whole in a model from shapes and in pieces in one from STEP, and is the
-  same part in both, so a run may hold a model of each.
+  same part in both, so a run may hold a model of each. A fastener or a plug a state
+  takes off isn't tried in it (issue #250): a screw can't be undone in a state it is
+  off in already. A retry passes over such a state, and one whose own state takes it
+  off (a rule's `state:`, or `default_state`) is not covered (`its own state
+  'guard-off' takes it off (remove glob 'guard*'), so it can't be reached there`),
+  which fails the run as a sidecar mistake does.
 - **Narrowing.** `explain` and `check --only` narrow what is reported, not what is
   resolved: a fastener's pair is checked with it, so its verdict is the full run's.
 
