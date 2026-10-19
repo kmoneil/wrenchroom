@@ -94,6 +94,9 @@ class Cell:
     plugs: dict = field(default_factory=dict)
     #: Its roles the bench's lid-off state takes off.
     off: tuple = ()
+    #: Its roles the bench's lever-up state takes off, besides moving what its model
+    #: moves (issue #250): lever-up is the state every failure is retried in.
+    up_off: tuple = ()
 
 
 M6_SOCKET = {"kind": "screw", "head": "socket", "size": "M6"}
@@ -115,6 +118,7 @@ def cell(  # noqa: PLR0913, PLR0917  (one keyword per Cell field)
     connectors=(),
     plugs=None,
     off=(),
+    up_off=(),
 ):
     def register(build):
         CELLS.append(
@@ -133,6 +137,7 @@ def cell(  # noqa: PLR0913, PLR0917  (one keyword per Cell field)
                 tuple(connectors),
                 plugs or {},
                 tuple(off),
+                tuple(up_off),
             )
         )
         return build
@@ -3878,3 +3883,23 @@ def slipped():
             (f"{name}_nut", Pos(x, 0, 0) * hex_nut(8, 13, 6.8)),
         ]
     return parts
+
+
+@cell(
+    "taken_off",
+    [{"parts": "screw", **M6_SOCKET}],
+    {"screw": {"verdict": "blocked", "tool": "hex-key-5", "blocked_by": ["guard"]}},
+    up_off=["guard", "screw"],
+)
+def taken_off():
+    """key_wall_near's wall as a guard 15 over an M6 socket head, no key getting on. The
+    bench's lever-up state, which every failure is retried in, takes off the guard and
+    the screw with it, as a remove: glob such as guard* does. A screw can't be reached
+    in a state it is off in: lever-up is passed over, and the screw stays blocked by its
+    guard. Tried there, it turned in lever-up (issue #250).
+    """
+    return [
+        ("plate", plate(holes=[(0, 0, 3)])),
+        ("screw", socket_screw()),
+        ("guard", slab(6 + 15)),
+    ]

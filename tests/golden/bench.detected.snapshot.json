@@ -6,10 +6,10 @@
  "swing_positions": 24,
  "kit_added": [],
  "summary": {
-  "fasteners": 192,
+  "fasteners": 193,
   "turns": 138,
   "held": 15,
-  "blocked": 33,
+  "blocked": 34,
   "stuck": 4,
   "not_covered": 2
  },
@@ -5101,6 +5101,38 @@
    "notes": []
   },
   {
+   "name": "taken_off_screw",
+   "kind": "screw",
+   "head": "socket",
+   "size": "M6",
+   "length": null,
+   "axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "seat": [
+    0.0,
+    22000.0,
+    6.0
+   ],
+   "source": "name+geometry",
+   "tool": "hex-key-5",
+   "verdict": "blocked",
+   "how": null,
+   "swing_deg": 0.0,
+   "state": null,
+   "pair": null,
+   "blocked_by": [
+    "taken_off_guard"
+   ],
+   "deciding": [],
+   "stuck_on": [],
+   "reason": null,
+   "grazes": [],
+   "notes": []
+  },
+  {
    "name": "tapped_hold_screw",
    "kind": "screw",
    "head": "socket",
@@ -5516,7 +5548,7 @@
     1.0
    ],
    "seat": [
-    -100.0,
+    900.0,
     22000.0,
     6.0
    ],
@@ -5548,7 +5580,7 @@
     1.0
    ],
    "seat": [
-    100.0,
+    1100.0,
     22000.0,
     6.0
    ],
@@ -6908,6 +6940,10 @@
     "verdict": "blocked"
    },
    {
+    "name": "taken_off_screw",
+    "verdict": "blocked"
+   },
+   {
     "name": "tapped_hold_screw",
     "verdict": "blocked"
    },
@@ -6957,7 +6993,7 @@
    },
    {
     "tool": "hex-key-5",
-    "count": 11,
+    "count": 12,
     "fasteners": [
      "both_over_screw",
      "build_benched_screw",
@@ -6967,6 +7003,7 @@
      "key_wall_near_screw",
      "shelled_screw",
      "state_lid_screw",
+     "taken_off_screw",
      "tapped_hold_screw",
      "tee_hold_screw",
      "twins_a_screw"

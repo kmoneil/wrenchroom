@@ -84,12 +84,13 @@ SLOTS = len(CELLS) + 1
 #: 188 with #233's inch_shop: a 3/8 nut the sidecar's ring written 14.29 for 9/16 in turns,
 #: 189 with #240's inch_large: a 3/4 nut, which only a tool past an inch turns, 190 with
 #: #235's build_benched: a screw blocked in service, put in on the bench, 192 with #237's
-#: written: an M8 nut and an M5 socket head, turned by the inch tools their rules size.
+#: written: an M8 nut and an M5 socket head, turned by the inch tools their rules size,
+#: 193 with #250's taken_off: a screw blocked by its guard, which lever-up takes off with it.
 FINAL_COUNTS = {
-    "fasteners": 192,
+    "fasteners": 193,
     "turns": 142,
     "held": 15,
-    "blocked": 32,
+    "blocked": 33,
     "stuck": 3,
     "not_covered": 0,
 }
@@ -122,6 +123,7 @@ def sidecar_and_truth(copies=1, which="all"):
     picks the cells: "all", or the perf bench's "timed" or "untimed" ones.
     """
     rules, truth, ignore, lids, allow, connectors = [], {}, set(), [], [], []
+    ups = []
     for copy in range(copies):
         prefix = copy_prefix(copy)
         for cell in CELLS:
@@ -133,6 +135,7 @@ def sidecar_and_truth(copies=1, which="all"):
             ignore.update(cell.ignore)
             allow += [[f"{name}_{a}", f"{name}_{b}"] for a, b in cell.allow]
             lids += [f"{name}_{role}" for role in cell.off]
+            ups += [f"{name}_{role}" for role in cell.up_off]
             for role, expected in cell.truth.items():
                 truth[f"{name}_{role}"] = _named_truth(expected, name)
         if which != "untimed":  # the twins are ordinary: timed with the rest
@@ -150,7 +153,7 @@ def sidecar_and_truth(copies=1, which="all"):
         "ignore": sorted(ignore),
         "states": {
             "lid-off": {"remove": lids},
-            "lever-up": {"model": LEVER_UP},
+            "lever-up": {"model": LEVER_UP, **({"remove": ups} if ups else {})},
         },
         "checks": {"try_states": ["lever-up"]},
         "tools": _bench_tools(which),
