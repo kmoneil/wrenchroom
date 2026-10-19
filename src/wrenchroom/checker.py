@@ -326,7 +326,7 @@ def check(  # noqa: PLR0913  (one keyword per CLI option; bundling them would hi
     ]
     built = None
     if config.build:
-        steps = plan_build(config.build, assembly, config.is_ignored)
+        steps = space.build_plan()
         built = _build_run(space, steps, fasteners, frames, failures, pairs, reported, tools)
     connected = None
     if plugs or named or config.connectors:
@@ -1424,6 +1424,10 @@ class _StateSpace:
         #: Each build step resolved so far: its assembly, the parts still to come, and
         #: whether it is the model as given.
         self._steps: dict[int, tuple[Assembly, frozenset[str], bool]] = {}
+        #: The build read against the model, once asked for (:meth:`build_plan`).
+        self._plan: Plan | None = None
+        #: Each state on a bench resolved so far: the parts its bench hasn't (#249).
+        self._benched: dict[str, frozenset[str]] = {}
         self.warnings: list[str] = []
         #: What the state models differ in from the main model (issue #74).
         self.notes: list[str] = []
@@ -1480,19 +1484,31 @@ class _StateSpace:
             ignored = self._ignored[part.name] = _ignored(self._config, part)
         return ignored
 
+    def build_plan(self) -> Plan:
+        """The sidecar's build read against the model as given, read the once.
+
+        The build check's steps, and which parts a state on a bench has (issue #249).
+        """
+        if self._plan is None:
+            self._plan = plan_build(self._config.build, self._default, self._config.is_ignored)
+        return self._plan
+
     def resolve(self, state_name: str | None) -> tuple[Assembly, frozenset[str], bool]:
-        """The assembly a state sees, its removed names, and whether it is the default."""
+        """The assembly a state sees, its removed names, and whether it is the default.
+
+        A state on a bench (issue #249) has the parts the build's steps on that bench
+        add, and no others: the rest are removed, as its ``remove:`` globs' are.
+        """
         if state_name is None:
             return self._default, frozenset(), True
-        model = self._config.state_model(state_name)
+        model, spot = self._model_and_spot(state_name)
+        bench = self._config.state_bench(state_name)
         assembly = (
-            self._default
-            if model is None
-            else self._load(model, f"state {state_name!r}", self._state_spot(state_name))
+            self._default if model is None else self._load(model, f"state {state_name!r}", spot)
         )
         if model is not None and state_name not in self.models:
-            self._compare(state_name, model, assembly)
-        removed: set[str] = set()
+            self._compare(state_name, model, assembly, bench)
+        removed: set[str] = set(self._off_bench(state_name, assembly, bench))
         for glob in self._config.state_removes(state_name):
             hits = {name for name in assembly.names if fnmatchcase(name, glob)}
             if not hits and (state_name, glob) not in self._warned:
@@ -1518,6 +1534,12 @@ class _StateSpace:
         _, removed, _ = self.resolve(state_name)
         if name not in removed:
             return None
+        if name in self._benched.get(state_name, ()):
+            bench = self._config.state_bench(state_name)
+            return (
+                f"its own state {state_name!r} is on bench {bench}, and no step on that "
+                "bench adds it"
+            )
         glob = next(g for g in self._config.state_removes(state_name) if fnmatchcase(name, g))
         return (
             f"its own state {state_name!r} takes it off (remove glob {glob!r}), "
@@ -1577,16 +1599,52 @@ class _StateSpace:
         if said:
             self.notes.append(f"build step {step.name!r}: its model {step.model} {'; '.join(said)}")
 
-    def _state_spot(self, state_name: str) -> str:
-        """Where in the sidecar a state's model is named: its own, or up its chain."""
+    def _off_bench(self, state_name: str, assembly: Assembly, bench: str | None) -> frozenset[str]:
+        """The parts of a state's model its bench hasn't: each no step on that bench adds.
+
+        A part only the state's model has, a stand, say, stays, as a jig does in a
+        build step's model. Parts, not solids: a piece goes with its part, as it does
+        from a ``remove:`` glob (:meth:`resolve`). Worked out once a state (issue #249).
+        """
+        if bench is None:
+            return frozenset()
+        if state_name not in self._benched:
+            main = set(_part_names(self._default))
+            self._benched[state_name] = frozenset(
+                name
+                for name in _part_names(assembly)
+                if name in main and not self._on_bench(name, bench)
+            )
+        return self._benched[state_name]
+
+    def _on_bench(self, name: str, bench: str) -> bool:
+        """Whether a step on ``bench`` adds a part of the model as given, by its name."""
+        plan = self.build_plan()
+        index = plan.added_in.get(name)
+        return index is not None and plan.steps[index].bench == bench
+
+    def _model_and_spot(self, state_name: str) -> tuple[str | None, str]:
+        """A state's model and where in the sidecar it is named; None for the main model.
+
+        Its own, or the nearest up its chain; else, for a state on a bench, the model the
+        last step on that bench is checked in, the bench as it is once all its parts are
+        on (issue #249).
+        """
         owner = self._config.state(state_name)
         while owner.model is None and owner.base is not None:  # the state that names it
             owner = self._config.state(owner.base)
-        return f"states.{owner.name}"
+        if owner.model is not None:
+            return owner.model, f"states.{owner.name}"
+        bench = self._config.state_bench(state_name)
+        if bench is None:
+            return None, ""
+        steps = self._config.build
+        last = max(index for index, step in enumerate(steps) if step.bench == bench)
+        return steps[last].model, f"build[{last}]"
 
     def model_of(self, state_name: str) -> str | None:
-        """The model file a state uses, its own or up its chain; None for the main model."""
-        return self._config.state_model(state_name)
+        """The model file a state uses, its own, up its chain or its bench's; else None."""
+        return self._model_and_spot(state_name)[0]
 
     def warn_absent(self, state_name: str, name: str) -> None:
         """A fastener a state's model doesn't have: not tried there, and the run fails.
@@ -1600,12 +1658,14 @@ class _StateSpace:
             "(renamed?), so it wasn't tried there"
         )
 
-    def _compare(self, state_name: str, model: str, assembly: Assembly) -> None:
+    def _compare(self, state_name: str, model: str, assembly: Assembly, bench: str | None) -> None:
         """Note a state's model whose parts aren't the main model's by name.
 
         A state's model is meant to be the same parts, moved: a name only one of
         them has is a renamed or dropped part, more often than not. Said, not
-        failed for, since a state may also add or take away parts on purpose.
+        failed for, since a state may also add or take away parts on purpose. A state
+        on a bench is meant to have its bench's parts alone: one it lacks of those is
+        said, and none of the rest (issue #249).
 
         Parts are compared, not their solids: a part drawn as several is one whole
         part from shapes and its largest solid and pieces from STEP, and a run may
@@ -1613,11 +1673,13 @@ class _StateSpace:
         """
         main = [name for name in _part_names(self._default) if not self._config.is_ignored(name)]
         theirs = [name for name in _part_names(assembly) if not self._config.is_ignored(name)]
-        missing = tuple(name for name in main if name not in set(theirs))
+        meant = main if bench is None else [n for n in main if self._on_bench(n, bench)]
+        missing = tuple(name for name in meant if name not in set(theirs))
         new = tuple(name for name in theirs if name not in set(main))
+        whose = "the main model's" if bench is None else f"bench {bench}'s"
         said = []
         if missing:
-            said.append(f"lacks {_count(missing, 'part')} of the main model's: {listed(missing)}")
+            said.append(f"lacks {_count(missing, 'part')} of {whose}: {listed(missing)}")
         if new:
             said.append(f"has {_count(new, 'part')} the main model doesn't: {listed(new)}")
         if said:

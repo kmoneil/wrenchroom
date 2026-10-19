@@ -202,6 +202,8 @@ def build_sidecar():
     The cells' steps, in BUILD_STEPS' order, each adding its cells' roles; then REST,
     adding every other part, with the model as given: every other fastener is checked
     there among every part, its verdict in the build its own in the model as given.
+    Each bench of the build's is a state too, retried after the bench's own (issue
+    #249): ``aside-bench``, the parts the build puts together on bench aside alone.
     """
     sidecar, _ = sidecar_and_truth()
     adds = {step: [] for step in BUILD_STEPS}
@@ -231,6 +233,10 @@ def build_sidecar():
         for step in BUILD_STEPS
     ]
     sidecar["build"] = [*steps, {"step": REST, "add": ["*"]}]
+    benched = {f"{bench}-bench": {"bench": bench} for bench in dict.fromkeys(BENCHES.values())}
+    sidecar["states"] = {**sidecar["states"], **benched}
+    retried = [*sidecar["checks"]["try_states"], *benched]
+    sidecar["checks"] = {**sidecar["checks"], "try_states": retried}
     return sidecar, truth
 
 

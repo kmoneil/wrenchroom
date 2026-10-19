@@ -350,7 +350,8 @@ and `grazes` in the JSON).
   pair geometry wouldn't make.
 - **Extraction.** A screw that turns but can't come out along its axis is `stuck`.
 - **States.** A state takes parts off (`remove:`), or is another model of the same
-  parts with the mechanism moved (`model:`), and may build on another (`base:`). A
+  parts with the mechanism moved (`model:`), or is a bench of the build's, with only
+  its parts there (`bench:`, [below](#build-order)), and may build on another (`base:`). A
   `model:` path is read as one beside the sidecar, as a path in a config file
   usually is, then beside the model if the sidecar's folder hasn't it (issue #73);
   an absolute one is taken as it is. One found nowhere is an error naming the state,
@@ -838,6 +839,38 @@ build:
   machine) isn't: a joint is made where both its members are`), which fails the run
   as a sidecar mistake does. The terminal's step line, the JSON's step (`bench`) and
   the Markdown say which bench a step was on.
+- **In service, on the bench.** Some fasteners are only ever seen to with a part off
+  the machine: the screws on the inside of a cover, a drive's that face the frame. A
+  state's `bench:` names a bench of the build's, and the state is that bench (issue
+  #249):
+
+  ```yaml
+  build:
+    - step: frame
+      add: ["frame_*"]
+    - step: drive
+      bench: drives
+      add: ["drive_*", motor]
+    - step: drive on
+      add: ["*"]
+  states:
+    drive-bench: {bench: drives}                  # the drive as built, and no machine
+    motor-off: {bench: drives, remove: [motor]}
+  checks:
+    try_states: [drive-bench, motor-off]
+  ```
+
+  Its scene is the parts the build's steps on that bench add, as the last of those
+  steps has them (its `model:`, else as drawn), and no others: the machine isn't there.
+  A part only that model has (a stand) stays. A fastener or a plug the bench hasn't
+  isn't tried there, as one a state takes off isn't: a retry passes over the state,
+  and one whose own state it is is not covered (`its own state 'drive-bench' is on
+  bench drives, and no step on that bench adds it`). `remove:` and `base:` combine
+  with it as anywhere, a `bench:` up a state's chain is its own, and a state's own
+  `model:`, or one up its chain, outranks its bench's. A state's model lacking one of
+  its bench's parts is noted, and the machine's parts it lacks aren't. A bench no build
+  step is on is an error naming the nearest (`states[s]: bench 'drive' is no build
+  step's bench; the nearest: drives`), and so is a state on a bench with no `build:`.
 - **A step's scene** is every part added by then, the step's own included, as they
   go on before their fasteners, and none of the later steps'. A step's `model:` is
   read as a state's is (beside the sidecar, then beside the model, or given as an

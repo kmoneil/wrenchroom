@@ -19,6 +19,7 @@ family and a narrow one the exception, in reading order.
 
 from __future__ import annotations
 
+import difflib
 import enum
 from dataclasses import dataclass, field, replace
 from fnmatch import fnmatchcase
@@ -50,7 +51,7 @@ _SUPPORTED_TOP = {
     "connectors",
 }
 _CONNECTOR_KEYS = {"parts", "axis", "travel", "grip", "latch", "mates", "receptacle", "state"}
-_STATE_KEYS = {"remove", "base", "model"}
+_STATE_KEYS = {"remove", "base", "model", "bench"}
 _STEP_KEYS = {"step", "add", "except", "model", "bench"}
 _CHECKS_KEYS = {"default_state", "try_states", "detect", "hand_room", "clashes", "step_deg"}
 _RULE_KEYS = {
@@ -97,13 +98,15 @@ class StateDef:
     """One named state: parts off, and/or another model of the same parts.
 
     ``base`` chains states; the effective removals walk the chain, and the
-    nearest ``model`` on the chain wins.
+    nearest ``model`` on the chain wins, as does the nearest ``bench``: a bench of the
+    build's, whose parts alone are there (issue #249).
     """
 
     name: str
     remove: tuple[str, ...] = ()
     base: str | None = None
     model: str | None = None
+    bench: str | None = None
 
 
 class Grip(enum.StrEnum):
@@ -241,6 +244,7 @@ class Config:
         )
         states = _parse_states(raw.get("states", {}), source)
         build = _parse_build(raw["build"], source) if "build" in raw else ()
+        _check_benches(states, build, source)
         connectors = tuple(
             _parse_connector(entry, index, source)
             for index, entry in enumerate(
@@ -297,6 +301,13 @@ class Config:
         if state.model is not None:
             return state.model
         return self.state_model(state.base) if state.base else None
+
+    def state_bench(self, name: str) -> str | None:
+        """The bench this state is on: its own, else the nearest up the chain (issue #249)."""
+        state = self.state(name)
+        if state.bench is not None:
+            return state.bench
+        return self.state_bench(state.base) if state.base else None
 
     def apply(self, assembly: Assembly) -> Matches:
         """Match the rules against an assembly's part names.
@@ -652,6 +663,12 @@ def _parse_states(raw: object, source: str) -> tuple[StateDef, ...]:
         if unknown:
             msg = f"{state_where}: unknown key(s) {sorted(unknown)}"
             raise ConfigError(msg)
+        bench = None
+        if "bench" in entry:
+            bench = _as_str(entry["bench"], f"{state_where}: bench")
+            if not bench.strip():
+                msg = f"{state_where}: bench needs a name"
+                raise ConfigError(msg)
         states.append(
             StateDef(
                 name=str(name),
@@ -663,6 +680,7 @@ def _parse_states(raw: object, source: str) -> tuple[StateDef, ...]:
                 ),
                 base=None if entry.get("base") is None else str(entry["base"]),
                 model=None if entry.get("model") is None else str(entry["model"]),
+                bench=bench,
             )
         )
     names = {state.name for state in states}
@@ -738,6 +756,34 @@ def _parse_step(entry: object, where: str) -> BuildStep:
             msg = f"{where}: bench needs a name"
             raise ConfigError(msg)
     return BuildStep(name, add, None if model is None else str(model), except_, bench)
+
+
+def _check_benches(states: tuple[StateDef, ...], build: tuple[BuildStep, ...], source: str) -> None:
+    """Each state's ``bench:`` names a bench a build step is on (issue #249).
+
+    The build's steps on a bench are what say which parts are on it: a state on a bench
+    with no build, or on one no step names, is a mistake, as an unknown state is.
+    """
+    benches = list(dict.fromkeys(step.bench for step in build if step.bench is not None))
+    for state in states:
+        if state.bench is None or state.bench in benches:
+            continue
+        where = f"{source}: states[{state.name}]"
+        if not build:
+            msg = (
+                f"{where}: bench {state.bench!r} needs a build: whose steps on that bench "
+                "say which parts are on it"
+            )
+            raise ConfigError(msg)
+        nearest = difflib.get_close_matches(state.bench, benches, n=1)
+        if nearest:
+            said = f"; the nearest: {nearest[0]}"
+        elif benches:
+            said = f"; the build's benches: {', '.join(benches)}"
+        else:
+            said = "; no build step is on a bench"
+        msg = f"{where}: bench {state.bench!r} is no build step's bench{said}"
+        raise ConfigError(msg)
 
 
 def _reject_base_cycles(states: list[StateDef], where: str) -> None:
