@@ -1141,17 +1141,45 @@ def _frame(part: Part, fastener: Fastener) -> _Frame:
     origin, vertices = _axis_frame(part, axis)
     projections = tuple(_dot(_sub(v, origin), direction) for v in vertices)
     radials = tuple(_radial(_sub(v, origin), direction) for v in vertices)
+    bore = _bore_radius(faces, direction)
+    _round_its_thread(fastener, bore)
     return _Frame(
         part=part,
         direction=direction,
         origin=origin,
         projections=projections,
         radials=radials,
-        bore=_bore_radius(faces, direction),
+        bore=bore,
         oriented=isinstance(fastener.axis, tuple),
         flats=_on_flats(faces, origin, direction, vertices),
         faces=faces,
     )
+
+
+def _round_its_thread(fastener: Fastener, bore: float) -> None:
+    """A rule's across_flats: for a nut is wider than its thread, or it is a slip (#244).
+
+    A given hex is taken as written, whatever it is, so 1.3 written for 13 was a hex
+    whose corners lay inside the bolt through it, which then read as the trap holding
+    the nut (issue #93): a pass. A nut's bore is its thread, so no hex on it is as
+    narrow as the rule's size, nor as its bore as drawn, where the rule gives none. A
+    hex head is left as given: a hex on a screw's end, an adjuster's, can be under its
+    thread. Detection measures the hex it reads, round its bore.
+    """
+    af = fastener.drive_af
+    if fastener.kind is not Kind.NUT or af is None or fastener.source != "sidecar":
+        return
+    size = fastener.size
+    if size is not None and af <= size.diameter_mm:
+        raise NotCovered(
+            f"its rule's across_flats: {af:g} is no hex on its {size.designation} thread, "
+            f"{size.diameter_mm:.2f} across: a nut's hex is wider than its thread"
+        )
+    if af <= 2 * bore:
+        raise NotCovered(
+            f"its rule's across_flats: {af:g} is no hex on its bore as drawn, "
+            f"{2 * bore:.2f} across: a nut's hex is wider than its bore"
+        )
 
 
 def _on_flats(
